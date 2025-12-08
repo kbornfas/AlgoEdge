@@ -684,19 +684,17 @@ const AlgoEdge = () => {
             code: verificationCode 
           });
 
-          setAuthToken(response.token);
-          setCurrentUser(response.user);
-          setIsAuthenticated(true);
-          showToast(response.message || 'Registration successful! Welcome to AlgoEdge.', 'success');
-          setBalance(0);
-          setEquity(0);
-          setSubscriptionPlan('free');
+          // Show success message and switch to login
+          showToast('🎉 Registration successful! Please login to access your account.', 'success');
           
-          // Reset registration state
+          // Reset registration state and switch to login
           setRegistrationStep(1);
           setPendingRegistrationEmail('');
-          setShowAuthModal(false);
-          setCurrentPage('dashboard');
+          setVerificationCode('');
+          setPassword('');
+          setConfirmPassword('');
+          setIsLogin(true); // Switch to login tab
+          // Keep the modal open so user can login
         }
       }
 

@@ -21,6 +21,8 @@ export const register = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
+    console.log('📧 Registration request received:', { username, email });
+
     // Validation
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
@@ -62,8 +64,13 @@ export const register = async (req, res) => {
 
     await client.query('COMMIT');
 
+    console.log('📤 Sending verification code to:', email);
+    console.log('🔢 Verification code:', verificationCode);
+
     // Send verification code via email
     await sendVerificationCodeEmail(email, username, verificationCode);
+
+    console.log('✅ Verification email sent successfully to:', email);
 
     res.status(200).json({
       message: 'Verification code sent to your email',
