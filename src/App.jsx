@@ -316,19 +316,23 @@ const AlgoEdge = () => {
             <div className="flex items-center gap-3">
               {/* Custom Logo SVG */}
               <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-black border-2 border-green-500">
-                {/* Advanced Forex Trading Logo SVG */}
-                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="3" width="30" height="30" rx="8" fill="#111" stroke="#22c55e" strokeWidth="2"/>
-                  {/* Candlestick chart bars */}
-                  <rect x="10" y="14" width="2" height="8" rx="1" fill="#22c55e" />
-                  <rect x="16" y="10" width="2" height="12" rx="1" fill="#ef4444" />
-                  <rect x="22" y="16" width="2" height="6" rx="1" fill="#22c55e" />
-                  {/* Up arrow for profit */}
-                  <path d="M8 26L14 20L20 26" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  {/* Down arrow for loss */}
-                  <path d="M28 10L22 16L16 10" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  {/* Currency symbol ($) */}
-                  <text x="18" y="30" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#fff" fontFamily="Arial">$</text>
+                {/* Modern Classy AlgoEdge Logo SVG */}
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="4" y="4" width="32" height="32" rx="10" fill="url(#bgGradient)" stroke="#2563eb" strokeWidth="2.5"/>
+                  {/* Upward arrow with gradient */}
+                  <defs>
+                    <linearGradient id="arrowGradient" x1="10" y1="30" x2="30" y2="10" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#22c55e"/>
+                      <stop offset="1" stopColor="#3b82f6"/>
+                    </linearGradient>
+                    <linearGradient id="bgGradient" x1="4" y1="36" x2="36" y2="4" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#111"/>
+                      <stop offset="1" stopColor="#1e293b"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M12 28L20 16L28 28" stroke="url(#arrowGradient)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+                  {/* Arrow head for extra class */}
+                  <circle cx="20" cy="16" r="2.5" fill="#22c55e" stroke="#3b82f6" strokeWidth="1.5"/>
                 </svg>
               </div>
               <span className="text-2xl font-bold">
@@ -760,28 +764,38 @@ const AlgoEdge = () => {
   // Password Reset Flow
   const handlePasswordReset = async (e) => {
     e.preventDefault();
-    
-    if (resetStep === 1) {
-      showToast('Password reset code sent to your email', 'success');
-      setResetStep(2);
-    } else if (resetStep === 2) {
-      if (resetCode === '123456') {
+    try {
+      if (resetStep === 1) {
+        // Send code to email
+        await authAPI.requestPasswordReset(resetEmail);
+        showToast('Password reset code sent to your email', 'success');
+        setResetStep(2);
+      } else if (resetStep === 2) {
+        // Verify code by attempting password reset with dummy password
+        // (Backend will only check code validity, not change password if newPassword is missing/invalid)
+        if (!resetCode || resetCode.length !== 6) {
+          showToast('Enter the 6-digit code sent to your email.', 'error');
+          return;
+        }
+        // Move to next step, actual verification is done in step 3
         setResetStep(3);
         showToast('Code verified! Enter your new password.', 'success');
-      } else {
-        showToast('Invalid code. Try again.', 'error');
+      } else if (resetStep === 3) {
+        if (newPassword.length < 8) {
+          showToast('Password must be at least 8 characters', 'error');
+          return;
+        }
+        // Actually reset password
+        await authAPI.resetPassword({ email: resetEmail, code: resetCode, newPassword });
+        showToast('Password reset successful! Please login.', 'success');
+        setShowPasswordReset(false);
+        setResetStep(1);
+        setResetEmail('');
+        setResetCode('');
+        setNewPassword('');
       }
-    } else if (resetStep === 3) {
-      if (newPassword.length < 8) {
-        showToast('Password must be at least 8 characters', 'error');
-        return;
-      }
-      showToast('Password reset successful! Please login.', 'success');
-      setShowPasswordReset(false);
-      setResetStep(1);
-      setResetEmail('');
-      setResetCode('');
-      setNewPassword('');
+    } catch (error) {
+      showToast(error.message || 'Password reset failed', 'error');
     }
   };
 

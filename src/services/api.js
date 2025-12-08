@@ -71,10 +71,10 @@ export const authAPI = {
       body: JSON.stringify({ email }),
     }),
 
-  resetPassword: (token, newPassword) =>
+  resetPassword: ({ email, code, newPassword }) =>
     apiRequest('/api/auth/reset-password', {
       method: 'POST',
-      body: JSON.stringify({ token, newPassword }),
+      body: JSON.stringify({ email, code, newPassword }),
     }),
 
   setup2FA: () => apiRequest('/api/auth/2fa/setup', { method: 'POST' }),

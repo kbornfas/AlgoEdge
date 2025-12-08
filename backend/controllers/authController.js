@@ -283,29 +283,37 @@ export const verifyEmail = async (req, res) => {
 };
 
 // Request Password Reset
+// Request Password Reset (send real code to email)
 export const requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body;
-
-    const resetToken = uuidv4();
-    const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-    const result = await pool.query(
-      `UPDATE users 
-       SET reset_token = $1, reset_expires = $2
-       WHERE email = $3
-       RETURNING id, username, email`,
-      [resetToken, resetExpires, email]
-    );
-
-    if (result.rows.length > 0) {
-      const user = result.rows[0];
-      const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-      sendEmail(email, 'passwordReset', [user.username, resetUrl]);
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
     }
-
+    // Check if user exists
+    const result = await pool.query(
+      'SELECT id, username, email FROM users WHERE email = $1',
+      [email]
+    );
+    if (result.rows.length === 0) {
+      // Always return success to prevent email enumeration
+      return res.json({ message: 'If the email exists, a reset code has been sent' });
+    }
+    const user = result.rows[0];
+    // Generate 6-digit code
+    const code = generateVerificationCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    // Store code in database
+    await pool.query(
+      `UPDATE users 
+       SET reset_code = $1, reset_code_expires = $2, reset_code_attempts = 0
+       WHERE id = $3`,
+      [code, expiresAt, user.id]
+    );
+    // Send code via email
+    await sendVerificationCodeEmail(user.email, user.username, code, 10);
     // Always return success to prevent email enumeration
-    res.json({ message: 'If the email exists, a reset link has been sent' });
+    res.json({ message: 'If the email exists, a reset code has been sent' });
   } catch (error) {
     console.error('Password reset request error:', error);
     res.status(500).json({ error: 'Request failed' });
@@ -313,29 +321,59 @@ export const requestPasswordReset = async (req, res) => {
 };
 
 // Reset Password
+// Reset Password (verify code, then reset)
 export const resetPassword = async (req, res) => {
   try {
-    const { token, newPassword } = req.body;
-
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ error: 'Email, code, and new password are required' });
+    }
     if (newPassword.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
-
+    // Find user and check code
+    const result = await pool.query(
+      'SELECT id, reset_code, reset_code_expires, reset_code_attempts FROM users WHERE email = $1',
+      [email]
+    );
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid email or code' });
+    }
+    const user = result.rows[0];
+    if (!user.reset_code) {
+      return res.status(400).json({ error: 'No reset code found. Please request a new one.' });
+    }
+    if (new Date() > new Date(user.reset_code_expires)) {
+      await pool.query(
+        'UPDATE users SET reset_code = NULL, reset_code_expires = NULL WHERE id = $1',
+        [user.id]
+      );
+      return res.status(400).json({ error: 'Reset code expired. Please request a new one.' });
+    }
+    if (user.reset_code_attempts >= 5) {
+      await pool.query(
+        'UPDATE users SET reset_code = NULL, reset_code_expires = NULL WHERE id = $1',
+        [user.id]
+      );
+      return res.status(429).json({ error: 'Too many attempts. Please request a new code.' });
+    }
+    if (user.reset_code !== code) {
+      await pool.query(
+        'UPDATE users SET reset_code_attempts = reset_code_attempts + 1 WHERE id = $1',
+        [user.id]
+      );
+      const attemptsLeft = 5 - (user.reset_code_attempts + 1);
+      return res.status(400).json({ error: 'Invalid reset code', attemptsLeft });
+    }
+    // Code is valid - reset password
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(newPassword, salt);
-
-    const result = await pool.query(
+    await pool.query(
       `UPDATE users 
-       SET password_hash = $1, reset_token = NULL, reset_expires = NULL
-       WHERE reset_token = $2 AND reset_expires > NOW()
-       RETURNING id`,
-      [passwordHash, token]
+       SET password_hash = $1, reset_code = NULL, reset_code_expires = NULL, reset_code_attempts = 0
+       WHERE id = $2`,
+      [passwordHash, user.id]
     );
-
-    if (result.rows.length === 0) {
-      return res.status(400).json({ error: 'Invalid or expired token' });
-    }
-
     res.json({ message: 'Password reset successful' });
   } catch (error) {
     console.error('Password reset error:', error);
