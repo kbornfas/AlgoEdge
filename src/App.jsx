@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Activity, TrendingUp, Wallet, Settings, Link2, BookOpen, Users, History, Bot, LogOut, AlertCircle, CheckCircle, User, Mail, Lock, Bell, Shield, HelpCircle, FileText, Eye, EyeOff, Calendar, BarChart3, PieChart, LineChart, Download, Upload, X, Check, Clock, DollarSign, TrendingDown, Zap, Target, Sun, Moon } from 'lucide-react';
 import { LineChart as RechartsLine, Line, AreaChart, Area, PieChart as RechartsPie, Pie, Cell, BarChart as RechartsBar, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { authAPI, userAPI, tradeAPI, setAuthToken, getAuthToken, websocket } from './services/api';
@@ -73,11 +73,48 @@ const AlgoEdge = () => {
   });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
+  // Modal States - Must be declared before useEffect hooks that reference them
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showRiskDisclosure, setShowRiskDisclosure] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
+
   // Password Reset
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (showAuthModal || showPasswordReset || showPricingModal || showTerms || showPrivacy || showRiskDisclosure) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showAuthModal, showPasswordReset, showPricingModal, showTerms, showPrivacy, showRiskDisclosure]);
+
+  // Preserve input focus during re-renders
+  useEffect(() => {
+    const activeElement = document.activeElement;
+    const activeId = activeElement?.id;
+    
+    if (activeId && (activeId.startsWith('auth-') || activeId.startsWith('reset-'))) {
+      // Restore focus on next tick if it was lost
+      const timeoutId = setTimeout(() => {
+        const element = document.getElementById(activeId);
+        if (element && document.activeElement !== element) {
+          element.focus();
+        }
+      }, 0);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  });
+
   const [resetStep, setResetStep] = useState(1);
 
   // 2FA State
@@ -100,17 +137,13 @@ const AlgoEdge = () => {
     }
   });
 
-  // Modal States
-  const [showTerms, setShowTerms] = useState(false);
-  const [showPrivacy, setShowPrivacy] = useState(false);
-  const [showRiskDisclosure, setShowRiskDisclosure] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [confirmAction, setConfirmAction] = useState(null);
-
   // Loading States
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isMT5Loading, setIsMT5Loading] = useState(false);
+
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // Admin tracking
   const [isAdmin, setIsAdmin] = useState(false);
@@ -137,7 +170,6 @@ const AlgoEdge = () => {
 
   // Subscription state
   const [subscriptionPlan, setSubscriptionPlan] = useState('free');
-  const [showPricingModal, setShowPricingModal] = useState(false);
 
   // Theme Configuration
   const themes = {
@@ -176,9 +208,8 @@ const AlgoEdge = () => {
       accentAlt: 'from-red-500 to-red-600',
       accentBlue: 'from-blue-500 to-blue-600',
       accentYellow: 'from-yellow-500 to-yellow-600',
-      accentAlt: 'from-cyan-600 to-blue-700',
       sidebar: 'bg-white/95',
-      input: 'bg-white border-purple-300 text-gray-900',
+      input: 'bg-white border-green-500 text-gray-900',
       success: 'text-green-600',
       error: 'text-red-600',
       warning: 'text-amber-600',
@@ -283,7 +314,7 @@ const AlgoEdge = () => {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-500">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
                 <TrendingUp className="w-7 h-7 text-white" />
               </div>
               <span className="text-2xl font-bold bg-gradient-to-r from-green-500 to-green-600 bg-clip-text text-transparent">
@@ -299,7 +330,7 @@ const AlgoEdge = () => {
               </button>
               <button
                 onClick={() => { setIsLogin(false); setShowAuthModal(true); }}
-                className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg shadow-lg shadow-green-500 hover:shadow-xl transition-all"
+                className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:from-green-400 hover:to-green-500 transition-all"
               >
                 Get Started
               </button>
@@ -327,13 +358,13 @@ const AlgoEdge = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
                 onClick={() => { setIsLogin(false); setShowAuthModal(true); }}
-                className="px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white text-lg font-bold rounded-xl shadow-2xl shadow-green-500 hover:shadow-green-400 transform hover:scale-105 transition-all"
+                className="px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white text-lg font-bold rounded-xl hover:from-green-400 hover:to-green-500 transform hover:scale-105 transition-all"
               >
                 Start Trading Free
               </button>
               <button
                 onClick={() => document.getElementById('features').scrollIntoView({ behavior: 'smooth' })}
-                className="px-8 py-4 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black text-lg font-semibold rounded-xl shadow-xl shadow-yellow-500 hover:shadow-yellow-400 transition-all"
+                className="px-8 py-4 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black text-lg font-semibold rounded-xl hover:from-yellow-400 hover:to-yellow-500 transition-all"
               >
                 Learn More
               </button>
@@ -371,8 +402,8 @@ const AlgoEdge = () => {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-gradient-to-br from-green-900 to-green-800 backdrop-blur-xl rounded-2xl p-8 border-2 border-green-500 hover:border-green-400 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-green-500">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-green-500">
+            <div className="bg-gradient-to-br from-green-900 to-green-800 backdrop-blur-xl rounded-2xl p-8 border-2 border-green-500 hover:border-green-400 transition-all hover:scale-105">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mb-6">
                 <Bot className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold mb-4 text-green-500">AI-Powered Robots</h3>
@@ -384,8 +415,8 @@ const AlgoEdge = () => {
               </ul>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-900 to-blue-800 backdrop-blur-xl rounded-2xl p-8 border-2 border-blue-500 hover:border-blue-400 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-blue-500">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500">
+            <div className="bg-gradient-to-br from-blue-900 to-blue-800 backdrop-blur-xl rounded-2xl p-8 border-2 border-blue-500 hover:border-blue-400 transition-all hover:scale-105">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6">
                 <Link2 className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold mb-4 text-blue-500">MT5 Integration</h3>
@@ -397,8 +428,8 @@ const AlgoEdge = () => {
               </ul>
             </div>
 
-            <div className="bg-gradient-to-br from-yellow-900 to-yellow-800 backdrop-blur-xl rounded-2xl p-8 border-2 border-yellow-500 hover:border-yellow-400 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-yellow-500">
-              <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-yellow-500">
+            <div className="bg-gradient-to-br from-yellow-900 to-yellow-800 backdrop-blur-xl rounded-2xl p-8 border-2 border-yellow-500 hover:border-yellow-400 transition-all hover:scale-105">
+              <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center mb-6">
                 <BarChart3 className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold mb-4 text-yellow-500">Real-Time Analytics</h3>
@@ -580,7 +611,7 @@ const AlgoEdge = () => {
   const [registrationStep, setRegistrationStep] = useState(1); // 1 = enter details, 2 = verify code
   const [pendingRegistrationEmail, setPendingRegistrationEmail] = useState('');
 
-  const handleAuth = async (e) => {
+  const handleAuth = useCallback(async (e) => {
     e.preventDefault();
     setIsAuthLoading(true);
 
@@ -683,7 +714,7 @@ const AlgoEdge = () => {
     } finally {
       setIsAuthLoading(false);
     }
-  };
+  }, [isLogin, registrationStep, email, password, username, confirmPassword, verificationCode, pendingRegistrationEmail]);
 
   const handleLogout = () => {
     setShowConfirmDialog(true);
@@ -1033,8 +1064,9 @@ const AlgoEdge = () => {
   }, [botActive, connected]);
 
   // Toast Component
-  const ToastContainer = () => (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
+  const ToastContainer = () => {
+    return (
+      <div className="fixed top-4 right-4 z-50 space-y-2">
       {toasts.map(toast => (
         <div
           key={toast.id}
@@ -1054,11 +1086,14 @@ const AlgoEdge = () => {
         </div>
       ))}
     </div>
-  );
+    );
+  };
 
   // Confirmation Dialog
-  const ConfirmDialog = () => (
-    showConfirmDialog && (
+  const ConfirmDialog = () => {
+    if (!showConfirmDialog) return null;
+    
+    return (
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
         <div className={`${theme.card} backdrop-blur-xl rounded-2xl p-6 border ${theme.border} max-w-md shadow-2xl`}>
           <h3 className={`text-xl font-bold ${theme.text} mb-4`}>Confirm Action</h3>
@@ -1079,14 +1114,22 @@ const AlgoEdge = () => {
           </div>
         </div>
       </div>
-    )
-  );
+    );
+  };
 
-  // Auth Modal Component
-  const AuthModal = () => (
-    showAuthModal && (
-      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-black backdrop-blur-xl rounded-2xl border-2 border-green-500 shadow-2xl shadow-green-500 max-w-md w-full max-h-[90vh] overflow-y-auto">
+  // Auth Modal Component - Memoized to prevent re-renders
+  const AuthModal = useMemo(() => {
+    if (!showAuthModal) return null;
+    
+    return (
+      <div 
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setShowAuthModal(false);
+        }}
+        onWheel={(e) => e.stopPropagation()}
+      >
+        <div className="bg-black backdrop-blur-xl rounded-2xl border-2 border-green-500 max-w-md w-full max-h-[90vh] overflow-y-auto">
           <div className="p-8">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-white">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
@@ -1100,7 +1143,7 @@ const AlgoEdge = () => {
                 type="button"
                 onClick={() => { setIsLogin(true); setRegistrationStep(1); }}
                 className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
-                  isLogin ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg shadow-green-500' : 'bg-gray-800 text-gray-400'
+                  isLogin ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' : 'bg-gray-800 text-gray-400'
                 }`}
               >
                 Login
@@ -1109,7 +1152,7 @@ const AlgoEdge = () => {
                 type="button"
                 onClick={() => { setIsLogin(false); setRegistrationStep(1); }}
                 className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
-                  !isLogin ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg shadow-green-500' : 'bg-gray-800 text-gray-400'
+                  !isLogin ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' : 'bg-gray-800 text-gray-400'
                 }`}
               >
                 Register
@@ -1121,13 +1164,15 @@ const AlgoEdge = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
                   <input
+                    id="auth-username"
                     type="text"
+                    name="username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-900 border-2 border-green-500 rounded-lg text-white focus:outline-none focus:border-green-400 focus:shadow-lg focus:shadow-green-500"
+                    className="w-full px-4 py-3 bg-gray-900 border-2 border-green-500 rounded-lg text-white focus:outline-none focus:border-green-400"
                     placeholder="Enter username"
                     required={!isLogin}
-                    autoComplete="off"
+                    autoComplete="username"
                   />
                 </div>
               )}
@@ -1137,13 +1182,15 @@ const AlgoEdge = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
                     <input
+                      id="auth-email"
                       type="email"
+                      name="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-900 border-2 border-blue-500 rounded-lg text-white focus:outline-none focus:border-blue-400 focus:shadow-lg focus:shadow-blue-500"
+                      className="w-full px-4 py-3 bg-gray-900 border-2 border-blue-500 rounded-lg text-white focus:outline-none focus:border-blue-400"
                       placeholder="you@example.com"
                       required
-                      autoComplete="off"
+                      autoComplete="email"
                     />
                   </div>
 
@@ -1151,13 +1198,15 @@ const AlgoEdge = () => {
                     <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
                     <div className="relative">
                       <input
+                        id="auth-password"
                         type={showPassword ? "text" : "password"}
+                        name="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-900 border-2 border-yellow-500 rounded-lg text-white focus:outline-none focus:border-yellow-400 focus:shadow-lg focus:shadow-yellow-500"
+                        className="w-full px-4 py-3 bg-gray-900 border-2 border-yellow-500 rounded-lg text-white focus:outline-none focus:border-yellow-400"
                         placeholder="Enter password"
                         required
-                        autoComplete="off"
+                        autoComplete="current-password"
                       />
                       <button
                         type="button"
@@ -1175,13 +1224,15 @@ const AlgoEdge = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
                   <input
+                    id="auth-confirm-password"
                     type="password"
+                    name="confirmPassword"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-900 border-2 border-yellow-500 rounded-lg text-white focus:outline-none focus:border-yellow-400 focus:shadow-lg focus:shadow-yellow-500"
+                    className="w-full px-4 py-3 bg-gray-900 border-2 border-yellow-500 rounded-lg text-white focus:outline-none focus:border-yellow-400"
                     placeholder="Re-enter password"
                     required={!isLogin}
-                    autoComplete="off"
+                    autoComplete="new-password"
                   />
                 </div>
               )}
@@ -1196,14 +1247,16 @@ const AlgoEdge = () => {
                   </div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Verification Code</label>
                   <input
+                    id="auth-verification-code"
                     type="text"
+                    name="verificationCode"
                     value={verificationCode}
                     onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full px-4 py-3 bg-gray-900 border-2 border-green-500 rounded-lg text-green-500 text-center text-2xl tracking-widest focus:outline-none focus:border-green-400 focus:shadow-lg focus:shadow-green-500 font-bold"
+                    className="w-full px-4 py-3 bg-gray-900 border-2 border-green-500 rounded-lg text-green-500 text-center text-2xl tracking-widest focus:outline-none focus:border-green-400 font-bold"
                     placeholder="000000"
                     maxLength={6}
                     required
-                    autoComplete="off"
+                    autoComplete="one-time-code"
                   />
                   <p className="text-xs text-gray-400 mt-2 text-center">Enter the 6-digit code from your email</p>
                 </div>
@@ -1224,7 +1277,7 @@ const AlgoEdge = () => {
               <button
                 type="submit"
                 disabled={isAuthLoading}
-                className={`w-full py-3 px-6 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-lg shadow-xl shadow-green-500 hover:shadow-2xl hover:shadow-green-400 transition-all ${
+                className={`w-full py-3 px-6 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-lg hover:from-green-400 hover:to-green-500 transition-all ${
                   isAuthLoading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
@@ -1250,15 +1303,15 @@ const AlgoEdge = () => {
           </div>
         </div>
       </div>
-    )
-  );
+    );
+  }, [showAuthModal, isLogin, username, email, password, confirmPassword, showPassword, registrationStep, pendingRegistrationEmail, verificationCode, isAuthLoading, handleAuth]);
 
   // Show landing page when not authenticated
   if (!isAuthenticated) {
     return (
       <>
         <ToastContainer />
-        <AuthModal />
+        {AuthModal}
         
         {/* Password Reset Modal */}
         {showPasswordReset && (
