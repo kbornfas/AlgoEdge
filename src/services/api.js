@@ -1,5 +1,6 @@
 import { io } from 'socket.io-client';
 
+// Default to backend dev port 3000 (see README); override via VITE_API_URL / VITE_WS_URL in .env
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:3000';
 
@@ -28,10 +29,16 @@ const apiRequest = async (endpoint, options = {}) => {
     },
   };
 
+  console.log('Making request to:', `${API_URL}${endpoint}`);
+  
   const response = await fetch(`${API_URL}${endpoint}`, config);
+  
+  console.log('Response status:', response.status);
+  
   const data = await response.json();
 
   if (!response.ok) {
+    console.error('API Error:', data);
     throw new Error(data.error || 'Request failed');
   }
 

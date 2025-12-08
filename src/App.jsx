@@ -10,17 +10,20 @@ const AlgoEdge = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [email, setEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // Theme State
   const [isDarkMode, setIsDarkMode] = useState(true);
-  
+
   // Page Navigation
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  
+  const [currentPage, setCurrentPage] = useState('landing');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
   // MT5 Configuration
   const [mt5Config, setMt5Config] = useState({
     apiKey: '',
@@ -29,7 +32,7 @@ const AlgoEdge = () => {
     server: ''
   });
   const [showMt5Config, setShowMt5Config] = useState(false);
-  
+
   // Trading State
   const [connected, setConnected] = useState(false);
   const [botActive, setBotActive] = useState(false);
@@ -45,10 +48,10 @@ const AlgoEdge = () => {
   const [wsConnected, setWsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('');
   const [retryCount, setRetryCount] = useState(0);
-  
+
   // Toast Notifications
   const [toasts, setToasts] = useState([]);
-  
+
   // Settings
   const [settings, setSettings] = useState({
     emailNotifications: true,
@@ -60,7 +63,7 @@ const AlgoEdge = () => {
     stopLossPercent: 2,
     takeProfitPercent: 5
   });
-  
+
   // Profile State
   const [profile, setProfile] = useState({
     fullName: '',
@@ -69,19 +72,19 @@ const AlgoEdge = () => {
     timezone: 'UTC'
   });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  
+
   // Password Reset
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [resetStep, setResetStep] = useState(1);
-  
+
   // 2FA State
   const [show2FASetup, setShow2FASetup] = useState(false);
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
   const [twoFACode, setTwoFACode] = useState('');
-  
+
   // Strategy Configuration
   const [strategy, setStrategy] = useState({
     type: 'EMA_CROSSOVER',
@@ -96,22 +99,22 @@ const AlgoEdge = () => {
       macd_slow: 26
     }
   });
-  
+
   // Modal States
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showRiskDisclosure, setShowRiskDisclosure] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
-  
+
   // Loading States
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isMT5Loading, setIsMT5Loading] = useState(false);
-  
+
   // Admin tracking
   const [isAdmin, setIsAdmin] = useState(false);
-  
+
   // Performance Data
   const [performanceData, setPerformanceData] = useState([
     { date: 'Mon', profit: 120, trades: 5 },
@@ -122,16 +125,16 @@ const AlgoEdge = () => {
     { date: 'Sat', profit: 180, trades: 4 },
     { date: 'Sun', profit: 90, trades: 2 }
   ]);
-  
+
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const MAX_RETRIES = 5;
   const RETRY_DELAY = 3000;
-  
+
   // ⚠️ IMPORTANT: Replace this with your Railway backend URL after deployment!
   // Example: 'https://algoedge-backend-production.up.railway.app'
   const BACKEND_URL = 'REPLACE_WITH_YOUR_RAILWAY_URL_AFTER_DEPLOYMENT';
-  
+
   // Subscription state
   const [subscriptionPlan, setSubscriptionPlan] = useState('free');
   const [showPricingModal, setShowPricingModal] = useState(false);
@@ -177,7 +180,7 @@ const AlgoEdge = () => {
       info: 'text-cyan-600'
     }
   };
-  
+
   const theme = isDarkMode ? themes.dark : themes.light;
 
   // Trading Robots Configuration
@@ -267,35 +270,333 @@ const AlgoEdge = () => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
+  // Landing Page Component
+  const LandingPage = () => (
+    <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black text-white">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-xl border-b border-purple-500/20">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 via-pink-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/50 animate-pulse">
+                <TrendingUp className="w-7 h-7 text-white" />
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+                AlgoEdge
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => { setIsLogin(true); setShowAuthModal(true); }}
+                className="px-6 py-2 text-white hover:text-purple-300 transition-colors font-semibold"
+              >
+                Login
+              </button>
+              <button
+                onClick={() => { setIsLogin(false); setShowAuthModal(true); }}
+                className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all"
+              >
+                Get Started
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="pt-32 pb-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-full text-green-300 text-sm mb-6 animate-bounce">
+              <Zap className="w-4 h-4" />
+              <span>Live Trading • Real Results • AI-Powered</span>
+            </div>
+            <h1 className="text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent leading-tight">
+              Trade Smarter.
+              <br />Not Harder.
+            </h1>
+            <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-10">
+              Harness the power of AI-driven trading robots to execute profitable trades 24/7. Connect your MT5 account and let our battle-tested algorithms work for you.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={() => { setIsLogin(false); setShowAuthModal(true); }}
+                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-lg font-bold rounded-xl shadow-2xl shadow-purple-500/50 hover:shadow-purple-500/70 transform hover:scale-105 transition-all"
+              >
+                Start Trading Free
+              </button>
+              <button
+                onClick={() => document.getElementById('features').scrollIntoView({ behavior: 'smooth' })}
+                className="px-8 py-4 bg-white/10 backdrop-blur text-white text-lg font-semibold rounded-xl border border-white/20 hover:bg-white/20 transition-all"
+              >
+                Learn More
+              </button>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
+            <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/30 text-center">
+              <div className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent mb-2">72%</div>
+              <div className="text-gray-300 text-sm">Average Win Rate</div>
+            </div>
+            <div className="bg-gradient-to-br from-cyan-900/50 to-blue-900/50 backdrop-blur-xl rounded-2xl p-6 border border-cyan-500/30 text-center">
+              <div className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent mb-2">7</div>
+              <div className="text-gray-300 text-sm">Trading Robots</div>
+            </div>
+            <div className="bg-gradient-to-br from-green-900/50 to-emerald-900/50 backdrop-blur-xl rounded-2xl p-6 border border-green-500/30 text-center">
+              <div className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">24/7</div>
+              <div className="text-gray-300 text-sm">Automated Trading</div>
+            </div>
+            <div className="bg-gradient-to-br from-orange-900/50 to-red-900/50 backdrop-blur-xl rounded-2xl p-6 border border-orange-500/30 text-center">
+              <div className="text-4xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent mb-2">$0</div>
+              <div className="text-gray-300 text-sm">Setup Fee</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-20 px-6 bg-black/30">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Powerful Features</h2>
+            <p className="text-xl text-gray-400">Everything you need to succeed in automated trading</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 backdrop-blur-xl rounded-2xl p-8 border border-purple-500/20 hover:border-purple-500/50 transition-all hover:scale-105">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-purple-500/50">
+                <Bot className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4 text-white">AI-Powered Robots</h3>
+              <p className="text-gray-400 mb-4">Choose from 7 pre-configured trading robots powered by advanced algorithms. Each robot specializes in different strategies—from scalping to trend following.</p>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> EMA Crossover System</li>
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> Ichimoku Cloud Breakout</li>
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> RSI + MACD Strategies</li>
+              </ul>
+            </div>
+
+            <div className="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 backdrop-blur-xl rounded-2xl p-8 border border-cyan-500/20 hover:border-cyan-500/50 transition-all hover:scale-105">
+              <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-cyan-500/50">
+                <Link2 className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4 text-white">MT5 Integration</h3>
+              <p className="text-gray-400 mb-4">Seamlessly connect your MetaTrader 5 account. We never hold your funds—all trading happens through your trusted broker.</p>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> Secure API Connection</li>
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> Real-time Sync</li>
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> Multiple Accounts</li>
+              </ul>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 backdrop-blur-xl rounded-2xl p-8 border border-green-500/20 hover:border-green-500/50 transition-all hover:scale-105">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-green-500/50">
+                <BarChart3 className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4 text-white">Real-Time Analytics</h3>
+              <p className="text-gray-400 mb-4">Monitor your performance with live dashboards, detailed trade history, and comprehensive profit/loss tracking.</p>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> Live Trade Feed</li>
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> Performance Charts</li>
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> Risk Management Tools</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-5xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">How It Works</h2>
+            <p className="text-xl text-gray-400">Get started in 3 simple steps</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-12">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-3xl font-bold text-white mx-auto mb-6 shadow-2xl shadow-purple-500/50">
+                1
+              </div>
+              <h3 className="text-2xl font-bold mb-4 text-white">Create Account</h3>
+              <p className="text-gray-400">Sign up for free in under 2 minutes. No credit card required to start.</p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-cyan-600 to-blue-600 rounded-full flex items-center justify-center text-3xl font-bold text-white mx-auto mb-6 shadow-2xl shadow-cyan-500/50">
+                2
+              </div>
+              <h3 className="text-2xl font-bold mb-4 text-white">Connect MT5</h3>
+              <p className="text-gray-400">Link your MetaTrader 5 account securely using our encrypted API integration.</p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full flex items-center justify-center text-3xl font-bold text-white mx-auto mb-6 shadow-2xl shadow-green-500/50">
+                3
+              </div>
+              <h3 className="text-2xl font-bold mb-4 text-white">Start Trading</h3>
+              <p className="text-gray-400">Choose your robot, set your risk level, and watch your portfolio grow 24/7.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Section */}
+      <section className="py-20 px-6 bg-gradient-to-br from-purple-900/20 to-pink-900/20">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-5xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Built for Security & Trust</h2>
+              <p className="text-xl text-gray-300 mb-8">Your capital security is our top priority. AlgoEdge employs bank-grade encryption and never holds your funds.</p>
+              <div className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Shield className="w-6 h-6 text-green-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white mb-2">SSL/TLS Encryption</h4>
+                    <p className="text-gray-400">All data transmission is encrypted with industry-standard 256-bit SSL.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Lock className="w-6 h-6 text-purple-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white mb-2">2FA Authentication</h4>
+                    <p className="text-gray-400">Protect your account with two-factor authentication via authenticator apps.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-6 h-6 text-cyan-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white mb-2">Audit Logging</h4>
+                    <p className="text-gray-400">Complete audit trail of all account activities and trades for transparency.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="relative">
+              <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-xl rounded-3xl p-8 border border-purple-500/30 shadow-2xl">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between p-4 bg-black/30 rounded-xl">
+                    <span className="text-gray-300">Active Users</span>
+                    <span className="text-2xl font-bold text-green-400">1,247+</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-black/30 rounded-xl">
+                    <span className="text-gray-300">Total Trades</span>
+                    <span className="text-2xl font-bold text-cyan-400">52,891</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-black/30 rounded-xl">
+                    <span className="text-gray-300">Success Rate</span>
+                    <span className="text-2xl font-bold text-purple-400">68.4%</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-black/30 rounded-xl">
+                    <span className="text-gray-300">Uptime</span>
+                    <span className="text-2xl font-bold text-yellow-400">99.9%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+            Ready to Automate Your Trading?
+          </h2>
+          <p className="text-xl text-gray-300 mb-10">Join thousands of traders who trust AlgoEdge to manage their portfolios 24/7.</p>
+          <button
+            onClick={() => { setIsLogin(false); setShowAuthModal(true); }}
+            className="px-12 py-5 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xl font-bold rounded-xl shadow-2xl shadow-purple-500/50 hover:shadow-purple-500/70 transform hover:scale-105 transition-all"
+          >
+            Get Started Free
+          </button>
+          <p className="text-sm text-gray-500 mt-6">No credit card required • Free forever plan available</p>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 px-6 border-t border-purple-500/20 bg-black/50">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-xl font-bold text-white">AlgoEdge</span>
+              </div>
+              <p className="text-gray-400 text-sm">AI-powered trading platform for the modern trader.</p>
+            </div>
+            <div>
+              <h4 className="text-white font-bold mb-4">Platform</h4>
+              <ul className="space-y-2 text-gray-400 text-sm">
+                <li><button onClick={() => { setIsLogin(false); setShowAuthModal(true); }} className="hover:text-purple-400 transition-colors">Get Started</button></li>
+                <li><button onClick={() => setShowPricingModal(true)} className="hover:text-purple-400 transition-colors">Pricing</button></li>
+                <li><button className="hover:text-purple-400 transition-colors">Features</button></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-bold mb-4">Resources</h4>
+              <ul className="space-y-2 text-gray-400 text-sm">
+                <li><button className="hover:text-purple-400 transition-colors">Documentation</button></li>
+                <li><button className="hover:text-purple-400 transition-colors">API Reference</button></li>
+                <li><button className="hover:text-purple-400 transition-colors">Support</button></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-bold mb-4">Legal</h4>
+              <ul className="space-y-2 text-gray-400 text-sm">
+                <li><button onClick={() => setShowTerms(true)} className="hover:text-purple-400 transition-colors">Terms of Service</button></li>
+                <li><button onClick={() => setShowPrivacy(true)} className="hover:text-purple-400 transition-colors">Privacy Policy</button></li>
+                <li><button onClick={() => setShowRiskDisclosure(true)} className="hover:text-purple-400 transition-colors">Risk Disclosure</button></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-purple-500/20 pt-8 text-center text-gray-500 text-sm">
+            <p>© 2025 AlgoEdge. All rights reserved. Trading involves risk. Past performance does not guarantee future results.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+
   // Authentication Handler
   const handleAuth = async (e) => {
     e.preventDefault();
-    
     setIsAuthLoading(true);
+
     try {
       if (isLogin) {
-        // Real login API call
-        const response = await authAPI.login({ username, password });
-        
-        // Store token
+        if (!email || !password) {
+          showToast('Email and password are required', 'error');
+          setIsAuthLoading(false);
+          return;
+        }
+
+        const response = await authAPI.login({ username: email, password });
         setAuthToken(response.token);
-        
-        // Set user state
         setCurrentUser(response.user);
         setIsAuthenticated(true);
         showToast('Login successful! Welcome back.', 'success');
-        
-        // Connect WebSocket
+
         websocket.connect(response.token);
-        
-        // Fetch user profile and data
+
         try {
           const profile = await userAPI.getProfile();
           setSubscriptionPlan(profile.subscription?.plan || 'free');
-          
+
           const trades = await tradeAPI.getTrades();
           setTradeHistory(trades.trades || []);
-          
+
           const stats = await tradeAPI.getTradeStats();
           setBalance(stats.stats?.total_profit || 0);
           setEquity(stats.stats?.total_profit || 0);
@@ -303,42 +604,39 @@ const AlgoEdge = () => {
         } catch (err) {
           console.error('Error fetching user data:', err);
         }
-        
       } else {
-        // Real register API call
-        if (!username || !email || !password) {
+        if (!username || !email || !password || !confirmPassword) {
           showToast('Please fill in all fields', 'error');
           setIsAuthLoading(false);
           return;
         }
-        
+
+        if (password !== confirmPassword) {
+          showToast('Passwords do not match', 'error');
+          setIsAuthLoading(false);
+          return;
+        }
+
         const response = await authAPI.register({ username, email, password });
-        
-        // Store token
         setAuthToken(response.token);
-        
-        // Set user state
         setCurrentUser(response.user);
         setIsAuthenticated(true);
         showToast(response.message || 'Registration successful! Welcome to AlgoEdge.', 'success');
-        
-        // Initialize with default values for new users
         setBalance(0);
         setEquity(0);
         setSubscriptionPlan('free');
       }
-      
-      // Clear form
+
       setUsername('');
       setPassword('');
+      setConfirmPassword('');
       setEmail('');
-      
+      setVerificationCode('');
     } catch (error) {
+      console.error('Auth error:', error);
       showToast(error.message || 'Authentication failed', 'error');
     } finally {
       setIsAuthLoading(false);
-    }
-      console.error('Auth error:', error);
     }
   };
 
@@ -739,11 +1037,150 @@ const AlgoEdge = () => {
     )
   );
 
-  // Login/Register Screen
+  // Auth Modal Component
+  const AuthModal = () => (
+    showAuthModal && (
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-gray-950/95 backdrop-blur-xl rounded-2xl border border-purple-500/30 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-8">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
+              <button onClick={() => setShowAuthModal(false)} className="text-gray-400 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="flex gap-2 mb-6">
+              <button
+                onClick={() => setIsLogin(true)}
+                className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
+                  isLogin ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' : 'bg-slate-700/50 text-gray-400'
+                }`}
+              >
+                Login
+              </button>
+              <button
+                onClick={() => setIsLogin(false)}
+                className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
+                  !isLogin ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' : 'bg-slate-700/50 text-gray-400'
+                }`}
+              >
+                Register
+              </button>
+            </div>
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              {!isLogin && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-purple-500/30 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                    placeholder="Enter username"
+                    required={!isLogin}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-purple-500/30 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-purple-500/30 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                    placeholder="Enter password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {!isLogin && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-purple-500/30 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                    placeholder="Re-enter password"
+                    required={!isLogin}
+                  />
+                </div>
+              )}
+
+              {isLogin && (
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => { setShowAuthModal(false); setShowPasswordReset(true); }}
+                    className="text-sm text-purple-400 hover:text-purple-300"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isAuthLoading}
+                className={`w-full py-3 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg shadow-lg shadow-purple-500/50 hover:shadow-xl transition-all ${
+                  isAuthLoading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                {isAuthLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    {isLogin ? 'Logging in...' : 'Registering...'}
+                  </span>
+                ) : (
+                  isLogin ? 'Login' : 'Register'
+                )}
+              </button>
+            </form>
+
+            {!isLogin && (
+              <div className="mt-4 text-xs text-gray-400 text-center">
+                By registering, you agree to our{' '}
+                <button onClick={() => { setShowAuthModal(false); setShowTerms(true); }} className="text-purple-400 hover:underline">Terms of Service</button>
+                {' '}and{' '}
+                <button onClick={() => { setShowAuthModal(false); setShowPrivacy(true); }} className="text-purple-400 hover:underline">Privacy Policy</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  );
+
+  // Show landing page when not authenticated
   if (!isAuthenticated) {
     return (
-      <div className={`min-h-screen ${theme.bgGradient} flex items-center justify-center p-4`}>
+      <>
         <ToastContainer />
+        <AuthModal />
         
         {/* Password Reset Modal */}
         {showPasswordReset && (
@@ -811,125 +1248,8 @@ const AlgoEdge = () => {
           </div>
         )}
         
-        <div className="w-full max-w-md">
-          <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-8 border border-purple-500/20 shadow-2xl">
-            <div className="flex items-center justify-center gap-2 mb-8">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-7 h-7 text-white" />
-              </div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                AlgoEdge
-              </h1>
-            </div>
-
-            <div className="flex gap-2 mb-6">
-              <button
-                onClick={() => { setIsLogin(true); }}
-                className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
-                  isLogin ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' : 'bg-slate-700/50 text-gray-400'
-                }`}
-              >
-                Login
-              </button>
-              <button
-                onClick={() => { setIsLogin(false); }}
-                className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
-                  !isLogin ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' : 'bg-slate-700/50 text-gray-400'
-                }`}
-              >
-                Register
-              </button>
-            </div>
-
-            <form onSubmit={handleAuth} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-700/50 border border-purple-500/30 rounded-lg text-white focus:outline-none focus:border-purple-500"
-                  placeholder="Enter username"
-                  required
-                />
-              </div>
-
-              {!isLogin && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-700/50 border border-purple-500/30 rounded-lg text-white focus:outline-none focus:border-purple-500"
-                    placeholder="Enter email"
-                    required={!isLogin}
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-700/50 border border-purple-500/30 rounded-lg text-white focus:outline-none focus:border-purple-500"
-                    placeholder="Enter password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-
-              {isLogin && (
-                <div className="text-right">
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswordReset(true)}
-                    className="text-sm text-purple-400 hover:text-purple-300"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isAuthLoading}
-                className={`w-full py-3 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg shadow-lg shadow-purple-500/50 hover:shadow-xl transition-all ${
-                  isAuthLoading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                {isAuthLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    {isLogin ? 'Logging in...' : 'Registering...'}
-                  </span>
-                ) : (
-                  isLogin ? 'Login' : 'Register'
-                )}
-              </button>
-            </form>
-
-            {!isLogin && (
-              <div className="mt-4 text-xs text-gray-400 text-center">
-                By registering, you agree to our{' '}
-                <button onClick={() => setShowTerms(true)} className="text-purple-400 hover:underline">Terms of Service</button>
-                {' '}and{' '}
-                <button onClick={() => setShowPrivacy(true)} className="text-purple-400 hover:underline">Privacy Policy</button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+        <LandingPage />
+      </>
     );
   }
 

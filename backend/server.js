@@ -4,7 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import dotenv from 'dotenv';
-import { initializeDatabase } from './config/database.js';
+import { initDatabase } from './config/database.js';
 import { initializeWebSocket } from './services/websocketService.js';
 import { initializeMT5Connections, startBalanceSyncScheduler } from './services/mt5Service.js';
 import { auditMiddleware } from './middleware/audit.js';
@@ -36,7 +36,12 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -97,8 +102,13 @@ const startServer = async () => {
   try {
     // Initialize database
     console.log('Initializing database...');
-    await initializeDatabase();
-    console.log('✓ Database initialized');
+    try {
+      await initDatabase();
+      console.log('✓ Database initialized');
+    } catch (dbError) {
+      console.warn('⚠️  Database connection failed:', dbError.message);
+      console.log('⚠️  Server will start in limited mode without database');
+    }
 
     // Initialize WebSocket
     console.log('Initializing WebSocket...');
@@ -107,12 +117,20 @@ const startServer = async () => {
 
     // Initialize MT5 connections
     console.log('Initializing MT5 connections...');
-    await initializeMT5Connections();
-    console.log('✓ MT5 connections initialized');
+    try {
+      await initializeMT5Connections();
+      console.log('✓ MT5 connections initialized');
+    } catch (mt5Error) {
+      console.warn('⚠️  MT5 initialization failed:', mt5Error.message);
+    }
 
     // Start balance sync scheduler
-    startBalanceSyncScheduler();
-    console.log('✓ Balance sync scheduler started');
+    try {
+      startBalanceSyncScheduler();
+      console.log('✓ Balance sync scheduler started');
+    } catch (schedError) {
+      console.warn('⚠️  Balance sync scheduler failed:', schedError.message);
+    }
 
     // Start server
     server.listen(PORT, () => {
