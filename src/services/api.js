@@ -83,6 +83,18 @@ export const authAPI = {
       method: 'POST',
       body: JSON.stringify({ password }),
     }),
+
+  sendVerificationCode: (email, phone, method = 'email') =>
+    apiRequest('/api/auth/send-verification-code', {
+      method: 'POST',
+      body: JSON.stringify({ email, phone, method }),
+    }),
+
+  verifyCode: (email, phone, code) =>
+    apiRequest('/api/auth/verify-code', {
+      method: 'POST',
+      body: JSON.stringify({ email, phone, code }),
+    }),
 };
 
 // User API

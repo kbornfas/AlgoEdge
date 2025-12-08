@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import pool from '../config/database.js';
-import { sendEmail } from '../services/emailService.js';
+import { sendEmail, generateVerificationCode, sendVerificationCodeEmail, sendVerificationCodeSMS } from '../services/emailService.js';
 import { auditLog } from '../middleware/audit.js';
 
 // Generate JWT token
@@ -358,6 +358,161 @@ export const disable2FA = async (req, res) => {
   }
 };
 
+// Send Verification Code (Email or SMS)
+export const sendVerificationCode = async (req, res) => {
+  try {
+    const { email, phone, method = 'email' } = req.body;
+
+    if (!email && !phone) {
+      return res.status(400).json({ error: 'Email or phone number required' });
+    }
+
+    // Check if user exists
+    const userQuery = email 
+      ? 'SELECT id, username, email, phone FROM users WHERE email = $1'
+      : 'SELECT id, username, email, phone FROM users WHERE phone = $1';
+    
+    const result = await pool.query(userQuery, [email || phone]);
+
+    if (result.rows.length === 0) {
+      // Don't reveal if user exists
+      return res.json({ message: 'Verification code sent if account exists' });
+    }
+
+    const user = result.rows[0];
+
+    // Generate 6-digit code
+    const code = generateVerificationCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Store code in database
+    await pool.query(
+      `UPDATE users 
+       SET verification_code = $1, verification_code_expires = $2, verification_code_attempts = 0
+       WHERE id = $3`,
+      [code, expiresAt, user.id]
+    );
+
+    // Send code via selected method
+    if (method === 'sms' && user.phone) {
+      await sendVerificationCodeSMS(user.phone, code, 10);
+      console.log(`📱 Verification code sent via SMS to ${user.phone}`);
+    } else {
+      await sendVerificationCodeEmail(user.email, user.username, code, 10);
+      console.log(`📧 Verification code sent via email to ${user.email}`);
+    }
+
+    // Audit log
+    auditLog(user.id, 'VERIFICATION_CODE_SENT', { method, destination: email || phone }, req);
+
+    res.json({ 
+      message: 'Verification code sent',
+      method,
+      expiresIn: 600 // seconds
+    });
+  } catch (error) {
+    console.error('Send verification code error:', error);
+    res.status(500).json({ error: 'Failed to send verification code' });
+  }
+};
+
+// Verify Code
+export const verifyCode = async (req, res) => {
+  try {
+    const { email, phone, code } = req.body;
+
+    if (!email && !phone) {
+      return res.status(400).json({ error: 'Email or phone number required' });
+    }
+
+    if (!code) {
+      return res.status(400).json({ error: 'Verification code required' });
+    }
+
+    // Find user
+    const userQuery = email
+      ? 'SELECT id, username, email, verification_code, verification_code_expires, verification_code_attempts FROM users WHERE email = $1'
+      : 'SELECT id, username, email, verification_code, verification_code_expires, verification_code_attempts FROM users WHERE phone = $1';
+    
+    const result = await pool.query(userQuery, [email || phone]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0];
+
+    // Check if code exists
+    if (!user.verification_code) {
+      return res.status(400).json({ error: 'No verification code found. Please request a new one.' });
+    }
+
+    // Check if code expired
+    if (new Date() > new Date(user.verification_code_expires)) {
+      await pool.query(
+        'UPDATE users SET verification_code = NULL, verification_code_expires = NULL WHERE id = $1',
+        [user.id]
+      );
+      return res.status(400).json({ error: 'Verification code expired. Please request a new one.' });
+    }
+
+    // Check attempts (max 5)
+    if (user.verification_code_attempts >= 5) {
+      await pool.query(
+        'UPDATE users SET verification_code = NULL, verification_code_expires = NULL WHERE id = $1',
+        [user.id]
+      );
+      return res.status(429).json({ error: 'Too many attempts. Please request a new code.' });
+    }
+
+    // Verify code
+    if (user.verification_code !== code) {
+      // Increment attempts
+      await pool.query(
+        'UPDATE users SET verification_code_attempts = verification_code_attempts + 1 WHERE id = $1',
+        [user.id]
+      );
+      
+      const attemptsLeft = 5 - (user.verification_code_attempts + 1);
+      return res.status(400).json({ 
+        error: 'Invalid verification code',
+        attemptsLeft 
+      });
+    }
+
+    // Code is valid - clear it and mark user as verified
+    await pool.query(
+      `UPDATE users 
+       SET verification_code = NULL, 
+           verification_code_expires = NULL, 
+           verification_code_attempts = 0,
+           is_verified = true
+       WHERE id = $1`,
+      [user.id]
+    );
+
+    // Generate JWT token
+    const token = generateToken(user.id);
+
+    // Audit log
+    auditLog(user.id, 'VERIFICATION_CODE_VERIFIED', { email, phone }, req);
+
+    res.json({ 
+      message: 'Verification successful',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isVerified: true
+      }
+    });
+  } catch (error) {
+    console.error('Verify code error:', error);
+    res.status(500).json({ error: 'Verification failed' });
+  }
+};
+
 export default {
   register,
   login,
@@ -367,4 +522,6 @@ export default {
   setup2FA,
   verify2FA,
   disable2FA,
+  sendVerificationCode,
+  verifyCode,
 };
