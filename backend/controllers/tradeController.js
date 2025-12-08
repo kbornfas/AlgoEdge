@@ -1,3 +1,50 @@
+// List all trades (admin only)
+export const listAllTrades = async (req, res) => {
+  try {
+    const { status, limit = 100, offset = 0 } = req.query;
+    let query = `
+      SELECT t.*, u.username, tr.name as robot_name, ma.account_id as mt5_account
+      FROM trades t
+      LEFT JOIN users u ON t.user_id = u.id
+      LEFT JOIN trading_robots tr ON t.robot_id = tr.id
+      LEFT JOIN mt5_accounts ma ON t.mt5_account_id = ma.id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (status) {
+      params.push(status);
+      query += ` AND t.status = $${params.length}`;
+    }
+    query += ` ORDER BY t.open_time DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
+    const result = await pool.query(query, params);
+    res.json({ trades: result.rows });
+  } catch (error) {
+    console.error('List all trades error:', error);
+    res.status(500).json({ error: 'Failed to list trades' });
+  }
+};
+
+// Approve or reject a pending transaction (admin only)
+export const approveTransaction = async (req, res) => {
+  try {
+    const { tradeId } = req.params;
+    const { approve } = req.body;
+    const status = approve ? 'approved' : 'rejected';
+    const result = await pool.query(
+      `UPDATE trades SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`,
+      [status, tradeId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Trade not found' });
+    }
+    auditLog(req.user.id, approve ? 'TRADE_APPROVED' : 'TRADE_REJECTED', { tradeId }, req);
+    res.json({ trade: result.rows[0] });
+  } catch (error) {
+    console.error('Approve/reject transaction error:', error);
+    res.status(500).json({ error: 'Failed to update transaction' });
+  }
+};
 import pool from '../config/database.js';
 import { sendEmail } from '../services/emailService.js';
 import { auditLog } from '../middleware/audit.js';
@@ -242,4 +289,6 @@ export default {
   createTrade,
   closeTrade,
   getRobots,
+  listAllTrades,
+  approveTransaction,
 };

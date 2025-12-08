@@ -1,3 +1,37 @@
+// List all users (admin only)
+export const listAllUsers = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, username, email, full_name, phone, country, timezone, is_verified, two_fa_enabled, created_at, is_blocked
+       FROM users
+       ORDER BY created_at DESC`
+    );
+    res.json({ users: result.rows });
+  } catch (error) {
+    console.error('List all users error:', error);
+    res.status(500).json({ error: 'Failed to list users' });
+  }
+};
+
+// Block or unblock a user (admin only)
+export const setUserBlocked = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { block } = req.body;
+    const result = await pool.query(
+      `UPDATE users SET is_blocked = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, username, is_blocked`,
+      [!!block, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    auditLog(req.user.id, block ? 'USER_BLOCKED' : 'USER_UNBLOCKED', { userId }, req);
+    res.json({ user: result.rows[0] });
+  } catch (error) {
+    console.error('Set user blocked error:', error);
+    res.status(500).json({ error: 'Failed to update user status' });
+  }
+};
 import pool from '../config/database.js';
 import { auditLog } from '../middleware/audit.js';
 
@@ -245,4 +279,6 @@ export default {
   addMT5Account,
   getRobotConfigs,
   updateRobotConfig,
+  listAllUsers,
+  setUserBlocked,
 };

@@ -14,159 +14,54 @@ const generateToken = (userId) => {
   });
 };
 
-// Register - Step 1: Send verification code
+
+// Register - direct registration, no email verification
 export const register = async (req, res) => {
   const client = await pool.connect();
-  
   try {
     const { username, email, password } = req.body;
-
-    console.log('📧 Registration request received:', { username, email });
-
-    // Validation
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
-
     if (password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
-
     await client.query('BEGIN');
-
     // Check if user exists
     const existingUser = await client.query(
       'SELECT id FROM users WHERE email = $1 OR username = $2',
       [email, username]
     );
-
     if (existingUser.rows.length > 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'User already exists' });
     }
-
     // Hash password
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(password, salt);
-
-    // Generate 6-digit verification code
-    const verificationCode = generateVerificationCode();
-    const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    // Store verification code in database
-    await client.query(
-      `INSERT INTO verification_codes (email, code, expires_at, type, metadata)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (email, type) 
-       DO UPDATE SET code = $2, expires_at = $3, created_at = CURRENT_TIMESTAMP`,
-      [email, verificationCode, verificationExpires, 'registration', JSON.stringify({ username, password_hash: passwordHash })]
-    );
-
-    await client.query('COMMIT');
-
-    console.log('📤 Sending verification code to:', email);
-    console.log('🔢 Verification code:', verificationCode);
-
-    // Send verification code via email
-    await sendVerificationCodeEmail(email, username, verificationCode);
-
-    console.log('✅ Verification email sent successfully to:', email);
-
-    res.status(200).json({
-      message: 'Verification code sent to your email',
-      email: email,
-      requiresVerification: true
-    });
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Registration failed' });
-  } finally {
-    client.release();
-  }
-};
-
-// Verify Registration Code and Complete Registration
-export const verifyRegistration = async (req, res) => {
-  const client = await pool.connect();
-  
-  try {
-    const { email, code } = req.body;
-
-    if (!email || !code) {
-      return res.status(400).json({ error: 'Email and verification code are required' });
-    }
-
-    await client.query('BEGIN');
-
-    // Get verification code
-    const codeResult = await client.query(
-      `SELECT code, expires_at, metadata FROM verification_codes 
-       WHERE email = $1 AND type = $2 AND used = false`,
-      [email, 'registration']
-    );
-
-    if (codeResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Invalid or expired verification code' });
-    }
-
-    const { code: storedCode, expires_at, metadata } = codeResult.rows[0];
-
-    // Check if code matches
-    if (storedCode !== code) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Invalid verification code' });
-    }
-
-    // Check if expired
-    if (new Date() > new Date(expires_at)) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Verification code has expired' });
-    }
-
-    // Parse metadata
-    const { username, password_hash } = JSON.parse(metadata);
-
     // Create user
     const result = await client.query(
       `INSERT INTO users (username, email, password_hash, is_verified)
        VALUES ($1, $2, $3, $4)
        RETURNING id, username, email, created_at`,
-      [username, email, password_hash, true]
+      [username, email, passwordHash, true]
     );
-
     const user = result.rows[0];
-
     // Create default subscription
     await client.query(
       'INSERT INTO subscriptions (user_id, plan, status) VALUES ($1, $2, $3)',
       [user.id, 'free', 'active']
     );
-
     // Create default settings
     await client.query(
       'INSERT INTO user_settings (user_id) VALUES ($1)',
       [user.id]
     );
-
-    // Mark verification code as used
-    await client.query(
-      'UPDATE verification_codes SET used = true WHERE email = $1 AND type = $2',
-      [email, 'registration']
-    );
-
     await client.query('COMMIT');
-
     // Generate JWT
     const token = generateToken(user.id);
-
     // Audit log
     auditLog(user.id, 'USER_REGISTERED', { email, username }, req);
-
-    // Send welcome email
-    sendEmail(email, 'welcome', [username, process.env.FRONTEND_URL]);
-
     res.status(201).json({
       message: 'Registration successful! Welcome to AlgoEdge.',
       token,
@@ -179,12 +74,15 @@ export const verifyRegistration = async (req, res) => {
     });
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Verification error:', error);
-    res.status(500).json({ error: 'Verification failed' });
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Registration failed' });
   } finally {
     client.release();
   }
 };
+
+
+// Remove verifyRegistration endpoint (no longer needed)
 
 // Login
 export const login = async (req, res) => {

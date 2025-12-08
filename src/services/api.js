@@ -1,4 +1,8 @@
-  // IP Whitelist Management (admin)
+
+import { io } from 'socket.io-client';
+
+// IP Whitelist Management (admin)
+export const ipWhitelistAPI = {
   getUserIPs: (userId) =>
     apiRequest(`/api/ip-whitelist/user/${userId}`, { method: 'GET' }),
   addUserIP: (userId, ip_address) =>
@@ -8,7 +12,7 @@
     }),
   removeUserIP: (userId, ip) =>
     apiRequest(`/api/ip-whitelist/user/${userId}/${ip}`, { method: 'DELETE' }),
-import { io } from 'socket.io-client';
+};
 
 // Default to backend dev port 3000 (see README); override via VITE_API_URL / VITE_WS_URL in .env
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -69,55 +73,7 @@ export const authAPI = {
       body: JSON.stringify(credentials),
     }),
 
-  verifyEmail: (token) =>
-    apiRequest('/api/auth/verify-email', {
-      method: 'POST',
-      body: JSON.stringify({ token }),
-    }),
 
-  requestPasswordReset: (email) =>
-    apiRequest('/api/auth/request-password-reset', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    }),
-
-  resetPassword: ({ email, code, newPassword }) =>
-    apiRequest('/api/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ email, code, newPassword }),
-    }),
-
-  setup2FA: () => apiRequest('/api/auth/2fa/setup', { method: 'POST' }),
-
-  verify2FA: (code) =>
-    apiRequest('/api/auth/2fa/verify', {
-      method: 'POST',
-      body: JSON.stringify({ code }),
-    }),
-
-  disable2FA: (password) =>
-    apiRequest('/api/auth/2fa/disable', {
-      method: 'POST',
-      body: JSON.stringify({ password }),
-    }),
-
-  sendVerificationCode: (email, phone, method = 'email') =>
-    apiRequest('/api/auth/send-verification-code', {
-      method: 'POST',
-      body: JSON.stringify({ email, phone, method }),
-    }),
-
-  verifyCode: (email, phone, code) =>
-    apiRequest('/api/auth/verify-code', {
-      method: 'POST',
-      body: JSON.stringify({ email, phone, code }),
-    }),
-
-  verifyRegistration: (data) =>
-    apiRequest('/api/auth/verify-registration', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
 };
 
 // User API

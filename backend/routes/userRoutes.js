@@ -8,7 +8,15 @@ import {
   addMT5Account,
   getRobotConfigs,
   updateRobotConfig,
+  listAllUsers,
+  setUserBlocked,
 } from '../controllers/userController.js';
+import { requireAdmin } from '../middleware/auth.js';
+// Admin: List all users
+router.get('/admin/all', requireAdmin, listAllUsers);
+
+// Admin: Block/unblock user
+router.patch('/admin/:userId/block', requireAdmin, setUserBlocked);
 import { authenticate } from '../middleware/auth.js';
 import { apiLimiter } from '../middleware/rateLimiter.js';
 

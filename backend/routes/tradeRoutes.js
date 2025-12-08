@@ -5,7 +5,15 @@ import {
   createTrade,
   closeTrade,
   getRobots,
+  listAllTrades,
+  approveTransaction,
 } from '../controllers/tradeController.js';
+import { requireAdmin } from '../middleware/auth.js';
+// Admin: List all trades
+router.get('/admin/all', requireAdmin, listAllTrades);
+
+// Admin: Approve/reject transaction
+router.patch('/admin/:tradeId/approve', requireAdmin, approveTransaction);
 import { authenticate } from '../middleware/auth.js';
 import { tradeLimiter } from '../middleware/rateLimiter.js';
 

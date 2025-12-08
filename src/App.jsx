@@ -12,7 +12,6 @@ const AlgoEdge = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [email, setEmail] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -628,13 +627,10 @@ const AlgoEdge = () => {
 
   // Authentication Handler
   // Auth state for two-step registration
-  const [registrationStep, setRegistrationStep] = useState(1); // 1 = enter details, 2 = verify code
-  const [pendingRegistrationEmail, setPendingRegistrationEmail] = useState('');
 
   const handleAuth = useCallback(async (e) => {
     e.preventDefault();
     setIsAuthLoading(true);
-
     try {
       if (isLogin) {
         if (!email || !password) {
@@ -642,22 +638,17 @@ const AlgoEdge = () => {
           setIsAuthLoading(false);
           return;
         }
-
         const response = await authAPI.login({ username: email, password });
         setAuthToken(response.token);
         setCurrentUser(response.user);
         setIsAuthenticated(true);
         showToast('Login successful! Welcome back.', 'success');
-
         websocket.connect(response.token);
-
         try {
           const profile = await userAPI.getProfile();
           setSubscriptionPlan(profile.subscription?.plan || 'free');
-
           const trades = await tradeAPI.getTrades();
           setTradeHistory(trades.trades || []);
-
           const stats = await tradeAPI.getTradeStats();
           setBalance(stats.stats?.total_profit || 0);
           setEquity(stats.stats?.total_profit || 0);
@@ -665,66 +656,27 @@ const AlgoEdge = () => {
         } catch (err) {
           console.error('Error fetching user data:', err);
         }
-
         setShowAuthModal(false);
         setCurrentPage('dashboard');
       } else {
         // Registration flow
-        if (registrationStep === 1) {
-          // Step 1: Send verification code
-          if (!username || !email || !password || !confirmPassword) {
-            showToast('Please fill in all fields', 'error');
-            setIsAuthLoading(false);
-            return;
-          }
-
-          if (password !== confirmPassword) {
-            showToast('Passwords do not match', 'error');
-            setIsAuthLoading(false);
-            return;
-          }
-
-          const response = await authAPI.register({ username, email, password });
-          
-          if (response.requiresVerification) {
-            setPendingRegistrationEmail(email);
-            setRegistrationStep(2);
-            showToast('Verification code sent to your email!', 'success');
-          }
-        } else if (registrationStep === 2) {
-          // Step 2: Verify code and complete registration
-          if (!verificationCode) {
-            showToast('Please enter the verification code', 'error');
-            setIsAuthLoading(false);
-            return;
-          }
-
-          const response = await authAPI.verifyRegistration({ 
-            email: pendingRegistrationEmail, 
-            code: verificationCode 
-          });
-
-          // Show success message and switch to login
-          showToast('🎉 Registration successful! Please login to access your account.', 'success');
-          
-          // Reset registration state and switch to login
-          setRegistrationStep(1);
-          setPendingRegistrationEmail('');
-          setVerificationCode('');
-          setPassword('');
-          setConfirmPassword('');
-          setIsLogin(true); // Switch to login tab
-          // Keep the modal open so user can login
+        if (!username || !email || !password || !confirmPassword) {
+          showToast('Please fill in all fields', 'error');
+          setIsAuthLoading(false);
+          return;
         }
-      }
-
-      // Clear form fields
-      if (isLogin || registrationStep === 2) {
+        if (password !== confirmPassword) {
+          showToast('Passwords do not match', 'error');
+          setIsAuthLoading(false);
+          return;
+        }
+        await authAPI.register({ username, email, password });
+        showToast('Registration successful! Please login to access your account.', 'success');
+        setIsLogin(true);
         setUsername('');
         setPassword('');
         setConfirmPassword('');
         setEmail('');
-        setVerificationCode('');
       }
     } catch (error) {
       console.error('Auth error:', error);
@@ -732,7 +684,7 @@ const AlgoEdge = () => {
     } finally {
       setIsAuthLoading(false);
     }
-  }, [isLogin, registrationStep, email, password, username, confirmPassword, verificationCode, pendingRegistrationEmail]);
+  }, [isLogin, email, password, username, confirmPassword]);
 
   const handleLogout = () => {
     setShowConfirmDialog(true);
@@ -761,44 +713,8 @@ const AlgoEdge = () => {
     });
   };
 
-  // Password Reset Flow
-  const handlePasswordReset = async (e) => {
-    e.preventDefault();
-    alert('Password reset handler called! Step: ' + resetStep);
-    console.log('handlePasswordReset called, step:', resetStep, 'email:', resetEmail, 'code:', resetCode, 'newPassword:', newPassword);
-    try {
-      if (resetStep === 1) {
-        console.log('Sending password reset code to:', resetEmail);
-        await authAPI.requestPasswordReset(resetEmail);
-        showToast('Password reset code sent to your email', 'success');
-        setResetStep(2);
-      } else if (resetStep === 2) {
-        console.log('Verifying code:', resetCode);
-        if (!resetCode || resetCode.length !== 6) {
-          showToast('Enter the 6-digit code sent to your email.', 'error');
-          return;
-        }
-        setResetStep(3);
-        showToast('Code verified! Enter your new password.', 'success');
-      } else if (resetStep === 3) {
-        console.log('Resetting password for:', resetEmail);
-        if (newPassword.length < 8) {
-          showToast('Password must be at least 8 characters', 'error');
-          return;
-        }
-        await authAPI.resetPassword({ email: resetEmail, code: resetCode, newPassword });
-        showToast('Password reset successful! Please login.', 'success');
-        setShowPasswordReset(false);
-        setResetStep(1);
-        setResetEmail('');
-        setResetCode('');
-        setNewPassword('');
-      }
-    } catch (error) {
-      console.error('Password reset error:', error);
-      showToast(error.message || 'Password reset failed', 'error');
-    }
-  };
+
+  // Password reset is disabled (no email verification)
 
   // 2FA Setup
   const handle2FASetup = () => {
