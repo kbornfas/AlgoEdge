@@ -10,7 +10,6 @@ import {
   disable2FA,
   sendVerificationCode,
   verifyCode,
-  verifyRegistration,
 } from '../controllers/authController.js';
 import { authenticate } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
@@ -19,7 +18,7 @@ const router = express.Router();
 
 // Public routes with rate limiting
 router.post('/register', authLimiter, register);
-router.post('/verify-registration', authLimiter, verifyRegistration);
+
 router.post('/login', authLimiter, login);
 router.post('/verify-email', verifyEmail);
 router.post('/request-password-reset', authLimiter, requestPasswordReset);

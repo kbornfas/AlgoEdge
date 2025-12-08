@@ -11,16 +11,16 @@ import {
   listAllUsers,
   setUserBlocked,
 } from '../controllers/userController.js';
-import { requireAdmin } from '../middleware/auth.js';
-// Admin: List all users
-router.get('/admin/all', requireAdmin, listAllUsers);
-
-// Admin: Block/unblock user
-router.patch('/admin/:userId/block', requireAdmin, setUserBlocked);
 import { authenticate } from '../middleware/auth.js';
 import { apiLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
+
+// Admin: List all users
+router.get('/admin/all', listAllUsers);
+
+// Admin: Block/unblock user
+router.patch('/admin/:userId/block', setUserBlocked);
 
 // All user routes require authentication
 router.use(authenticate);

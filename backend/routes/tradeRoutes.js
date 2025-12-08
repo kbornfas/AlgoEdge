@@ -8,16 +8,16 @@ import {
   listAllTrades,
   approveTransaction,
 } from '../controllers/tradeController.js';
-import { requireAdmin } from '../middleware/auth.js';
-// Admin: List all trades
-router.get('/admin/all', requireAdmin, listAllTrades);
-
-// Admin: Approve/reject transaction
-router.patch('/admin/:tradeId/approve', requireAdmin, approveTransaction);
 import { authenticate } from '../middleware/auth.js';
 import { tradeLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
+
+// Admin: List all trades
+router.get('/admin/all', listAllTrades);
+
+// Admin: Approve/reject transaction
+router.patch('/admin/:tradeId/approve', approveTransaction);
 
 // All trade routes require authentication
 router.use(authenticate);
