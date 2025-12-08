@@ -163,6 +163,21 @@ export const initDatabase = async () => {
       );
     `);
 
+    // Verification Codes table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS verification_codes (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        code VARCHAR(10) NOT NULL,
+        type VARCHAR(50) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
+        metadata JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(email, type)
+      );
+    `);
+
     // Audit Logs table
     await client.query(`
       CREATE TABLE IF NOT EXISTS audit_logs (
@@ -185,6 +200,8 @@ export const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
       CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+      CREATE INDEX IF NOT EXISTS idx_verification_codes_email_type ON verification_codes(email, type);
+      CREATE INDEX IF NOT EXISTS idx_verification_codes_expires ON verification_codes(expires_at);
     `);
 
     // Insert default trading robots

@@ -102,6 +102,12 @@ export const authAPI = {
       method: 'POST',
       body: JSON.stringify({ email, phone, code }),
     }),
+
+  verifyRegistration: (data) =>
+    apiRequest('/api/auth/verify-registration', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
 
 // User API

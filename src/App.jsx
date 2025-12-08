@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Activity, TrendingUp, Wallet, Settings, Link2, BookOpen, Users, History, Bot, LogOut, AlertCircle, CheckCircle, User, Mail, Lock, Bell, Shield, HelpCircle, FileText, Eye, EyeOff, Calendar, BarChart3, PieChart, LineChart, Download, Upload, X, Check, Clock, DollarSign, TrendingDown, Zap, Target } from 'lucide-react';
+import { Activity, TrendingUp, Wallet, Settings, Link2, BookOpen, Users, History, Bot, LogOut, AlertCircle, CheckCircle, User, Mail, Lock, Bell, Shield, HelpCircle, FileText, Eye, EyeOff, Calendar, BarChart3, PieChart, LineChart, Download, Upload, X, Check, Clock, DollarSign, TrendingDown, Zap, Target, Sun, Moon } from 'lucide-react';
 import { LineChart as RechartsLine, Line, AreaChart, Area, PieChart as RechartsPie, Pie, Cell, BarChart as RechartsBar, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { authAPI, userAPI, tradeAPI, setAuthToken, getAuthToken, websocket } from './services/api';
 import TermsOfService from './components/TermsOfService';
@@ -143,34 +143,39 @@ const AlgoEdge = () => {
   const themes = {
     dark: {
       bg: 'bg-black',
-      bgGradient: 'bg-gradient-to-br from-black via-purple-950 to-black',
+      bgGradient: 'bg-gradient-to-br from-black via-gray-950 to-black',
       card: 'bg-gray-900/90',
       cardHover: 'hover:bg-gray-800/90',
       text: 'text-white',
       textSecondary: 'text-gray-300',
       textMuted: 'text-gray-400',
-      border: 'border-purple-500/30',
-      borderHover: 'hover:border-purple-500/60',
-      accent: 'from-purple-600 to-pink-600',
-      accentAlt: 'from-cyan-500 to-blue-600',
-      sidebar: 'bg-gray-950/80',
-      input: 'bg-gray-800/80 border-purple-500/40 text-white',
-      success: 'text-green-400',
-      error: 'text-red-400',
-      warning: 'text-yellow-400',
-      info: 'text-cyan-400'
+      border: 'border-green-500',
+      borderHover: 'hover:border-green-400',
+      accent: 'from-green-500 to-green-600',
+      accentAlt: 'from-red-500 to-red-600',
+      accentBlue: 'from-blue-500 to-blue-600',
+      accentYellow: 'from-yellow-500 to-yellow-600',
+      sidebar: 'bg-black/95',
+      input: 'bg-gray-900/80 border-green-500 text-white',
+      success: 'text-green-500',
+      error: 'text-red-500',
+      warning: 'text-yellow-500',
+      info: 'text-blue-500'
     },
     light: {
       bg: 'bg-white',
-      bgGradient: 'bg-gradient-to-br from-purple-50 via-pink-50 to-cyan-50',
+      bgGradient: 'bg-gradient-to-br from-gray-50 via-green-50 to-gray-50',
       card: 'bg-white/95',
       cardHover: 'hover:bg-gray-50',
       text: 'text-gray-900',
       textSecondary: 'text-gray-700',
       textMuted: 'text-gray-500',
-      border: 'border-purple-300',
-      borderHover: 'hover:border-purple-500',
-      accent: 'from-purple-600 to-pink-600',
+      border: 'border-green-500',
+      borderHover: 'hover:border-green-600',
+      accent: 'from-green-500 to-green-600',
+      accentAlt: 'from-red-500 to-red-600',
+      accentBlue: 'from-blue-500 to-blue-600',
+      accentYellow: 'from-yellow-500 to-yellow-600',
       accentAlt: 'from-cyan-600 to-blue-700',
       sidebar: 'bg-white/95',
       input: 'bg-white border-purple-300 text-gray-900',
@@ -272,29 +277,29 @@ const AlgoEdge = () => {
 
   // Landing Page Component
   const LandingPage = () => (
-    <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black text-white">
+    <div className="min-h-screen bg-black text-white">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-xl border-b border-purple-500/20">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-b border-green-500">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 via-pink-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/50 animate-pulse">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-500">
                 <TrendingUp className="w-7 h-7 text-white" />
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+              <span className="text-2xl font-bold bg-gradient-to-r from-green-500 to-green-600 bg-clip-text text-transparent">
                 AlgoEdge
               </span>
             </div>
             <div className="flex items-center gap-4">
               <button
                 onClick={() => { setIsLogin(true); setShowAuthModal(true); }}
-                className="px-6 py-2 text-white hover:text-purple-300 transition-colors font-semibold"
+                className="px-6 py-2 text-white hover:text-green-500 transition-colors font-semibold"
               >
                 Login
               </button>
               <button
                 onClick={() => { setIsLogin(false); setShowAuthModal(true); }}
-                className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all"
+                className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg shadow-lg shadow-green-500 hover:shadow-xl transition-all"
               >
                 Get Started
               </button>
@@ -311,9 +316,10 @@ const AlgoEdge = () => {
               <Zap className="w-4 h-4" />
               <span>Live Trading • Real Results • AI-Powered</span>
             </div>
-            <h1 className="text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent leading-tight">
-              Trade Smarter.
-              <br />Not Harder.
+            <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
+              <span className="bg-gradient-to-r from-green-500 to-green-600 bg-clip-text text-transparent">Trade Smarter.</span>
+              <br />
+              <span className="bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">Not Harder.</span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-10">
               Harness the power of AI-driven trading robots to execute profitable trades 24/7. Connect your MT5 account and let our battle-tested algorithms work for you.
@@ -321,13 +327,13 @@ const AlgoEdge = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
                 onClick={() => { setIsLogin(false); setShowAuthModal(true); }}
-                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-lg font-bold rounded-xl shadow-2xl shadow-purple-500/50 hover:shadow-purple-500/70 transform hover:scale-105 transition-all"
+                className="px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white text-lg font-bold rounded-xl shadow-2xl shadow-green-500 hover:shadow-green-400 transform hover:scale-105 transition-all"
               >
                 Start Trading Free
               </button>
               <button
                 onClick={() => document.getElementById('features').scrollIntoView({ behavior: 'smooth' })}
-                className="px-8 py-4 bg-white/10 backdrop-blur text-white text-lg font-semibold rounded-xl border border-white/20 hover:bg-white/20 transition-all"
+                className="px-8 py-4 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black text-lg font-semibold rounded-xl shadow-xl shadow-yellow-500 hover:shadow-yellow-400 transition-all"
               >
                 Learn More
               </button>
@@ -336,21 +342,21 @@ const AlgoEdge = () => {
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
-            <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/30 text-center">
-              <div className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent mb-2">72%</div>
-              <div className="text-gray-300 text-sm">Average Win Rate</div>
+            <div className="bg-gradient-to-br from-green-900 to-green-800 backdrop-blur-xl rounded-2xl p-6 border-2 border-green-500 text-center">
+              <div className="text-4xl font-bold text-green-500 mb-2">72%</div>
+              <div className="text-white text-sm font-semibold">Average Win Rate</div>
             </div>
-            <div className="bg-gradient-to-br from-cyan-900/50 to-blue-900/50 backdrop-blur-xl rounded-2xl p-6 border border-cyan-500/30 text-center">
-              <div className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent mb-2">7</div>
-              <div className="text-gray-300 text-sm">Trading Robots</div>
+            <div className="bg-gradient-to-br from-blue-900 to-blue-800 backdrop-blur-xl rounded-2xl p-6 border-2 border-blue-500 text-center">
+              <div className="text-4xl font-bold text-blue-500 mb-2">7</div>
+              <div className="text-white text-sm font-semibold">Trading Robots</div>
             </div>
-            <div className="bg-gradient-to-br from-green-900/50 to-emerald-900/50 backdrop-blur-xl rounded-2xl p-6 border border-green-500/30 text-center">
-              <div className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">24/7</div>
-              <div className="text-gray-300 text-sm">Automated Trading</div>
+            <div className="bg-gradient-to-br from-yellow-900 to-yellow-800 backdrop-blur-xl rounded-2xl p-6 border-2 border-yellow-500 text-center">
+              <div className="text-4xl font-bold text-yellow-500 mb-2">24/7</div>
+              <div className="text-white text-sm font-semibold">Automated Trading</div>
             </div>
-            <div className="bg-gradient-to-br from-orange-900/50 to-red-900/50 backdrop-blur-xl rounded-2xl p-6 border border-orange-500/30 text-center">
-              <div className="text-4xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent mb-2">$0</div>
-              <div className="text-gray-300 text-sm">Setup Fee</div>
+            <div className="bg-gradient-to-br from-red-900 to-red-800 backdrop-blur-xl rounded-2xl p-6 border-2 border-red-500 text-center">
+              <div className="text-4xl font-bold text-red-500 mb-2">$0</div>
+              <div className="text-white text-sm font-semibold">Setup Fee</div>
             </div>
           </div>
         </div>
@@ -360,42 +366,42 @@ const AlgoEdge = () => {
       <section id="features" className="py-20 px-6 bg-black/30">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Powerful Features</h2>
+            <h2 className="text-5xl font-bold mb-4 text-green-500">Powerful Features</h2>
             <p className="text-xl text-gray-400">Everything you need to succeed in automated trading</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 backdrop-blur-xl rounded-2xl p-8 border border-purple-500/20 hover:border-purple-500/50 transition-all hover:scale-105">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-purple-500/50">
+            <div className="bg-gradient-to-br from-green-900 to-green-800 backdrop-blur-xl rounded-2xl p-8 border-2 border-green-500 hover:border-green-400 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-green-500">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-green-500">
                 <Bot className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-white">AI-Powered Robots</h3>
+              <h3 className="text-2xl font-bold mb-4 text-green-500">AI-Powered Robots</h3>
               <p className="text-gray-400 mb-4">Choose from 7 pre-configured trading robots powered by advanced algorithms. Each robot specializes in different strategies—from scalping to trend following.</p>
               <ul className="space-y-2 text-gray-300">
-                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> EMA Crossover System</li>
-                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> Ichimoku Cloud Breakout</li>
-                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> RSI + MACD Strategies</li>
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-500" /> EMA Crossover System</li>
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-500" /> Ichimoku Cloud Breakout</li>
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-500" /> RSI + MACD Strategies</li>
               </ul>
             </div>
 
-            <div className="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 backdrop-blur-xl rounded-2xl p-8 border border-cyan-500/20 hover:border-cyan-500/50 transition-all hover:scale-105">
-              <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-cyan-500/50">
+            <div className="bg-gradient-to-br from-blue-900 to-blue-800 backdrop-blur-xl rounded-2xl p-8 border-2 border-blue-500 hover:border-blue-400 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-blue-500">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500">
                 <Link2 className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-white">MT5 Integration</h3>
+              <h3 className="text-2xl font-bold mb-4 text-blue-500">MT5 Integration</h3>
               <p className="text-gray-400 mb-4">Seamlessly connect your MetaTrader 5 account. We never hold your funds—all trading happens through your trusted broker.</p>
               <ul className="space-y-2 text-gray-300">
-                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> Secure API Connection</li>
-                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> Real-time Sync</li>
-                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> Multiple Accounts</li>
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-blue-500" /> Secure API Connection</li>
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-blue-500" /> Real-time Sync</li>
+                <li className="flex items-center gap-2"><Check className="w-5 h-5 text-blue-500" /> Multiple Accounts</li>
               </ul>
             </div>
 
-            <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 backdrop-blur-xl rounded-2xl p-8 border border-green-500/20 hover:border-green-500/50 transition-all hover:scale-105">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-green-500/50">
+            <div className="bg-gradient-to-br from-yellow-900 to-yellow-800 backdrop-blur-xl rounded-2xl p-8 border-2 border-yellow-500 hover:border-yellow-400 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-yellow-500">
+              <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-yellow-500">
                 <BarChart3 className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-white">Real-Time Analytics</h3>
+              <h3 className="text-2xl font-bold mb-4 text-yellow-500">Real-Time Analytics</h3>
               <p className="text-gray-400 mb-4">Monitor your performance with live dashboards, detailed trade history, and comprehensive profit/loss tracking.</p>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-center gap-2"><Check className="w-5 h-5 text-green-400" /> Live Trade Feed</li>
@@ -417,7 +423,7 @@ const AlgoEdge = () => {
 
           <div className="grid md:grid-cols-3 gap-12">
             <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-3xl font-bold text-white mx-auto mb-6 shadow-2xl shadow-purple-500/50">
+              <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full flex items-center justify-center text-3xl font-bold text-white mx-auto mb-6 shadow-2xl shadow-green-500/50">
                 1
               </div>
               <h3 className="text-2xl font-bold mb-4 text-white">Create Account</h3>
@@ -448,7 +454,7 @@ const AlgoEdge = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-5xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Built for Security & Trust</h2>
+              <h2 className="text-5xl font-bold mb-6 bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">Built for Security & Trust</h2>
               <p className="text-xl text-gray-300 mb-8">Your capital security is our top priority. AlgoEdge employs bank-grade encryption and never holds your funds.</p>
               <div className="space-y-4">
                 <div className="flex items-start gap-4">
@@ -509,13 +515,13 @@ const AlgoEdge = () => {
       {/* CTA Section */}
       <section className="py-20 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+          <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
             Ready to Automate Your Trading?
           </h2>
           <p className="text-xl text-gray-300 mb-10">Join thousands of traders who trust AlgoEdge to manage their portfolios 24/7.</p>
           <button
             onClick={() => { setIsLogin(false); setShowAuthModal(true); }}
-            className="px-12 py-5 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xl font-bold rounded-xl shadow-2xl shadow-purple-500/50 hover:shadow-purple-500/70 transform hover:scale-105 transition-all"
+            className="px-12 py-5 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xl font-bold rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transform hover:scale-105 transition-all"
           >
             Get Started Free
           </button>
@@ -570,6 +576,10 @@ const AlgoEdge = () => {
   );
 
   // Authentication Handler
+  // Auth state for two-step registration
+  const [registrationStep, setRegistrationStep] = useState(1); // 1 = enter details, 2 = verify code
+  const [pendingRegistrationEmail, setPendingRegistrationEmail] = useState('');
+
   const handleAuth = async (e) => {
     e.preventDefault();
     setIsAuthLoading(true);
@@ -604,34 +614,69 @@ const AlgoEdge = () => {
         } catch (err) {
           console.error('Error fetching user data:', err);
         }
+
+        setShowAuthModal(false);
+        setCurrentPage('dashboard');
       } else {
-        if (!username || !email || !password || !confirmPassword) {
-          showToast('Please fill in all fields', 'error');
-          setIsAuthLoading(false);
-          return;
-        }
+        // Registration flow
+        if (registrationStep === 1) {
+          // Step 1: Send verification code
+          if (!username || !email || !password || !confirmPassword) {
+            showToast('Please fill in all fields', 'error');
+            setIsAuthLoading(false);
+            return;
+          }
 
-        if (password !== confirmPassword) {
-          showToast('Passwords do not match', 'error');
-          setIsAuthLoading(false);
-          return;
-        }
+          if (password !== confirmPassword) {
+            showToast('Passwords do not match', 'error');
+            setIsAuthLoading(false);
+            return;
+          }
 
-        const response = await authAPI.register({ username, email, password });
-        setAuthToken(response.token);
-        setCurrentUser(response.user);
-        setIsAuthenticated(true);
-        showToast(response.message || 'Registration successful! Welcome to AlgoEdge.', 'success');
-        setBalance(0);
-        setEquity(0);
-        setSubscriptionPlan('free');
+          const response = await authAPI.register({ username, email, password });
+          
+          if (response.requiresVerification) {
+            setPendingRegistrationEmail(email);
+            setRegistrationStep(2);
+            showToast('Verification code sent to your email!', 'success');
+          }
+        } else if (registrationStep === 2) {
+          // Step 2: Verify code and complete registration
+          if (!verificationCode) {
+            showToast('Please enter the verification code', 'error');
+            setIsAuthLoading(false);
+            return;
+          }
+
+          const response = await authAPI.verifyRegistration({ 
+            email: pendingRegistrationEmail, 
+            code: verificationCode 
+          });
+
+          setAuthToken(response.token);
+          setCurrentUser(response.user);
+          setIsAuthenticated(true);
+          showToast(response.message || 'Registration successful! Welcome to AlgoEdge.', 'success');
+          setBalance(0);
+          setEquity(0);
+          setSubscriptionPlan('free');
+          
+          // Reset registration state
+          setRegistrationStep(1);
+          setPendingRegistrationEmail('');
+          setShowAuthModal(false);
+          setCurrentPage('dashboard');
+        }
       }
 
-      setUsername('');
-      setPassword('');
-      setConfirmPassword('');
-      setEmail('');
-      setVerificationCode('');
+      // Clear form fields
+      if (isLogin || registrationStep === 2) {
+        setUsername('');
+        setPassword('');
+        setConfirmPassword('');
+        setEmail('');
+        setVerificationCode('');
+      }
     } catch (error) {
       console.error('Auth error:', error);
       showToast(error.message || 'Authentication failed', 'error');
@@ -1041,7 +1086,7 @@ const AlgoEdge = () => {
   const AuthModal = () => (
     showAuthModal && (
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-gray-950/95 backdrop-blur-xl rounded-2xl border border-purple-500/30 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="bg-black backdrop-blur-xl rounded-2xl border-2 border-green-500 shadow-2xl shadow-green-500 max-w-md w-full max-h-[90vh] overflow-y-auto">
           <div className="p-8">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-white">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
@@ -1052,17 +1097,19 @@ const AlgoEdge = () => {
 
             <div className="flex gap-2 mb-6">
               <button
-                onClick={() => setIsLogin(true)}
+                type="button"
+                onClick={() => { setIsLogin(true); setRegistrationStep(1); }}
                 className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
-                  isLogin ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' : 'bg-slate-700/50 text-gray-400'
+                  isLogin ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg shadow-green-500' : 'bg-gray-800 text-gray-400'
                 }`}
               >
                 Login
               </button>
               <button
-                onClick={() => setIsLogin(false)}
+                type="button"
+                onClick={() => { setIsLogin(false); setRegistrationStep(1); }}
                 className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
-                  !isLogin ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' : 'bg-slate-700/50 text-gray-400'
+                  !isLogin ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg shadow-green-500' : 'bg-gray-800 text-gray-400'
                 }`}
               >
                 Register
@@ -1070,64 +1117,95 @@ const AlgoEdge = () => {
             </div>
 
             <form onSubmit={handleAuth} className="space-y-4">
-              {!isLogin && (
+              {!isLogin && registrationStep === 1 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
                   <input
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-700/50 border border-purple-500/30 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                    className="w-full px-4 py-3 bg-gray-900 border-2 border-green-500 rounded-lg text-white focus:outline-none focus:border-green-400 focus:shadow-lg focus:shadow-green-500"
                     placeholder="Enter username"
                     required={!isLogin}
+                    autoComplete="off"
                   />
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-700/50 border border-purple-500/30 rounded-lg text-white focus:outline-none focus:border-purple-500"
-                  placeholder="you@example.com"
-                  required
-                />
-              </div>
+              {(!isLogin && registrationStep === 1) || isLogin ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-900 border-2 border-blue-500 rounded-lg text-white focus:outline-none focus:border-blue-400 focus:shadow-lg focus:shadow-blue-500"
+                      placeholder="you@example.com"
+                      required
+                      autoComplete="off"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-700/50 border border-purple-500/30 rounded-lg text-white focus:outline-none focus:border-purple-500"
-                    placeholder="Enter password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full px-4 py-3 bg-gray-900 border-2 border-yellow-500 rounded-lg text-white focus:outline-none focus:border-yellow-400 focus:shadow-lg focus:shadow-yellow-500"
+                        placeholder="Enter password"
+                        required
+                        autoComplete="off"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : null}
 
-              {!isLogin && (
+              {!isLogin && registrationStep === 1 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-700/50 border border-purple-500/30 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                    className="w-full px-4 py-3 bg-gray-900 border-2 border-yellow-500 rounded-lg text-white focus:outline-none focus:border-yellow-400 focus:shadow-lg focus:shadow-yellow-500"
                     placeholder="Re-enter password"
                     required={!isLogin}
+                    autoComplete="off"
                   />
+                </div>
+              )}
+
+              {!isLogin && registrationStep === 2 && (
+                <div>
+                  <div className="mb-4 p-4 bg-green-900 border-2 border-green-500 rounded-lg">
+                    <p className="text-sm text-green-500 font-semibold">
+                      <Mail className="w-4 h-4 inline mr-2" />
+                      We've sent a 6-digit verification code to <strong>{pendingRegistrationEmail}</strong>
+                    </p>
+                  </div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Verification Code</label>
+                  <input
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="w-full px-4 py-3 bg-gray-900 border-2 border-green-500 rounded-lg text-green-500 text-center text-2xl tracking-widest focus:outline-none focus:border-green-400 focus:shadow-lg focus:shadow-green-500 font-bold"
+                    placeholder="000000"
+                    maxLength={6}
+                    required
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-gray-400 mt-2 text-center">Enter the 6-digit code from your email</p>
                 </div>
               )}
 
@@ -1136,7 +1214,7 @@ const AlgoEdge = () => {
                   <button
                     type="button"
                     onClick={() => { setShowAuthModal(false); setShowPasswordReset(true); }}
-                    className="text-sm text-purple-400 hover:text-purple-300"
+                    className="text-sm text-green-400 hover:text-green-300"
                   >
                     Forgot password?
                   </button>
@@ -1146,17 +1224,17 @@ const AlgoEdge = () => {
               <button
                 type="submit"
                 disabled={isAuthLoading}
-                className={`w-full py-3 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg shadow-lg shadow-purple-500/50 hover:shadow-xl transition-all ${
+                className={`w-full py-3 px-6 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-lg shadow-xl shadow-green-500 hover:shadow-2xl hover:shadow-green-400 transition-all ${
                   isAuthLoading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
                 {isAuthLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    {isLogin ? 'Logging in...' : 'Registering...'}
+                    {isLogin ? 'Logging in...' : registrationStep === 1 ? 'Sending code...' : 'Verifying...'}
                   </span>
                 ) : (
-                  isLogin ? 'Login' : 'Register'
+                  isLogin ? 'Login' : registrationStep === 1 ? 'Continue' : 'Verify & Complete'
                 )}
               </button>
             </form>
@@ -1164,9 +1242,9 @@ const AlgoEdge = () => {
             {!isLogin && (
               <div className="mt-4 text-xs text-gray-400 text-center">
                 By registering, you agree to our{' '}
-                <button onClick={() => { setShowAuthModal(false); setShowTerms(true); }} className="text-purple-400 hover:underline">Terms of Service</button>
+                <button onClick={() => { setShowAuthModal(false); setShowTerms(true); }} className="text-green-400 hover:underline">Terms of Service</button>
                 {' '}and{' '}
-                <button onClick={() => { setShowAuthModal(false); setShowPrivacy(true); }} className="text-purple-400 hover:underline">Privacy Policy</button>
+                <button onClick={() => { setShowAuthModal(false); setShowPrivacy(true); }} className="text-green-400 hover:underline">Privacy Policy</button>
               </div>
             )}
           </div>
@@ -1321,7 +1399,7 @@ const AlgoEdge = () => {
                   handleMT5Connection();
                 }}
                 disabled={isMT5Loading}
-                className={`flex-1 py-3 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg shadow-lg shadow-purple-500/50 hover:shadow-xl ${
+                className={`flex-1 py-3 px-6 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg shadow-lg shadow-green-500/50 hover:shadow-xl ${
                   isMT5Loading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
@@ -1554,7 +1632,7 @@ const AlgoEdge = () => {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+          <h2 className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
             Live Trades
           </h2>
           <div className="flex gap-3">
@@ -1994,7 +2072,7 @@ const AlgoEdge = () => {
           className={`w-full py-3 px-6 rounded-lg font-semibold transition-all ${
             twoFAEnabled
               ? 'bg-red-600 hover:bg-red-700 text-white'
-              : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+              : 'bg-gradient-to-r from-green-600 to-emerald-600 text-white'
           }`}
         >
           {twoFAEnabled ? 'Disable 2FA' : 'Enable 2FA'}
@@ -2022,7 +2100,7 @@ const AlgoEdge = () => {
 
       <button
         onClick={handleSettingsUpdate}
-        className="w-full py-3 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg shadow-lg"
+        className="w-full py-3 px-6 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg shadow-lg"
       >
         Save Settings
       </button>
@@ -2032,7 +2110,7 @@ const AlgoEdge = () => {
   // Profile Page
   const ProfilePage = () => (
     <div className="space-y-6">
-      <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+      <h2 className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
         Profile
       </h2>
 
@@ -2291,7 +2369,7 @@ const AlgoEdge = () => {
                   className={`w-full py-3 rounded-lg font-semibold transition-all ${
                     plan.current
                       ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-lg'
+                      : 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-lg'
                   }`}
                   disabled={plan.current}
                 >
@@ -2436,7 +2514,7 @@ const AlgoEdge = () => {
             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 via-pink-500 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg animate-pulse">
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
               AlgoEdge
             </h1>
           </div>
@@ -2553,7 +2631,7 @@ const AlgoEdge = () => {
             onClick={() => setIsDarkMode(!isDarkMode)}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all ${theme.textMuted} ${theme.cardHover}`}
           >
-            {isDarkMode ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+            {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             {isDarkMode ? 'Light Mode' : 'Dark Mode'}
           </button>
         </nav>
