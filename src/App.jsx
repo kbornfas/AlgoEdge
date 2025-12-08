@@ -314,11 +314,25 @@ const AlgoEdge = () => {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-7 h-7 text-white" />
+              {/* Custom Logo SVG */}
+              <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-black border-2 border-green-500">
+                {/* Advanced Forex Trading Logo SVG */}
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="30" height="30" rx="8" fill="#111" stroke="#22c55e" strokeWidth="2"/>
+                  {/* Candlestick chart bars */}
+                  <rect x="10" y="14" width="2" height="8" rx="1" fill="#22c55e" />
+                  <rect x="16" y="10" width="2" height="12" rx="1" fill="#ef4444" />
+                  <rect x="22" y="16" width="2" height="6" rx="1" fill="#22c55e" />
+                  {/* Up arrow for profit */}
+                  <path d="M8 26L14 20L20 26" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  {/* Down arrow for loss */}
+                  <path d="M28 10L22 16L16 10" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  {/* Currency symbol ($) */}
+                  <text x="18" y="30" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#fff" fontFamily="Arial">$</text>
+                </svg>
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-green-500 to-green-600 bg-clip-text text-transparent">
-                AlgoEdge
+              <span className="text-2xl font-bold">
+                <span className="text-red-500">Algo</span><span className="text-green-500">Edge</span>
               </span>
             </div>
             <div className="flex items-center gap-4">
@@ -569,7 +583,9 @@ const AlgoEdge = () => {
                 <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
                   <TrendingUp className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xl font-bold text-white">AlgoEdge</span>
+                <span className="text-xl font-bold">
+                  <span className="text-red-500">Algo</span><span className="text-green-500">Edge</span>
+                </span>
               </div>
               <p className="text-gray-400 text-sm">AI-powered trading platform for the modern trader.</p>
             </div>
