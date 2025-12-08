@@ -1,3 +1,13 @@
+  // IP Whitelist Management (admin)
+  getUserIPs: (userId) =>
+    apiRequest(`/api/ip-whitelist/user/${userId}`, { method: 'GET' }),
+  addUserIP: (userId, ip_address) =>
+    apiRequest(`/api/ip-whitelist/user/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify({ ip_address }),
+    }),
+  removeUserIP: (userId, ip) =>
+    apiRequest(`/api/ip-whitelist/user/${userId}/${ip}`, { method: 'DELETE' }),
 import { io } from 'socket.io-client';
 
 // Default to backend dev port 3000 (see README); override via VITE_API_URL / VITE_WS_URL in .env

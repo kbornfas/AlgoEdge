@@ -764,6 +764,7 @@ const AlgoEdge = () => {
   // Password Reset Flow
   const handlePasswordReset = async (e) => {
     e.preventDefault();
+    alert('Password reset handler called! Step: ' + resetStep);
     console.log('handlePasswordReset called, step:', resetStep, 'email:', resetEmail, 'code:', resetCode, 'newPassword:', newPassword);
     try {
       if (resetStep === 1) {
