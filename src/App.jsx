@@ -764,28 +764,27 @@ const AlgoEdge = () => {
   // Password Reset Flow
   const handlePasswordReset = async (e) => {
     e.preventDefault();
+    console.log('handlePasswordReset called, step:', resetStep, 'email:', resetEmail, 'code:', resetCode, 'newPassword:', newPassword);
     try {
       if (resetStep === 1) {
-        // Send code to email
+        console.log('Sending password reset code to:', resetEmail);
         await authAPI.requestPasswordReset(resetEmail);
         showToast('Password reset code sent to your email', 'success');
         setResetStep(2);
       } else if (resetStep === 2) {
-        // Verify code by attempting password reset with dummy password
-        // (Backend will only check code validity, not change password if newPassword is missing/invalid)
+        console.log('Verifying code:', resetCode);
         if (!resetCode || resetCode.length !== 6) {
           showToast('Enter the 6-digit code sent to your email.', 'error');
           return;
         }
-        // Move to next step, actual verification is done in step 3
         setResetStep(3);
         showToast('Code verified! Enter your new password.', 'success');
       } else if (resetStep === 3) {
+        console.log('Resetting password for:', resetEmail);
         if (newPassword.length < 8) {
           showToast('Password must be at least 8 characters', 'error');
           return;
         }
-        // Actually reset password
         await authAPI.resetPassword({ email: resetEmail, code: resetCode, newPassword });
         showToast('Password reset successful! Please login.', 'success');
         setShowPasswordReset(false);
@@ -795,6 +794,7 @@ const AlgoEdge = () => {
         setNewPassword('');
       }
     } catch (error) {
+      console.error('Password reset error:', error);
       showToast(error.message || 'Password reset failed', 'error');
     }
   };
