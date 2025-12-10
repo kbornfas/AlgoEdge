@@ -1,3 +1,4 @@
+
 import pool from '../config/database.js';
 import {
   emitMT5Status,
@@ -6,21 +7,22 @@ import {
   emitTradeClosed,
 } from './websocketService.js';
 
-// Dynamic import for MetaAPI SDK to handle ESM compatibility
+// Safe MetaAPI SDK import for Node.js
 let MetaApi;
 try {
-  const metaApiModule = await import('metaapi.cloud-sdk');
-  MetaApi = metaApiModule.default;
+  // Only require in Node.js (no window/global)
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  MetaApi = require('metaapi.cloud-sdk').default;
   console.log('✅ MetaAPI SDK loaded successfully');
 } catch (error) {
   console.error('❌ Failed to load MetaAPI SDK:', error.message);
   console.log('⚠️  Using mock MetaAPI implementation');
-  
   // Fallback mock implementation
   MetaApi = class {
     constructor(token) {
       this.token = token;
       this.metatraderAccountApi = {
+        getAccounts: async () => [],
         getAccount: async (accountId) => ({
           deploy: async () => console.log(`Mock: Deploying MT5 account ${accountId}`),
           waitDeployed: async () => console.log('Mock: Account deployed'),
@@ -29,22 +31,40 @@ try {
             balance: 10000,
             equity: 10000,
             margin: 0,
-            freeMargin: 10000
+            freeMargin: 10000,
+            leverage: 100,
+            profit: 0
           }),
-          createMarketBuyOrder: async (symbol, volume, sl, tp) => ({ 
-            positionId: `POS_${Date.now()}`,
-            symbol,
-            volume,
-            type: 'BUY'
-          }),
-          createMarketSellOrder: async (symbol, volume, sl, tp) => ({ 
-            positionId: `POS_${Date.now()}`,
-            symbol,
-            volume,
-            type: 'SELL'
+          createMarketOrder: async (symbol, volume, orderType, sl, tp) => ({
+            price: 1.2345,
+            orderId: `MOCK_${Date.now()}`
           }),
           getPositions: async () => [],
-          closePosition: async (positionId) => ({ success: true, positionId })
+          closePosition: async (ticket) => ({ price: 1.2345 }),
+        }),
+        createAccount: async (params) => ({
+          id: `MOCK_ACC_${Date.now()}`,
+          ...params,
+          deploy: async () => console.log('Mock: Deploying account'),
+          waitDeployed: async () => console.log('Mock: Account deployed'),
+          getRPCConnection: () => ({
+            connect: async () => console.log('Mock: Connected'),
+            waitSynchronized: async () => console.log('Mock: Synchronized'),
+            getAccountInformation: async () => ({
+              balance: 10000,
+              equity: 10000,
+              margin: 0,
+              freeMargin: 10000,
+              leverage: 100,
+              profit: 0
+            }),
+            createMarketOrder: async (symbol, volume, orderType, sl, tp) => ({
+              price: 1.2345,
+              orderId: `MOCK_${Date.now()}`
+            }),
+            getPositions: async () => [],
+            closePosition: async (ticket) => ({ price: 1.2345 }),
+          })
         })
       };
     }

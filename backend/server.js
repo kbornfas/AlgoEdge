@@ -157,11 +157,7 @@ const gracefulShutdown = async () => {
     process.exit(0);
   });
 
-  // Force close after 10 seconds
-  setTimeout(() => {
-    console.error('Forcing shutdown after timeout');
-    process.exit(1);
-  }, 10000);
+  // Removed forced shutdown timeout to keep server running
 };
 
 process.on('SIGTERM', gracefulShutdown);

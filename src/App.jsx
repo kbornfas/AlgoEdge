@@ -626,7 +626,7 @@ const AlgoEdge = () => {
   );
 
   // Authentication Handler
-  // Auth state for two-step registration
+
 
   const handleAuth = useCallback(async (e) => {
     e.preventDefault();
@@ -659,7 +659,7 @@ const AlgoEdge = () => {
         setShowAuthModal(false);
         setCurrentPage('dashboard');
       } else {
-        // Registration flow
+        // Registration flow (single step)
         if (!username || !email || !password || !confirmPassword) {
           showToast('Please fill in all fields', 'error');
           setIsAuthLoading(false);
@@ -1086,7 +1086,7 @@ const AlgoEdge = () => {
             <div className="flex gap-2 mb-6">
               <button
                 type="button"
-                onClick={() => { setIsLogin(true); setRegistrationStep(1); }}
+                onClick={() => { setIsLogin(true); }}
                 className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
                   isLogin ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' : 'bg-gray-800 text-gray-400'
                 }`}
@@ -1095,7 +1095,7 @@ const AlgoEdge = () => {
               </button>
               <button
                 type="button"
-                onClick={() => { setIsLogin(false); setRegistrationStep(1); }}
+                onClick={() => { setIsLogin(false); }}
                 className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
                   !isLogin ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' : 'bg-gray-800 text-gray-400'
                 }`}
@@ -1105,7 +1105,7 @@ const AlgoEdge = () => {
             </div>
 
             <form onSubmit={handleAuth} className="space-y-4">
-              {!isLogin && registrationStep === 1 && (
+              {!isLogin && (
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
                   <input
@@ -1122,7 +1122,7 @@ const AlgoEdge = () => {
                 </div>
               )}
 
-              {(!isLogin && registrationStep === 1) || isLogin ? (
+              {(!isLogin) || isLogin ? (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
@@ -1165,7 +1165,7 @@ const AlgoEdge = () => {
                 </>
               ) : null}
 
-              {!isLogin && registrationStep === 1 && (
+              {!isLogin && (
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
                   <input
@@ -1182,30 +1182,7 @@ const AlgoEdge = () => {
                 </div>
               )}
 
-              {!isLogin && registrationStep === 2 && (
-                <div>
-                  <div className="mb-4 p-4 bg-green-900 border-2 border-green-500 rounded-lg">
-                    <p className="text-sm text-green-500 font-semibold">
-                      <Mail className="w-4 h-4 inline mr-2" />
-                      We've sent a 6-digit verification code to <strong>{pendingRegistrationEmail}</strong>
-                    </p>
-                  </div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Verification Code</label>
-                  <input
-                    id="auth-verification-code"
-                    type="text"
-                    name="verificationCode"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full px-4 py-3 bg-gray-900 border-2 border-green-500 rounded-lg text-green-500 text-center text-2xl tracking-widest focus:outline-none focus:border-green-400 font-bold"
-                    placeholder="000000"
-                    maxLength={6}
-                    required
-                    autoComplete="one-time-code"
-                  />
-                  <p className="text-xs text-gray-400 mt-2 text-center">Enter the 6-digit code from your email</p>
-                </div>
-              )}
+
 
               {isLogin && (
                 <div className="text-right">
@@ -1229,10 +1206,10 @@ const AlgoEdge = () => {
                 {isAuthLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    {isLogin ? 'Logging in...' : registrationStep === 1 ? 'Sending code...' : 'Verifying...'}
+                    {isLogin ? 'Logging in...' : 'Registering...'}
                   </span>
                 ) : (
-                  isLogin ? 'Login' : registrationStep === 1 ? 'Continue' : 'Verify & Complete'
+                  isLogin ? 'Login' : 'Register'
                 )}
               </button>
             </form>
@@ -1249,7 +1226,7 @@ const AlgoEdge = () => {
         </div>
       </div>
     );
-  }, [showAuthModal, isLogin, username, email, password, confirmPassword, showPassword, registrationStep, pendingRegistrationEmail, verificationCode, isAuthLoading, handleAuth]);
+  }, [showAuthModal, isLogin, username, email, password, confirmPassword, showPassword, isAuthLoading, handleAuth]);
 
   // Show landing page when not authenticated
   if (!isAuthenticated) {
