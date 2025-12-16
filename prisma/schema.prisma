@@ -1,0 +1,194 @@
+// AlgoEdge Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   Int                 @id @default(autoincrement())
+  username             String              @unique @db.VarChar(50)
+  email                String              @unique @db.VarChar(255)
+  passwordHash         String              @map("password_hash") @db.VarChar(255)
+  fullName             String?             @map("full_name") @db.VarChar(100)
+  phone                String?             @db.VarChar(20)
+  country              String?             @db.VarChar(100)
+  timezone             String              @default("UTC") @db.VarChar(50)
+  isVerified           Boolean             @default(false) @map("is_verified")
+  verificationToken    String?             @map("verification_token") @db.VarChar(255)
+  verificationExpires  DateTime?           @map("verification_expires")
+  twoFaEnabled         Boolean             @default(false) @map("two_fa_enabled")
+  twoFaSecret          String?             @map("two_fa_secret") @db.VarChar(255)
+  resetToken           String?             @map("reset_token") @db.VarChar(255)
+  resetExpires         DateTime?           @map("reset_expires")
+  lastLogin            DateTime?           @map("last_login")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  subscription         Subscription?
+  mt5Accounts          Mt5Account[]
+  robotConfigs         UserRobotConfig[]
+  trades               Trade[]
+  settings             UserSettings?
+  auditLogs            AuditLog[]
+
+  @@index([email])
+  @@index([username])
+  @@map("users")
+}
+
+model Subscription {
+  id                    Int       @id @default(autoincrement())
+  userId                Int       @unique @map("user_id")
+  plan                  String    @default("free") @db.VarChar(50)
+  status                String    @default("active") @db.VarChar(50)
+  stripeCustomerId      String?   @map("stripe_customer_id") @db.VarChar(255)
+  stripeSubscriptionId  String?   @map("stripe_subscription_id") @db.VarChar(255)
+  currentPeriodStart    DateTime? @map("current_period_start")
+  currentPeriodEnd      DateTime? @map("current_period_end")
+  cancelAtPeriodEnd     Boolean   @default(false) @map("cancel_at_period_end")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model Mt5Account {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  accountId   String    @map("account_id") @db.VarChar(50)
+  server      String    @db.VarChar(100)
+  apiKey      String?   @map("api_key") @db.Text
+  apiSecret   String?   @map("api_secret") @db.Text
+  isDemo      Boolean   @default(true) @map("is_demo")
+  isConnected Boolean   @default(false) @map("is_connected")
+  balance     Decimal   @default(0) @db.Decimal(15, 2)
+  equity      Decimal   @default(0) @db.Decimal(15, 2)
+  lastSync    DateTime? @map("last_sync")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trades Trade[]
+
+  @@map("mt5_accounts")
+}
+
+model TradingRobot {
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  strategy    String?  @db.VarChar(100)
+  timeframe   String?  @db.VarChar(10)
+  riskLevel   String?  @map("risk_level") @db.VarChar(20)
+  winRate     Decimal? @map("win_rate") @db.Decimal(5, 2)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  userConfigs UserRobotConfig[]
+  trades      Trade[]
+
+  @@map("trading_robots")
+}
+
+model UserRobotConfig {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  robotId   String   @map("robot_id") @db.VarChar(50)
+  isEnabled Boolean  @default(false) @map("is_enabled")
+  settings  Json?    @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  robot TradingRobot  @relation(fields: [robotId], references: [id])
+
+  @@unique([userId, robotId])
+  @@map("user_robot_configs")
+}
+
+model Trade {
+  id            BigInt    @id @default(autoincrement())
+  userId        Int       @map("user_id")
+  robotId       String?   @map("robot_id") @db.VarChar(50)
+  mt5AccountId  Int?      @map("mt5_account_id")
+  pair          String    @db.VarChar(20)
+  type          String    @db.VarChar(10)
+  volume        Decimal   @db.Decimal(10, 2)
+  openPrice     Decimal   @map("open_price") @db.Decimal(15, 5)
+  closePrice    Decimal?  @map("close_price") @db.Decimal(15, 5)
+  stopLoss      Decimal?  @map("stop_loss") @db.Decimal(15, 5)
+  takeProfit    Decimal?  @map("take_profit") @db.Decimal(15, 5)
+  profit        Decimal?  @db.Decimal(15, 2)
+  status        String    @default("open") @db.VarChar(20)
+  openTime      DateTime  @default(now()) @map("open_time")
+  closeTime     DateTime? @map("close_time")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  robot      TradingRobot? @relation(fields: [robotId], references: [id])
+  mt5Account Mt5Account?   @relation(fields: [mt5AccountId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([openTime])
+  @@map("trades")
+}
+
+model UserSettings {
+  id                 Int      @id @default(autoincrement())
+  userId             Int      @unique @map("user_id")
+  emailNotifications Boolean  @default(true) @map("email_notifications")
+  tradeAlerts        Boolean  @default(true) @map("trade_alerts")
+  dailyReports       Boolean  @default(false) @map("daily_reports")
+  riskLevel          String   @default("medium") @map("risk_level") @db.VarChar(20)
+  stopLossPercent    Decimal  @default(2.0) @map("stop_loss_percent") @db.Decimal(5, 2)
+  takeProfitPercent  Decimal  @default(5.0) @map("take_profit_percent") @db.Decimal(5, 2)
+  autoCloseProfit    Boolean  @default(false) @map("auto_close_profit")
+  theme              String   @default("dark") @db.VarChar(20)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+model VerificationCode {
+  id        Int      @id @default(autoincrement())
+  email     String   @db.VarChar(255)
+  code      String   @db.VarChar(10)
+  type      String   @db.VarChar(50)
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  metadata  Json?    @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([email, type])
+  @@index([email, type])
+  @@index([expiresAt])
+  @@map("verification_codes")
+}
+
+model AuditLog {
+  id        BigInt   @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  action    String   @db.VarChar(100)
+  details   Json?    @db.JsonB
+  ipAddress String?  @map("ip_address") @db.VarChar(50)
+  userAgent String?  @map("user_agent") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
