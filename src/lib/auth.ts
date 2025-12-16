@@ -1,7 +1,16 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Warn if JWT_SECRET is not set, but allow fallback for development
+if (!JWT_SECRET) {
+  console.warn('⚠️  JWT_SECRET not set. Using development fallback. DO NOT use in production!');
+}
+
+// Use fallback for development/build, but log warning
+const SECRET = JWT_SECRET || 'dev-only-secret-DO-NOT-USE-IN-PRODUCTION';
 
 export interface JWTPayload {
   userId: number;
@@ -13,7 +22,7 @@ export interface JWTPayload {
  * Generate JWT token for authenticated user
  */
 export function generateToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign(payload, SECRET, { expiresIn: '7d' });
 }
 
 /**
@@ -21,7 +30,7 @@ export function generateToken(payload: JWTPayload): string {
  */
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, SECRET) as JWTPayload;
     return decoded;
   } catch (error) {
     return null;
@@ -44,22 +53,20 @@ export async function comparePassword(password: string, hash: string): Promise<b
 }
 
 /**
- * Generate random token for email verification, password reset, etc.
+ * Generate cryptographically secure random token
+ * Used for email verification, password reset, etc.
  */
 export function generateRandomToken(length: number = 32): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let token = '';
-  for (let i = 0; i < length; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return token;
+  return crypto.randomBytes(length).toString('hex');
 }
 
 /**
- * Generate random numeric code (for 2FA, verification, etc.)
+ * Generate random numeric code (for verification codes, etc.)
  */
 export function generateNumericCode(length: number = 6): string {
   const min = Math.pow(10, length - 1);
   const max = Math.pow(10, length) - 1;
-  return Math.floor(Math.random() * (max - min + 1) + min).toString();
+  const randomBuffer = crypto.randomBytes(4);
+  const randomNumber = randomBuffer.readUInt32BE(0);
+  return (min + (randomNumber % (max - min + 1))).toString();
 }
