@@ -1,0 +1,16 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/auth/2fa/disable/route": "app/api/auth/2fa/disable/route.js",
+  "/api/auth/2fa/setup/route": "app/api/auth/2fa/setup/route.js",
+  "/api/auth/2fa/verify/route": "app/api/auth/2fa/verify/route.js",
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/auth/register/route": "app/api/auth/register/route.js",
+  "/api/auth/reset-password/route": "app/api/auth/reset-password/route.js",
+  "/api/auth/verify/route": "app/api/auth/verify/route.js",
+  "/api/user/profile/route": "app/api/user/profile/route.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/auth/register/page": "app/auth/register/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/page": "app/page.js",
+  "/dashboard/page": "app/dashboard/page.js"
+}
