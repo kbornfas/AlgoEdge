@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Grid,
@@ -9,11 +11,44 @@ import {
   Button,
   Chip,
   LinearProgress,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
-import { TrendingUp, DollarSign, Activity, Users } from 'lucide-react';
+import { TrendingUp, DollarSign, Activity, Users, AlertCircle, Upload } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [paymentStatus, setPaymentStatus] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPaymentStatus();
+  }, []);
+
+  const fetchPaymentStatus = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/auth/login');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/payment-proof/status', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPaymentStatus(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch payment status:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Mock data - will be replaced with real API calls
   const stats = {
     balance: 10000,
@@ -31,6 +66,49 @@ export default function DashboardPage() {
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
         Monitor your automated trading performance
       </Typography>
+
+      {/* Payment Status Alert */}
+      {!loading && !paymentStatus?.isActivated && (
+        <Alert
+          severity={paymentStatus?.paymentStatus === 'pending' ? 'info' : 'warning'}
+          sx={{ mb: 4 }}
+          icon={<AlertCircle size={24} />}
+          action={
+            paymentStatus?.paymentStatus === 'pending' && (
+              <Button
+                component={Link}
+                href="/payment-proof"
+                variant="contained"
+                size="small"
+                startIcon={<Upload size={16} />}
+              >
+                Submit Payment
+              </Button>
+            )
+          }
+        >
+          <AlertTitle>
+            {paymentStatus?.paymentStatus === 'submitted'
+              ? 'Payment Under Review'
+              : paymentStatus?.paymentStatus === 'rejected'
+              ? 'Payment Rejected'
+              : 'Account Not Activated'}
+          </AlertTitle>
+          {paymentStatus?.paymentStatus === 'submitted' ? (
+            <Typography variant="body2">
+              Your payment proof is under admin review. You will be notified once approved. This usually takes 24 hours.
+            </Typography>
+          ) : paymentStatus?.paymentStatus === 'rejected' ? (
+            <Typography variant="body2">
+              Your payment proof was rejected. Please submit a valid payment proof to activate your account.
+            </Typography>
+          ) : (
+            <Typography variant="body2">
+              Please submit your payment proof to activate your account and access all trading features. Click the button to get started.
+            </Typography>
+          )}
+        </Alert>
+      )}
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
