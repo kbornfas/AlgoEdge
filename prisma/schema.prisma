@@ -25,6 +25,13 @@ model User {
   resetToken           String?             @map("reset_token") @db.VarChar(255)
   resetExpires         DateTime?           @map("reset_expires")
   lastLogin            DateTime?           @map("last_login")
+  isAdmin              Boolean             @default(false) @map("is_admin")
+  isActivated          Boolean             @default(false) @map("is_activated")
+  paymentProofUrl      String?             @map("payment_proof_url") @db.Text
+  paymentStatus        String              @default("pending") @map("payment_status") @db.VarChar(50)
+  paymentSubmittedAt   DateTime?           @map("payment_submitted_at")
+  activatedAt          DateTime?           @map("activated_at")
+  activatedBy          Int?                @map("activated_by")
   createdAt            DateTime            @default(now()) @map("created_at")
   updatedAt            DateTime            @default(now()) @updatedAt @map("updated_at")
 
@@ -35,9 +42,12 @@ model User {
   trades               Trade[]
   settings             UserSettings?
   auditLogs            AuditLog[]
+  paymentProofs        PaymentProof[]
 
   @@index([email])
   @@index([username])
+  @@index([isActivated])
+  @@index([paymentStatus])
   @@map("users")
 }
 
@@ -191,4 +201,24 @@ model AuditLog {
   @@index([userId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model PaymentProof {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  proofUrl     String    @map("proof_url") @db.Text
+  amount       Decimal?  @db.Decimal(10, 2)
+  currency     String    @default("USD") @db.VarChar(10)
+  status       String    @default("pending") @db.VarChar(50)
+  notes        String?   @db.Text
+  reviewedBy   Int?      @map("reviewed_by")
+  reviewedAt   DateTime? @map("reviewed_at")
+  submittedAt  DateTime  @default(now()) @map("submitted_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([submittedAt])
+  @@map("payment_proofs")
 }

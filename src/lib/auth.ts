@@ -16,6 +16,7 @@ export interface JWTPayload {
   userId: number;
   email: string;
   username: string;
+  isAdmin?: boolean;
 }
 
 /**
