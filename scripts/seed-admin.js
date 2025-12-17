@@ -14,8 +14,16 @@ async function seedAdmin() {
   try {
     console.log('🔧 Seeding admin user...');
 
-    const adminEmail = process.env.ADMIN_EMAIL || 'kbonface03@gmail.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'BRBros@1234';
+    // SECURITY: Use environment variables for production
+    // Never use default credentials in production!
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    
+    if (!adminEmail || !adminPassword) {
+      console.error('❌ ADMIN_EMAIL and ADMIN_PASSWORD must be set in environment variables');
+      process.exit(1);
+    }
+    
     const adminUsername = 'admin';
 
     // Check if admin already exists

@@ -95,15 +95,6 @@ export default function Home() {
             >
               Login
             </Button>
-            <Button
-              component={Link}
-              href="/admin/login"
-              variant="text"
-              size="large"
-              sx={{ minWidth: 200, color: 'text.secondary' }}
-            >
-              Admin Login
-            </Button>
           </Stack>
         </Box>
 

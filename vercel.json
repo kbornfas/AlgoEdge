@@ -35,7 +35,7 @@
         },
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "*"
+          "value": "@vercel_url"
         },
         {
           "key": "Access-Control-Allow-Methods",

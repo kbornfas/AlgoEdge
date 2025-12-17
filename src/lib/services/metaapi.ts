@@ -1,6 +1,15 @@
 /**
  * MetaAPI Integration Service
  * Handles MT5 account connection and trading operations
+ * 
+ * IMPORTANT: This is a simulation implementation for development/testing.
+ * For production use, you need to:
+ * 1. Install metaapi.cloud-sdk: npm install metaapi.cloud-sdk
+ * 2. Uncomment the MetaAPI initialization code below
+ * 3. Configure METAAPI_TOKEN and METAAPI_ACCOUNT_ID in .env
+ * 4. Replace simulation functions with real API calls
+ * 
+ * See: https://metaapi.cloud/docs/client/
  */
 
 interface MT5AccountConfig {
@@ -221,6 +230,13 @@ class MetaAPIService {
 
   /**
    * Execute automated trading based on robot strategy
+   * 
+   * NOTE: This is a SIMULATION for development/testing.
+   * In production, replace with actual technical analysis:
+   * - Fetch historical price data
+   * - Calculate technical indicators (EMA, RSI, MACD, etc.)
+   * - Apply strategy-specific rules
+   * - Implement proper risk management
    */
   async executeRobotStrategy(robotId: string, symbol: string, timeframe: string): Promise<boolean> {
     try {
@@ -228,9 +244,9 @@ class MetaAPIService {
       const price = await this.getPrice(symbol);
       if (!price) return false;
 
-      // Simulated strategy logic
-      // In production, this would include technical indicators and strategy rules
-      const shouldTrade = Math.random() > 0.7; // 30% chance to trade
+      // SIMULATION: Random trade generation (30% probability)
+      // TODO: Replace with actual strategy logic
+      const shouldTrade = Math.random() > 0.7;
 
       if (shouldTrade) {
         const tradeType = Math.random() > 0.5 ? 'buy' : 'sell';
