@@ -73,6 +73,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Check if user is activated (payment approved)
+    if (!user.isActivated) {
+      return NextResponse.json(
+        {
+          error: 'Account not activated. Please submit payment proof and wait for admin approval.',
+          requiresActivation: true,
+          paymentStatus: user.paymentStatus,
+        },
+        { status: 403 }
+      );
+    }
+
     // Update last login
     await prisma.user.update({
       where: { id: user.id },
@@ -100,7 +112,9 @@ export async function POST(req: NextRequest) {
         email: user.email,
         fullName: user.fullName,
         isVerified: user.isVerified,
+        isActivated: user.isActivated,
         twoFaEnabled: user.twoFaEnabled,
+        paymentStatus: user.paymentStatus,
         subscription: subscription
           ? {
               plan: subscription.plan,
