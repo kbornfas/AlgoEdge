@@ -1,0 +1,410 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Box,
+  Container,
+  Paper,
+  Typography,
+  Tabs,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Alert,
+  IconButton,
+  AppBar,
+  Toolbar,
+} from '@mui/material';
+import {
+  Users,
+  FileCheck,
+  LogOut,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Eye,
+  Shield,
+} from 'lucide-react';
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`tabpanel-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+    </div>
+  );
+}
+
+export default function AdminDashboard() {
+  const router = useRouter();
+  const [tabValue, setTabValue] = useState(0);
+  const [users, setUsers] = useState<any[]>([]);
+  const [paymentProofs, setPaymentProofs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedProof, setSelectedProof] = useState<any>(null);
+  const [reviewDialog, setReviewDialog] = useState(false);
+  const [reviewNotes, setReviewNotes] = useState('');
+
+  useEffect(() => {
+    // Check if admin is logged in
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      router.push('/admin/login');
+      return;
+    }
+
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    setLoading(true);
+    try {
+      const [usersRes, proofsRes] = await Promise.all([
+        fetch('/api/admin/users', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch('/api/admin/payment-proofs', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        setUsers(usersData.users || []);
+      }
+
+      if (proofsRes.ok) {
+        const proofsData = await proofsRes.json();
+        setPaymentProofs(proofsData.paymentProofs || []);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleActivateUser = async (userId: number, activate: boolean) => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    try {
+      const response = await fetch('/api/admin/users/activate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId, activate }),
+      });
+
+      if (response.ok) {
+        fetchData();
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleReviewPayment = async (status: 'approved' | 'rejected') => {
+    const token = localStorage.getItem('adminToken');
+    if (!token || !selectedProof) return;
+
+    try {
+      const response = await fetch('/api/admin/payment-proofs/review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          proofId: selectedProof.id,
+          status,
+          notes: reviewNotes,
+        }),
+      });
+
+      if (response.ok) {
+        setReviewDialog(false);
+        setSelectedProof(null);
+        setReviewNotes('');
+        fetchData();
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    router.push('/admin/login');
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved':
+      case 'active':
+        return 'success';
+      case 'rejected':
+        return 'error';
+      case 'pending':
+      case 'submitted':
+        return 'warning';
+      default:
+        return 'default';
+    }
+  };
+
+  return (
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      <AppBar position="static">
+        <Toolbar>
+          <Shield size={32} style={{ marginRight: 16 }} />
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+            AlgoEdge Admin Panel
+          </Typography>
+          <Button
+            color="inherit"
+            startIcon={<LogOut size={20} />}
+            onClick={handleLogout}
+          >
+            Logout
+          </Button>
+        </Toolbar>
+      </AppBar>
+
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
+            {error}
+          </Alert>
+        )}
+
+        <Paper sx={{ width: '100%' }}>
+          <Tabs
+            value={tabValue}
+            onChange={(_, newValue) => setTabValue(newValue)}
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
+          >
+            <Tab
+              icon={<Users size={20} />}
+              label="Users Management"
+              iconPosition="start"
+            />
+            <Tab
+              icon={<FileCheck size={20} />}
+              label="Payment Proofs"
+              iconPosition="start"
+            />
+          </Tabs>
+
+          <TabPanel value={tabValue} index={0}>
+            <Typography variant="h6" gutterBottom>
+              User Management
+            </Typography>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Username</TableCell>
+                    <TableCell>Full Name</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Payment</TableCell>
+                    <TableCell>Joined</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.username}</TableCell>
+                      <TableCell>{user.fullName || '-'}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={user.isActivated ? 'Active' : 'Inactive'}
+                          color={user.isActivated ? 'success' : 'default'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={user.paymentStatus}
+                          color={getStatusColor(user.paymentStatus)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        {!user.isActivated ? (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color="success"
+                            startIcon={<CheckCircle size={16} />}
+                            onClick={() => handleActivateUser(user.id, true)}
+                          >
+                            Activate
+                          </Button>
+                        ) : (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            startIcon={<XCircle size={16} />}
+                            onClick={() => handleActivateUser(user.id, false)}
+                          >
+                            Deactivate
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={1}>
+            <Typography variant="h6" gutterBottom>
+              Payment Proof Review
+            </Typography>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>User</TableCell>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Amount</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Submitted</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {paymentProofs.map((proof) => (
+                    <TableRow key={proof.id}>
+                      <TableCell>{proof.user.username}</TableCell>
+                      <TableCell>{proof.user.email}</TableCell>
+                      <TableCell>
+                        {proof.amount ? `$${proof.amount}` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={proof.status}
+                          color={getStatusColor(proof.status)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {new Date(proof.submittedAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<Eye size={16} />}
+                          onClick={() => {
+                            setSelectedProof(proof);
+                            setReviewDialog(true);
+                          }}
+                        >
+                          Review
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </TabPanel>
+        </Paper>
+      </Container>
+
+      <Dialog open={reviewDialog} onClose={() => setReviewDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Review Payment Proof</DialogTitle>
+        <DialogContent>
+          {selectedProof && (
+            <Box>
+              <Typography variant="body2" gutterBottom>
+                <strong>User:</strong> {selectedProof.user.email}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Amount:</strong> {selectedProof.amount ? `$${selectedProof.amount}` : 'Not specified'}
+              </Typography>
+              <Box sx={{ my: 2 }}>
+                <Typography variant="body2" gutterBottom>
+                  <strong>Proof:</strong>
+                </Typography>
+                <img
+                  src={selectedProof.proofUrl}
+                  alt="Payment Proof"
+                  style={{ width: '100%', maxHeight: 400, objectFit: 'contain' }}
+                />
+              </Box>
+              <TextField
+                fullWidth
+                label="Review Notes (Optional)"
+                multiline
+                rows={3}
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                margin="normal"
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setReviewDialog(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<XCircle size={16} />}
+            onClick={() => handleReviewPayment('rejected')}
+          >
+            Reject
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<CheckCircle size={16} />}
+            onClick={() => handleReviewPayment('approved')}
+          >
+            Approve
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}
