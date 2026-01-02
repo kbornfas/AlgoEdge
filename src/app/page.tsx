@@ -4,6 +4,7 @@ import { Box, Container, Typography, Button, Grid, Card, CardContent, Stack, Fab
 import { TrendingUp, Shield, Zap, BarChart3, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import CTACard from '@/components/CTACard';
 
 // Instagram icon component
 const InstagramIcon = () => (
@@ -14,7 +15,7 @@ const InstagramIcon = () => (
 
 export default function Home() {
   const whatsappUrl = process.env.NEXT_PUBLIC_WHATSAPP_URL || 'https://wa.me/';
-  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://instagram.com/';
+  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://www.instagram.com/algoedge.hub?igsh=MXZtcDYyMjJ1c2dobw%3D%3D&utm_source=qr';
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -119,6 +120,49 @@ export default function Home() {
               Login
             </Button>
           </Stack>
+        </Box>
+
+        {/* Connect with Us CTA Section */}
+        <Box sx={{ py: 6 }}>
+          <Typography
+            variant="h4"
+            align="center"
+            sx={{
+              fontWeight: 600,
+              mb: 4,
+              color: 'text.primary',
+            }}
+          >
+            Connect with Us
+          </Typography>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <CTACard
+                title="Get started now."
+                description="Don't wait, start trading smarter today! Let us help you set up your trading bot instantly."
+                buttonText="Buy & Start Trading Now"
+                buttonIcon={<MessageCircle size={20} />}
+                buttonHref={whatsappUrl}
+                buttonColor="#25D366"
+                buttonHoverColor="#1da851"
+                iconColor="#25D366"
+                ariaLabel="Contact us on WhatsApp to buy and start trading"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <CTACard
+                title="Follow Us on Instagram"
+                description="Follow us on Instagram for updates, tips, and trading insights"
+                buttonText="Follow IG"
+                buttonIcon={<InstagramIcon />}
+                buttonHref={instagramUrl}
+                buttonColor="#E1306C"
+                buttonHoverColor="#C13584"
+                iconColor="#E1306C"
+                ariaLabel="Follow us on Instagram"
+              />
+            </Grid>
+          </Grid>
         </Box>
 
         {/* Features Section */}
