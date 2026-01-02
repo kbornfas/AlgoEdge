@@ -7,9 +7,11 @@ This directory contains or references the trading background video for the landi
 
 ### Option 1: Pexels (Recommended)
 - URL: https://www.pexels.com/video/candlestick-chart-on-a-screen-3130284/
-- Direct MP4: https://videos.pexels.com/video-files/3130284/3130284-uhd_2560_1440_25fps.mp4
+- **Direct MP4 (1080p - Recommended):** https://videos.pexels.com/video-files/3130284/3130284-hd_1920_1080_25fps.mp4
+- Direct MP4 (UHD 2K): https://videos.pexels.com/video-files/3130284/3130284-uhd_2560_1440_25fps.mp4
 - License: Free to use (Pexels License)
 - Description: Trading chart with candlesticks
+- **Note:** Use 1080p version for better performance. UHD versions may be too large for web use.
 
 ### Option 2: Pixabay
 - Search: "stock market" or "trading chart"

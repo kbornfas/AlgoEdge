@@ -11,14 +11,17 @@ import CTACard from '@/components/CTACard';
  * 
  * Video Sources (Public Domain):
  * - Pexels: https://www.pexels.com/video/candlestick-chart-on-a-screen-3130284/
- * - Direct URL: https://videos.pexels.com/video-files/3130284/3130284-uhd_2560_1440_25fps.mp4
+ * - Recommended 1080p: https://videos.pexels.com/video-files/3130284/3130284-hd_1920_1080_25fps.mp4
+ * - Alternative UHD 2K: https://videos.pexels.com/video-files/3130284/3130284-uhd_2560_1440_25fps.mp4
  * 
  * To replace the video:
  * 1. Download a new trading video from Pexels, Pixabay, or Coverr
  * 2. Save as /public/video/trading-bg.mp4, OR
  * 3. Update the VIDEO_URL constant below with a new public video URL
+ * 
+ * Performance Note: Use 1080p videos for optimal loading. UHD versions may be too large.
  */
-const VIDEO_URL = 'https://videos.pexels.com/video-files/3130284/3130284-uhd_2560_1440_25fps.mp4';
+const VIDEO_URL = 'https://videos.pexels.com/video-files/3130284/3130284-hd_1920_1080_25fps.mp4';
 
 const VideoBackground = () => (
   <Box
@@ -30,6 +33,7 @@ const VideoBackground = () => (
       height: '100%',
       zIndex: -2,
       overflow: 'hidden',
+      bgcolor: '#0F172A', // Fallback background color
     }}
   >
     <video
@@ -37,6 +41,14 @@ const VideoBackground = () => (
       loop
       muted
       playsInline
+      preload="metadata"
+      onError={(e) => {
+        // Gracefully handle video loading errors by hiding the video element
+        const target = e.target as HTMLVideoElement;
+        if (target) {
+          target.style.display = 'none';
+        }
+      }}
       style={{
         position: 'absolute',
         top: '50%',
@@ -50,7 +62,8 @@ const VideoBackground = () => (
       }}
     >
       <source src={VIDEO_URL} type="video/mp4" />
-      {/* Fallback for browsers that don't support video */}
+      {/* Fallback: If video doesn't load, the dark background color will show */}
+      Your browser does not support the video tag. The page will display with a static background.
     </video>
     {/* Dark overlay for text readability */}
     <Box
