@@ -74,12 +74,25 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user is activated (payment approved)
-    if (!user.isActivated) {
+    // Users with rejected approval status cannot login
+    if (user.approvalStatus === 'rejected') {
       return NextResponse.json(
         {
-          error: 'Account not activated. Please submit payment proof and wait for admin approval.',
+          error: user.rejectionReason || 'Account has been rejected by admin. Please contact support.',
+          isRejected: true,
+        },
+        { status: 403 }
+      );
+    }
+
+    if (!user.isActivated || user.approvalStatus !== 'approved') {
+      return NextResponse.json(
+        {
+          error: 'Account not activated. Please complete email verification, submit payment proof, and wait for admin approval.',
           requiresActivation: true,
           paymentStatus: user.paymentStatus,
+          approvalStatus: user.approvalStatus,
+          isVerified: user.isVerified,
         },
         { status: 403 }
       );

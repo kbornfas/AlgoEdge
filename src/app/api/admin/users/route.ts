@@ -63,6 +63,7 @@ export async function GET(req: NextRequest) {
           phone: true,
           isVerified: true,
           isActivated: true,
+          approvalStatus: true,
           paymentStatus: true,
           paymentSubmittedAt: true,
           activatedAt: true,

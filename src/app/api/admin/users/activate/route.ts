@@ -6,11 +6,14 @@ import { z } from 'zod';
 const activateSchema = z.object({
   userId: z.number(),
   activate: z.boolean(),
+  rejectionReason: z.string().optional(),
 });
 
 /**
  * POST /api/admin/users/activate
- * Activate or deactivate a user
+ * Approve or reject a user
+ * Approve: Activate user and grant access
+ * Reject: Mark user as rejected and block login
  */
 export async function POST(req: NextRequest) {
   try {
@@ -28,16 +31,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { userId, activate } = activateSchema.parse(body);
+    const { userId, activate, rejectionReason } = activateSchema.parse(body);
 
-    // Update user activation status
+    // Update user activation and approval status
     const user = await prisma.user.update({
       where: { id: userId },
       data: {
         isActivated: activate,
+        approvalStatus: activate ? 'approved' : 'rejected',
         activatedAt: activate ? new Date() : null,
         activatedBy: activate ? decoded.userId : null,
-        paymentStatus: activate ? 'approved' : 'pending',
+        paymentStatus: activate ? 'approved' : 'rejected',
+        rejectionReason: activate ? null : rejectionReason,
       },
     });
 
@@ -45,21 +50,23 @@ export async function POST(req: NextRequest) {
     await prisma.auditLog.create({
       data: {
         userId: decoded.userId,
-        action: activate ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
+        action: activate ? 'USER_APPROVED' : 'USER_REJECTED',
         details: {
           targetUserId: userId,
           targetEmail: user.email,
+          rejectionReason: activate ? undefined : rejectionReason,
         },
         ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '',
       },
     });
 
     return NextResponse.json({
-      message: activate ? 'User activated successfully' : 'User deactivated',
+      message: activate ? 'User approved successfully' : 'User rejected',
       user: {
         id: user.id,
         email: user.email,
         isActivated: user.isActivated,
+        approvalStatus: user.approvalStatus,
         activatedAt: user.activatedAt,
       },
     });

@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { hashPassword, generateToken, generateRandomToken } from '@/lib/auth';
-import { sendVerificationEmail } from '@/lib/email';
+import { hashPassword, generateToken, PASSWORD_MIN_LENGTH } from '@/lib/auth';
 import { z } from 'zod';
 
-// Validation schema for registration
+// Validation schema for registration - Updated to require first and last name
 const registerSchema = z.object({
-  username: z.string().min(3).max(50),
+  firstName: z.string().min(1).max(50),
+  lastName: z.string().min(1).max(50),
   email: z.string().email(),
-  password: z.string().min(8),
-  fullName: z.string().optional(),
+  password: z.string().min(PASSWORD_MIN_LENGTH),
   phone: z.string().optional(),
   country: z.string().optional(),
 });
@@ -17,6 +16,7 @@ const registerSchema = z.object({
 /**
  * POST /api/auth/register
  * Register a new user account
+ * Step 1 of onboarding flow: Create account, then redirect to OTP verification
  */
 export async function POST(req: NextRequest) {
   try {
@@ -25,24 +25,25 @@ export async function POST(req: NextRequest) {
     // Validate input
     const validatedData = registerSchema.parse(body);
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: validatedData.email },
-          { username: validatedData.username },
-        ],
-      },
+    // Create username from first and last name
+    const baseUsername = `${validatedData.firstName.toLowerCase()}${validatedData.lastName.toLowerCase()}`.replace(/[^a-z0-9]/g, '');
+    let username = baseUsername;
+    let counter = 1;
+    
+    // Ensure username is unique
+    while (await prisma.user.findUnique({ where: { username } })) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+
+    // Check if email already registered
+    const existingUser = await prisma.user.findUnique({
+      where: { email: validatedData.email },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        {
-          error:
-            existingUser.email === validatedData.email
-              ? 'Email already registered'
-              : 'Username already taken',
-        },
+        { error: 'Email already registered' },
         { status: 400 }
       );
     }
@@ -50,21 +51,20 @@ export async function POST(req: NextRequest) {
     // Hash password
     const passwordHash = await hashPassword(validatedData.password);
 
-    // Generate verification token
-    const verificationToken = generateRandomToken();
-    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    // Create full name from first and last name
+    const fullName = `${validatedData.firstName} ${validatedData.lastName}`;
 
     // Create user
     const user = await prisma.user.create({
       data: {
-        username: validatedData.username,
+        username,
         email: validatedData.email,
         passwordHash,
-        fullName: validatedData.fullName,
+        fullName,
         phone: validatedData.phone,
         country: validatedData.country,
-        verificationToken,
-        verificationExpires,
+        isVerified: false, // Will be verified via OTP
+        approvalStatus: 'pending', // Requires admin approval after payment
       },
     });
 
@@ -84,13 +84,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Send verification email
-    try {
-      await sendVerificationEmail(user.email, user.username, verificationToken);
-    } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
-      // Don't fail registration if email fails
-    }
+    // Don't send verification email - will send OTP instead when user requests it
+    // Verification email sending removed - using OTP flow instead
 
     // Generate JWT token
     const token = generateToken({
@@ -101,13 +96,14 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       {
-        message: 'Registration successful. Please check your email to verify your account.',
+        message: 'Registration successful. Please verify your email with OTP.',
         token,
         user: {
           id: user.id,
           username: user.username,
           email: user.email,
           isVerified: user.isVerified,
+          requiresOTP: true, // Signal frontend to show OTP page
         },
       },
       { status: 201 }

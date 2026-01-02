@@ -27,6 +27,8 @@ model User {
   lastLogin            DateTime?           @map("last_login")
   isAdmin              Boolean             @default(false) @map("is_admin")
   isActivated          Boolean             @default(false) @map("is_activated")
+  approvalStatus       String              @default("pending") @map("approval_status") @db.VarChar(50) // pending, approved, rejected
+  rejectionReason      String?             @map("rejection_reason") @db.Text
   paymentProofUrl      String?             @map("payment_proof_url") @db.Text
   paymentStatus        String              @default("pending") @map("payment_status") @db.VarChar(50)
   paymentSubmittedAt   DateTime?           @map("payment_submitted_at")
@@ -47,6 +49,7 @@ model User {
   @@index([email])
   @@index([username])
   @@index([isActivated])
+  @@index([approvalStatus])
   @@index([paymentStatus])
   @@map("users")
 }

@@ -68,6 +68,9 @@ export default function AdminDashboard() {
   const [selectedProof, setSelectedProof] = useState<any>(null);
   const [reviewDialog, setReviewDialog] = useState(false);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [rejectDialog, setRejectDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     // Check if admin is logged in
@@ -115,6 +118,14 @@ export default function AdminDashboard() {
     const token = localStorage.getItem('adminToken');
     if (!token) return;
 
+    // If rejecting, show rejection dialog
+    if (!activate) {
+      const user = users.find(u => u.id === userId);
+      setSelectedUser(user);
+      setRejectDialog(true);
+      return;
+    }
+
     try {
       const response = await fetch('/api/admin/users/activate', {
         method: 'POST',
@@ -126,6 +137,35 @@ export default function AdminDashboard() {
       });
 
       if (response.ok) {
+        fetchData();
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleRejectUser = async () => {
+    const token = localStorage.getItem('adminToken');
+    if (!token || !selectedUser) return;
+
+    try {
+      const response = await fetch('/api/admin/users/activate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          activate: false,
+          rejectionReason,
+        }),
+      });
+
+      if (response.ok) {
+        setRejectDialog(false);
+        setSelectedUser(null);
+        setRejectionReason('');
         fetchData();
       }
     } catch (err: any) {
@@ -237,6 +277,7 @@ export default function AdminDashboard() {
                     <TableCell>Email</TableCell>
                     <TableCell>Username</TableCell>
                     <TableCell>Full Name</TableCell>
+                    <TableCell>Verified</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Payment</TableCell>
                     <TableCell>Joined</TableCell>
@@ -251,8 +292,15 @@ export default function AdminDashboard() {
                       <TableCell>{user.fullName || '-'}</TableCell>
                       <TableCell>
                         <Chip
-                          label={user.isActivated ? 'Active' : 'Inactive'}
-                          color={user.isActivated ? 'success' : 'default'}
+                          label={user.isVerified ? 'Verified' : 'Unverified'}
+                          color={user.isVerified ? 'success' : 'default'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={user.isActivated ? 'Active' : user.approvalStatus || 'Inactive'}
+                          color={user.isActivated ? 'success' : getStatusColor(user.approvalStatus || 'pending')}
                           size="small"
                         />
                       </TableCell>
@@ -267,7 +315,7 @@ export default function AdminDashboard() {
                         {new Date(user.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        {!user.isActivated ? (
+                        {!user.isActivated && user.approvalStatus !== 'rejected' ? (
                           <Button
                             size="small"
                             variant="contained"
@@ -275,8 +323,10 @@ export default function AdminDashboard() {
                             startIcon={<CheckCircle size={16} />}
                             onClick={() => handleActivateUser(user.id, true)}
                           >
-                            Activate
+                            Approve
                           </Button>
+                        ) : user.approvalStatus === 'rejected' ? (
+                          <Chip label="Rejected" color="error" size="small" />
                         ) : (
                           <Button
                             size="small"
@@ -285,7 +335,7 @@ export default function AdminDashboard() {
                             startIcon={<XCircle size={16} />}
                             onClick={() => handleActivateUser(user.id, false)}
                           >
-                            Deactivate
+                            Reject
                           </Button>
                         )}
                       </TableCell>
@@ -402,6 +452,52 @@ export default function AdminDashboard() {
             onClick={() => handleReviewPayment('approved')}
           >
             Approve
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={rejectDialog} onClose={() => setRejectDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Reject User Account</DialogTitle>
+        <DialogContent>
+          {selectedUser && (
+            <Box>
+              <Typography variant="body2" gutterBottom>
+                Are you sure you want to reject this user's account?
+              </Typography>
+              <Typography variant="body2" gutterBottom sx={{ mt: 2 }}>
+                <strong>User:</strong> {selectedUser.email}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Name:</strong> {selectedUser.fullName || '-'}
+              </Typography>
+              <TextField
+                fullWidth
+                label="Rejection Reason (Optional)"
+                multiline
+                rows={3}
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                margin="normal"
+                helperText="This message will be shown to the user when they try to login"
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setRejectDialog(false);
+            setSelectedUser(null);
+            setRejectionReason('');
+          }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<XCircle size={16} />}
+            onClick={handleRejectUser}
+          >
+            Reject User
           </Button>
         </DialogActions>
       </Dialog>

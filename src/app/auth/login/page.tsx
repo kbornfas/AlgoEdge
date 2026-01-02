@@ -61,6 +61,14 @@ export default function LoginPage() {
         if (data.requires2FA) {
           setRequires2FA(true);
           setError('');
+        } else if (data.isRejected) {
+          setError(data.error || 'Your account has been rejected. Please contact support for more information.');
+        } else if (data.requiresActivation) {
+          if (!data.isVerified) {
+            setError('Please verify your email address. Check your inbox for the verification code.');
+          } else {
+            setError(data.error || 'Account pending approval. Please complete payment and wait for admin approval.');
+          }
         } else {
           setError(data.error || 'Login failed');
         }
