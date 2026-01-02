@@ -462,7 +462,7 @@ export default function AdminDashboard() {
           {selectedUser && (
             <Box>
               <Typography variant="body2" gutterBottom>
-                Are you sure you want to reject this user's account?
+                Are you sure you want to reject this user&apos;s account?
               </Typography>
               <Typography variant="body2" gutterBottom sx={{ mt: 2 }}>
                 <strong>User:</strong> {selectedUser.email}

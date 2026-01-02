@@ -86,7 +86,7 @@ export default function PaymentInstructionsPage() {
                 Email Verified Successfully!
               </Typography>
               <Typography variant="body1" color="text.secondary">
-                You're almost ready to start trading
+                You&apos;re almost ready to start trading
               </Typography>
             </Box>
 
@@ -179,7 +179,7 @@ export default function PaymentInstructionsPage() {
 
             <Alert severity="warning" sx={{ mt: 3 }}>
               <Typography variant="body2">
-                <strong>Note:</strong> You won't be able to login until your payment is verified and your account is approved by an administrator.
+                <strong>Note:</strong> You won&apos;t be able to login until your payment is verified and your account is approved by an administrator.
               </Typography>
             </Alert>
           </CardContent>
