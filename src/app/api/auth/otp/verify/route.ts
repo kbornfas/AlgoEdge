@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { OTP_LENGTH } from '@/lib/auth';
 import { z } from 'zod';
 
 const verifyOTPSchema = z.object({
   email: z.string().email(),
-  code: z.string().length(6),
+  code: z.string().length(OTP_LENGTH),
 });
 
 /**

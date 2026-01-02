@@ -2,6 +2,12 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
+// Authentication Configuration Constants
+export const OTP_LENGTH = 6;
+export const OTP_EXPIRATION_MINUTES = 15;
+export const PASSWORD_MIN_LENGTH = 8;
+export const BCRYPT_SALT_ROUNDS = 12;
+
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // Warn if JWT_SECRET is not set, but allow fallback for development
@@ -42,7 +48,7 @@ export function verifyToken(token: string): JWTPayload | null {
  * Hash password using bcrypt
  */
 export async function hashPassword(password: string): Promise<string> {
-  const salt = await bcrypt.genSalt(12);
+  const salt = await bcrypt.genSalt(BCRYPT_SALT_ROUNDS);
   return bcrypt.hash(password, salt);
 }
 

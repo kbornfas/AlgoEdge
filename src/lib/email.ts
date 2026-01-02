@@ -1,5 +1,12 @@
 import nodemailer from 'nodemailer';
 
+// Constants for email styling and configuration
+const BRAND_PRIMARY_COLOR = '#3B82F6';
+const BRAND_SECONDARY_COLOR = '#8B5CF6';
+const SUCCESS_COLOR = '#10B981';
+const ERROR_COLOR = '#EF4444';
+const WHATSAPP_GREEN = '#25D366';
+
 // SMTP Configuration
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',

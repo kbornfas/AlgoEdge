@@ -44,9 +44,15 @@ export default function PaymentInstructionsPage() {
       return;
     }
 
-    // Get WhatsApp URL from environment or use default
-    const url = process.env.NEXT_PUBLIC_WHATSAPP_URL || 'https://wa.me/your_number';
-    setWhatsappUrl(url);
+    // Get WhatsApp URL from environment
+    const url = process.env.NEXT_PUBLIC_WHATSAPP_URL;
+    if (!url || url === 'https://wa.me/your_number') {
+      console.error('NEXT_PUBLIC_WHATSAPP_URL not configured properly');
+      // Still set it but show a warning
+      setWhatsappUrl(url || 'https://wa.me/');
+    } else {
+      setWhatsappUrl(url);
+    }
   }, [router]);
 
   const handleWhatsAppRedirect = () => {

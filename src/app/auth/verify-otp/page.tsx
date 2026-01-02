@@ -16,6 +16,9 @@ import {
 import { Mail, CheckCircle, MessageSquare } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+// OTP Configuration - matches backend constants
+const OTP_LENGTH = 6;
+
 export default function VerifyOTPPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -75,8 +78,8 @@ export default function VerifyOTPPage() {
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (code.length !== 6) {
-      setError('Please enter a 6-digit verification code');
+    if (code.length !== OTP_LENGTH) {
+      setError(`Please enter a ${OTP_LENGTH}-digit verification code`);
       return;
     }
 
@@ -212,14 +215,14 @@ export default function VerifyOTPPage() {
                   label="Verification Code"
                   value={code}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    const value = e.target.value.replace(/\D/g, '').slice(0, OTP_LENGTH);
                     setCode(value);
                     setError('');
                   }}
                   disabled={loading}
                   required
                   inputProps={{ 
-                    maxLength: 6,
+                    maxLength: OTP_LENGTH,
                     style: { 
                       fontSize: '24px', 
                       letterSpacing: '8px', 
@@ -228,7 +231,7 @@ export default function VerifyOTPPage() {
                     }
                   }}
                   sx={{ mb: 2 }}
-                  helperText="Enter the 6-digit code from your email"
+                  helperText={`Enter the ${OTP_LENGTH}-digit code from your email`}
                 />
 
                 <Button
@@ -236,7 +239,7 @@ export default function VerifyOTPPage() {
                   fullWidth
                   variant="contained"
                   size="large"
-                  disabled={loading || code.length !== 6}
+                  disabled={loading || code.length !== OTP_LENGTH}
                   startIcon={loading ? <CircularProgress size={20} /> : <CheckCircle />}
                   sx={{ mb: 2 }}
                 >

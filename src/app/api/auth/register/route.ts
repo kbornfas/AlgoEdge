@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { hashPassword, generateToken } from '@/lib/auth';
+import { hashPassword, generateToken, PASSWORD_MIN_LENGTH } from '@/lib/auth';
 import { z } from 'zod';
 
 // Validation schema for registration - Updated to require first and last name
@@ -8,7 +8,7 @@ const registerSchema = z.object({
   firstName: z.string().min(1).max(50),
   lastName: z.string().min(1).max(50),
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(PASSWORD_MIN_LENGTH),
   phone: z.string().optional(),
   country: z.string().optional(),
 });

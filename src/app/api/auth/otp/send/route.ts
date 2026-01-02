@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { generateNumericCode } from '@/lib/auth';
+import { generateNumericCode, OTP_LENGTH, OTP_EXPIRATION_MINUTES } from '@/lib/auth';
 import { sendOTPEmail } from '@/lib/email';
 import { z } from 'zod';
 
@@ -39,9 +39,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate 6-digit OTP code
-    const code = generateNumericCode(6);
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    // Generate OTP code with configured length
+    const code = generateNumericCode(OTP_LENGTH);
+    const expiresAt = new Date(Date.now() + OTP_EXPIRATION_MINUTES * 60 * 1000);
 
     // Store OTP in VerificationCode table
     await prisma.verificationCode.upsert({
