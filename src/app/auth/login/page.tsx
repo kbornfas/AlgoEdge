@@ -14,10 +14,19 @@ import {
   CircularProgress,
   InputAdornment,
   IconButton,
+  Grid,
 } from '@mui/material';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import CTACard from '@/components/CTACard';
+
+// Instagram icon component
+const InstagramIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+  </svg>
+);
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,6 +39,10 @@ export default function LoginPage() {
   const [requires2FA, setRequires2FA] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Get WhatsApp and Instagram URLs from environment
+  const whatsappUrl = process.env.NEXT_PUBLIC_WHATSAPP_URL || 'https://wa.me/';
+  const instagramUrl = 'https://www.instagram.com/algoedge.hub?igsh=MXZtcDYyMjJ1c2dobw%3D%3D&utm_source=qr';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -99,8 +112,9 @@ export default function LoginPage() {
         py: 4,
       }}
     >
-      <Container maxWidth="sm">
-        <Card>
+      <Container maxWidth="md">
+        {/* Login Form */}
+        <Card sx={{ mb: 4 }}>
           <CardContent sx={{ p: 4 }}>
             <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 600 }}>
               Welcome Back
@@ -198,6 +212,36 @@ export default function LoginPage() {
             </Box>
           </CardContent>
         </Card>
+
+        {/* CTA Cards */}
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <CTACard
+              title="Get started now."
+              description="Don't wait, start trading smarter today! Let us help you set up your trading bot instantly."
+              buttonText="Buy & Start Trading Now"
+              buttonIcon={<MessageCircle size={20} />}
+              buttonHref={whatsappUrl}
+              buttonColor="#25D366"
+              buttonHoverColor="#1da851"
+              iconColor="#25D366"
+              ariaLabel="Contact us on WhatsApp to buy and start trading"
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <CTACard
+              title="Follow Us on Instagram"
+              description="Follow us on Instagram for updates, tips, and trading insights"
+              buttonText="Follow IG"
+              buttonIcon={<InstagramIcon />}
+              buttonHref={instagramUrl}
+              buttonColor="#E1306C"
+              buttonHoverColor="#C13584"
+              iconColor="#E1306C"
+              ariaLabel="Follow us on Instagram"
+            />
+          </Grid>
+        </Grid>
       </Container>
     </Box>
   );
