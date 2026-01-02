@@ -42,7 +42,7 @@ export default function LoginPage() {
 
   // Get WhatsApp and Instagram URLs from environment
   const whatsappUrl = process.env.NEXT_PUBLIC_WHATSAPP_URL || 'https://wa.me/';
-  const instagramUrl = 'https://www.instagram.com/algoedge.hub?igsh=MXZtcDYyMjJ1c2dobw%3D%3D&utm_source=qr';
+  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://www.instagram.com/algoedge.hub?igsh=MXZtcDYyMjJ1c2dobw%3D%3D&utm_source=qr';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({

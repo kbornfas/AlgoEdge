@@ -37,7 +37,7 @@ export default function CTACard({
         '&:hover': {
           borderColor: buttonColor,
           transform: 'translateY(-4px)',
-          boxShadow: `0 8px 24px rgba(59, 130, 246, 0.15)`,
+          boxShadow: `0 8px 24px ${buttonColor}15`,
         },
       }}
     >
@@ -91,7 +91,6 @@ export default function CTACard({
           target="_blank"
           rel="noopener noreferrer"
           aria-label={ariaLabel || buttonText}
-          startIcon={buttonIcon}
           sx={{
             bgcolor: buttonColor,
             color: 'white',
@@ -113,7 +112,10 @@ export default function CTACard({
             transition: 'all 0.2s ease',
           }}
         >
-          {buttonText}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center' }}>
+            {buttonIcon}
+            {buttonText}
+          </Box>
         </Button>
       </CardContent>
     </Card>
