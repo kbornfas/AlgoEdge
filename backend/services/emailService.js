@@ -161,18 +161,26 @@ const emailTemplates = {
 // Generic send mail function - accepts recipient, subject, text, and optional html
 export const sendMail = async ({ to, subject, text, html }) => {
   try {
+    // Validate required parameters
     if (!to || !subject) {
       throw new Error('Recipient (to) and subject are required');
+    }
+
+    // Require at least one content type
+    if (!text && !html) {
+      throw new Error('At least one of text or html content is required');
     }
 
     const mailOptions = {
       from: process.env.SMTP_FROM || `"AlgoEdge" <${process.env.SMTP_USER}>`,
       to,
       subject,
-      text: text || '',
     };
 
-    // Add HTML if provided
+    // Add content
+    if (text) {
+      mailOptions.text = text;
+    }
     if (html) {
       mailOptions.html = html;
     }
@@ -184,11 +192,15 @@ export const sendMail = async ({ to, subject, text, html }) => {
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error(`❌ Failed to send email to ${to}:`, error.message);
-    console.error(`📋 Error details:`, {
-      code: error.code,
-      command: error.command,
-      response: error.response,
-    });
+    
+    // Log error details only in development mode to avoid exposing sensitive info
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(`📋 Error details:`, {
+        code: error.code,
+        command: error.command,
+      });
+    }
+    
     return { success: false, error: error.message };
   }
 };
@@ -209,10 +221,15 @@ export const sendEmail = async (to, template, data) => {
     return true;
   } catch (error) {
     console.error(`❌ Failed to send email to ${to}:`, error.message);
-    console.error(`📋 Error details:`, {
-      code: error.code,
-      template: template,
-    });
+    
+    // Log error details only in development mode
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(`📋 Error details:`, {
+        code: error.code,
+        template: template,
+      });
+    }
+    
     return false;
   }
 };
