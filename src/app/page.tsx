@@ -76,6 +76,29 @@ export default function Home() {
           >
             Automated Forex Trading with MetaTrader 5 Integration. Start your journey to algorithmic trading success.
           </Typography>
+          <Box sx={{ mb: 3, textAlign: 'center' }}>
+            <Link
+              href="https://t.me/+newQkIa06W1kNmMx"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ textDecoration: 'none' }}
+            >
+              <Typography
+                sx={{
+                  fontSize: '1.25rem',
+                  fontWeight: 600,
+                  color: '#0088cc',
+                  '&:hover': {
+                    color: '#006699',
+                    textDecoration: 'underline',
+                  },
+                  cursor: 'pointer',
+                }}
+              >
+                🎯Join telegram channel for free AI signals🚀
+              </Typography>
+            </Link>
+          </Box>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
             <Button
               component={Link}
