@@ -68,12 +68,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Create default subscription (free plan)
+    // Create subscription record
     await prisma.subscription.create({
       data: {
         userId: user.id,
-        plan: 'free',
-        status: 'active',
+        plan: 'standard',
+        status: 'pending',
       },
     });
 

@@ -111,11 +111,6 @@ export async function POST(req: NextRequest) {
       username: user.username,
     });
 
-    // Get user subscription
-    const subscription = await prisma.subscription.findUnique({
-      where: { userId: user.id },
-    });
-
     return NextResponse.json({
       message: 'Login successful',
       token,
@@ -128,12 +123,6 @@ export async function POST(req: NextRequest) {
         isActivated: user.isActivated,
         twoFaEnabled: user.twoFaEnabled,
         paymentStatus: user.paymentStatus,
-        subscription: subscription
-          ? {
-              plan: subscription.plan,
-              status: subscription.status,
-            }
-          : null,
       },
     });
   } catch (error) {
