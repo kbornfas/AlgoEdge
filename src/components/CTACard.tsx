@@ -29,15 +29,16 @@ export default function CTACard({
   return (
     <Card
       sx={{
-        bgcolor: 'background.paper',
+        bgcolor: 'rgba(30, 41, 59, 0.9)',
+        backdropFilter: 'blur(10px)',
         border: '1px solid',
-        borderColor: 'divider',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
         borderRadius: 3,
         transition: 'all 0.3s ease',
         '&:hover': {
           borderColor: buttonColor,
           transform: 'translateY(-4px)',
-          boxShadow: `0 8px 24px ${buttonColor}15`,
+          boxShadow: `0 8px 24px ${buttonColor}40`,
         },
       }}
     >

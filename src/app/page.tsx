@@ -6,6 +6,80 @@ import Link from 'next/link';
 import Image from 'next/image';
 import CTACard from '@/components/CTACard';
 
+/**
+ * Trading Background Video Component
+ * 
+ * Video Sources (Public Domain):
+ * - Pexels: https://www.pexels.com/video/candlestick-chart-on-a-screen-3130284/
+ * - Recommended 1080p: https://videos.pexels.com/video-files/3130284/3130284-hd_1920_1080_25fps.mp4
+ * - Alternative UHD 2K: https://videos.pexels.com/video-files/3130284/3130284-uhd_2560_1440_25fps.mp4
+ * 
+ * To replace the video:
+ * 1. Download a new trading video from Pexels, Pixabay, or Coverr
+ * 2. Save as /public/video/trading-bg.mp4, OR
+ * 3. Update the VIDEO_URL constant below with a new public video URL
+ * 
+ * Performance Note: Use 1080p videos for optimal loading. UHD versions may be too large.
+ */
+const VIDEO_URL = 'https://videos.pexels.com/video-files/3130284/3130284-hd_1920_1080_25fps.mp4';
+
+const VideoBackground = () => (
+  <Box
+    sx={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      zIndex: -2,
+      overflow: 'hidden',
+      bgcolor: '#0F172A', // Fallback background color
+    }}
+  >
+    <video
+      autoPlay
+      loop
+      muted
+      playsInline
+      preload="metadata"
+      onError={(e) => {
+        // Gracefully handle video loading errors by hiding the video element
+        const target = e.target as HTMLVideoElement;
+        if (target) {
+          target.style.display = 'none';
+        }
+      }}
+      style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        minWidth: '100%',
+        minHeight: '100%',
+        width: 'auto',
+        height: 'auto',
+        transform: 'translate(-50%, -50%)',
+        objectFit: 'cover',
+      }}
+    >
+      <source src={VIDEO_URL} type="video/mp4" />
+      {/* Fallback: If video doesn't load, the dark background color will show */}
+      Your browser does not support the video tag. The page will display with a static background.
+    </video>
+    {/* Dark overlay for text readability */}
+    <Box
+      sx={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        bgcolor: 'rgba(0, 0, 0, 0.75)',
+        zIndex: -1,
+      }}
+    />
+  </Box>
+);
+
 // WhatsApp icon component (official logo with white color)
 const WhatsAppIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
@@ -25,7 +99,10 @@ export default function Home() {
   const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://www.instagram.com/__.kip.chirchir._?igsh=MTc4MWI0MWU3YmNnaQ%3D%3D&utm_source=qr';
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', position: 'relative' }}>
+      {/* Video Background - Only on Landing Page */}
+      <VideoBackground />
+      
       {/* Hero Section */}
       <Container maxWidth="lg">
         <Box sx={{ py: 10, textAlign: 'center' }}>
@@ -35,17 +112,24 @@ export default function Home() {
               fontSize: { xs: '2.5rem', md: '3.5rem' },
               fontWeight: 700,
               mb: 3,
-              background: 'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)',
+              background: 'linear-gradient(135deg, #00ff00 0%, #10b981 50%, #22c55e 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
+              textShadow: '0 0 40px rgba(0, 255, 0, 0.3)',
             }}
           >
             AlgoEdge Trading Platform
           </Typography>
           <Typography
             variant="h5"
-            color="text.secondary"
-            sx={{ mb: 5, maxWidth: '800px', mx: 'auto' }}
+            color="text.primary"
+            sx={{ 
+              mb: 5, 
+              maxWidth: '800px', 
+              mx: 'auto',
+              textShadow: '0 2px 10px rgba(0, 0, 0, 0.8)',
+              fontWeight: 400,
+            }}
           >
             Automated Forex Trading with MetaTrader 5 Integration. Start your journey to algorithmic trading success.
           </Typography>
@@ -60,9 +144,10 @@ export default function Home() {
                 sx={{
                   fontSize: '1.25rem',
                   fontWeight: 600,
-                  color: '#0088cc',
+                  color: '#10b981',
+                  textShadow: '0 2px 8px rgba(16, 185, 129, 0.5)',
                   '&:hover': {
-                    color: '#006699',
+                    color: '#22c55e',
                     textDecoration: 'underline',
                   },
                   cursor: 'pointer',
@@ -78,7 +163,19 @@ export default function Home() {
               href="/auth/register"
               variant="contained"
               size="large"
-              sx={{ minWidth: 200 }}
+              sx={{ 
+                minWidth: 200,
+                bgcolor: '#10b981',
+                color: '#000',
+                fontWeight: 700,
+                fontSize: '1.1rem',
+                '&:hover': {
+                  bgcolor: '#059669',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)',
+                },
+                transition: 'all 0.3s ease',
+              }}
             >
               Get Started
             </Button>
@@ -87,7 +184,19 @@ export default function Home() {
               href="/auth/login"
               variant="outlined"
               size="large"
-              sx={{ minWidth: 200 }}
+              sx={{ 
+                minWidth: 200,
+                borderColor: '#10b981',
+                color: '#10b981',
+                fontWeight: 600,
+                fontSize: '1.1rem',
+                '&:hover': {
+                  borderColor: '#059669',
+                  bgcolor: 'rgba(16, 185, 129, 0.1)',
+                  transform: 'translateY(-2px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
             >
               Login
             </Button>
@@ -100,9 +209,10 @@ export default function Home() {
             variant="h4"
             align="center"
             sx={{
-              fontWeight: 600,
+              fontWeight: 700,
               mb: 4,
-              color: 'text.primary',
+              color: '#10b981',
+              textShadow: '0 2px 10px rgba(16, 185, 129, 0.3)',
             }}
           >
             Connect with Us
@@ -141,15 +251,30 @@ export default function Home() {
         <Box sx={{ py: 8 }}>
           <Grid container spacing={4}>
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ height: '100%', textAlign: 'center', p: 2 }}>
+              <Card 
+                sx={{ 
+                  height: '100%', 
+                  textAlign: 'center', 
+                  p: 2,
+                  bgcolor: 'rgba(30, 41, 59, 0.8)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    borderColor: '#10b981',
+                    boxShadow: '0 8px 32px rgba(16, 185, 129, 0.3)',
+                  },
+                }}
+              >
                 <CardContent>
-                  <Box sx={{ color: 'primary.main', mb: 2, display: 'flex', justifyContent: 'center' }}>
+                  <Box sx={{ color: '#10b981', mb: 2, display: 'flex', justifyContent: 'center' }}>
                     <TrendingUp size={48} />
                   </Box>
-                  <Typography variant="h6" gutterBottom>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#10b981', fontWeight: 700 }}>
                     7 Trading Robots
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.primary">
                     Pre-built strategies for trend, scalping, breakout, and more
                   </Typography>
                 </CardContent>
@@ -157,15 +282,30 @@ export default function Home() {
             </Grid>
             
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ height: '100%', textAlign: 'center', p: 2 }}>
+              <Card 
+                sx={{ 
+                  height: '100%', 
+                  textAlign: 'center', 
+                  p: 2,
+                  bgcolor: 'rgba(30, 41, 59, 0.8)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    borderColor: '#10b981',
+                    boxShadow: '0 8px 32px rgba(16, 185, 129, 0.3)',
+                  },
+                }}
+              >
                 <CardContent>
-                  <Box sx={{ color: 'primary.main', mb: 2, display: 'flex', justifyContent: 'center' }}>
+                  <Box sx={{ color: '#10b981', mb: 2, display: 'flex', justifyContent: 'center' }}>
                     <Shield size={48} />
                   </Box>
-                  <Typography variant="h6" gutterBottom>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#10b981', fontWeight: 700 }}>
                     Enterprise Security
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.primary">
                     2FA authentication, encrypted connections, and audit logs
                   </Typography>
                 </CardContent>
@@ -173,15 +313,30 @@ export default function Home() {
             </Grid>
 
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ height: '100%', textAlign: 'center', p: 2 }}>
+              <Card 
+                sx={{ 
+                  height: '100%', 
+                  textAlign: 'center', 
+                  p: 2,
+                  bgcolor: 'rgba(30, 41, 59, 0.8)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    borderColor: '#10b981',
+                    boxShadow: '0 8px 32px rgba(16, 185, 129, 0.3)',
+                  },
+                }}
+              >
                 <CardContent>
-                  <Box sx={{ color: 'primary.main', mb: 2, display: 'flex', justifyContent: 'center' }}>
+                  <Box sx={{ color: '#10b981', mb: 2, display: 'flex', justifyContent: 'center' }}>
                     <Zap size={48} />
                   </Box>
-                  <Typography variant="h6" gutterBottom>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#10b981', fontWeight: 700 }}>
                     Real-Time Trading
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.primary">
                     Live P&L tracking with WebSocket updates
                   </Typography>
                 </CardContent>
@@ -189,15 +344,30 @@ export default function Home() {
             </Grid>
 
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ height: '100%', textAlign: 'center', p: 2 }}>
+              <Card 
+                sx={{ 
+                  height: '100%', 
+                  textAlign: 'center', 
+                  p: 2,
+                  bgcolor: 'rgba(30, 41, 59, 0.8)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    borderColor: '#10b981',
+                    boxShadow: '0 8px 32px rgba(16, 185, 129, 0.3)',
+                  },
+                }}
+              >
                 <CardContent>
-                  <Box sx={{ color: 'primary.main', mb: 2, display: 'flex', justifyContent: 'center' }}>
+                  <Box sx={{ color: '#10b981', mb: 2, display: 'flex', justifyContent: 'center' }}>
                     <BarChart3 size={48} />
                   </Box>
-                  <Typography variant="h6" gutterBottom>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#10b981', fontWeight: 700 }}>
                     Advanced Analytics
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.primary">
                     Win rate, profit factors, and detailed statistics
                   </Typography>
                 </CardContent>
