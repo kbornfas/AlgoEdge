@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { hashPassword, generateToken, PASSWORD_MIN_LENGTH } from '@/lib/auth';
 import { z } from 'zod';
 
+// Subscription constants
+const DEFAULT_SUBSCRIPTION_PLAN = 'standard';
+const DEFAULT_SUBSCRIPTION_STATUS = 'pending';
+
 // Validation schema for registration - Updated to require first and last name
 const registerSchema = z.object({
   firstName: z.string().min(1).max(50),
@@ -68,12 +72,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Create default subscription (free plan)
+    // Create subscription record
     await prisma.subscription.create({
       data: {
         userId: user.id,
-        plan: 'free',
-        status: 'active',
+        plan: DEFAULT_SUBSCRIPTION_PLAN,
+        status: DEFAULT_SUBSCRIPTION_STATUS,
       },
     });
 
