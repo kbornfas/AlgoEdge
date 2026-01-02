@@ -4,6 +4,7 @@
  * Daily Trade Report Sender
  * 
  * This script sends daily trading performance summaries to all eligible users.
+ * It uses a dedicated database connection that is properly closed after execution.
  * 
  * Usage:
  *   node scripts/send-daily-reports.js
@@ -18,9 +19,19 @@
  */
 
 import { sendDailyReportsToAllUsers } from '../backend/services/emailService.js';
-import pool from '../backend/config/database.js';
+import pg from 'pg';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const { Pool } = pg;
 
 async function main() {
+  // Create a dedicated pool for this script
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+  });
+
   console.log('========================================');
   console.log('📧 AlgoEdge Daily Trade Report Sender');
   console.log('========================================');
@@ -51,7 +62,7 @@ async function main() {
     console.error(error.stack);
     process.exit(1);
   } finally {
-    // Close database connection
+    // Close database connection created by this script
     await pool.end();
   }
 }

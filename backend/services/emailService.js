@@ -400,7 +400,12 @@ export const sendVerificationCodeSMS = async (phoneNumber, code, expiryMinutes =
  */
 export const calculateDailyStats = async (userId, pool) => {
   try {
-    // Get trades from today (midnight to now)
+    // Get trades from today using range query for better index usage
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
     const result = await pool.query(
       `SELECT 
         COUNT(*) as total_trades,
@@ -410,8 +415,9 @@ export const calculateDailyStats = async (userId, pool) => {
        FROM trades
        WHERE user_id = $1 
        AND status = 'closed'
-       AND DATE(close_time) = CURRENT_DATE`,
-      [userId]
+       AND close_time >= $2 
+       AND close_time < $3`,
+      [userId, today, tomorrow]
     );
 
     const stats = result.rows[0];
@@ -452,6 +458,12 @@ export const calculateDailyStats = async (userId, pool) => {
  */
 export const getTodaysTrades = async (userId, pool) => {
   try {
+    // Use range query for better index usage
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
     const result = await pool.query(
       `SELECT 
         pair, 
@@ -465,10 +477,11 @@ export const getTodaysTrades = async (userId, pool) => {
        FROM trades
        WHERE user_id = $1 
        AND status = 'closed'
-       AND DATE(close_time) = CURRENT_DATE
+       AND close_time >= $2 
+       AND close_time < $3
        ORDER BY close_time DESC
        LIMIT 10`,
-      [userId]
+      [userId, today, tomorrow]
     );
 
     return result.rows;
@@ -528,23 +541,35 @@ export const sendDailyTradeReport = async (userId, email, username, pool) => {
 /**
  * Send daily reports to all active users with trades
  * @param {Object} pool - Database pool connection
+ * @param {number} batchSize - Number of concurrent emails to send (default: 5)
  * @returns {Object} Summary of sent reports
  */
-export const sendDailyReportsToAllUsers = async (pool) => {
+export const sendDailyReportsToAllUsers = async (pool, batchSize = 5) => {
   try {
     console.log('📧 Starting daily trade report batch...');
+    
+    // Use range query and EXISTS for better performance
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
     
     // Get all users with trades today and notifications enabled
     const usersResult = await pool.query(
       `SELECT DISTINCT u.id, u.email, u.username
        FROM users u
        JOIN user_settings us ON u.id = us.user_id
-       JOIN trades t ON u.id = t.user_id
        WHERE u.is_verified = true
        AND us.email_alerts = true
        AND us.trade_notifications = true
-       AND t.status = 'closed'
-       AND DATE(t.close_time) = CURRENT_DATE`
+       AND EXISTS (
+         SELECT 1 FROM trades t
+         WHERE t.user_id = u.id
+         AND t.status = 'closed'
+         AND t.close_time >= $1
+         AND t.close_time < $2
+       )`,
+      [today, tomorrow]
     );
 
     const users = usersResult.rows;
@@ -553,16 +578,26 @@ export const sendDailyReportsToAllUsers = async (pool) => {
     let sent = 0;
     let failed = 0;
 
-    for (const user of users) {
-      const success = await sendDailyTradeReport(user.id, user.email, user.username, pool);
-      if (success) {
-        sent++;
-      } else {
-        failed++;
-      }
+    // Process in batches for better performance
+    for (let i = 0; i < users.length; i += batchSize) {
+      const batch = users.slice(i, i + batchSize);
       
-      // Small delay between emails to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const results = await Promise.allSettled(
+        batch.map(user => sendDailyTradeReport(user.id, user.email, user.username, pool))
+      );
+      
+      results.forEach(result => {
+        if (result.status === 'fulfilled' && result.value) {
+          sent++;
+        } else {
+          failed++;
+        }
+      });
+      
+      // Delay between batches to avoid rate limiting
+      if (i + batchSize < users.length) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
     }
 
     const summary = {
