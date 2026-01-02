@@ -187,7 +187,66 @@ Copy the output to `JWT_SECRET` in `.env`
    ```env
    SMTP_USER="your-email@gmail.com"
    SMTP_PASS="your-16-char-app-password"
+   SMTP_FROM="AlgoEdge <noreply@algoedge.com>"
    ```
+
+### 5. Using the Email Service
+
+The backend includes a Nodemailer-based email service at `backend/services/emailService.js` that can be used to send transactional emails.
+
+#### Import the Email Service
+
+```javascript
+import { sendMail } from '../services/emailService.js';
+```
+
+#### Send a Custom Email
+
+The `sendMail` function accepts an object with the following parameters:
+
+```javascript
+const result = await sendMail({
+  to: 'user@example.com',           // Required: recipient email
+  subject: 'Welcome to AlgoEdge',   // Required: email subject
+  text: 'Plain text content',       // Optional: plain text version
+  html: '<h1>HTML content</h1>'     // Optional: HTML version
+});
+
+// Check result
+if (result.success) {
+  console.log('Email sent! Message ID:', result.messageId);
+} else {
+  console.error('Failed to send email:', result.error);
+}
+```
+
+#### Using Pre-built Templates
+
+The service also includes pre-built email templates:
+
+```javascript
+import { sendEmail } from '../services/emailService.js';
+
+// Send welcome email
+await sendEmail('user@example.com', 'welcome', [username, verificationUrl]);
+
+// Send password reset
+await sendEmail('user@example.com', 'passwordReset', [username, resetUrl]);
+
+// Send verification code
+await sendEmail('user@example.com', 'verificationCode', [username, code, expiryMinutes]);
+```
+
+#### Environment Variables
+
+Make sure these variables are set in your `.env` file:
+
+- `SMTP_HOST` - SMTP server hostname (e.g., smtp.gmail.com)
+- `SMTP_PORT` - SMTP server port (e.g., 465 for secure, 587 for TLS)
+- `SMTP_SECURE` - Use SSL/TLS (true for port 465, false for port 587)
+- `SMTP_USER` - SMTP username (your email address)
+- `SMTP_PASSWORD` - SMTP password (app-specific password for Gmail)
+- `SMTP_FROM` - Default "From" address (e.g., "AlgoEdge <noreply@algoedge.com>")
 
 ---
 

@@ -158,13 +158,48 @@ const emailTemplates = {
   }),
 };
 
-// Send email function
+// Generic send mail function - accepts recipient, subject, text, and optional html
+export const sendMail = async ({ to, subject, text, html }) => {
+  try {
+    if (!to || !subject) {
+      throw new Error('Recipient (to) and subject are required');
+    }
+
+    const mailOptions = {
+      from: process.env.SMTP_FROM || `"AlgoEdge" <${process.env.SMTP_USER}>`,
+      to,
+      subject,
+      text: text || '',
+    };
+
+    // Add HTML if provided
+    if (html) {
+      mailOptions.html = html;
+    }
+
+    const info = await transporter.sendMail(mailOptions);
+    
+    console.log(`✅ Email sent successfully to ${to}: ${subject}`);
+    console.log(`📧 Message ID: ${info.messageId}`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error(`❌ Failed to send email to ${to}:`, error.message);
+    console.error(`📋 Error details:`, {
+      code: error.code,
+      command: error.command,
+      response: error.response,
+    });
+    return { success: false, error: error.message };
+  }
+};
+
+// Send email function (template-based)
 export const sendEmail = async (to, template, data) => {
   try {
     const emailContent = emailTemplates[template](...data);
     
     await transporter.sendMail({
-      from: `"AlgoEdge" <${process.env.SMTP_USER}>`,
+      from: process.env.SMTP_FROM || `"AlgoEdge" <${process.env.SMTP_USER}>`,
       to,
       subject: emailContent.subject,
       html: emailContent.html,
@@ -173,7 +208,11 @@ export const sendEmail = async (to, template, data) => {
     console.log(`✅ Email sent to ${to}: ${emailContent.subject}`);
     return true;
   } catch (error) {
-    console.error(`❌ Email error:`, error);
+    console.error(`❌ Failed to send email to ${to}:`, error.message);
+    console.error(`📋 Error details:`, {
+      code: error.code,
+      template: template,
+    });
     return false;
   }
 };
@@ -190,7 +229,7 @@ export const sendVerificationCodeEmail = async (email, username, code, expiryMin
     console.log(`✅ Verification code sent to ${email}`);
     return true;
   } catch (error) {
-    console.error(`❌ Failed to send verification code:`, error);
+    console.error(`❌ Failed to send verification code to ${email}:`, error.message);
     return false;
   }
 };
@@ -218,12 +257,13 @@ export const sendVerificationCodeSMS = async (phoneNumber, code, expiryMinutes =
     
     return true;
   } catch (error) {
-    console.error(`❌ Failed to send SMS:`, error);
+    console.error(`❌ Failed to send SMS to ${phoneNumber}:`, error.message);
     return false;
   }
 };
 
 export default { 
+  sendMail,
   sendEmail, 
   emailTemplates, 
   generateVerificationCode,
