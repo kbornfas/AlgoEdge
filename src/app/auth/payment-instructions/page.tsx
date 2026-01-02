@@ -123,7 +123,7 @@ export default function PaymentInstructionsPage() {
               <Box component="ul" sx={{ pl: 2 }}>
                 <li>
                   <Typography variant="body2">
-                    Contact us on WhatsApp for payment details and subscription plans
+                    Contact us on WhatsApp to receive payment details and pricing information
                   </Typography>
                 </li>
                 <li>
