@@ -23,11 +23,11 @@ import { useRouter } from 'next/navigation';
 export default function RegisterPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    username: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
-    fullName: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -66,10 +66,10 @@ export default function RegisterPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: formData.username,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
           email: formData.email,
           password: formData.password,
-          fullName: formData.fullName,
         }),
       });
 
@@ -86,10 +86,10 @@ export default function RegisterPage() {
 
       setSuccess(true);
 
-      // Redirect after showing success message
+      // Redirect to OTP verification page
       setTimeout(() => {
-        router.push('/dashboard');
-      }, 2000);
+        router.push('/auth/verify-otp');
+      }, 1500);
     } catch (err) {
       setError('Network error. Please try again.');
     } finally {
@@ -126,18 +126,30 @@ export default function RegisterPage() {
 
             {success && (
               <Alert severity="success" sx={{ mb: 3 }}>
-                Registration successful! Check your email to verify your account. Redirecting to dashboard...
+                Registration successful! Redirecting to email verification...
               </Alert>
             )}
 
             <Box component="form" onSubmit={handleSubmit}>
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="Username"
-                    name="username"
-                    value={formData.username}
+                    label="First Name"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    required
+                    disabled={loading || success}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Last Name"
+                    name="lastName"
+                    value={formData.lastName}
                     onChange={handleChange}
                     required
                     disabled={loading || success}
@@ -153,17 +165,6 @@ export default function RegisterPage() {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    disabled={loading || success}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Full Name (Optional)"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleChange}
                     disabled={loading || success}
                   />
                 </Grid>

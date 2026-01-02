@@ -126,6 +126,49 @@ export async function sendPasswordResetEmail(
 }
 
 /**
+ * Send OTP verification code email
+ */
+export async function sendOTPEmail(
+  email: string,
+  username: string,
+  code: string
+): Promise<void> {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Verify Your Email</h1>
+        </div>
+        <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #3B82F6; margin-top: 0;">Hi ${username}!</h2>
+          <p>Thank you for registering with AlgoEdge. Please use the verification code below to complete your registration:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <div style="display: inline-block; background: white; padding: 20px 40px; border-radius: 8px; border: 2px solid #3B82F6;">
+              <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #3B82F6;">${code}</span>
+            </div>
+          </div>
+          <p style="color: #666; font-size: 14px; text-align: center;">Enter this code in the verification page to continue.</p>
+          <p style="color: #666; font-size: 14px; margin-top: 30px;">This code will expire in 15 minutes.</p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+          <p style="color: #999; font-size: 12px; text-align: center;">If you didn't create an account, please ignore this email.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  await sendEmail({
+    to: email,
+    subject: 'Your AlgoEdge Verification Code',
+    html,
+  });
+}
+
+/**
  * Send trade alert email
  */
 export async function sendTradeAlertEmail(
