@@ -95,7 +95,7 @@ export default function Home() {
                   cursor: 'pointer',
                 }}
               >
-                🎯Join telegram channel for free AI signals🚀
+                🎯 Join Telegram channel for free AI signals 🚀
               </Typography>
             </Link>
           </Box>
