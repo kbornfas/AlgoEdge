@@ -426,10 +426,10 @@ export const calculateDailyStats = async (userId, pool) => {
     const losingTrades = parseInt(stats.losing_trades) || 0;
     const dailyProfit = parseFloat(stats.daily_profit) || 0;
     
-    // Calculate win rate
+    // Calculate win rate (return as number for template flexibility)
     const winRate = totalTrades > 0 
-      ? ((winningTrades / totalTrades) * 100).toFixed(1)
-      : '0.0';
+      ? parseFloat(((winningTrades / totalTrades) * 100).toFixed(1))
+      : 0.0;
 
     return {
       totalTrades,
@@ -445,7 +445,7 @@ export const calculateDailyStats = async (userId, pool) => {
       winningTrades: 0,
       losingTrades: 0,
       dailyProfit: 0,
-      winRate: '0.0'
+      winRate: 0.0
     };
   }
 };
@@ -542,11 +542,15 @@ export const sendDailyTradeReport = async (userId, email, username, pool) => {
  * Send daily reports to all active users with trades
  * @param {Object} pool - Database pool connection
  * @param {number} batchSize - Number of concurrent emails to send (default: 5)
+ * @param {number} batchDelayMs - Delay between batches in milliseconds (default from env or 2000)
  * @returns {Object} Summary of sent reports
  */
-export const sendDailyReportsToAllUsers = async (pool, batchSize = 5) => {
+export const sendDailyReportsToAllUsers = async (pool, batchSize = 5, batchDelayMs = null) => {
   try {
     console.log('📧 Starting daily trade report batch...');
+    
+    // Allow configuration via environment variable
+    const delayMs = batchDelayMs || parseInt(process.env.EMAIL_BATCH_DELAY_MS) || 2000;
     
     // Use range query and EXISTS for better performance
     const today = new Date();
@@ -594,9 +598,9 @@ export const sendDailyReportsToAllUsers = async (pool, batchSize = 5) => {
         }
       });
       
-      // Delay between batches to avoid rate limiting
+      // Delay between batches to avoid rate limiting (configurable)
       if (i + batchSize < users.length) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
 

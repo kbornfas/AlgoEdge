@@ -21,6 +21,7 @@
 import { sendDailyReportsToAllUsers } from '../backend/services/emailService.js';
 import pg from 'pg';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 
@@ -68,7 +69,8 @@ async function main() {
 }
 
 // Run if executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+const scriptPath = fileURLToPath(import.meta.url);
+if (process.argv[1] === scriptPath) {
   main();
 }
 
