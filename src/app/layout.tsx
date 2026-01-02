@@ -5,9 +5,29 @@ import CssBaseline from '@mui/material/CssBaseline';
 import theme from '@/theme/theme';
 
 export const metadata: Metadata = {
-  title: "AlgoEdge - AI-Powered Trading Platform",
-  description: "Automated Forex Trading with MetaTrader 5 Integration",
-  keywords: "forex trading, automated trading, mt5, trading bot, algoedge",
+  title: "AlgoEdge - Automated Forex Trading Platform",
+  description: "Professional automated forex trading with MetaTrader 5 integration. 10 high-performance trading robots, real-time monitoring, and advanced analytics.",
+  keywords: ["forex trading", "automated trading", "mt5", "trading bot", "algoedge", "algorithmic trading", "forex robots", "trading platform"],
+  authors: [{ name: "AlgoEdge" }],
+  creator: "AlgoEdge",
+  publisher: "AlgoEdge",
+  robots: "index, follow",
+  openGraph: {
+    type: "website",
+    title: "AlgoEdge - Automated Forex Trading Platform",
+    description: "Professional automated forex trading with MetaTrader 5 integration",
+    siteName: "AlgoEdge",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AlgoEdge - Automated Forex Trading Platform",
+    description: "Professional automated forex trading with MetaTrader 5 integration",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

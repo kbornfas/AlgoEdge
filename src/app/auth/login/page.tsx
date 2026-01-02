@@ -182,7 +182,7 @@ export default function LoginPage() {
               </Button>
 
               <Typography variant="body2" align="center" color="text.secondary">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <MuiLink component={Link} href="/auth/register" underline="hover">
                   Sign up
                 </MuiLink>
