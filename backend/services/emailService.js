@@ -3,21 +3,22 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Create email transporter
+// Create email transporter with standardized env vars
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT),
-  secure: process.env.SMTP_SECURE === 'true',
+  secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
   auth: {
     user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
+    pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD, // Support both for backward compatibility
   },
 });
 
 // Verify email configuration
 transporter.verify((error) => {
   if (error) {
-    console.log('❌ Email service not configured:', error.message);
+    console.log('❌ Email service not configured properly. Check SMTP settings.');
+    console.log('   Required: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM');
   } else {
     console.log('✅ Email service ready');
   }
@@ -79,29 +80,195 @@ const emailTemplates = {
   verificationCode: (username, code, expiryMinutes = 10) => ({
     subject: 'Your AlgoEdge Verification Code',
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0;">Verification Code</h1>
-        </div>
-        <div style="padding: 30px; background: #f9fafb;">
-          <h2>Hi ${username},</h2>
-          <p>Your verification code is:</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <div style="background: white; border: 3px solid #667eea; border-radius: 10px; padding: 20px; display: inline-block;">
-              <span style="font-size: 36px; font-weight: bold; color: #667eea; letter-spacing: 8px;">${code}</span>
-            </div>
-          </div>
-          <p style="text-align: center; color: #6b7280; font-size: 16px;">Enter this code to verify your identity</p>
-          <p style="margin-top: 30px; color: #ef4444; font-weight: bold; text-align: center;">⏰ This code expires in ${expiryMinutes} minutes</p>
-          <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
-          <p style="color: #6b7280; font-size: 12px;">
-            If you didn't request this code, please ignore this email or contact support immediately.
-          </p>
-          <p style="color: #6b7280; font-size: 12px;">
-            For security reasons, never share this code with anyone.
-          </p>
-        </div>
-      </div>
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Verification Code</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6;">
+          <tr>
+            <td style="padding: 40px 20px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+                    <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">🔐 Verification Code</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 40px 30px;">
+                    <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px;">Hi ${username},</h2>
+                    <p style="color: #4b5563; font-size: 16px; line-height: 1.5; margin: 0 0 30px 0;">
+                      Thank you for registering with AlgoEdge! Use the code below to verify your email address and complete your registration.
+                    </p>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="text-align: center; padding: 30px 0;">
+                          <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 3px solid #667eea; border-radius: 12px; padding: 30px; display: inline-block;">
+                            <span style="font-size: 42px; font-weight: 900; color: #667eea; letter-spacing: 10px; font-family: 'Courier New', monospace;">${code}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="text-align: center; color: #ef4444; font-weight: 600; font-size: 16px; margin: 20px 0;">
+                      ⏰ This code expires in ${expiryMinutes} minutes
+                    </p>
+                    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 30px 0; border-radius: 4px;">
+                      <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.5;">
+                        <strong>Security Tip:</strong> Never share this code with anyone. AlgoEdge staff will never ask for your verification code.
+                      </p>
+                    </div>
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #9ca3af; font-size: 13px; line-height: 1.5; margin: 0;">
+                      If you didn't request this code, please ignore this email or contact support at 
+                      <a href="mailto:support@algoedge.com" style="color: #667eea; text-decoration: none;">support@algoedge.com</a>
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-radius: 0 0 12px 12px;">
+                    <p style="color: #6b7280; font-size: 13px; margin: 0 0 10px 0;">
+                      © ${new Date().getFullYear()} AlgoEdge. All rights reserved.
+                    </p>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                      Automated Trading Platform | Built for Traders
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `,
+  }),
+
+  dailyTradeSummary: (username, stats, trades) => ({
+    subject: `📊 Daily Trading Summary - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+    html: `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Daily Trade Summary</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6;">
+          <tr>
+            <td style="padding: 40px 20px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 700px; margin: 0 auto; background-color: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+                    <h1 style="color: white; margin: 0 0 10px 0; font-size: 28px; font-weight: 700;">📊 Daily Trading Summary</h1>
+                    <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 16px;">${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 40px 30px;">
+                    <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 22px;">Hi ${username},</h2>
+                    <p style="color: #4b5563; font-size: 16px; line-height: 1.5; margin: 0 0 30px 0;">
+                      Here's your trading performance summary for today. Keep up the great work!
+                    </p>
+                    
+                    <!-- Performance Stats -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 30px;">
+                      <tr>
+                        <td style="width: 50%; padding: 20px; background: linear-gradient(135deg, ${stats.dailyProfit >= 0 ? '#d1fae5' : '#fee2e2'} 0%, ${stats.dailyProfit >= 0 ? '#a7f3d0' : '#fecaca'} 100%); border-radius: 8px; text-align: center;">
+                          <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; font-weight: 600;">Daily P/L</p>
+                          <p style="margin: 0; font-size: 32px; font-weight: 900; color: ${stats.dailyProfit >= 0 ? '#059669' : '#dc2626'};">
+                            ${stats.dailyProfit >= 0 ? '+' : ''}$${Math.abs(stats.dailyProfit).toFixed(2)}
+                          </p>
+                        </td>
+                        <td style="width: 10px;"></td>
+                        <td style="width: 50%; padding: 20px; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-radius: 8px; text-align: center;">
+                          <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; font-weight: 600;">Win Rate</p>
+                          <p style="margin: 0; font-size: 32px; font-weight: 900; color: #0284c7;">${stats.winRate}%</p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Quick Stats Grid -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 30px;">
+                      <tr>
+                        <td style="width: 33.33%; padding: 15px; background-color: #f9fafb; border-radius: 8px; text-align: center;">
+                          <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 12px;">Total Trades</p>
+                          <p style="margin: 0; font-size: 24px; font-weight: 700; color: #1f2937;">${stats.totalTrades}</p>
+                        </td>
+                        <td style="width: 5px;"></td>
+                        <td style="width: 33.33%; padding: 15px; background-color: #f9fafb; border-radius: 8px; text-align: center;">
+                          <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 12px;">Winners</p>
+                          <p style="margin: 0; font-size: 24px; font-weight: 700; color: #059669;">${stats.winningTrades}</p>
+                        </td>
+                        <td style="width: 5px;"></td>
+                        <td style="width: 33.33%; padding: 15px; background-color: #f9fafb; border-radius: 8px; text-align: center;">
+                          <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 12px;">Losers</p>
+                          <p style="margin: 0; font-size: 24px; font-weight: 700; color: #dc2626;">${stats.losingTrades}</p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    ${trades && trades.length > 0 ? `
+                    <!-- Recent Trades -->
+                    <h3 style="color: #1f2937; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;">Recent Trades</h3>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f9fafb; border-radius: 8px; overflow: hidden;">
+                      <thead>
+                        <tr style="background-color: #e5e7eb;">
+                          <th style="padding: 12px; text-align: left; color: #374151; font-size: 13px; font-weight: 600;">Symbol</th>
+                          <th style="padding: 12px; text-align: left; color: #374151; font-size: 13px; font-weight: 600;">Type</th>
+                          <th style="padding: 12px; text-align: right; color: #374151; font-size: 13px; font-weight: 600;">P/L</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${trades.slice(0, 5).map((trade, idx) => `
+                          <tr style="${idx % 2 === 0 ? 'background-color: white;' : 'background-color: #f9fafb;'}">
+                            <td style="padding: 12px; color: #1f2937; font-size: 14px; font-weight: 500;">${trade.pair || trade.symbol}</td>
+                            <td style="padding: 12px; color: #6b7280; font-size: 14px;">${trade.type}</td>
+                            <td style="padding: 12px; text-align: right; color: ${trade.profit >= 0 ? '#059669' : '#dc2626'}; font-size: 14px; font-weight: 600;">
+                              ${trade.profit >= 0 ? '+' : ''}$${trade.profit?.toFixed(2) || '0.00'}
+                            </td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                    ` : '<p style="color: #6b7280; font-size: 14px; text-align: center; padding: 20px; background-color: #f9fafb; border-radius: 8px;">No trades executed today</p>'}
+
+                    <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px; border-left: 4px solid #f59e0b;">
+                      <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.5;">
+                        <strong>💡 Trading Tip:</strong> Always monitor your risk management and never invest more than you can afford to lose.
+                      </p>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 30px;">
+                      <a href="${process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://algoedge.com'}/dashboard" 
+                         style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                        View Full Dashboard
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #6b7280; font-size: 13px; margin: 0 0 10px 0;">
+                      © ${new Date().getFullYear()} AlgoEdge. All rights reserved.
+                    </p>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                      Automated Trading Platform | Built for Traders
+                    </p>
+                    <p style="color: #9ca3af; font-size: 11px; margin: 10px 0 0 0;">
+                      <a href="${process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://algoedge.com'}/settings" style="color: #667eea; text-decoration: none;">Email Preferences</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `,
   }),
 
@@ -162,9 +329,10 @@ const emailTemplates = {
 export const sendEmail = async (to, template, data) => {
   try {
     const emailContent = emailTemplates[template](...data);
+    const fromAddress = process.env.SMTP_FROM || `"AlgoEdge" <${process.env.SMTP_USER}>`;
     
     await transporter.sendMail({
-      from: `"AlgoEdge" <${process.env.SMTP_USER}>`,
+      from: fromAddress,
       to,
       subject: emailContent.subject,
       html: emailContent.html,
@@ -173,7 +341,8 @@ export const sendEmail = async (to, template, data) => {
     console.log(`✅ Email sent to ${to}: ${emailContent.subject}`);
     return true;
   } catch (error) {
-    console.error(`❌ Email error:`, error);
+    // Log error without exposing sensitive config
+    console.error(`❌ Email error sending to ${to}:`, error.message);
     return false;
   }
 };
@@ -223,10 +392,208 @@ export const sendVerificationCodeSMS = async (phoneNumber, code, expiryMinutes =
   }
 };
 
+/**
+ * Calculate daily trade statistics for a user
+ * @param {number} userId - User ID
+ * @param {Object} pool - Database pool connection
+ * @returns {Object} Daily statistics
+ */
+export const calculateDailyStats = async (userId, pool) => {
+  try {
+    // Get trades from today (midnight to now)
+    const result = await pool.query(
+      `SELECT 
+        COUNT(*) as total_trades,
+        COUNT(*) FILTER (WHERE profit > 0) as winning_trades,
+        COUNT(*) FILTER (WHERE profit < 0) as losing_trades,
+        COALESCE(SUM(profit), 0) as daily_profit
+       FROM trades
+       WHERE user_id = $1 
+       AND status = 'closed'
+       AND DATE(close_time) = CURRENT_DATE`,
+      [userId]
+    );
+
+    const stats = result.rows[0];
+    const totalTrades = parseInt(stats.total_trades) || 0;
+    const winningTrades = parseInt(stats.winning_trades) || 0;
+    const losingTrades = parseInt(stats.losing_trades) || 0;
+    const dailyProfit = parseFloat(stats.daily_profit) || 0;
+    
+    // Calculate win rate
+    const winRate = totalTrades > 0 
+      ? ((winningTrades / totalTrades) * 100).toFixed(1)
+      : '0.0';
+
+    return {
+      totalTrades,
+      winningTrades,
+      losingTrades,
+      dailyProfit,
+      winRate
+    };
+  } catch (error) {
+    console.error('Error calculating daily stats:', error.message);
+    return {
+      totalTrades: 0,
+      winningTrades: 0,
+      losingTrades: 0,
+      dailyProfit: 0,
+      winRate: '0.0'
+    };
+  }
+};
+
+/**
+ * Get today's trades for a user
+ * @param {number} userId - User ID
+ * @param {Object} pool - Database pool connection
+ * @returns {Array} Array of trade objects
+ */
+export const getTodaysTrades = async (userId, pool) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        pair, 
+        symbol, 
+        type, 
+        volume, 
+        open_price, 
+        close_price, 
+        profit,
+        close_time
+       FROM trades
+       WHERE user_id = $1 
+       AND status = 'closed'
+       AND DATE(close_time) = CURRENT_DATE
+       ORDER BY close_time DESC
+       LIMIT 10`,
+      [userId]
+    );
+
+    return result.rows;
+  } catch (error) {
+    console.error('Error fetching today\'s trades:', error.message);
+    return [];
+  }
+};
+
+/**
+ * Send daily trading summary email to a user
+ * @param {number} userId - User ID
+ * @param {string} email - User email address
+ * @param {string} username - User username
+ * @param {Object} pool - Database pool connection
+ * @returns {boolean} Success status
+ */
+export const sendDailyTradeReport = async (userId, email, username, pool) => {
+  try {
+    // Check if user has email notifications enabled
+    const settingsResult = await pool.query(
+      'SELECT email_alerts, trade_notifications FROM user_settings WHERE user_id = $1',
+      [userId]
+    );
+
+    if (settingsResult.rows.length === 0 || 
+        !settingsResult.rows[0].email_alerts || 
+        !settingsResult.rows[0].trade_notifications) {
+      console.log(`⏭️  Daily report skipped for ${email} - notifications disabled`);
+      return false;
+    }
+
+    // Get daily stats and trades
+    const stats = await calculateDailyStats(userId, pool);
+    const trades = await getTodaysTrades(userId, pool);
+
+    // Only send if there's activity
+    if (stats.totalTrades === 0) {
+      console.log(`⏭️  Daily report skipped for ${email} - no trades today`);
+      return false;
+    }
+
+    // Send email
+    const success = await sendEmail(email, 'dailyTradeSummary', [username, stats, trades]);
+    
+    if (success) {
+      console.log(`✅ Daily trade report sent to ${email}`);
+    }
+    
+    return success;
+  } catch (error) {
+    console.error(`❌ Failed to send daily report to ${email}:`, error.message);
+    return false;
+  }
+};
+
+/**
+ * Send daily reports to all active users with trades
+ * @param {Object} pool - Database pool connection
+ * @returns {Object} Summary of sent reports
+ */
+export const sendDailyReportsToAllUsers = async (pool) => {
+  try {
+    console.log('📧 Starting daily trade report batch...');
+    
+    // Get all users with trades today and notifications enabled
+    const usersResult = await pool.query(
+      `SELECT DISTINCT u.id, u.email, u.username
+       FROM users u
+       JOIN user_settings us ON u.id = us.user_id
+       JOIN trades t ON u.id = t.user_id
+       WHERE u.is_verified = true
+       AND us.email_alerts = true
+       AND us.trade_notifications = true
+       AND t.status = 'closed'
+       AND DATE(t.close_time) = CURRENT_DATE`
+    );
+
+    const users = usersResult.rows;
+    console.log(`📊 Found ${users.length} users with trades today`);
+
+    let sent = 0;
+    let failed = 0;
+
+    for (const user of users) {
+      const success = await sendDailyTradeReport(user.id, user.email, user.username, pool);
+      if (success) {
+        sent++;
+      } else {
+        failed++;
+      }
+      
+      // Small delay between emails to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    const summary = {
+      total: users.length,
+      sent,
+      failed,
+      timestamp: new Date().toISOString()
+    };
+
+    console.log(`✅ Daily report batch complete: ${sent} sent, ${failed} failed`);
+    return summary;
+  } catch (error) {
+    console.error('❌ Daily report batch error:', error.message);
+    return {
+      total: 0,
+      sent: 0,
+      failed: 0,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    };
+  }
+};
+
 export default { 
   sendEmail, 
   emailTemplates, 
   generateVerificationCode,
   sendVerificationCodeEmail,
-  sendVerificationCodeSMS
+  sendVerificationCodeSMS,
+  calculateDailyStats,
+  getTodaysTrades,
+  sendDailyTradeReport,
+  sendDailyReportsToAllUsers
 };

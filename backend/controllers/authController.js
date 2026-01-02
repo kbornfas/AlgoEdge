@@ -15,7 +15,7 @@ const generateToken = (userId) => {
 };
 
 
-// Register - direct registration, no email verification
+// Register - with OTP email verification
 export const register = async (req, res) => {
   const client = await pool.connect();
   try {
@@ -39,12 +39,17 @@ export const register = async (req, res) => {
     // Hash password
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(password, salt);
-    // Create user
+    
+    // Generate OTP code
+    const otpCode = generateVerificationCode();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    
+    // Create user with OTP (not verified yet)
     const result = await client.query(
-      `INSERT INTO users (username, email, password_hash, is_verified)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO users (username, email, password_hash, is_verified, verification_code, verification_code_expires, verification_code_attempts)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, username, email, created_at`,
-      [username, email, passwordHash, true]
+      [username, email, passwordHash, false, otpCode, otpExpires, 0]
     );
     const user = result.rows[0];
     // Create default subscription
@@ -58,19 +63,26 @@ export const register = async (req, res) => {
       [user.id]
     );
     await client.query('COMMIT');
-    // Generate JWT
-    const token = generateToken(user.id);
+    
+    // Send OTP verification email
+    const emailSent = await sendVerificationCodeEmail(email, username, otpCode, 10);
+    
+    if (!emailSent) {
+      console.warn(`⚠️  OTP email failed for ${email}, but registration completed`);
+    }
+    
     // Audit log
     auditLog(user.id, 'USER_REGISTERED', { email, username }, req);
+    
     res.status(201).json({
-      message: 'Registration successful! Welcome to AlgoEdge.',
-      token,
+      message: 'Registration successful! Please check your email for the verification code.',
       user: {
         id: user.id,
         username: user.username,
         email: user.email,
-        isVerified: true
+        isVerified: false
       },
+      requiresVerification: true
     });
   } catch (error) {
     await client.query('ROLLBACK');
