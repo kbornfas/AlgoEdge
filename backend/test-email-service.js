@@ -15,20 +15,21 @@ console.log('');
 // Test email service import
 console.log('📦 Testing Email Service Import...');
 try {
-  const emailService = await import('./services/emailService.js');
+  const emailServiceModule = await import('./services/emailService.js');
+  const { generateVerificationCode } = emailServiceModule;
+  const emailTemplates = emailServiceModule.default.emailTemplates;
   console.log('✅ Email service imported successfully\n');
   
   // Test OTP generation
   console.log('🔢 Testing OTP Generation...');
-  const otp = emailService.generateVerificationCode();
+  const otp = generateVerificationCode();
   console.log(`✅ Generated OTP: ${otp} (${otp.length} digits)\n`);
   
   // Test template rendering
   console.log('📧 Testing Email Templates...');
-  const templates = emailService.default.emailTemplates;
   
   // Test OTP template
-  const otpEmail = templates.verificationCode('TestUser', '123456', 10);
+  const otpEmail = emailTemplates.verificationCode('TestUser', '123456', 10);
   console.log('✅ OTP Template:');
   console.log('   Subject:', otpEmail.subject);
   console.log('   HTML Length:', otpEmail.html.length, 'characters\n');
@@ -46,7 +47,7 @@ try {
     { pair: 'GBPUSD', type: 'SELL', profit: -20.00 },
     { pair: 'USDJPY', type: 'BUY', profit: 100.50 }
   ];
-  const dailyEmail = templates.dailyTradeSummary('TestUser', mockStats, mockTrades);
+  const dailyEmail = emailTemplates.dailyTradeSummary('TestUser', mockStats, mockTrades);
   console.log('✅ Daily Summary Template:');
   console.log('   Subject:', dailyEmail.subject);
   console.log('   HTML Length:', dailyEmail.html.length, 'characters\n');
