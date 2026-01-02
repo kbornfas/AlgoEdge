@@ -423,6 +423,18 @@ To verify your SMTP setup is working:
 - Use App Passwords instead of regular password
 - Enable 2FA on Google account first
 
+### Performance Optimization
+
+For optimal daily report performance with large user bases, consider adding a composite index:
+
+```sql
+CREATE INDEX idx_trades_daily_reports 
+ON trades(user_id, status, close_time) 
+WHERE status = 'closed';
+```
+
+This index significantly improves the query performance for daily report generation.
+
 ---
 
 ## 🔐 Security Features
