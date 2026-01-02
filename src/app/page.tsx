@@ -167,76 +167,7 @@ export default function Home() {
           </Grid>
         </Box>
 
-        {/* Pricing Section */}
-        <Box sx={{ py: 8, textAlign: 'center' }}>
-          <Typography variant="h3" gutterBottom sx={{ fontWeight: 600 }}>
-            Choose Your Plan
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 5 }}>
-            Start with our free plan or upgrade for more features
-          </Typography>
-          <Grid container spacing={4} justifyContent="center">
-            <Grid item xs={12} sm={6} md={4}>
-              <Card sx={{ p: 3, border: '2px solid transparent' }}>
-                <Typography variant="h5" gutterBottom>
-                  Free
-                </Typography>
-                <Typography variant="h3" sx={{ my: 2 }}>
-                  $0<Typography component="span" variant="body1">/mo</Typography>
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  • 1 MT5 Account<br />
-                  • All 7 Trading Robots<br />
-                  • Email Alerts<br />
-                  • Basic Analytics
-                </Typography>
-                <Button variant="outlined" fullWidth component={Link} href="/auth/register">
-                  Get Started
-                </Button>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12} sm={6} md={4}>
-              <Card sx={{ p: 3, border: '2px solid', borderColor: 'primary.main' }}>
-                <Typography variant="h5" gutterBottom color="primary">
-                  Pro
-                </Typography>
-                <Typography variant="h3" sx={{ my: 2 }}>
-                  $49<Typography component="span" variant="body1">/mo</Typography>
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  • 3 MT5 Accounts<br />
-                  • All Features<br />
-                  • Priority Support<br />
-                  • Advanced Analytics
-                </Typography>
-                <Button variant="contained" fullWidth component={Link} href="/auth/register">
-                  Start Pro Trial
-                </Button>
-              </Card>
-            </Grid>
 
-            <Grid item xs={12} sm={6} md={4}>
-              <Card sx={{ p: 3, border: '2px solid transparent' }}>
-                <Typography variant="h5" gutterBottom>
-                  Enterprise
-                </Typography>
-                <Typography variant="h3" sx={{ my: 2 }}>
-                  $199<Typography component="span" variant="body1">/mo</Typography>
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  • Unlimited Accounts<br />
-                  • API Access<br />
-                  • Dedicated Support<br />
-                  • Custom Features
-                </Typography>
-                <Button variant="outlined" fullWidth component={Link} href="/auth/register">
-                  Contact Sales
-                </Button>
-              </Card>
-            </Grid>
-          </Grid>
-        </Box>
       </Container>
     </Box>
   );
