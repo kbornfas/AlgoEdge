@@ -1,0 +1,16 @@
+{
+  "name": "AlgoEdge",
+  "short_name": "AlgoEdge",
+  "description": "Automated Forex Trading Platform with MetaTrader 5 Integration",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e27",
+  "theme_color": "#3B82F6",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

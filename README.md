@@ -20,17 +20,18 @@
 
 AlgoEdge is a comprehensive production-ready SaaS trading platform that connects to MetaTrader 5 accounts and provides automated trading robots with real-time monitoring, advanced analytics, and payment-gated access control.
 
-### 🎯 Key Features
+## 🎯 Key Features
 
 - 🤖 **10 High-Performance Trading Robots** - Multiple strategies across all timeframes (M1 to D1)
 - 💳 **Payment-Gated Access** - WhatsApp payment proof submission with admin approval
-- 🔐 **Enterprise Security** - JWT authentication, 2FA, bcrypt hashing, audit logs
+- 🔐 **Enterprise Security** - JWT authentication, 2FA, bcrypt hashing, security headers
 - 👨‍💼 **Admin Panel** - Complete user and payment management at `/admin`
 - 📈 **Real-Time Monitoring** - Live trade tracking and bot status
 - 🌐 **MT5 Integration** - MetaAPI support for real broker connections
 - 📧 **Email Notifications** - Trade alerts, welcome emails, password resets
-- 🎨 **Modern Dark UI** - Material-UI with custom theming
+- 🎨 **Modern Dark UI** - Material-UI with custom theming and responsive design
 - 📱 **Social CTAs** - WhatsApp & Instagram floating action buttons
+- ⚡ **Production Ready** - Security headers, error pages, SEO optimized
 
 ---
 
@@ -439,15 +440,27 @@ This index significantly improves the query performance for daily report generat
 
 ## 🔐 Security Features
 
-- ✅ **JWT Authentication** - Secure token-based auth
+- ✅ **JWT Authentication** - Secure token-based auth with configurable expiration
 - ✅ **Password Hashing** - bcrypt with 12 salt rounds
-- ✅ **2FA Support** - TOTP authentication
-- ✅ **Rate Limiting** - Prevent brute force attacks
-- ✅ **SQL Injection Protection** - Parameterized queries (Prisma)
-- ✅ **XSS Protection** - Secure headers
-- ✅ **CORS Configuration** - Restricted origins
-- ✅ **Audit Logging** - Track all user actions
-- ✅ **Email Verification** - Confirm user identity
+- ✅ **2FA Support** - TOTP authentication for enhanced security
+- ✅ **Security Headers** - HSTS, CSP, X-Frame-Options, and more via Next.js config
+- ✅ **SQL Injection Protection** - Parameterized queries via Prisma ORM
+- ✅ **XSS Protection** - React's built-in XSS protection + secure headers
+- ✅ **CORS Configuration** - Restricted origins in production
+- ✅ **Rate Limiting** - Configurable rate limits for API endpoints
+- ✅ **Audit Logging** - Track all user and admin actions
+- ✅ **Email Verification** - Confirm user identity before activation
+- ✅ **No Secrets in Code** - All sensitive data via environment variables
+- ✅ **Error Handling** - Generic error messages, no internal details exposed
+
+### Security Best Practices
+
+1. **Environment Variables**: Never commit `.env` files. Use strong, unique secrets.
+2. **JWT Secret**: Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+3. **Admin Credentials**: Change default admin password immediately in production
+4. **HTTPS**: Always use HTTPS in production (Vercel provides this automatically)
+5. **Database**: Use connection pooling and ensure database credentials are secure
+6. **Regular Updates**: Keep dependencies updated with `npm audit` and `npm update`
 
 ---
 
