@@ -209,7 +209,7 @@ verifyPaymentProofs();
 
 ## Manual Testing (CI/CD Removed)
 
-> **⚠️ NOTE:** CI/CD pipeline has been removed. Testing should be done manually or through deployment platforms.
+> **⚠️ NOTE:** CI/CD pipeline has been removed. Testing is done manually or through deployment platform validation (Render and Vercel have built-in build validation).
 
 ### Manual Validation
 
@@ -218,6 +218,8 @@ Before deploying to production:
 2. ✅ Verify `payment_proofs` table exists
 3. ✅ Validate required columns are present
 4. ✅ Test database connectivity
+
+Use `npm run vercel:build` to test the frontend build process locally (runs `scripts/vercel-build.js` which generates Prisma client without migrations).
 
 ### Vercel Deployment
 

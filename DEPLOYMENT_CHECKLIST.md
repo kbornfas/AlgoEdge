@@ -183,7 +183,7 @@ Before deploying, manually verify:
 - ✅ Test database connectivity
 - ✅ Run build locally to catch errors early
 
-Use `npm run vercel:build` to test the frontend build process locally.
+Use `npm run vercel:build` to test the frontend build process locally (this runs `scripts/vercel-build.js` which generates Prisma client without running migrations).
 
 ## Documentation References
 
