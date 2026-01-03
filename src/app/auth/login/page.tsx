@@ -86,7 +86,7 @@ export default function LoginPage() {
         } else if (data.details && Array.isArray(data.details)) {
           // Validation errors with field details
           const fieldErrors = data.details
-            .map(err => `${err.field}: ${err.message}`)
+            .map((err: { field: string; message: string }) => `${err.field}: ${err.message}`)
             .join(', ');
           setError(fieldErrors || data.error || 'Login failed');
         } else {
@@ -102,6 +102,7 @@ export default function LoginPage() {
       // Redirect to dashboard
       router.push('/dashboard');
     } catch (err) {
+      console.error('Login error:', err);
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);

@@ -9,6 +9,9 @@
  * 3. Verifying all tables are created
  */
 
+// Load environment variables
+require('dotenv').config();
+
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);

@@ -10,6 +10,9 @@
  * 4. Required tables exist
  */
 
+// Load environment variables
+require('dotenv').config();
+
 const { PrismaClient } = require('@prisma/client');
 const { exec } = require('child_process');
 const { promisify } = require('util');
