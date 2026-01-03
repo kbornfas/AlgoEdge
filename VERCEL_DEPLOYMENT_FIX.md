@@ -103,13 +103,12 @@ This makes it explicit that Vercel should not run migrations.
 ```json
 {
   "scripts": {
-    "vercel:build": "node scripts/vercel-build.js && npm run build",
-    "render:migrate": "prisma migrate deploy"
+    "vercel:build": "node scripts/vercel-build.js && npm run build"
   }
 }
 ```
 
-Separate scripts for each deployment target make responsibilities clear.
+Migrations are handled by Render's build command defined in `render.yaml`, not by npm scripts.
 
 ## Deployment Guide
 

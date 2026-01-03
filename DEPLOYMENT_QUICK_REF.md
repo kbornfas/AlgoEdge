@@ -53,12 +53,11 @@ npm run vercel:build
 ### Production (Render)
 
 ```bash
-# Run on Render backend deployment (automated)
-npm run render:migrate
-
-# Equivalent to:
-npx prisma migrate deploy
+# Migrations run automatically during Render build (see render.yaml)
+# Build command includes: npx prisma migrate deploy
 ```
+
+No manual command needed - handled by deployment configuration.
 
 ## 🔍 What Runs Where
 

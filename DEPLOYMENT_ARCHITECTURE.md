@@ -115,11 +115,12 @@ services:
 ```json
 {
   "scripts": {
-    "vercel:build": "node scripts/vercel-build.js && npm run build",
-    "render:migrate": "prisma migrate deploy"
+    "vercel:build": "node scripts/vercel-build.js && npm run build"
   }
 }
 ```
+
+Migrations are handled by Render's build command (defined in `render.yaml`).
 
 ## Migration Workflow
 
@@ -227,8 +228,8 @@ npm run vercel:build
 # Set DATABASE_URL to test database
 export DATABASE_URL="postgresql://..."
 
-# Run migration command
-npm run render:migrate
+# Run migration command (same as used by Render)
+npx prisma migrate deploy
 
 # Verify migrations applied
 npx prisma migrate status

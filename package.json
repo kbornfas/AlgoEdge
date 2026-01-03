@@ -23,8 +23,7 @@
     "db:init": "node scripts/init-database.js",
     "db:validate-payment-proofs": "node scripts/validate-payment-proofs.js",
     "prestart": "node scripts/check-database.js",
-    "vercel:build": "node scripts/vercel-build.js && npm run build",
-    "render:migrate": "prisma migrate deploy"
+    "vercel:build": "node scripts/vercel-build.js && npm run build"
   },
   "dependencies": {
     "@emotion/react": "^11.11.0",

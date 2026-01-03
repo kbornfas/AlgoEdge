@@ -62,7 +62,7 @@ async function testDatabaseConnection() {
   console.log('\n🔍 Testing database connection (optional for frontend)...');
   
   try {
-    // Import dynamically to avoid build issues if Prisma client isn't generated yet
+    // Use require (synchronous) since PrismaClient is already available after npm install
     const { PrismaClient } = require('@prisma/client');
     const prisma = new PrismaClient({
       log: ['error', 'warn'],

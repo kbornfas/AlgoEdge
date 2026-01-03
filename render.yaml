@@ -19,11 +19,18 @@ services:
     region: oregon
     plan: starter
     # Build command: Install all dependencies (root + backend) and run migrations
+    # Note: Using set -e to fail fast on any error
     buildCommand: |
-      npm ci --prefix . &&
-      npm ci --prefix backend &&
-      npx prisma generate &&
+      set -e
+      echo "Installing root dependencies..."
+      npm ci --prefix .
+      echo "Installing backend dependencies..."
+      npm ci --prefix backend
+      echo "Generating Prisma Client..."
+      npx prisma generate
+      echo "Running database migrations..."
       npx prisma migrate deploy
+      echo "Build completed successfully"
     # Start the Express backend
     startCommand: cd backend && npm start
     envVars:
