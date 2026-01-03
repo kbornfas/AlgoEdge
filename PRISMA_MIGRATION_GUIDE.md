@@ -187,22 +187,36 @@ npx prisma migrate deploy
 
 **Solutions:**
 
-1. **Pull schema from database:**
+1. **Use the automated P3005 resolution script (Recommended):**
+   ```bash
+   # Interactive mode
+   npm run migrate:resolve-p3005
+   
+   # Automatic mode (no prompts)
+   npm run migrate:resolve-p3005 -- --auto
+   
+   # Dry run (see what would be done)
+   npm run migrate:resolve-p3005 -- --dry-run
+   ```
+
+2. **Pull schema from database:**
    ```bash
    npx prisma db pull
    npx prisma generate
    ```
 
-2. **Mark migrations as applied:**
+3. **Mark migrations as applied manually:**
    ```bash
    npm run migrate:resolve
    ```
 
-3. **Create baseline migration:**
+4. **Create baseline migration:**
    ```bash
    npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > prisma/migrations/0_init/migration.sql
    npx prisma migrate resolve --applied 0_init
    ```
+
+**Note:** The vercel-build.js script now automatically handles P3005 errors during deployment by detecting and resolving all migrations.
 
 ### Error: Migrations are out of sync
 
@@ -388,7 +402,13 @@ npm run prisma:migrate:status
 # Pull schema from database
 npm run prisma:db:pull
 
-# Resolve migration conflicts (interactive)
+# Resolve P3005 error (database schema not empty)
+# Use this script specifically for P3005 errors during deployment
+npm run migrate:resolve-p3005
+# Options: --auto (no prompts), --dry-run (preview only)
+
+# Resolve general migration conflicts (interactive)
+# Use this for other migration issues (not P3005)
 npm run migrate:resolve
 
 # Initialize database
@@ -397,6 +417,10 @@ npm run db:init
 # Check database health
 npm run db:check
 ```
+
+**Note:** 
+- `migrate:resolve-p3005` - Specialized tool for P3005 errors (database schema not empty)
+- `migrate:resolve` - General-purpose interactive migration conflict resolution tool
 
 ---
 

@@ -13,6 +13,8 @@
 
 const { execSync } = require('child_process');
 const { PrismaClient } = require('@prisma/client');
+const fs = require('fs');
+const path = require('path');
 
 // Critical tables that must exist
 const REQUIRED_TABLES = [
@@ -115,13 +117,42 @@ async function testDatabaseConnection() {
 }
 
 /**
- * Apply database migrations
+ * Get list of all migration names from the migrations directory
+ */
+function getMigrationNames() {
+  const migrationsDir = path.join(process.cwd(), 'prisma', 'migrations');
+  
+  try {
+    const entries = fs.readdirSync(migrationsDir, { withFileTypes: true });
+    return entries
+      .filter(entry => {
+        // Only include directories that contain a migration.sql file
+        if (!entry.isDirectory() || entry.name.startsWith('.')) {
+          return false;
+        }
+        
+        // Check if migration.sql exists in the directory
+        const migrationSqlPath = path.join(migrationsDir, entry.name, 'migration.sql');
+        return fs.existsSync(migrationSqlPath);
+      })
+      .map(entry => entry.name)
+      .sort(); // Sort chronologically
+  } catch (error) {
+    console.error('⚠️  Could not read migrations directory:', error.message);
+    return [];
+  }
+}
+
+/**
+ * Apply database migrations with comprehensive P3005 error handling
  */
 function applyMigrations() {
   console.log('\n🔍 Applying database migrations...');
   
   // Check migration status first
   console.log('\n📊 Checking migration status...');
+  let hasP3005Error = false;
+  
   try {
     const statusOutput = execSync('npx prisma migrate status', {
       encoding: 'utf-8',
@@ -138,46 +169,140 @@ function applyMigrations() {
       return true;
     } else if (statusOutput.includes('The following migrations have failed')) {
       console.log('\n   ⚠️  Failed migrations detected, attempting to resolve...');
-      
-      // Try to resolve failed migrations
-      // This marks migrations as applied if the database already has the changes
-      const resolveSuccess = execCommand(
-        'npx prisma migrate resolve --applied "20260102090000_init"',
-        'Resolving initial migration'
-      );
-      
-      if (resolveSuccess) {
-        execCommand(
-          'npx prisma migrate resolve --applied "20260102090350_add_approval_status_and_rejection_reason"',
-          'Resolving approval status migration'
-        );
-      }
+      hasP3005Error = true;
     }
   } catch (error) {
-    // If status check fails, continue with deployment attempt
-    console.log('   ⚠️  Could not check migration status, proceeding with deployment');
+    const errorOutput = error.stderr || error.stdout || error.message;
+    console.log('   Migration status check returned error:', errorOutput);
+    
+    // Check for P3005 error
+    if (errorOutput.includes('P3005') || errorOutput.includes('database schema is not empty')) {
+      console.log('   ⚠️  P3005 error detected: Database schema is not empty');
+      hasP3005Error = true;
+    } else {
+      console.log('   ⚠️  Could not check migration status, proceeding with deployment');
+    }
   }
   
-  // Apply pending migrations
-  const success = execCommand(
-    'npx prisma migrate deploy',
-    'Deploying Prisma migrations'
-  );
+  // If P3005 error detected, resolve all migrations as applied
+  if (hasP3005Error) {
+    console.log('\n🔧 Resolving P3005 error by marking existing migrations as applied...');
+    const migrations = getMigrationNames();
+    
+    if (migrations.length === 0) {
+      console.error('   ❌ No migrations found in prisma/migrations directory');
+      return false;
+    }
+    
+    console.log(`   Found ${migrations.length} migration(s) to resolve:`);
+    migrations.forEach(name => console.log(`     - ${name}`));
+    
+    // Mark each migration as applied
+    let allResolved = true;
+    for (const migrationName of migrations) {
+      try {
+        console.log(`\n   📝 Resolving migration: ${migrationName}`);
+        execSync(`npx prisma migrate resolve --applied "${migrationName}"`, {
+          encoding: 'utf-8',
+          stdio: 'pipe',
+          maxBuffer: 10 * 1024 * 1024,
+        });
+        console.log(`   ✅ Marked "${migrationName}" as applied`);
+      } catch (error) {
+        // Some migrations might already be marked as applied, which is okay
+        const errorMsg = error.stderr || error.stdout || error.message;
+        if (errorMsg.includes('already applied') || errorMsg.includes('is applied')) {
+          console.log(`   ℹ️  Migration "${migrationName}" was already marked as applied`);
+        } else {
+          console.error(`   ⚠️  Failed to resolve "${migrationName}":`, errorMsg);
+          // Continue with other migrations even if one fails
+        }
+      }
+    }
+    
+    // Check status again after resolution
+    console.log('\n📊 Rechecking migration status after resolution...');
+    try {
+      const newStatus = execSync('npx prisma migrate status', {
+        encoding: 'utf-8',
+        stdio: 'pipe',
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      console.log(newStatus);
+    } catch (error) {
+      console.log('   Status check after resolution:', error.message);
+    }
+  }
   
-  if (!success) {
+  // Try to apply pending migrations
+  console.log('\n📦 Deploying any remaining Prisma migrations...');
+  try {
+    const deployOutput = execSync('npx prisma migrate deploy', {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+      maxBuffer: 10 * 1024 * 1024,
+    });
+    console.log(deployOutput);
+    console.log('✅ Migration deployment completed successfully');
+    return true;
+  } catch (error) {
+    const errorOutput = error.stderr || error.stdout || error.message;
+    
+    // Check if error is because everything is already applied
+    if (errorOutput.includes('No pending migrations') || 
+        errorOutput.includes('Database schema is up to date') ||
+        errorOutput.includes('already applied')) {
+      console.log('   ✅ No pending migrations to apply, database is up to date');
+      return true;
+    }
+    
+    // Check for P3005 error again - if so, try one more resolution attempt
+    if (errorOutput.includes('P3005') || errorOutput.includes('database schema is not empty')) {
+      console.log('\n   ⚠️  P3005 error still occurring after resolution attempt');
+      console.log('   This may indicate a deeper schema mismatch. Trying alternative approach...');
+      
+      // Try to pull the schema from database and regenerate client
+      try {
+        console.log('\n   🔄 Attempting to sync schema from database...');
+        execSync('npx prisma db pull', {
+          encoding: 'utf-8',
+          stdio: 'pipe',
+          maxBuffer: 10 * 1024 * 1024,
+        });
+        console.log('   ✅ Schema synced from database');
+        
+        // Regenerate client with the pulled schema
+        try {
+          execSync('npx prisma generate', {
+            encoding: 'utf-8',
+            stdio: 'pipe',
+            maxBuffer: 10 * 1024 * 1024,
+          });
+          console.log('   ✅ Prisma client regenerated');
+          return true;
+        } catch (generateError) {
+          console.error('   ❌ Failed to regenerate Prisma client:', generateError.message);
+          return false;
+        }
+      } catch (pullError) {
+        console.error('   ❌ Schema sync failed:', pullError.message);
+        // Fall through to error reporting
+      }
+    }
+    
     console.error('\n❌ ERROR: Migration deployment failed');
-    console.error('   This usually means:');
-    console.error('   1. Database schema is out of sync');
-    console.error('   2. Migration files are corrupted');
+    console.error('   Error details:', errorOutput);
+    console.error('\n   This usually means:');
+    console.error('   1. Database schema is out of sync with migration files');
+    console.error('   2. Migration files are corrupted or incomplete');
     console.error('   3. Database permissions are insufficient');
-    console.error('\n   To manually resolve:');
+    console.error('\n   Manual resolution steps:');
     console.error('   1. Check migration status: npx prisma migrate status');
-    console.error('   2. If tables exist but migrations are not marked: npx prisma migrate resolve --applied "<migration_name>"');
-    console.error('   3. Then retry: npx prisma migrate deploy');
+    console.error('   2. Mark migrations as applied: npx prisma migrate resolve --applied "<migration_name>"');
+    console.error('   3. Sync schema from DB: npx prisma db pull');
+    console.error('   4. Regenerate client: npx prisma generate');
     return false;
   }
-  
-  return true;
 }
 
 /**

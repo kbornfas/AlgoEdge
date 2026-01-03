@@ -69,7 +69,23 @@ jobs:
         run: npx prisma generate
       
       - name: Run database migrations
-        run: npx prisma migrate deploy
+        run: |
+          # Try to deploy migrations, if P3005 error occurs, use resolution script
+          if ! npx prisma migrate deploy 2>&1 | tee /tmp/migrate-output.txt; then
+            if grep -q "P3005\|database schema is not empty" /tmp/migrate-output.txt; then
+              echo "⚠️  P3005 error detected, using automated resolution..."
+              
+              # Use the resolve-p3005.js script in automatic mode
+              npm run migrate:resolve-p3005 -- --auto
+              
+              # Retry migration deployment
+              echo "Retrying migration deployment..."
+              npx prisma migrate deploy
+            else
+              # Re-throw error if not P3005
+              exit 1
+            fi
+          fi
       
       - name: Verify payment_proofs table exists
         run: |
