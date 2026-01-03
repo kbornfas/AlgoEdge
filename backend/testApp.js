@@ -19,8 +19,10 @@ import userRoutes from './routes/userRoutes.js';
 const app = express();
 
 // Security middleware
+// Note: contentSecurityPolicy is disabled for testing to avoid interference with test requests
+// In production, the main server.js has proper CSP configuration
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: false, // Disabled in test environment only
 }));
 
 // CORS configuration
