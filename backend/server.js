@@ -169,11 +169,12 @@ const startServer = async () => {
     }
 
     // Start server
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       console.log('\n🚀 AlgoEdge Backend Server');
       console.log('==========================');
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`Server running on port: ${PORT}`);
+      console.log(`Listening on: 0.0.0.0:${PORT}`);
       console.log(`API available at: http://localhost:${PORT}/api`);
       console.log(`WebSocket available at: ws://localhost:${PORT}`);
       console.log('==========================\n');
