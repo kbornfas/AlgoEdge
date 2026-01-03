@@ -18,6 +18,7 @@ out/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.test*
 backend/.env
 
 # Logs
@@ -63,3 +64,4 @@ Thumbs.db
 *.bak
 *.backup
 .cache/
+*.tsbuildinfo

@@ -66,7 +66,7 @@ async function checkRequiredTables() {
   console.log('\n🔍 Checking required tables...');
   
   try {
-    const tableCheckQuery = `
+    const result = await prisma.$queryRaw`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public' 
@@ -74,7 +74,6 @@ async function checkRequiredTables() {
       ORDER BY table_name;
     `;
     
-    const result = await prisma.$queryRawUnsafe(tableCheckQuery);
     const existingTables = result.map(row => row.table_name);
     
     console.log(`   Found ${existingTables.length} tables in database`);

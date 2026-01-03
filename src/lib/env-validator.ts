@@ -173,7 +173,7 @@ export function validateEnvironment(): ValidationResult {
   if (process.env.NODE_ENV === 'production') {
     // Warn if using weak JWT secret in production
     const jwtSecret = process.env.JWT_SECRET;
-    if (jwtSecret && jwtSecret.includes('dev') || jwtSecret === 'your-super-secret-jwt-key-change-this-in-production') {
+    if (jwtSecret && (jwtSecret.includes('dev') || jwtSecret === 'your-super-secret-jwt-key-change-this-in-production')) {
       warnings.push('JWT_SECRET appears to be a development value. Use a strong random secret in production!');
     }
 

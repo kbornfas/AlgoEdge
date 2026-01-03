@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { comparePassword, generateToken } from '@/lib/auth';
+import { handleApiError } from '@/lib/api-errors';
 import { z } from 'zod';
 
 // Validation schema for login
@@ -127,73 +128,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error('Login error:', error);
-
-    // Handle Zod validation errors
-    if (error instanceof z.ZodError) {
-      const fieldErrors = error.errors.map(err => ({
-        field: err.path.join('.'),
-        message: err.message,
-      }));
-      
-      console.error('Login validation errors:', fieldErrors);
-      
-      return NextResponse.json(
-        { 
-          error: 'Invalid input data. Please check your credentials.',
-          details: fieldErrors,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Handle Prisma errors
-    if (error && typeof error === 'object' && 'code' in error) {
-      const prismaError = error as { code: string; meta?: unknown };
-      
-      switch (prismaError.code) {
-        case 'P1001':
-          // Can't reach database server
-          console.error('Cannot reach database server during login:', prismaError);
-          return NextResponse.json(
-            { error: 'Database connection failed. Please try again later.' },
-            { status: 503 }
-          );
-          
-        case 'P1002':
-          // Database server timeout
-          console.error('Database server timeout during login:', prismaError);
-          return NextResponse.json(
-            { error: 'Database timeout. Please try again.' },
-            { status: 503 }
-          );
-          
-        case 'P2024':
-          // Connection pool timeout
-          console.error('Connection pool timeout during login:', prismaError);
-          return NextResponse.json(
-            { error: 'Server is busy. Please try again in a moment.' },
-            { status: 503 }
-          );
-          
-        default:
-          console.error('Prisma error during login:', prismaError.code, prismaError);
-          return NextResponse.json(
-            { error: 'Database error occurred. Please try again.' },
-            { status: 500 }
-          );
-      }
-    }
-
-    // Handle generic errors
-    console.error('Unexpected login error:', {
-      name: error instanceof Error ? error.name : 'Unknown',
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-
-    return NextResponse.json(
-      { error: 'Login failed. Please try again or contact support if the problem persists.' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Login');
   }
 }
