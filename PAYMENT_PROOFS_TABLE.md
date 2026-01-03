@@ -207,15 +207,17 @@ async function verifyPaymentProofs() {
 verifyPaymentProofs();
 ```
 
-## CI/CD Integration
+## Manual Testing (CI/CD Removed)
 
-### GitHub Actions
+> **⚠️ NOTE:** CI/CD pipeline has been removed. Testing should be done manually or through deployment platforms.
 
-The workflow at `.github/workflows/ci-cd.yml` automatically:
-1. ✅ Runs migrations against test database
-2. ✅ Verifies `payment_proofs` table exists
-3. ✅ Validates required columns are present
-4. ✅ Tests database connectivity
+### Manual Validation
+
+Before deploying to production:
+1. ✅ Run migrations against test database locally
+2. ✅ Verify `payment_proofs` table exists
+3. ✅ Validate required columns are present
+4. ✅ Test database connectivity
 
 ### Vercel Deployment
 

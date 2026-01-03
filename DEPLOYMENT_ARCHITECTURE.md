@@ -235,11 +235,11 @@ npx prisma migrate deploy
 npx prisma migrate status
 ```
 
-### CI/CD Testing
+### Local Testing
 
-The CI pipeline simulates both environments:
-- **database-validation** job: Runs migrations (simulates Render)
-- **build** job: Builds frontend without migrations (simulates Vercel)
+Before deploying to production, test locally:
+- **Backend testing:** Run migrations against local database
+- **Frontend testing:** Build frontend without migrations to verify Prisma client generation
 
 ## Security Considerations
 
