@@ -28,10 +28,11 @@ if (missingEnvVars.length > 0) {
     console.error(`   - ${varName}`);
   });
   console.error('\n💡 Action Required:');
-  console.error('   1. Create a .env file in the backend directory');
-  console.error('   2. Copy .env.example to .env');
-  console.error('   3. Set the missing environment variables');
-  console.error('   4. Restart the server\n');
+  console.error('   1. Set the required environment variable(s) listed above');
+  console.error('   2. You can set them in a .env file (copy from .env.example)');
+  console.error('   3. Or set them directly in your environment');
+  console.error('\n📋 Note: JWT_SECRET is critical for authentication security');
+  console.error('   Example: JWT_SECRET=your-super-secret-key-change-this\n');
   process.exit(1);
 }
 
