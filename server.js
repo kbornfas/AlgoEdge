@@ -7,7 +7,7 @@ const hostname = '0.0.0.0';
 const port = parseInt(process.env.PORT || '3000', 10);
 
 // Create Next.js app
-const app = next({ dev, hostname, port });
+const app = next({ dev, hostname });
 const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
