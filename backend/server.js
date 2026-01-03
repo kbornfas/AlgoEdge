@@ -18,6 +18,42 @@ import paymentRoutes from './routes/paymentRoutes.js';
 // Load environment variables
 dotenv.config();
 
+// Validate critical environment variables
+const requiredEnvVars = ['JWT_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  console.error('❌ STARTUP FAILED: Missing required environment variables:');
+  missingEnvVars.forEach(varName => {
+    console.error(`   - ${varName}`);
+  });
+  console.error('\n💡 Action Required:');
+  console.error('   1. Set the required environment variable(s) listed above');
+  console.error('   2. You can set them in a .env file (copy from .env.example)');
+  console.error('   3. Or set them directly in your environment');
+  console.error('\n📋 Note: JWT_SECRET is critical for authentication security');
+  console.error('   ⚠️  IMPORTANT: Generate a strong random key, minimum 32 characters');
+  console.error('   ✅ Good: Use `openssl rand -base64 32` or similar');
+  console.error('   ❌ Bad: Simple strings like "secret" or "password123"\n');
+  process.exit(1);
+}
+
+// Warn about insecure JWT_SECRET in production
+if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET) {
+  const insecureSecrets = ['secret', 'password', 'test', 'example', 'changeme', 'your-super-secret'];
+  const secret = process.env.JWT_SECRET.toLowerCase();
+  if (insecureSecrets.some(bad => secret.includes(bad))) {
+    console.error('❌ SECURITY WARNING: JWT_SECRET appears to be insecure!');
+    console.error('   Generate a strong random key using: openssl rand -base64 32');
+    process.exit(1);
+  }
+}
+
+// Warn about optional but recommended variables
+if (!process.env.DATABASE_URL) {
+  console.warn('⚠️  Warning: DATABASE_URL not set. Database features will be unavailable.');
+}
+
 const app = express();
 const server = createServer(app);
 const PORT = process.env.PORT || 3000;

@@ -1,7 +1,17 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables based on NODE_ENV
+if (process.env.NODE_ENV === 'test') {
+  dotenv.config({ path: path.join(__dirname, '..', '.env.test') });
+} else {
+  dotenv.config();
+}
 
 const { Pool } = pg;
 
@@ -45,10 +55,16 @@ export const initDatabase = async () => {
         is_verified BOOLEAN DEFAULT false,
         verification_token VARCHAR(255),
         verification_expires TIMESTAMP,
+        verification_code VARCHAR(10),
+        verification_code_expires TIMESTAMP,
+        verification_code_attempts INTEGER DEFAULT 0,
         two_fa_enabled BOOLEAN DEFAULT false,
         two_fa_secret VARCHAR(255),
         reset_token VARCHAR(255),
         reset_expires TIMESTAMP,
+        reset_code VARCHAR(10),
+        reset_code_expires TIMESTAMP,
+        reset_code_attempts INTEGER DEFAULT 0,
         last_login TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
