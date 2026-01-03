@@ -569,17 +569,34 @@ npm install
 
 **Root Cause:** Prisma migrations were not applied to the database
 
+**✅ PERMANENT FIX (January 2026):**
+
+The project now includes an enhanced build script (`scripts/vercel-build.js`) that:
+- Validates DATABASE_URL environment variable
+- Tests database connectivity before building
+- Applies all migrations with proper error handling
+- Verifies all required tables exist (including payment_proofs)
+- Provides detailed error messages for troubleshooting
+
+This script runs automatically on Vercel via `vercel.json` build command.
+
 **Solutions:**
 
-1. **For Vercel Deployments:**
-   - Migrations should run automatically via `vercel.json` build command
-   - Verify `DATABASE_URL` is set in Vercel environment variables
-   - Check Vercel build logs for migration errors
-   - The build command runs: `prisma migrate deploy && npm run build`
+1. **For Vercel Deployments (Automated):**
+   - The new `vercel-build.js` script handles everything automatically
+   - Verify `DATABASE_URL` is set in Vercel Project Settings > Environment Variables
+   - Check Vercel build logs - the script provides detailed output
+   - Build command: `node scripts/vercel-build.js && npm run build`
+   
+   **If deployment still fails:**
+   - Check build logs for specific error from vercel-build.js
+   - Verify DATABASE_URL format: `postgresql://user:pass@host:port/db`
+   - Ensure database server is accessible from Vercel
+   - Check that migrations directory is committed to git
 
-2. **Manual Migration Deployment:**
+2. **Manual Migration Deployment (if needed):**
    ```bash
-   # Pull production environment variables
+   # Pull production environment variables (if using Vercel)
    vercel env pull .env.local
    
    # Apply all pending migrations
@@ -587,6 +604,9 @@ npm install
    
    # OR use Prisma CLI directly
    npx prisma migrate deploy
+   
+   # Verify migrations were applied
+   npm run prisma:migrate:status
    ```
 
 3. **Verify migrations exist:**
@@ -595,22 +615,67 @@ npm install
    ls -la prisma/migrations/
    
    # Should see:
-   # - 20260103100000_init (creates all base tables including payment_proofs)
+   # - 20260102090000_init (creates all base tables including payment_proofs)
    # - 20260102090350_add_approval_status_and_rejection_reason
    # - migration_lock.toml
+   
+   # Verify payment_proofs table is in init migration
+   grep -A 15 "CREATE TABLE \"payment_proofs\"" prisma/migrations/20260102090000_init/migration.sql
    ```
 
-4. **Reset database (DEVELOPMENT ONLY - causes data loss):**
+4. **Test migrations locally before deploying:**
+   ```bash
+   # Use the enhanced build script locally
+   npm run vercel:build
+   
+   # This will:
+   # 1. Check your DATABASE_URL
+   # 2. Connect to database
+   # 3. Apply migrations
+   # 4. Verify all tables exist
+   # 5. Build the app
+   ```
+
+5. **Reset database (DEVELOPMENT ONLY - causes data loss):**
    ```bash
    npx prisma migrate reset
    npx prisma migrate deploy
    ```
 
 **Prevention:**
+- ✅ Enhanced build script now prevents this issue automatically
 - Always commit migration files in `prisma/migrations/` to git
 - Never use `prisma db push` in production
 - Test migrations in staging before production deployment
 - Monitor Vercel build logs for migration errors
+- Use `npm run vercel:build` locally to test before deploying
+
+**Troubleshooting Build Failures:**
+
+If `vercel-build.js` fails, check the error message:
+
+- **"DATABASE_URL environment variable is not set"**
+  → Set DATABASE_URL in Vercel Project Settings
+
+- **"Cannot connect to database"**
+  → Verify database is running and accessible
+  → Check DATABASE_URL format and credentials
+  → Ensure database allows connections from Vercel IPs
+
+- **"Migration deployment failed"**
+  → Check database permissions
+  → Verify migration files are not corrupted
+  → Review Prisma migration logs
+
+- **"Required tables are missing"** (after migrations)
+  → Indicates migration SQL may be incomplete
+  → Check migration files for all CREATE TABLE statements
+  → May need to reset migrations (DEVELOPMENT ONLY)
+
+**For More Details:**
+- See [PRISMA_MIGRATION_GUIDE.md](./PRISMA_MIGRATION_GUIDE.md) for comprehensive migration management
+- See `scripts/vercel-build.js` for the automated build script
+- Check Vercel build logs for detailed output from the build script
 
 ---
 
