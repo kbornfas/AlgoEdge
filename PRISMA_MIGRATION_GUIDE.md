@@ -402,7 +402,13 @@ npm run prisma:migrate:status
 # Pull schema from database
 npm run prisma:db:pull
 
-# Resolve migration conflicts (interactive)
+# Resolve P3005 error (database schema not empty)
+# Use this script specifically for P3005 errors during deployment
+npm run migrate:resolve-p3005
+# Options: --auto (no prompts), --dry-run (preview only)
+
+# Resolve general migration conflicts (interactive)
+# Use this for other migration issues (not P3005)
 npm run migrate:resolve
 
 # Initialize database
@@ -411,6 +417,10 @@ npm run db:init
 # Check database health
 npm run db:check
 ```
+
+**Note:** 
+- `migrate:resolve-p3005` - Specialized tool for P3005 errors (database schema not empty)
+- `migrate:resolve` - General-purpose interactive migration conflict resolution tool
 
 ---
 

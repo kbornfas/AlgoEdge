@@ -125,7 +125,16 @@ function getMigrationNames() {
   try {
     const entries = fs.readdirSync(migrationsDir, { withFileTypes: true });
     return entries
-      .filter(entry => entry.isDirectory() && !entry.name.startsWith('.'))
+      .filter(entry => {
+        // Only include directories that contain a migration.sql file
+        if (!entry.isDirectory() || entry.name.startsWith('.')) {
+          return false;
+        }
+        
+        // Check if migration.sql exists in the directory
+        const migrationSqlPath = path.join(migrationsDir, entry.name, 'migration.sql');
+        return fs.existsSync(migrationSqlPath);
+      })
       .map(entry => entry.name)
       .sort(); // Sort chronologically
   } catch (error) {
@@ -142,11 +151,10 @@ function applyMigrations() {
   
   // Check migration status first
   console.log('\n📊 Checking migration status...');
-  let statusOutput = '';
   let hasP3005Error = false;
   
   try {
-    statusOutput = execSync('npx prisma migrate status', {
+    const statusOutput = execSync('npx prisma migrate status', {
       encoding: 'utf-8',
       stdio: 'pipe',
       maxBuffer: 10 * 1024 * 1024,
