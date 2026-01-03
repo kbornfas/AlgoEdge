@@ -70,18 +70,13 @@ jobs:
       
       - name: Run database migrations
         run: |
-          # Try to deploy migrations, if P3005 error occurs, resolve and retry
+          # Try to deploy migrations, if P3005 error occurs, use resolution script
           if ! npx prisma migrate deploy 2>&1 | tee /tmp/migrate-output.txt; then
             if grep -q "P3005\|database schema is not empty" /tmp/migrate-output.txt; then
-              echo "⚠️  P3005 error detected, resolving migrations..."
+              echo "⚠️  P3005 error detected, using automated resolution..."
               
-              # Get all migration names and mark as applied
-              for migration in $(ls -1 prisma/migrations/ | grep -v "^migration_lock.toml$" | grep -v "^README.md$"); do
-                if [ -d "prisma/migrations/$migration" ]; then
-                  echo "Marking $migration as applied..."
-                  npx prisma migrate resolve --applied "$migration" || true
-                fi
-              done
+              # Use the resolve-p3005.js script in automatic mode
+              npm run migrate:resolve-p3005 -- --auto
               
               # Retry migration deployment
               echo "Retrying migration deployment..."

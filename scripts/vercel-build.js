@@ -13,6 +13,8 @@
 
 const { execSync } = require('child_process');
 const { PrismaClient } = require('@prisma/client');
+const fs = require('fs');
+const path = require('path');
 
 // Critical tables that must exist
 const REQUIRED_TABLES = [
@@ -118,8 +120,6 @@ async function testDatabaseConnection() {
  * Get list of all migration names from the migrations directory
  */
 function getMigrationNames() {
-  const fs = require('fs');
-  const path = require('path');
   const migrationsDir = path.join(process.cwd(), 'prisma', 'migrations');
   
   try {
@@ -264,14 +264,18 @@ function applyMigrations() {
         console.log('   ✅ Schema synced from database');
         
         // Regenerate client with the pulled schema
-        execSync('npx prisma generate', {
-          encoding: 'utf-8',
-          stdio: 'pipe',
-          maxBuffer: 10 * 1024 * 1024,
-        });
-        console.log('   ✅ Prisma client regenerated');
-        
-        return true;
+        try {
+          execSync('npx prisma generate', {
+            encoding: 'utf-8',
+            stdio: 'pipe',
+            maxBuffer: 10 * 1024 * 1024,
+          });
+          console.log('   ✅ Prisma client regenerated');
+          return true;
+        } catch (generateError) {
+          console.error('   ❌ Failed to regenerate Prisma client:', generateError.message);
+          return false;
+        }
       } catch (pullError) {
         console.error('   ❌ Schema sync failed:', pullError.message);
         // Fall through to error reporting

@@ -68,11 +68,16 @@ function getMigrationNames() {
   
   const entries = fs.readdirSync(migrationsDir, { withFileTypes: true });
   return entries
-    .filter(entry => 
-      entry.isDirectory() && 
-      !entry.name.startsWith('.') &&
-      entry.name !== 'README.md'
-    )
+    .filter(entry => {
+      // Only include directories that contain a migration.sql file
+      if (!entry.isDirectory() || entry.name.startsWith('.')) {
+        return false;
+      }
+      
+      // Check if migration.sql exists in the directory
+      const migrationSqlPath = path.join(migrationsDir, entry.name, 'migration.sql');
+      return fs.existsSync(migrationSqlPath);
+    })
     .map(entry => entry.name)
     .sort();
 }
