@@ -10,5 +10,8 @@
       "memory": 1024,
       "maxDuration": 30
     }
+  },
+  "env": {
+    "SKIP_DB_MIGRATIONS": "true"
   }
 }

@@ -1,5 +1,30 @@
 # AlgoEdge Production Deployment Checklist
 
+## 🎯 Deployment Architecture Overview
+
+**IMPORTANT:** AlgoEdge uses a **strict separation** between backend and frontend deployments.
+
+```
+Backend (Render)          Frontend (Vercel)           Database (Render)
+─────────────────          ────────────────           ─────────────────
+• Express API              • Next.js build            • PostgreSQL
+• Prisma migrations ✅     • Prisma generate          • Schema managed by backend
+• WebSocket server         • Static assets            • Connection from backend
+• Full DB access           • API routes (read)        
+                           • NO migrations ❌
+```
+
+**🚨 Critical Rules:**
+1. **Backend (Render)** ONLY = Runs ALL database migrations
+2. **Frontend (Vercel)** ONLY = Builds Next.js, NO migrations
+3. **Deploy Order:** Backend first (migrations), then Frontend
+
+📖 **Must Read:** [BACKEND_RENDER_FRONTEND_VERCEL.md](./BACKEND_RENDER_FRONTEND_VERCEL.md) - Complete separation guide
+
+See [DEPLOYMENT_ARCHITECTURE.md](./DEPLOYMENT_ARCHITECTURE.md) for technical details.
+
+---
+
 ## ✅ Pre-Deployment Verification
 
 ### Code Quality
@@ -40,21 +65,74 @@
 
 ## 🚀 Deployment Steps
 
-### 1. Database Setup (Required First)
+### Step 0: Deployment Order (IMPORTANT!)
 
-**Option A: Render PostgreSQL (Recommended)**
+**Deploy in this order:**
+1. **Database** (Render PostgreSQL) - Create first
+2. **Backend** (Render Web Service) - Deploys second, runs migrations
+3. **Frontend** (Vercel) - Deploys last, uses migrated schema
+
+**Why this order?**
+- Backend needs database URL to run migrations
+- Frontend needs backend API to be available
+- Migrations must complete before frontend builds
+
+### 1. Database Setup (Render PostgreSQL)
+
+**Option A: Using render.yaml (Recommended)**
+
+The project includes a `render.yaml` blueprint that automatically creates both database and backend:
+
+1. Go to https://render.com
+2. Click "New +" → "Blueprint"
+3. Connect `kbornfas/AlgoEdge` repository
+4. Select `main` branch
+5. Render creates database + backend automatically
+6. ✅ Migrations run automatically during backend build
+
+**Option B: Manual Database Creation**
+
 1. Create account at https://render.com
-2. Create new PostgreSQL database
-3. Copy the **Internal Database URL**
-4. Save for environment variables
+2. Click "New +" → "PostgreSQL"
+3. Database name: `algoedge-db`
+4. Region: Oregon (or closest to backend)
+5. Plan: Starter (or Free for testing)
+6. Copy the **Internal Database URL** for backend setup
 
-**Option B: Neon PostgreSQL (Free Tier)**
-1. Create account at https://neon.tech
-2. Create new project
-3. Copy connection string
-4. Save for environment variables
+### 2. Backend Deployment (Render Web Service)
 
-### 2. Vercel Deployment
+**If using render.yaml:** Skip this section - already created automatically.
+
+**Manual Setup:**
+
+1. Click "New +" → "Web Service"
+2. Connect `kbornfas/AlgoEdge` repository
+3. Configure:
+   - **Name**: `algoedge-backend`
+   - **Region**: Same as database
+   - **Branch**: `main`
+   - **Build Command**: 
+     ```bash
+     npm ci --prefix . && npm ci --prefix backend && npx prisma generate && npx prisma migrate deploy
+     ```
+   - **Start Command**: 
+     ```bash
+     cd backend && npm start
+     ```
+
+4. Set environment variables (see Backend Environment Variables section below)
+5. Deploy and verify migrations run successfully in logs
+
+**Expected Build Output:**
+```
+Installing dependencies...
+Generating Prisma Client...
+Deploying database migrations...
+✅ 3 migrations applied successfully
+Starting backend server...
+```
+
+### 3. Vercel Deployment (Frontend)
 
 #### A. Connect Repository
 1. Go to https://vercel.com
@@ -64,27 +142,30 @@
 
 #### B. Configure Build Settings
 - **Framework Preset**: Next.js
-- **Build Command**: Automatically configured in `vercel.json` to run `prisma migrate deploy && npm run build`
+- **Build Command**: Automatically configured in `vercel.json` to run `node scripts/vercel-build.js && npm run build`
 - **Output Directory**: `.next`
 - **Install Command**: `npm install`
 
-**CRITICAL**: The build command ensures all database migrations are applied before building the application. This includes creating the `payment_proofs` table which is **required** for deployment.
+**IMPORTANT CHANGE:** The build command NO LONGER runs database migrations on Vercel.
 
-**Migration Validation**: The `vercel-build.js` script:
-1. ✅ Validates DATABASE_URL is set
-2. ✅ Tests database connectivity
-3. ✅ Runs `npx prisma migrate deploy`
-4. ✅ Verifies **payment_proofs** table exists
-5. ✅ Handles migration conflicts with `prisma migrate resolve`
+**Migration Architecture:**
+- ✅ **Vercel (Frontend)**: Builds Next.js app, generates Prisma client (read-only)
+- ✅ **Render (Backend)**: Runs all database migrations and manages schema
 
-**See**: [PAYMENT_PROOFS_TABLE.md](./PAYMENT_PROOFS_TABLE.md) for complete troubleshooting guide.
+**What `vercel-build.js` does now:**
+1. ✅ Validates DATABASE_URL is set (optional for frontend)
+2. ✅ Generates Prisma Client (for type definitions)
+3. ❌ Does NOT run `prisma migrate deploy` (migrations handled by Render)
+4. ❌ Does NOT modify database schema
+
+**See**: [DEPLOYMENT_ARCHITECTURE.md](./DEPLOYMENT_ARCHITECTURE.md) for complete architecture details.
 
 #### C. Environment Variables (Critical!)
 
 Add these in Vercel dashboard under "Environment Variables":
 
 ```bash
-# Database (Required)
+# Database (Optional - for frontend API routes read-only access)
 DATABASE_URL=postgresql://user:password@host:5432/algoedge?schema=public
 
 # JWT Secret (Required - Generate new one!)
@@ -97,6 +178,9 @@ SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-gmail-app-password
 SMTP_FROM=AlgoEdge <noreply@algoedge.com>
+
+# Skip database migrations on Vercel
+SKIP_DB_MIGRATIONS=true
 
 # App URLs (Update with your Vercel domain)
 NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
@@ -122,31 +206,80 @@ PAYMENT_PROOF_REQUIRED=true
 NODE_ENV=production
 ```
 
-#### D. Deploy
+#### D. Backend Environment Variables (Render)
+
+Configure these in Render dashboard for the backend service:
+
+```bash
+# Database (Required - from Render PostgreSQL)
+DATABASE_URL=postgresql://...  # Use Internal Database URL from Render
+
+# JWT Secret (Required - same as Vercel for consistency)
+JWT_SECRET=your-generated-secret-64-characters-minimum
+
+# Email Service (Required)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-gmail-app-password
+SMTP_FROM=AlgoEdge <noreply@algoedge.com>
+
+# Frontend URL (Required - your Vercel URL)
+FRONTEND_URL=https://your-app.vercel.app
+
+# MetaAPI (Required for trading)
+METAAPI_TOKEN=your-metaapi-token
+METAAPI_ACCOUNT_ID=your-metaapi-account-id
+
+# Stripe (Optional)
+STRIPE_SECRET_KEY=sk_live_your_key
+STRIPE_WEBHOOK_SECRET=whsec_your_secret
+
+# Environment
+NODE_ENV=production
+```
+
+**Important Notes:** 
+- Render automatically sets `PORT` environment variable - don't override it
+- Use the **Internal Database URL** from Render for best performance
+- Backend and frontend should share the same `JWT_SECRET`
+- Verify migrations ran successfully in Render build logs
+
+#### E. Deploy
 1. Click "Deploy"
 2. Wait for build to complete (2-3 minutes)
 3. Note your deployment URL
 
-#### E. Verify Deployment Success
+#### F. Verify Deployment Success
 
-**CRITICAL**: After deployment, verify the payment_proofs table exists:
+**Step 1: Verify Backend Migrations**
 
-```bash
-# Install Vercel CLI (if not already installed)
-npm i -g vercel
-
-# Login and link to your project
-vercel login
-vercel link
-
-# Pull production environment variables
-vercel env pull .env.production
-
-# Validate payment_proofs table
-npm run db:validate-payment-proofs
+Check Render build logs for successful migration:
+```
+Deploying database migrations...
+✅ The following migrations have been applied:
+  ├─ 20260102090000_init
+  ├─ 20260102090350_add_approval_status_and_rejection_reason
+  └─ [other migrations]
+✅ All migrations have been successfully applied
 ```
 
-Expected output:
+**Step 2: Verify Frontend Build**
+
+**Step 2: Verify Frontend Build**
+
+Check Vercel build logs for successful frontend build (without migrations):
+```
+==========================================
+  Vercel Build - Frontend Preparation
+==========================================
+🎯 Architecture: Frontend-only deployment
+✅ Prisma Client generation completed
+❌ No migrations run (handled by backend)
+✅ Frontend build completed successfully!
+```
+
+**Step 3: Test Application**
 ```
 ✅ DATABASE_URL is set
 ✅ Database connection successful

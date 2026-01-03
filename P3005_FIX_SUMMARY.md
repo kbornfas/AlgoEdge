@@ -1,5 +1,7 @@
 # P3005 Fix Implementation Complete - Summary
 
+> **⚠️ NOTE:** This is historical documentation. The current architecture has been updated to separate frontend and backend deployments. See [BACKEND_RENDER_FRONTEND_VERCEL.md](./BACKEND_RENDER_FRONTEND_VERCEL.md) for the latest architecture.
+
 ## Issue Resolved
 ✅ **Prisma P3005 Migration Error: "The database schema is not empty"**
 

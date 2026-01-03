@@ -207,15 +207,19 @@ async function verifyPaymentProofs() {
 verifyPaymentProofs();
 ```
 
-## CI/CD Integration
+## Manual Testing (CI/CD Removed)
 
-### GitHub Actions
+> **⚠️ NOTE:** CI/CD pipeline has been removed. Testing is done manually or through deployment platform validation (Render and Vercel have built-in build validation).
 
-The workflow at `.github/workflows/ci-cd.yml` automatically:
-1. ✅ Runs migrations against test database
-2. ✅ Verifies `payment_proofs` table exists
-3. ✅ Validates required columns are present
-4. ✅ Tests database connectivity
+### Manual Validation
+
+Before deploying to production:
+1. ✅ Run migrations against test database locally
+2. ✅ Verify `payment_proofs` table exists
+3. ✅ Validate required columns are present
+4. ✅ Test database connectivity
+
+Use `npm run vercel:build` to test the frontend build process locally (runs `scripts/vercel-build.js` which generates Prisma client without migrations).
 
 ### Vercel Deployment
 

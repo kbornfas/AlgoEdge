@@ -174,16 +174,16 @@ npx prisma migrate deploy
    postgresql://user:password@host:5432/database?schema=public
    ```
 
-## CI/CD Validation
+## Manual Validation
 
-The GitHub Actions workflow (`.github/workflows/ci-cd.yml`) automatically:
-- ✅ Runs migrations against test database
-- ✅ Verifies payment_proofs table exists
-- ✅ Validates required columns present
-- ✅ Tests database connectivity
-- ✅ Runs build to catch errors early
+Before deploying, manually verify:
+- ✅ Run migrations against test database locally
+- ✅ Verify payment_proofs table exists
+- ✅ Validate required columns present
+- ✅ Test database connectivity
+- ✅ Run build locally to catch errors early
 
-Check workflow status: https://github.com/kbornfas/AlgoEdge/actions
+Use `npm run vercel:build` to test the frontend build process locally (this runs `scripts/vercel-build.js` which generates Prisma client without running migrations).
 
 ## Documentation References
 

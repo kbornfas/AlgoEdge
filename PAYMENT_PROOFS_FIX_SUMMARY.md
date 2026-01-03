@@ -1,5 +1,7 @@
 # 🎯 Payment Proofs Table Issue - PERMANENTLY RESOLVED
 
+> **⚠️ NOTE:** This is historical documentation. The current architecture has been updated to separate frontend and backend deployments (see [BACKEND_RENDER_FRONTEND_VERCEL.md](./BACKEND_RENDER_FRONTEND_VERCEL.md) for details). Additionally, the CI/CD pipeline has been removed - deployments now happen directly through Render and Vercel platforms.
+
 ## Executive Summary
 
 The "Missing required tables: payment_proofs" deployment error has been **permanently fixed** with multiple layers of protection to ensure it never occurs again.
