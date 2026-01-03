@@ -37,4 +37,55 @@ AlgoEdge is a comprehensive production-ready SaaS trading platform that connects
 
 ---
 
+## 🗄️ Database Requirements
+
+**CRITICAL**: The `payment_proofs` table is required for deployment. All migrations must be applied before starting the application.
+
+### Quick Database Setup
+
+```bash
+# 1. Generate Prisma Client
+npm run prisma:generate
+
+# 2. Apply all migrations (creates payment_proofs table)
+npm run prisma:migrate:deploy
+
+# 3. Validate payment_proofs table exists
+npm run db:validate-payment-proofs
+
+# 4. Seed database (optional)
+npm run seed:admin
+npm run seed:robots
+```
+
+### Required Tables
+
+✅ All tables created automatically by migrations including:
+- `users` - User accounts and authentication
+- `payment_proofs` - **Payment verification (REQUIRED for deployment)**
+- `subscriptions` - User subscription plans
+- `mt5_accounts` - MetaTrader 5 account connections
+- `trading_robots` - Available trading strategies
+- `trades` - Trade history and analytics
+- And 4 more supporting tables
+
+### Troubleshooting
+
+If deployment fails with "Missing required tables: payment_proofs":
+
+```bash
+# Check migration status
+npm run prisma:migrate:status
+
+# Apply pending migrations
+npm run prisma:migrate:deploy
+
+# Validate table exists
+npm run db:validate-payment-proofs
+```
+
+📘 **See [PAYMENT_PROOFS_TABLE.md](./PAYMENT_PROOFS_TABLE.md)** for complete troubleshooting guide.
+
+---
+
 (rest of file unchanged)
