@@ -63,13 +63,14 @@ function execCommand(command, description) {
 // Environment validation removed - DATABASE_URL is optional for frontend builds
 
 /**
- * Test database connectivity (optional for frontend)
+ * Check database connectivity (optional, non-blocking)
+ * Always returns true to avoid blocking frontend builds
  */
-async function testDatabaseConnection() {
+async function checkDatabaseConnection() {
   console.log('\n🔍 Testing database connection (optional for frontend)...');
   
   try {
-    // Use require (synchronous) since PrismaClient is already available after npm install
+    // Using require() because this is a CommonJS script (not ES modules)
     const { PrismaClient } = require('@prisma/client');
     const prisma = new PrismaClient({
       log: ['error', 'warn'],
@@ -111,7 +112,7 @@ async function main() {
   
   // Step 2: Test database connection (optional, non-blocking)
   console.log('\n🔍 Step 2: Testing database connection (optional)...');
-  await testDatabaseConnection();
+  await checkDatabaseConnection();
   
   // Step 3: Generate Prisma Client
   console.log('\n🔍 Step 3: Generating Prisma Client...');
