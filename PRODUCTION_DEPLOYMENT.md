@@ -68,7 +68,16 @@
 - **Output Directory**: `.next`
 - **Install Command**: `npm install`
 
-**Note**: The build command ensures all database migrations are applied before building the application. This guarantees the database schema matches the application code.
+**CRITICAL**: The build command ensures all database migrations are applied before building the application. This includes creating the `payment_proofs` table which is **required** for deployment.
+
+**Migration Validation**: The `vercel-build.js` script:
+1. ✅ Validates DATABASE_URL is set
+2. ✅ Tests database connectivity
+3. ✅ Runs `npx prisma migrate deploy`
+4. ✅ Verifies **payment_proofs** table exists
+5. ✅ Handles migration conflicts with `prisma migrate resolve`
+
+**See**: [PAYMENT_PROOFS_TABLE.md](./PAYMENT_PROOFS_TABLE.md) for complete troubleshooting guide.
 
 #### C. Environment Variables (Critical!)
 
@@ -118,6 +127,36 @@ NODE_ENV=production
 2. Wait for build to complete (2-3 minutes)
 3. Note your deployment URL
 
+#### E. Verify Deployment Success
+
+**CRITICAL**: After deployment, verify the payment_proofs table exists:
+
+```bash
+# Install Vercel CLI (if not already installed)
+npm i -g vercel
+
+# Login and link to your project
+vercel login
+vercel link
+
+# Pull production environment variables
+vercel env pull .env.production
+
+# Validate payment_proofs table
+npm run db:validate-payment-proofs
+```
+
+Expected output:
+```
+✅ DATABASE_URL is set
+✅ Database connection successful
+✅ payment_proofs table exists
+✅ All required columns present
+✅ All Validations Passed!
+```
+
+If validation fails, see [PAYMENT_PROOFS_TABLE.md](./PAYMENT_PROOFS_TABLE.md) for troubleshooting.
+
 ### 3. Post-Deployment Setup
 
 #### A. Database Initialization
@@ -150,11 +189,13 @@ npm run seed:robots
 ```
 
 **Migration Notes**:
-- Migrations are automatically deployed during the Vercel build process
-- The `buildCommand` in `vercel.json` runs `prisma migrate deploy` before building
-- Never use `prisma db push` in production as it may cause data loss
-- All migrations in `prisma/migrations` are version-controlled and applied in order
-- The `payment_proofs` table is created by the initial migration
+- ✅ Migrations are automatically deployed during the Vercel build process
+- ✅ The `buildCommand` in `vercel.json` runs `prisma migrate deploy` before building
+- ✅ Never use `prisma db push` in production as it may cause data loss
+- ✅ All migrations in `prisma/migrations` are version-controlled and applied in order
+- ✅ The **payment_proofs** table is created by migrations `20260102090000_init` and `20260103113015_add_created_at_to_payment_proofs`
+- ✅ Migration conflicts are automatically resolved by `vercel-build.js` using `prisma migrate resolve`
+- ⚠️  If deployment fails with "Missing required tables: payment_proofs", see [PAYMENT_PROOFS_TABLE.md](./PAYMENT_PROOFS_TABLE.md)
 
 #### B. Test Admin Access
 1. Go to `https://your-domain.vercel.app/admin/login`
