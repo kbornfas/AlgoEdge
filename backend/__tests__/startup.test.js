@@ -22,7 +22,7 @@ describe('Server Startup - Environment Variable Validation', () => {
       let hasErrored = false;
 
       const timeoutId = setTimeout(() => {
-        serverProcess.kill();
+        serverProcess.kill('SIGTERM');
         if (!hasStarted && !hasErrored) {
           reject(new Error('Server startup timeout'));
         }
@@ -35,7 +35,7 @@ describe('Server Startup - Environment Variable Validation', () => {
         if (stdout.includes('Server running on port') || stdout.includes('🚀 AlgoEdge Backend Server')) {
           hasStarted = true;
           clearTimeout(timeoutId);
-          serverProcess.kill();
+          serverProcess.kill('SIGTERM');
           resolve({ success: true, stdout, stderr });
         }
       });

@@ -167,8 +167,13 @@ describe('Registration API - Error Handling & Validation', () => {
           'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3)',
           ['user2', 'duplicate@example.com', 'hash']
         );
-        fail('Should have thrown unique constraint error');
+        // If we get here, the test should fail
+        throw new Error('Should have thrown unique constraint error');
       } catch (error) {
+        // We expect an error to be thrown
+        if (error.message === 'Should have thrown unique constraint error') {
+          throw error; // Re-throw if it's our error
+        }
         expect(error.message).toMatch(/unique|duplicate/i);
         expect(error.code).toBe('23505'); // PostgreSQL unique violation code
       }

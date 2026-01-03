@@ -32,8 +32,21 @@ if (missingEnvVars.length > 0) {
   console.error('   2. You can set them in a .env file (copy from .env.example)');
   console.error('   3. Or set them directly in your environment');
   console.error('\n📋 Note: JWT_SECRET is critical for authentication security');
-  console.error('   Example: JWT_SECRET=your-super-secret-key-change-this\n');
+  console.error('   ⚠️  IMPORTANT: Generate a strong random key, minimum 32 characters');
+  console.error('   ✅ Good: Use `openssl rand -base64 32` or similar');
+  console.error('   ❌ Bad: Simple strings like "secret" or "password123"\n');
   process.exit(1);
+}
+
+// Warn about insecure JWT_SECRET in production
+if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET) {
+  const insecureSecrets = ['secret', 'password', 'test', 'example', 'changeme', 'your-super-secret'];
+  const secret = process.env.JWT_SECRET.toLowerCase();
+  if (insecureSecrets.some(bad => secret.includes(bad))) {
+    console.error('❌ SECURITY WARNING: JWT_SECRET appears to be insecure!');
+    console.error('   Generate a strong random key using: openssl rand -base64 32');
+    process.exit(1);
+  }
 }
 
 // Warn about optional but recommended variables
