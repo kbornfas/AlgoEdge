@@ -298,20 +298,56 @@ In Vercel Dashboard:
 #### Step 5: Initialize Database
 ```bash
 # From local machine, using production DATABASE_URL
-npx prisma db push --accept-data-loss
+export DATABASE_URL="your-vercel-database-url"
 
-# Seed admin user
-npx prisma db seed --preview-feature
-# Or manually run:
-node scripts/seed-admin.js
-node scripts/seed-robots.js
+# Option 1: Fresh Database (Recommended)
+npx prisma migrate deploy
+
+# Option 2: Existing Database (if schema already exists)
+# First sync schema from database
+npx prisma db pull
+npx prisma generate
+
+# Then mark migrations as applied
+npx prisma migrate resolve --applied "20260102090350_add_approval_status_and_rejection_reason"
+# Or use helper script: npm run migrate:resolve
+
+# Verify migration status
+npx prisma migrate status
+
+# Seed admin user and robots
+npm run seed:all
 ```
 
 **Alternative:** Use Vercel CLI for database commands
 ```bash
 vercel env pull .env.local
-npm run prisma:push
+npm run prisma:push  # Development only
+# OR
+npx prisma migrate deploy  # Production recommended
 npm run seed:all
+```
+
+**Troubleshooting P3005 Error:**
+
+If you encounter "P3005: The database schema is not empty" error:
+
+```bash
+# Solution 1: Sync schema from existing database
+npx prisma db pull
+npx prisma generate
+
+# Solution 2: Mark migrations as already applied
+npx prisma migrate status  # Check which migrations exist
+npx prisma migrate resolve --applied "migration_name"
+
+# Solution 3: Baseline the database
+npx prisma migrate diff \
+  --from-empty \
+  --to-schema-datamodel prisma/schema.prisma \
+  --script > prisma/migrations/0_init/migration.sql
+npx prisma migrate resolve --applied 0_init
+npx prisma migrate deploy
 ```
 
 ### 3.2 Railway Deployment

@@ -112,14 +112,73 @@ With this fix, the health check should pass and your service will stay live.
 ## Post-Deployment
 
 ### 1. Initialize Database
-After first deployment, run these commands locally:
+
+After first deployment, initialize the database with proper migrations:
+
+**Option A: Fresh Database (Recommended)**
 ```bash
 # Set DATABASE_URL from Render
 export DATABASE_URL="your-render-database-url"
 
-# Generate Prisma client and push schema
+# Generate Prisma client
 npm run prisma:generate
-npm run prisma:push
+
+# Deploy migrations (production-safe)
+npx prisma migrate deploy
+
+# Seed initial data
+npm run seed:all
+```
+
+**Option B: Existing Database with Schema**
+
+If your database already has schema but no migration history:
+
+```bash
+# Set DATABASE_URL from Render
+export DATABASE_URL="your-render-database-url"
+
+# Pull current schema to sync
+npx prisma db pull
+
+# Review changes
+git diff prisma/schema.prisma
+
+# Generate Prisma client
+npm run prisma:generate
+
+# If schema matches, mark migrations as applied
+npx prisma migrate resolve --applied "20260102090350_add_approval_status_and_rejection_reason"
+
+# Or use helper script
+npm run migrate:resolve
+
+# Verify migration status
+npx prisma migrate status
+
+# Seed initial data if needed
+npm run seed:all
+```
+
+**Option C: Database has different schema**
+
+If the database schema doesn't match your Prisma schema:
+
+```bash
+# Backup the database first!
+pg_dump $DATABASE_URL > backup.sql
+
+# Create a baseline migration
+npx prisma migrate diff \
+  --from-empty \
+  --to-schema-datamodel prisma/schema.prisma \
+  --script > prisma/migrations/0_init/migration.sql
+
+# Mark baseline as applied
+npx prisma migrate resolve --applied 0_init
+
+# Deploy any remaining migrations
+npx prisma migrate deploy
 
 # Seed initial data
 npm run seed:all
