@@ -18,6 +18,28 @@ import paymentRoutes from './routes/paymentRoutes.js';
 // Load environment variables
 dotenv.config();
 
+// Validate critical environment variables
+const requiredEnvVars = ['JWT_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  console.error('❌ STARTUP FAILED: Missing required environment variables:');
+  missingEnvVars.forEach(varName => {
+    console.error(`   - ${varName}`);
+  });
+  console.error('\n💡 Action Required:');
+  console.error('   1. Create a .env file in the backend directory');
+  console.error('   2. Copy .env.example to .env');
+  console.error('   3. Set the missing environment variables');
+  console.error('   4. Restart the server\n');
+  process.exit(1);
+}
+
+// Warn about optional but recommended variables
+if (!process.env.DATABASE_URL) {
+  console.warn('⚠️  Warning: DATABASE_URL not set. Database features will be unavailable.');
+}
+
 const app = express();
 const server = createServer(app);
 const PORT = process.env.PORT || 3000;
