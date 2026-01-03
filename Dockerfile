@@ -8,7 +8,7 @@ WORKDIR /app
 COPY backend/package*.json ./
 
 # Install Python and build dependencies for node-gyp (required by better-sqlite3)
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache py3-pip make g++
 
 # Install dependencies
 RUN npm ci --only=production
