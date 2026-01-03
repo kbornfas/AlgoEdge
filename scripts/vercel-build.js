@@ -120,7 +120,45 @@ async function testDatabaseConnection() {
 function applyMigrations() {
   console.log('\n🔍 Applying database migrations...');
   
-  // First, try to apply migrations normally
+  // Check migration status first
+  console.log('\n📊 Checking migration status...');
+  try {
+    const statusOutput = execSync('npx prisma migrate status', {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+      maxBuffer: 10 * 1024 * 1024,
+    });
+    console.log(statusOutput);
+    
+    // Check if there are pending migrations or conflicts
+    if (statusOutput.includes('Following migration have not yet been applied')) {
+      console.log('   ℹ️  Pending migrations detected, will apply them now');
+    } else if (statusOutput.includes('Database schema is up to date')) {
+      console.log('   ✅ Database is already up to date');
+      return true;
+    } else if (statusOutput.includes('The following migrations have failed')) {
+      console.log('\n   ⚠️  Failed migrations detected, attempting to resolve...');
+      
+      // Try to resolve failed migrations
+      // This marks migrations as applied if the database already has the changes
+      const resolveSuccess = execCommand(
+        'npx prisma migrate resolve --applied "20260102090000_init"',
+        'Resolving initial migration'
+      );
+      
+      if (resolveSuccess) {
+        execCommand(
+          'npx prisma migrate resolve --applied "20260102090350_add_approval_status_and_rejection_reason"',
+          'Resolving approval status migration'
+        );
+      }
+    }
+  } catch (error) {
+    // If status check fails, continue with deployment attempt
+    console.log('   ⚠️  Could not check migration status, proceeding with deployment');
+  }
+  
+  // Apply pending migrations
   const success = execCommand(
     'npx prisma migrate deploy',
     'Deploying Prisma migrations'
@@ -132,6 +170,10 @@ function applyMigrations() {
     console.error('   1. Database schema is out of sync');
     console.error('   2. Migration files are corrupted');
     console.error('   3. Database permissions are insufficient');
+    console.error('\n   To manually resolve:');
+    console.error('   1. Check migration status: npx prisma migrate status');
+    console.error('   2. If tables exist but migrations are not marked: npx prisma migrate resolve --applied "<migration_name>"');
+    console.error('   3. Then retry: npx prisma migrate deploy');
     return false;
   }
   

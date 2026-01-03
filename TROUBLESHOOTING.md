@@ -4,11 +4,48 @@
 
 📘 **For comprehensive Prisma migration troubleshooting, see [PRISMA_MIGRATION_GUIDE.md](./PRISMA_MIGRATION_GUIDE.md)**
 
+📘 **For payment_proofs table issues, see [PAYMENT_PROOFS_TABLE.md](./PAYMENT_PROOFS_TABLE.md)**
+
 📘 **For detailed troubleshooting, see [TROUBLESHOOTING_DETAILED.md](./TROUBLESHOOTING_DETAILED.md)**
 
 ---
 
 ## 🚨 CRITICAL ERRORS
+
+### Error: "Missing required tables: payment_proofs"
+
+**Cause:** Database schema is out of sync with application code. The `payment_proofs` table is missing from the database.
+
+**This is a CRITICAL deployment blocker!**
+
+**Quick Fix:**
+```bash
+# Step 1: Check migration status
+npx prisma migrate status
+
+# Step 2: Apply all pending migrations
+npx prisma migrate deploy
+
+# Step 3: Verify table exists
+npx prisma db execute --stdin <<EOF
+SELECT 1 FROM payment_proofs LIMIT 1;
+EOF
+```
+
+**If migrations fail with "already applied" error:**
+```bash
+# Mark existing migrations as applied
+npx prisma migrate resolve --applied "20260102090000_init"
+npx prisma migrate resolve --applied "20260102090350_add_approval_status_and_rejection_reason"
+npx prisma migrate resolve --applied "20260103113015_add_created_at_to_payment_proofs"
+
+# Then deploy any remaining
+npx prisma migrate deploy
+```
+
+**For complete guide, see:** [PAYMENT_PROOFS_TABLE.md](./PAYMENT_PROOFS_TABLE.md)
+
+---
 
 ### Error: "Cannot find module 'express'"
 
