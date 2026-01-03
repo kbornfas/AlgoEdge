@@ -106,6 +106,7 @@ For detailed setup instructions, deployment guides, and API documentation, see:
 - [Project Structure](./NEXTJS_SETUP.md#project-structure)
 - [Environment Configuration](./NEXTJS_SETUP.md#environment-configuration)
 - [Database Setup](./NEXTJS_SETUP.md#database-setup)
+- [Prisma Migration Guide](./PRISMA_MIGRATION_GUIDE.md) - **NEW!** Comprehensive migration guide
 - [API Endpoints](./NEXTJS_SETUP.md#api-endpoints)
 - [Deployment Guide](./NEXTJS_SETUP.md#deployment)
 - [Troubleshooting](./NEXTJS_SETUP.md#common-issues)

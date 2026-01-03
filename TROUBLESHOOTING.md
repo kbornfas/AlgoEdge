@@ -2,6 +2,10 @@
 
 ## Complete Problem-Solving Guide
 
+📘 **For comprehensive Prisma migration troubleshooting, see [PRISMA_MIGRATION_GUIDE.md](./PRISMA_MIGRATION_GUIDE.md)**
+
+📘 **For detailed troubleshooting, see [TROUBLESHOOTING_DETAILED.md](./TROUBLESHOOTING_DETAILED.md)**
+
 ---
 
 ## 🚨 CRITICAL ERRORS

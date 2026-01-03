@@ -187,16 +187,96 @@ Server runs on `http://localhost:3000`
 
 ## Database Migrations
 
-The application automatically creates tables on first run. For schema updates:
+### Initial Setup
+
+The application uses Prisma for database management. For first-time deployment:
+
+```bash
+# Generate Prisma client
+npx prisma generate
+
+# Push schema to database (development)
+npx prisma db push
+
+# OR deploy migrations (production - recommended)
+npx prisma migrate deploy
+
+# Seed initial data
+npm run seed:all
+```
+
+### Schema Updates
+
+When updating the database schema:
 
 1. **Backup database:**
    ```bash
    pg_dump -U algoedge algoedge > backup.sql
    ```
 
-2. **Apply changes** by modifying `config/database.js`
+2. **Create migration (development):**
+   ```bash
+   npx prisma migrate dev --name description_of_changes
+   ```
 
-3. **Restart application**
+3. **Deploy migration (production):**
+   ```bash
+   npx prisma migrate deploy
+   ```
+
+### Troubleshooting Migration Issues
+
+#### Error: P3005 - Database schema is not empty
+
+This error occurs when deploying migrations to a database that already has schema but no migration history.
+
+**Solution 1: Sync schema from database**
+```bash
+# Pull current database schema
+npx prisma db pull
+
+# Review changes
+git diff prisma/schema.prisma
+
+# Generate Prisma client
+npx prisma generate
+```
+
+**Solution 2: Mark existing migrations as applied**
+```bash
+# Check current migration status
+npx prisma migrate status
+
+# Mark specific migration as already applied
+npx prisma migrate resolve --applied "migration_name"
+
+# Or use helper script
+npm run migrate:resolve
+```
+
+**Solution 3: Baseline existing database**
+```bash
+# Create baseline migration
+npx prisma migrate diff \
+  --from-empty \
+  --to-schema-datamodel prisma/schema.prisma \
+  --script > prisma/migrations/0_init/migration.sql
+
+# Mark baseline as applied
+npx prisma migrate resolve --applied 0_init
+
+# Deploy remaining migrations
+npx prisma migrate deploy
+```
+
+#### Best Practices
+
+- Always use `prisma migrate deploy` for production
+- Use `prisma db push` only for development/prototyping
+- Keep migration history in version control
+- Test migrations in staging before production
+- Backup database before applying migrations
+- Document custom migration steps in migration files
 
 ## Monitoring
 

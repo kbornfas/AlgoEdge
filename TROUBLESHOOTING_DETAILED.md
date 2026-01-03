@@ -247,6 +247,72 @@ Add it to your `.env` file as `JWT_SECRET=<generated-value>`
 
 ## Migration Problems
 
+### Error: "P3005: The database schema is not empty"
+
+**Symptoms:**
+- Deployment fails with P3005 error
+- Prisma migrate deploy fails because database already has schema
+- Error message: "The database schema for `<database>` is not empty. Read more about how to baseline an existing production database"
+
+**Common Scenario:**
+This typically happens when:
+1. Database was initialized with `prisma db push` instead of migrations
+2. Migrations were applied manually and migration history is out of sync
+3. Deploying to a database that was set up outside of Prisma Migrate
+
+**Solutions:**
+
+**Option 1: Sync Schema from Database (Recommended for existing databases)**
+```bash
+# 1. Pull current schema from database to update your Prisma schema
+npx prisma db pull
+
+# 2. Review the changes to ensure they match your expectations
+git diff prisma/schema.prisma
+
+# 3. If schema looks correct, generate Prisma client
+npx prisma generate
+
+# 4. Continue with your deployment
+```
+
+**Option 2: Mark Existing Migrations as Applied**
+```bash
+# If you know migrations are already applied but not tracked:
+# List migrations in prisma/migrations/ directory
+ls prisma/migrations/
+
+# Mark specific migration as applied (replace with your migration name)
+npx prisma migrate resolve --applied "20260102090350_add_approval_status_and_rejection_reason"
+
+# Or use the helper script
+npm run migrate:resolve
+
+# Verify migration status
+npx prisma migrate status
+```
+
+**Option 3: Baseline Production Database (For first-time migration setup)**
+```bash
+# 1. Create a baseline migration without applying it
+npx prisma migrate diff \
+  --from-empty \
+  --to-schema-datamodel prisma/schema.prisma \
+  --script > prisma/migrations/0_init/migration.sql
+
+# 2. Mark the baseline as applied
+npx prisma migrate resolve --applied 0_init
+
+# 3. Continue with normal migrations
+npx prisma migrate deploy
+```
+
+**Prevention:**
+- Always use `prisma migrate deploy` in production environments
+- Keep migration history consistent across environments
+- Document your migration strategy in deployment guides
+- Use helper scripts to handle migration conflicts
+
 ### Error: "Pending migrations detected"
 
 **Symptoms:**
