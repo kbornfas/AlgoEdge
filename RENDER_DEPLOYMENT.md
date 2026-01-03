@@ -1,34 +1,70 @@
 # Render Deployment Guide
 
 ## Overview
-This guide explains how to deploy AlgoEdge to Render with the fixed port binding configuration.
+This guide explains how to deploy AlgoEdge backend to Render. The backend is responsible for running database migrations and managing the database schema.
+
+## Important: Deployment Architecture
+
+⚠️ **AlgoEdge uses a split deployment architecture:**
+- **Vercel (Frontend)**: Deploys Next.js app, generates Prisma client (read-only)
+- **Render (Backend)**: Deploys Express API, **runs all database migrations**
+
+See [DEPLOYMENT_ARCHITECTURE.md](./DEPLOYMENT_ARCHITECTURE.md) for complete details.
 
 ## What Was Fixed
-The server now:
-- ✅ Listens on `process.env.PORT` (required by Render)
-- ✅ Binds to `0.0.0.0` (all network interfaces)
-- ✅ Logs the port being used at startup
+The deployment now correctly separates responsibilities:
+- ✅ Render runs database migrations during build
+- ✅ Vercel only builds frontend (no migrations)
+- ✅ Database schema managed in one place (Render)
+- ✅ No race conditions or migration conflicts
 
 ## Render Configuration
 
-### 1. Create Web Service
+### 1. Automatic Deployment with render.yaml
+
+The project includes a `render.yaml` blueprint file that automatically configures:
+- PostgreSQL database
+- Backend web service
+- Environment variables
+- Build and start commands
+
+**To deploy:**
 1. Go to [Render Dashboard](https://dashboard.render.com)
-2. Click "New +" → "Web Service"
+2. Click "New +" → "Blueprint"
 3. Connect your GitHub repository: `kbornfas/AlgoEdge`
-4. Select branch: `copilot/fix-server-port-listening-again`
+4. Select branch: `main` (or your working branch)
+5. Render will automatically detect `render.yaml` and create all services
 
-### 2. Configure Build Settings
+**Build Process (Automated):**
+```bash
+# Install dependencies
+npm ci --prefix .
+npm ci --prefix backend
+
+# Generate Prisma Client
+npx prisma generate
+
+# Run database migrations ✅
+npx prisma migrate deploy
+
+# Start backend
+cd backend && npm start
 ```
-Name: algoedge
+
+### 2. Manual Deployment Configuration
+
+If not using the blueprint, configure manually:
+
+**Service Settings:**
+```
+Name: algoedge-backend
 Environment: Node
-Region: Choose closest to your users
-Branch: copilot/fix-server-port-listening-again
+Region: Oregon (or closest to your users)
+Branch: main
 
-Build Command: npm install && npm run build --ignore-scripts
-Start Command: npm start
+Build Command: npm ci --prefix . && npm ci --prefix backend && npx prisma generate && npx prisma migrate deploy
+Start Command: cd backend && npm start
 ```
-
-### 3. Set Environment Variables
 **Required Variables:**
 ```bash
 # Database (use Render PostgreSQL)
@@ -62,7 +98,9 @@ ADMIN_PASSWORD=your-secure-password
 NODE_ENV=production
 ```
 
-**Note:** Render automatically sets the `PORT` environment variable. Do NOT manually set it.
+### 3. Set Environment Variables
+
+**IMPORTANT:** Render automatically sets the `PORT` environment variable. Do NOT manually set it.
 
 ### 4. Advanced Settings
 - **Auto-Deploy**: Enable for automatic deployments on git push
@@ -70,8 +108,34 @@ NODE_ENV=production
 - **Instance Type**: Start with "Free" or "Starter"
 
 ## Expected Startup Logs
+
 When your service starts successfully on Render, you should see:
+
 ```
+==========================================
+  Vercel Build - Frontend Preparation
+==========================================
+
+🎯 Architecture: Frontend-only deployment
+   - Frontend (Vercel): Builds Next.js app
+   - Backend (Render): Handles DB migrations
+
+🔍 Step 1: Validating environment...
+✅ DATABASE_URL is set (for read-only queries)
+
+🔍 Step 2: Testing database connection (optional)...
+✅ Database connection successful (read-only access)
+
+🔍 Step 3: Generating Prisma Client...
+✅ Prisma Client generation completed
+
+📦 Deploying Prisma migrations...
+✅ Migration deployment completed successfully
+
+==========================================
+  ✅ Backend build completed successfully!
+==========================================
+
 🚀 AlgoEdge Server Started Successfully
 ========================================
 Environment: production

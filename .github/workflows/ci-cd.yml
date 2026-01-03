@@ -68,8 +68,12 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
       
-      - name: Run database migrations
+      - name: Run database migrations (simulating backend/Render behavior)
         run: |
+          # In CI, we simulate what Render does: run migrations
+          # In production, Vercel does NOT run migrations - only Render does
+          echo "ℹ️  Note: In production, migrations run on Render (backend), not Vercel (frontend)"
+          
           # Try to deploy migrations, if P3005 error occurs, use resolution script
           if ! npx prisma migrate deploy 2>&1 | tee /tmp/migrate-output.txt; then
             if grep -q "P3005\|database schema is not empty" /tmp/migrate-output.txt; then
