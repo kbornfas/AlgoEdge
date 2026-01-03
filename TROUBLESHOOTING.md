@@ -563,6 +563,57 @@ npm install
 
 ## 📊 DATABASE ISSUES
 
+### "relation 'payment_proofs' does not exist" or Similar Table Missing Errors
+
+**Issue:** Database table missing during deployment or runtime
+
+**Root Cause:** Prisma migrations were not applied to the database
+
+**Solutions:**
+
+1. **For Vercel Deployments:**
+   - Migrations should run automatically via `vercel.json` build command
+   - Verify `DATABASE_URL` is set in Vercel environment variables
+   - Check Vercel build logs for migration errors
+   - The build command runs: `prisma migrate deploy && npm run build`
+
+2. **Manual Migration Deployment:**
+   ```bash
+   # Pull production environment variables
+   vercel env pull .env.local
+   
+   # Apply all pending migrations
+   npm run prisma:migrate:deploy
+   
+   # OR use Prisma CLI directly
+   npx prisma migrate deploy
+   ```
+
+3. **Verify migrations exist:**
+   ```bash
+   # Check migration files
+   ls -la prisma/migrations/
+   
+   # Should see:
+   # - 20260103100000_init (creates all base tables including payment_proofs)
+   # - 20260102090350_add_approval_status_and_rejection_reason
+   # - migration_lock.toml
+   ```
+
+4. **Reset database (DEVELOPMENT ONLY - causes data loss):**
+   ```bash
+   npx prisma migrate reset
+   npx prisma migrate deploy
+   ```
+
+**Prevention:**
+- Always commit migration files in `prisma/migrations/` to git
+- Never use `prisma db push` in production
+- Test migrations in staging before production deployment
+- Monitor Vercel build logs for migration errors
+
+---
+
 ### "relation does not exist"
 
 **Issue:** Database tables not created

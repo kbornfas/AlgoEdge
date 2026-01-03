@@ -11,17 +11,13 @@
     "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:migrate:status": "prisma migrate status",
-    "prisma:db:pull": "prisma db pull",
-    "migrate:resolve": "node scripts/resolve-migration-conflict.js",
     "seed:admin": "node scripts/seed-admin.js",
     "seed:robots": "node scripts/seed-robots.js",
     "seed:all": "npm run seed:admin && npm run seed:robots",
     "postinstall": "prisma generate",
     "db:check": "node scripts/check-database.js",
     "db:init": "node scripts/init-database.js",
-    "prestart": "node scripts/check-database.js",
-    "prebuild": "node scripts/check-database.js"
+    "prestart": "node scripts/check-database.js"
   },
   "dependencies": {
     "@emotion/react": "^11.11.0",

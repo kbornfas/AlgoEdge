@@ -64,9 +64,11 @@
 
 #### B. Configure Build Settings
 - **Framework Preset**: Next.js
-- **Build Command**: `npm run build`
+- **Build Command**: Automatically configured in `vercel.json` to run `prisma migrate deploy && npm run build`
 - **Output Directory**: `.next`
 - **Install Command**: `npm install`
+
+**Note**: The build command ensures all database migrations are applied before building the application. This guarantees the database schema matches the application code.
 
 #### C. Environment Variables (Critical!)
 
@@ -119,8 +121,11 @@ NODE_ENV=production
 ### 3. Post-Deployment Setup
 
 #### A. Database Initialization
+
+**IMPORTANT**: Migrations are automatically run during Vercel deployment via the `buildCommand` in `vercel.json`. However, if you need to manually initialize or seed the database, follow these steps:
+
 ```bash
-# Install Vercel CLI
+# Install Vercel CLI (if not already installed)
 npm i -g vercel
 
 # Login to Vercel
@@ -129,15 +134,27 @@ vercel login
 # Link to your project
 vercel link
 
-# Run Prisma migrations
+# Pull environment variables (this creates .env.local with production DATABASE_URL)
 vercel env pull .env.local
+
+# Generate Prisma Client (should already be done by postinstall)
 npm run prisma:generate
-npm run prisma:push
+
+# Note: Migrations are automatically applied during build
+# If you need to manually apply migrations (should not be necessary):
+# npm run prisma:migrate:deploy
 
 # Seed database (use local .env.local)
 npm run seed:admin
 npm run seed:robots
 ```
+
+**Migration Notes**:
+- Migrations are automatically deployed during the Vercel build process
+- The `buildCommand` in `vercel.json` runs `prisma migrate deploy` before building
+- Never use `prisma db push` in production as it may cause data loss
+- All migrations in `prisma/migrations` are version-controlled and applied in order
+- The `payment_proofs` table is created by the initial migration
 
 #### B. Test Admin Access
 1. Go to `https://your-domain.vercel.app/admin/login`
