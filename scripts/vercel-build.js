@@ -1,9 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Vercel Build Script - Frontend-only build preparation
+ * ⚠️ CRITICAL: Vercel Frontend-Only Build Script
+ * 
+ * ARCHITECTURE SEPARATION:
+ * - Backend (Render): Runs ALL database migrations via render.yaml
+ * - Frontend (Vercel): This script - NO migrations, only Prisma client generation
  * 
  * This script prepares the Next.js frontend for deployment on Vercel.
+ * 
  * IMPORTANT: This script does NOT run database migrations.
  * 
  * Architecture:
@@ -11,10 +16,12 @@
  * - Render (Backend): Runs database migrations and manages schema
  * 
  * This script:
- * 1. Validates DATABASE_URL is set (for read-only access)
+ * 1. Validates DATABASE_URL is set (optional for read-only access)
  * 2. Generates Prisma Client (for type definitions and queries)
  * 3. Does NOT apply migrations (migrations run on backend/Render only)
  * 4. Does NOT modify database schema
+ * 
+ * See: BACKEND_RENDER_FRONTEND_VERCEL.md for complete separation details
  */
 
 const { execSync } = require('child_process');

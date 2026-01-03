@@ -2,23 +2,26 @@
 
 ## 🎯 Deployment Architecture Overview
 
-**IMPORTANT:** AlgoEdge uses a **split deployment architecture**:
+**IMPORTANT:** AlgoEdge uses a **strict separation** between backend and frontend deployments.
 
 ```
-Frontend (Vercel)          Backend (Render)           Database (Render)
+Backend (Render)          Frontend (Vercel)           Database (Render)
 ─────────────────          ────────────────           ─────────────────
-• Next.js build            • Express API              • PostgreSQL
-• Prisma generate          • Prisma migrations ✅     • Schema managed by backend
-• Static assets            • WebSocket server         • Connection from backend
-• API routes (read)        • Full DB access           
+• Express API              • Next.js build            • PostgreSQL
+• Prisma migrations ✅     • Prisma generate          • Schema managed by backend
+• WebSocket server         • Static assets            • Connection from backend
+• Full DB access           • API routes (read)        
+                           • NO migrations ❌
 ```
 
-**Key Principle:** 
-- ✅ Vercel = Frontend ONLY (no migrations)
-- ✅ Render = Backend + Database migrations
-- ✅ One source of truth for schema changes (Render)
+**🚨 Critical Rules:**
+1. **Backend (Render)** ONLY = Runs ALL database migrations
+2. **Frontend (Vercel)** ONLY = Builds Next.js, NO migrations
+3. **Deploy Order:** Backend first (migrations), then Frontend
 
-See [DEPLOYMENT_ARCHITECTURE.md](./DEPLOYMENT_ARCHITECTURE.md) for complete details.
+📖 **Must Read:** [BACKEND_RENDER_FRONTEND_VERCEL.md](./BACKEND_RENDER_FRONTEND_VERCEL.md) - Complete separation guide
+
+See [DEPLOYMENT_ARCHITECTURE.md](./DEPLOYMENT_ARCHITECTURE.md) for technical details.
 
 ---
 

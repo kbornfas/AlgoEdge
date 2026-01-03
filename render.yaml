@@ -1,15 +1,22 @@
-# Render Blueprint for AlgoEdge
-# This file defines the deployment architecture on Render
+# Render Blueprint for AlgoEdge Backend
+# 
+# ⚠️ CRITICAL ARCHITECTURE:
+# - Backend deploys to RENDER (this file)
+# - Frontend deploys to VERCEL (vercel.json)
+# - Database migrations run ONLY here on Render
+# 
+# This file defines the backend deployment on Render
 # 
 # Architecture:
-# - Frontend: Deployed on Vercel (Next.js only, no migrations)
+# - Frontend: Deployed on Vercel (Next.js only, NO migrations)
 # - Backend: Deployed on Render (Express API + Database migrations)
 # - Database: PostgreSQL on Render
 #
 # The backend service is responsible for:
-# - Running Prisma database migrations (for the Next.js frontend's schema)
+# - Running Prisma database migrations (ONLY place migrations run)
 # - Providing REST API endpoints (Express)
 # - Handling WebSocket connections for real-time trading
+# - Managing all database schema changes
 
 services:
   # Backend API Service (also runs database migrations)

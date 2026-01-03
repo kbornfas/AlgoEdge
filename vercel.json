@@ -13,5 +13,6 @@
   },
   "env": {
     "SKIP_DB_MIGRATIONS": "true"
-  }
+  },
+  "comment": "⚠️ CRITICAL: Frontend ONLY deployment - NO database migrations. Backend migrations run on Render. See BACKEND_RENDER_FRONTEND_VERCEL.md"
 }

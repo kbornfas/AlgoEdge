@@ -24,12 +24,19 @@ AlgoEdge is a comprehensive production-ready SaaS trading platform that connects
 
 ## 🏗️ Architecture
 
-**Split Deployment Model:**
-- **Frontend (Vercel)**: Next.js application, API routes, static assets
-- **Backend (Render)**: Express API, database migrations, WebSocket server
-- **Database (Render)**: PostgreSQL with Prisma ORM
+**⚠️ CRITICAL: Split Deployment Model**
 
-See [DEPLOYMENT_ARCHITECTURE.md](./DEPLOYMENT_ARCHITECTURE.md) for details.
+AlgoEdge uses a **strict separation** between backend and frontend:
+
+| Component | Platform | Responsibilities |
+|-----------|----------|------------------|
+| **Backend** | 🟢 **Render** | Express API, **Database Migrations**, Schema Management, WebSocket |
+| **Frontend** | 🔵 **Vercel** | Next.js App, Prisma Client (types only), **NO Migrations** |
+| **Database** | 🟢 **Render** | PostgreSQL (managed by backend) |
+
+**Key Principle:** Backend controls the database, Frontend consumes the schema.
+
+📖 See [BACKEND_RENDER_FRONTEND_VERCEL.md](./BACKEND_RENDER_FRONTEND_VERCEL.md) for complete separation details.
 
 ## 🎯 Key Features
 
