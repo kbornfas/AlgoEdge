@@ -76,7 +76,17 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Registration failed');
+        // Handle different types of errors
+        if (data.details && Array.isArray(data.details)) {
+          // Validation errors with field details
+          const fieldErrors = data.details
+            .map(err => `${err.field}: ${err.message}`)
+            .join(', ');
+          setError(fieldErrors || data.error || 'Registration failed');
+        } else {
+          // Generic error message
+          setError(data.error || 'Registration failed');
+        }
         return;
       }
 

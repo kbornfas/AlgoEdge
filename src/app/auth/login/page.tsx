@@ -71,6 +71,7 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle different types of errors
         if (data.requires2FA) {
           setRequires2FA(true);
           setError('');
@@ -82,6 +83,12 @@ export default function LoginPage() {
           } else {
             setError(data.error || 'Account pending approval. Please complete payment and wait for admin approval.');
           }
+        } else if (data.details && Array.isArray(data.details)) {
+          // Validation errors with field details
+          const fieldErrors = data.details
+            .map(err => `${err.field}: ${err.message}`)
+            .join(', ');
+          setError(fieldErrors || data.error || 'Login failed');
         } else {
           setError(data.error || 'Login failed');
         }

@@ -115,15 +115,88 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Registration error:', error);
 
+    // Handle Zod validation errors
     if (error instanceof z.ZodError) {
+      const fieldErrors = error.errors.map(err => ({
+        field: err.path.join('.'),
+        message: err.message,
+      }));
+      
+      console.error('Validation errors:', fieldErrors);
+      
       return NextResponse.json(
-        { error: 'Invalid input data', details: error.errors },
+        { 
+          error: 'Invalid input data. Please check the form fields.',
+          details: fieldErrors,
+        },
         { status: 400 }
       );
     }
 
+    // Handle Prisma errors
+    if (error && typeof error === 'object' && 'code' in error) {
+      const prismaError = error as { code: string; meta?: { target?: string[] } };
+      
+      switch (prismaError.code) {
+        case 'P2002':
+          // Unique constraint violation
+          const field = prismaError.meta?.target?.[0] || 'field';
+          console.error(`Unique constraint violation on field: ${field}`);
+          return NextResponse.json(
+            { error: `This ${field} is already registered. Please use a different ${field}.` },
+            { status: 400 }
+          );
+          
+        case 'P2003':
+          // Foreign key constraint violation
+          console.error('Foreign key constraint violation:', prismaError);
+          return NextResponse.json(
+            { error: 'Database constraint error. Please contact support.' },
+            { status: 500 }
+          );
+          
+        case 'P1001':
+          // Can't reach database server
+          console.error('Cannot reach database server:', prismaError);
+          return NextResponse.json(
+            { error: 'Database connection failed. Please try again later.' },
+            { status: 503 }
+          );
+          
+        case 'P1002':
+          // Database server timeout
+          console.error('Database server timeout:', prismaError);
+          return NextResponse.json(
+            { error: 'Database timeout. Please try again.' },
+            { status: 503 }
+          );
+          
+        case 'P2024':
+          // Connection pool timeout
+          console.error('Connection pool timeout:', prismaError);
+          return NextResponse.json(
+            { error: 'Server is busy. Please try again in a moment.' },
+            { status: 503 }
+          );
+          
+        default:
+          console.error('Prisma error:', prismaError.code, prismaError);
+          return NextResponse.json(
+            { error: 'Database error occurred. Please try again.' },
+            { status: 500 }
+          );
+      }
+    }
+
+    // Handle generic errors
+    console.error('Unexpected registration error:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return NextResponse.json(
-      { error: 'Registration failed. Please try again.' },
+      { error: 'Registration failed. Please try again or contact support if the problem persists.' },
       { status: 500 }
     );
   }
