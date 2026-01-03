@@ -32,42 +32,100 @@ else
     echo "✓ PostgreSQL found"
 fi
 
-# Install frontend dependencies
+# Install dependencies
 echo ""
-echo "📦 Installing frontend dependencies..."
+echo "📦 Installing dependencies..."
 npm install
 
-# Install backend dependencies
+# Setup environment file
 echo ""
-echo "📦 Installing backend dependencies..."
-cd backend
-npm install
-cd ..
-
-# Setup environment files
-echo ""
-echo "📝 Setting up environment files..."
+echo "📝 Setting up environment file..."
 
 if [ ! -f .env ]; then
     cp .env.example .env
-    echo "✓ Created frontend .env file"
-    echo "⚠️  Please edit .env and add your configuration"
-else
-    echo "✓ Frontend .env already exists"
-fi
-
-if [ ! -f backend/.env ]; then
-    cp backend/.env.example backend/.env
-    echo "✓ Created backend .env file"
-    echo "⚠️  Please edit backend/.env and add your configuration"
+    echo "✓ Created .env file from template"
+    echo ""
+    echo "⚠️  IMPORTANT: You must configure your .env file before running the application!"
     echo ""
     echo "Required configuration:"
-    echo "  - DATABASE_URL (PostgreSQL connection)"
-    echo "  - JWT_SECRET (run: openssl rand -base64 32)"
-    echo "  - SMTP credentials (email service)"
-    echo "  - Stripe keys (payment processing)"
+    echo "  1. DATABASE_URL      - PostgreSQL connection string"
+    echo "  2. JWT_SECRET        - Generate with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+    echo "  3. SMTP_HOST         - Email server (e.g., smtp.gmail.com)"
+    echo "  4. SMTP_PORT         - Email port (usually 587)"
+    echo "  5. SMTP_USER         - Your email address"
+    echo "  6. SMTP_PASS         - Your email password or app-specific password"
+    echo "  7. SMTP_FROM         - From address (e.g., 'AlgoEdge <noreply@algoedge.com>')"
+    echo "  8. NEXT_PUBLIC_APP_URL - Your application URL"
+    echo ""
+    echo "Please edit .env now and configure these required variables."
+    echo ""
+    read -p "Press Enter after you've configured .env to continue..."
 else
-    echo "✓ Backend .env already exists"
+    echo "✓ .env file already exists"
+fi
+
+# Validate environment variables
+echo ""
+echo "🔍 Validating environment configuration..."
+
+validate_env() {
+    local var_name=$1
+    local var_value="${!var_name}"
+    
+    if [ -z "$var_value" ]; then
+        echo "  ❌ $var_name is not set"
+        return 1
+    fi
+    
+    # Check if it's still the example value
+    if [[ "$var_value" == *"your-"* ]] || [[ "$var_value" == *"change-this"* ]]; then
+        echo "  ⚠️  $var_name appears to be using example value"
+        return 1
+    fi
+    
+    return 0
+}
+
+# Load environment variables
+set -a
+source .env 2>/dev/null || true
+set +a
+
+validation_failed=0
+
+# Check required variables
+required_vars=("DATABASE_URL" "JWT_SECRET" "SMTP_HOST" "SMTP_PORT" "SMTP_USER" "SMTP_PASS" "SMTP_FROM" "NEXT_PUBLIC_APP_URL")
+
+for var in "${required_vars[@]}"; do
+    if ! validate_env "$var"; then
+        validation_failed=1
+    else
+        echo "  ✓ $var is configured"
+    fi
+done
+
+if [ $validation_failed -eq 1 ]; then
+    echo ""
+    echo "❌ Environment validation failed!"
+    echo "   Please check and update your .env file with valid values."
+    echo "   See .env.example for reference."
+    echo ""
+    exit 1
+fi
+
+echo "✓ Environment configuration looks good"
+
+# Initialize database
+echo ""
+echo "🔧 Initializing database..."
+npm run db:init
+
+if [ $? -eq 0 ]; then
+    echo "✓ Database initialized successfully"
+else
+    echo "❌ Database initialization failed"
+    echo "   Please check your DATABASE_URL and ensure PostgreSQL is running"
+    exit 1
 fi
 
 echo ""
@@ -77,19 +135,14 @@ echo "================================"
 echo ""
 echo "Next steps:"
 echo ""
-echo "1. Configure environment variables:"
-echo "   - Edit backend/.env with your database and API keys"
-echo "   - Edit .env with your backend URL"
+echo "1. Seed the database (optional but recommended):"
+echo "   npm run seed:admin    # Create default admin user"
+echo "   npm run seed:robots   # Add trading robots"
 echo ""
-echo "2. Initialize the database:"
-echo "   cd backend"
-echo "   npm run init-db"
+echo "2. Start the development server:"
+echo "   npm run dev"
 echo ""
-echo "3. Start the development servers:"
-echo "   Terminal 1: cd backend && npm run dev"
-echo "   Terminal 2: npm run dev"
-echo ""
-echo "4. Open http://localhost:5173 in your browser"
+echo "3. Open http://localhost:3000 in your browser"
 echo ""
 echo "For production deployment, see DEPLOYMENT.md"
 echo ""

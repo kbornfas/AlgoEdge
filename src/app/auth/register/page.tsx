@@ -76,7 +76,17 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Registration failed');
+        // Handle different types of errors
+        if (data.details && Array.isArray(data.details)) {
+          // Validation errors with field details
+          const fieldErrors = data.details
+            .map((err: { field: string; message: string }) => `${err.field}: ${err.message}`)
+            .join(', ');
+          setError(fieldErrors || data.error || 'Registration failed');
+        } else {
+          // Generic error message
+          setError(data.error || 'Registration failed');
+        }
         return;
       }
 
@@ -91,6 +101,7 @@ export default function RegisterPage() {
         router.push('/auth/verify-otp');
       }, 1500);
     } catch (err) {
+      console.error('Registration error:', err);
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, generateToken, PASSWORD_MIN_LENGTH } from '@/lib/auth';
+import { handleApiError } from '@/lib/api-errors';
 import { z } from 'zod';
 
 // Subscription constants
@@ -114,17 +115,6 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     console.error('Registration error:', error);
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid input data', details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: 'Registration failed. Please try again.' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Registration');
   }
 }
