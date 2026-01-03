@@ -38,7 +38,9 @@ function execCommand(command, description) {
     const output = execSync(command, {
       encoding: 'utf-8',
       stdio: 'pipe',
-      maxBuffer: 10 * 1024 * 1024,
+      // Large buffer to handle extensive migration output
+      // Prisma migrations can generate significant output (table creation, indexes, foreign keys)
+      maxBuffer: 10 * 1024 * 1024, // 10MB
     });
     
     if (output) {
@@ -153,7 +155,14 @@ async function verifyTables() {
     
     for (const tableName of REQUIRED_TABLES) {
       try {
-        // Try to query each table
+        // Validate table name to prevent SQL injection (even though it's from a const array)
+        // Table names can only contain alphanumeric characters and underscores
+        if (!/^[a-z_]+$/.test(tableName)) {
+          console.error(`  ⚠️  Invalid table name format: '${tableName}'`);
+          continue;
+        }
+        
+        // Try to query each table - using double quotes for PostgreSQL identifier
         await prisma.$queryRawUnsafe(`SELECT 1 FROM "${tableName}" LIMIT 1`);
         console.log(`  ✅ Table '${tableName}' exists`);
       } catch (error) {
