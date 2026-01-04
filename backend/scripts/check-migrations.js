@@ -3,6 +3,8 @@
 /**
  * Migration Verification Script
  * 
+ * ⚠️ IMPORTANT: This script MUST be run from the PROJECT ROOT directory
+ * 
  * This script verifies that all Prisma database migrations have been applied
  * before the backend server starts. It performs the following checks:
  * 
@@ -18,9 +20,18 @@
  * This script is designed to be run as a prestart hook to catch
  * migration issues before the server attempts to start.
  * 
- * NOTE: This script should be run from the PROJECT ROOT directory,
- * not from the backend directory, because it needs to import @prisma/client
- * from the root node_modules.
+ * DEPENDENCY NOTE:
+ * This script imports @prisma/client from the root node_modules.
+ * The backend/package.json does not include @prisma/client as a
+ * dependency - it is only in the root package.json. This is intentional
+ * to maintain a single source of truth for Prisma configuration.
+ * 
+ * MAINTENANCE NOTE:
+ * When adding new tables or critical columns from migrations:
+ * 1. Update REQUIRED_TABLES array below
+ * 2. Update CRITICAL_COLUMNS object below
+ * 3. Reference the migration file in comments
+ * 4. Test the script: npm run check-migrations (from backend dir)
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -32,24 +43,33 @@ dotenv.config();
 const prisma = new PrismaClient();
 
 // Tables that must exist for the application to function
+// UPDATE THIS LIST when adding new tables to the schema
+// Reference: prisma/schema.prisma
 const REQUIRED_TABLES = [
-  'users',
-  'subscriptions', 
-  'mt5_accounts',
-  'trading_robots',
-  'user_robot_configs',
-  'trades',
-  'user_settings',
-  'verification_codes',
-  'audit_logs',
-  'payment_proofs'
+  'users',           // Core user management
+  'subscriptions',   // User subscription plans
+  'mt5_accounts',    // MT5 trading account connections
+  'trading_robots',  // Available trading robots/strategies
+  'user_robot_configs', // User robot settings
+  'trades',          // Trade history and records
+  'user_settings',   // User preferences
+  'verification_codes', // Email verification codes
+  'audit_logs',      // Security audit trail
+  'payment_proofs'   // Payment verification uploads
 ];
 
 // Critical columns that should exist after recent migrations
 // These are columns that were added in migrations and the app depends on
+// UPDATE THIS OBJECT when migrations add critical columns
+// 
+// Format: { 'table_name': ['column1', 'column2'] }
+// Include migration reference in comments for tracking
 const CRITICAL_COLUMNS = {
   'mt5_accounts': ['status'], // Added in migration 20260104095900_add_status_to_mt5_accounts
   'payment_proofs': ['created_at'] // Added in migration 20260103113015_add_created_at_to_payment_proofs
+  // Add new critical columns here as migrations are created
+  // Example:
+  // 'users': ['new_field'], // Added in migration YYYYMMDDHHMMSS_add_new_field
 };
 
 async function checkMigrations() {
