@@ -100,6 +100,7 @@ export const initDatabase = async () => {
         api_secret TEXT,
         is_demo BOOLEAN DEFAULT true,
         is_connected BOOLEAN DEFAULT false,
+        status VARCHAR(50) DEFAULT 'disconnected',
         balance DECIMAL(15, 2) DEFAULT 0,
         equity DECIMAL(15, 2) DEFAULT 0,
         last_sync TIMESTAMP,

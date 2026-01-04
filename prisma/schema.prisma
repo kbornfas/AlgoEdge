@@ -81,6 +81,7 @@ model Mt5Account {
   apiSecret   String?   @map("api_secret") @db.Text
   isDemo      Boolean   @default(true) @map("is_demo")
   isConnected Boolean   @default(false) @map("is_connected")
+  status      String    @default("disconnected") @db.VarChar(50)
   balance     Decimal   @default(0) @db.Decimal(15, 2)
   equity      Decimal   @default(0) @db.Decimal(15, 2)
   lastSync    DateTime? @map("last_sync")
