@@ -20,6 +20,7 @@ out/
 .env.production.local
 .env.test*
 backend/.env
+frontend/.env
 
 # Logs
 logs
