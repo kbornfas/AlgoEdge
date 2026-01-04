@@ -4,6 +4,7 @@ import { verifyToken } from '@/lib/auth';
 
 // Mark as dynamic route since it uses authentication headers
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/admin/payment-proofs

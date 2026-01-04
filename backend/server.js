@@ -110,6 +110,11 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Root endpoint for basic connectivity check (Render health checks)
+app.get('/', (req, res) => {
+  res.status(200).send('AlgoEdge Backend API - Running');
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -135,6 +140,18 @@ app.use((err, req, res, next) => {
 
 // Initialize database and start server
 const startServer = async () => {
+  // START SERVER FIRST - Render health checks require open HTTP port immediately
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log('\n🚀 AlgoEdge Backend Server');
+    console.log('==========================');
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Server running on port: ${PORT}`);
+    console.log(`Listening on: 0.0.0.0:${PORT}`);
+    console.log(`API available at: http://localhost:${PORT}/api`);
+    console.log(`WebSocket available at: ws://localhost:${PORT}`);
+    console.log('==========================\n');
+  });
+
   try {
     // Initialize database
     console.log('Initializing database...');
@@ -167,21 +184,13 @@ const startServer = async () => {
     } catch (schedError) {
       console.warn('⚠️  Balance sync scheduler failed:', schedError.message);
     }
-
-    // Start server
-    server.listen(PORT, '0.0.0.0', () => {
-      console.log('\n🚀 AlgoEdge Backend Server');
-      console.log('==========================');
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`Server running on port: ${PORT}`);
-      console.log(`Listening on: 0.0.0.0:${PORT}`);
-      console.log(`API available at: http://localhost:${PORT}/api`);
-      console.log(`WebSocket available at: ws://localhost:${PORT}`);
-      console.log('==========================\n');
-    });
   } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+    console.error('❌ Initialization error:', error);
+    console.error('⚠️  Server is running but some services may be unavailable:');
+    console.error('   - Check DATABASE_URL if database features are needed');
+    console.error('   - Check SMTP settings if email features are needed');
+    console.error('   - Check MetaAPI settings if MT5 trading is needed');
+    // Don't exit - server is already running and can handle basic requests
   }
 };
 
