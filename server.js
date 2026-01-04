@@ -6,6 +6,16 @@ const dev = process.env.NODE_ENV !== 'production';
 const hostname = '0.0.0.0';
 const port = parseInt(process.env.PORT || '3000', 10);
 
+console.log('\n╔════════════════════════════════════════════════════════════════╗');
+console.log('║                                                                ║');
+console.log('║                   🌐 FRONTEND SERVER (Next.js)                 ║');
+console.log('║                       AlgoEdge Web Interface                   ║');
+console.log('║                                                                ║');
+console.log('╚════════════════════════════════════════════════════════════════╝\n');
+console.log('📍 This is the FRONTEND Next.js server for the web interface');
+console.log('📍 For API/backend server, see backend/server.js');
+console.log('');
+
 // Create Next.js app
 const app = next({ dev, hostname });
 const handle = app.getRequestHandler();
@@ -26,10 +36,11 @@ app.prepare().then(() => {
       process.exit(1);
     })
     .listen(port, hostname, () => {
-      console.log('\n🚀 AlgoEdge Server Started Successfully');
+      console.log('\n✅ Frontend Server Started Successfully');
       console.log('========================================');
+      console.log(`Server: FRONTEND (Next.js)`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`Server listening on: http://${hostname}:${port}`);
+      console.log(`Listening on: http://${hostname}:${port}`);
       console.log(`Port: ${port} (from ${process.env.PORT ? 'process.env.PORT' : 'default'})`);
       console.log(`Hostname: ${hostname}`);
       console.log(`Ready for connections`);

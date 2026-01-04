@@ -18,6 +18,19 @@ import paymentRoutes from './routes/paymentRoutes.js';
 // Load environment variables
 dotenv.config();
 
+// ============================================================================
+// SERVER IDENTIFICATION
+// ============================================================================
+console.log('\n╔════════════════════════════════════════════════════════════════╗');
+console.log('║                                                                ║');
+console.log('║                    🚀 BACKEND SERVER (Express)                 ║');
+console.log('║                       AlgoEdge Trading API                     ║');
+console.log('║                                                                ║');
+console.log('╚════════════════════════════════════════════════════════════════╝\n');
+console.log('📍 This is the BACKEND server providing REST API and WebSocket services');
+console.log('📍 NOT the frontend Next.js server (see root /server.js for frontend)');
+console.log('');
+
 // Validate critical environment variables
 const requiredEnvVars = ['JWT_SECRET'];
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
@@ -52,6 +65,8 @@ if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET) {
 // Warn about optional but recommended variables
 if (!process.env.DATABASE_URL) {
   console.warn('⚠️  Warning: DATABASE_URL not set. Database features will be unavailable.');
+  console.warn('   For production deployment, ensure DATABASE_URL is configured.');
+  console.warn('');
 }
 
 const app = express();
@@ -151,51 +166,86 @@ app.use((err, req, res, next) => {
 
 // Initialize database and start server
 const startServer = async () => {
+  console.log('');
+  console.log('═══════════════════════════════════════════════════════════════');
+  console.log('  STARTING BACKEND SERVER');
+  console.log('═══════════════════════════════════════════════════════════════');
+  console.log('');
+  
   // START SERVER FIRST - Render health checks require open HTTP port immediately
+  // This is critical for cloud deployments (Render, Railway, etc.)
+  // The platform health checks need to connect to an open port to verify deployment
+  console.log('Step 1/5: Opening HTTP port for health checks...');
   server.listen(PORT, HOST, () => {
-    console.log('\n🚀 AlgoEdge Backend Server');
-    console.log('==========================');
-    console.log(`✓ Server is now listening`);
+    console.log('\n✅ HTTP Server Started Successfully');
+    console.log('==================================');
+    console.log(`✓ Server: BACKEND (Express API)`);
     console.log(`✓ Listening on: ${HOST}:${PORT}`);
     console.log(`✓ API available at: http://${HOST}:${PORT}/api`);
     console.log(`✓ Health check: http://${HOST}:${PORT}/health`);
     console.log(`✓ WebSocket available at: ws://${HOST}:${PORT}`);
-    console.log('==========================\n');
-    console.log('🔄 Initializing services...');
+    console.log('==================================\n');
+    console.log('ℹ️  HTTP port is now open for Render health checks');
+    console.log('');
   });
 
   try {
     // Initialize database
-    console.log('Initializing database...');
+    console.log('Step 2/5: Initializing database connection...');
     try {
       await initDatabase();
-      console.log('✓ Database initialized');
+      console.log('✅ Database initialized successfully');
     } catch (dbError) {
-      console.warn('⚠️  Database connection failed:', dbError.message);
-      console.log('⚠️  Server will start in limited mode without database');
+      console.error('');
+      console.error('❌ Database initialization failed:');
+      console.error('   Error:', dbError.message);
+      console.error('');
+      console.error('⚠️  Server will continue in LIMITED MODE without database');
+      console.error('   Some features will be unavailable:');
+      console.error('   - User authentication and registration');
+      console.error('   - Trade history and management');
+      console.error('   - Account settings');
+      console.error('');
+      console.error('💡 To fix this issue:');
+      console.error('   1. Verify DATABASE_URL is correctly set');
+      console.error('   2. Check database is accessible');
+      console.error('   3. Run: npx prisma migrate deploy');
+      console.error('   4. Run: node scripts/check-migrations.js');
+      console.error('');
     }
 
     // Initialize WebSocket
-    console.log('Initializing WebSocket...');
+    console.log('');
+    console.log('Step 3/5: Initializing WebSocket...');
     initializeWebSocket(server);
-    console.log('✓ WebSocket initialized');
+    console.log('✅ WebSocket initialized successfully');
 
     // Initialize MT5 connections
-    console.log('Initializing MT5 connections...');
+    console.log('');
+    console.log('Step 4/5: Initializing MT5 connections...');
     try {
       await initializeMT5Connections();
-      console.log('✓ MT5 connections initialized');
+      console.log('✅ MT5 connections initialized successfully');
     } catch (mt5Error) {
       console.warn('⚠️  MT5 initialization failed:', mt5Error.message);
+      console.warn('   Trading features will be limited without MT5 connection');
     }
 
     // Start balance sync scheduler
+    console.log('');
+    console.log('Step 5/5: Starting balance sync scheduler...');
     try {
       startBalanceSyncScheduler();
-      console.log('✓ Balance sync scheduler started');
+      console.log('✅ Balance sync scheduler started successfully');
     } catch (schedError) {
       console.warn('⚠️  Balance sync scheduler failed:', schedError.message);
     }
+    
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('  ✅ BACKEND SERVER READY');
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('');
   } catch (error) {
     console.error('❌ Initialization error:', error);
     console.error('⚠️  Server is running but some services may be unavailable:');
