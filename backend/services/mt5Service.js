@@ -7,12 +7,16 @@ import {
   emitTradeClosed,
 } from './websocketService.js';
 
-// Safe MetaAPI SDK import for Node.js
+// Safe MetaAPI SDK import for Node.js (ESM compatible)
 let MetaApi;
 try {
-  // Only require in Node.js (no window/global)
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  MetaApi = require('metaapi.cloud-sdk').default;
+  // Dynamic import for ESM compatibility
+  const metaApiModule = await import('metaapi.cloud-sdk');
+  // Handle different export structures
+  MetaApi = metaApiModule.default?.default || metaApiModule.default || metaApiModule.MetaApi;
+  if (!MetaApi || typeof MetaApi !== 'function') {
+    throw new Error('MetaApi constructor not found in module');
+  }
   console.log('✅ MetaAPI SDK loaded successfully');
 } catch (error) {
   console.error('❌ Failed to load MetaAPI SDK:', error.message);
