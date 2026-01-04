@@ -58,6 +58,31 @@ async function validateDatabase() {
     
     console.log('✅ All required tables exist');
     console.log(`   Found ${existingTables.length} tables: ${existingTables.join(', ')}`);
+    
+    // Check for critical columns that have been added in migrations
+    console.log('🔍 Checking critical column migrations...');
+    
+    try {
+      const columnCheck = await prisma.$queryRaw`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'mt5_accounts'
+        AND column_name = 'status';
+      `;
+      
+      if (columnCheck.length > 0) {
+        console.log('✅ MT5 accounts "status" column exists (migration applied)');
+      } else {
+        console.warn('⚠️  MT5 accounts "status" column does not exist');
+        console.warn('   Migration 20260104095900_add_status_to_mt5_accounts may not have been applied');
+        console.warn('   The service will use fallback to "is_connected" column');
+        console.warn('   Run: npx prisma migrate deploy');
+      }
+    } catch (columnError) {
+      console.warn('⚠️  Could not verify status column:', columnError.message);
+    }
+    
     console.log('✅ Database validation passed');
     await prisma.$disconnect();
   } catch (error) {
