@@ -57,6 +57,17 @@ if (!process.env.DATABASE_URL) {
 const app = express();
 const server = createServer(app);
 const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0'; // Always bind to 0.0.0.0 for Render/cloud deployments
+
+// Log critical startup configuration
+console.log('\n📋 Server Configuration');
+console.log('========================');
+console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`Port: ${PORT} (from ${process.env.PORT ? 'process.env.PORT' : 'default'})`);
+console.log(`Host: ${HOST}`);
+console.log(`Database: ${process.env.DATABASE_URL ? '✓ Configured' : '⚠️  Not configured'}`);
+console.log(`JWT Secret: ${process.env.JWT_SECRET ? '✓ Configured' : '❌ Missing'}`);
+console.log('========================\n');
 
 // Security middleware
 app.use(helmet({
@@ -141,15 +152,16 @@ app.use((err, req, res, next) => {
 // Initialize database and start server
 const startServer = async () => {
   // START SERVER FIRST - Render health checks require open HTTP port immediately
-  server.listen(PORT, '0.0.0.0', () => {
+  server.listen(PORT, HOST, () => {
     console.log('\n🚀 AlgoEdge Backend Server');
     console.log('==========================');
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`Server running on port: ${PORT}`);
-    console.log(`Listening on: 0.0.0.0:${PORT}`);
-    console.log(`API available at: http://localhost:${PORT}/api`);
-    console.log(`WebSocket available at: ws://localhost:${PORT}`);
+    console.log(`✓ Server is now listening`);
+    console.log(`✓ Listening on: ${HOST}:${PORT}`);
+    console.log(`✓ API available at: http://${HOST}:${PORT}/api`);
+    console.log(`✓ Health check: http://${HOST}:${PORT}/health`);
+    console.log(`✓ WebSocket available at: ws://${HOST}:${PORT}`);
     console.log('==========================\n');
+    console.log('🔄 Initializing services...');
   });
 
   try {

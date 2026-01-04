@@ -157,6 +157,56 @@ With this fix, the health check should pass and your service will stay live.
 
 ## Troubleshooting
 
+### No Open HTTP Ports Detected
+
+If Render shows "No open HTTP ports detected on 0.0.0.0, continuing to scan...", this means the server is not binding to the correct host or port.
+
+**Symptoms:**
+- Health check fails immediately after deployment
+- Logs show "No open HTTP ports detected"
+- Service keeps restarting
+
+**Root Cause:**
+The server must:
+1. Listen on `0.0.0.0` (not `localhost` or `127.0.0.1`)
+2. Use the `PORT` environment variable from Render
+3. Start listening BEFORE any async initialization tasks
+
+**Solution:**
+The backend/server.js has been fixed to:
+- Call `server.listen(PORT, '0.0.0.0')` immediately in `startServer()`
+- Perform database and MT5 initialization AFTER the port is open
+- Handle initialization errors gracefully without crashing the server
+
+### MT5 Service "status column does not exist" Error
+
+If the MT5 service fails with `column "status" does not exist`:
+
+**Symptoms:**
+- Error during server startup: `Initialize MT5 connections error: column "status" does not exist`
+- Service crashes or starts in degraded mode
+- MT5 accounts cannot reconnect
+
+**Root Cause:**
+1. The migration `20260104095900_add_status_to_mt5_accounts` adds a `status` column to `mt5_accounts`
+2. This migration was not applied to the production database
+3. The `initializeMT5Connections` function queries for `status = 'connected'`
+
+**Solution:**
+The service now has defensive fallback logic:
+1. Tries querying with `status` column first
+2. If that fails, falls back to legacy `is_connected` column
+3. Logs warnings about missing migrations
+4. Continues server startup without crashing
+
+**To apply the migration:**
+```bash
+# In Render Shell or locally with DATABASE_URL
+npx prisma migrate deploy
+```
+
+The build process should automatically apply this migration.
+
 ### Migration Failures
 
 If migrations fail during deployment, you'll see clear error messages in the Render logs:
@@ -268,13 +318,13 @@ To verify your current deployment status:
 
 | Error | Meaning | Solution |
 |-------|---------|----------|
+| `No open HTTP ports` | Server not listening on 0.0.0.0 | Fixed in backend/server.js |
+| `status column does not exist` | Migration not applied | Service has fallback logic, run migrations |
 | `errorMissingColumn` | Table or column doesn't exist | Migrations didn't run - check build logs |
 | `P1001` | Can't reach database | Check DATABASE_URL is set |
 | `P1003` | Database doesn't exist | Create database service in Render |
 | `P3005` | Migration conflict | Resolve with `prisma migrate resolve` |
 | `ECONNREFUSED` | Connection refused | Database not accessible from Render |
-
-## Troubleshooting
 
 ### If service still shuts down:
 1. Check the logs in Render dashboard

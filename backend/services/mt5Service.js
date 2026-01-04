@@ -91,6 +91,75 @@ const api = new MetaApi(token);
 const mt5Connections = new Map();
 const metaApiAccounts = new Map();
 
+/**
+ * Helper function to update MT5 account status in database
+ * Handles both new 'status' column and legacy 'is_connected' column
+ */
+const updateAccountStatus = async (accountId, status, additionalFields = {}) => {
+  // Whitelist of allowed column names to prevent SQL injection
+  const ALLOWED_COLUMNS = ['balance', 'equity', 'last_sync', 'mt5_login', 'mt5_password', 'mt5_server'];
+  
+  try {
+    // Build the SET clause for additional fields
+    const setClause = ['status = $1'];
+    const values = [status];
+    let paramIndex = 2;
+    
+    for (const [key, value] of Object.entries(additionalFields)) {
+      // Security: Only allow whitelisted column names
+      if (!ALLOWED_COLUMNS.includes(key)) {
+        console.warn(`⚠️  Ignoring non-whitelisted column: ${key}`);
+        continue;
+      }
+      
+      if (key === 'last_sync' && value === 'CURRENT_TIMESTAMP') {
+        setClause.push('last_sync = CURRENT_TIMESTAMP');
+      } else {
+        setClause.push(`${key} = $${paramIndex}`);
+        values.push(value);
+        paramIndex++;
+      }
+    }
+    
+    values.push(accountId);
+    const query = `UPDATE mt5_accounts SET ${setClause.join(', ')} WHERE id = $${paramIndex}`;
+    
+    await pool.query(query, values);
+  } catch (error) {
+    if (error.message && error.message.includes('column "status" does not exist')) {
+      // Fall back to legacy 'is_connected' column
+      console.warn('⚠️  Using legacy is_connected column (status column not available)');
+      const isConnected = status === 'connected';
+      
+      const setClause = ['is_connected = $1'];
+      const values = [isConnected];
+      let paramIndex = 2;
+      
+      for (const [key, value] of Object.entries(additionalFields)) {
+        // Security: Only allow whitelisted column names
+        if (!ALLOWED_COLUMNS.includes(key)) {
+          continue;
+        }
+        
+        if (key === 'last_sync' && value === 'CURRENT_TIMESTAMP') {
+          setClause.push('last_sync = CURRENT_TIMESTAMP');
+        } else {
+          setClause.push(`${key} = $${paramIndex}`);
+          values.push(value);
+          paramIndex++;
+        }
+      }
+      
+      values.push(accountId);
+      const query = `UPDATE mt5_accounts SET ${setClause.join(', ')} WHERE id = $${paramIndex}`;
+      
+      await pool.query(query, values);
+    } else {
+      throw error;
+    }
+  }
+};
+
 // Connect to MT5 Account
 export const connectMT5Account = async (accountId, login, password, server) => {
   try {
@@ -150,11 +219,11 @@ export const connectMT5Account = async (accountId, login, password, server) => {
     mt5Connections.set(accountId, connectionData);
     metaApiAccounts.set(accountId, metaApiAccount);
 
-    // Update database
-    await pool.query(
-      'UPDATE mt5_accounts SET status = $1, balance = $2, last_sync = CURRENT_TIMESTAMP WHERE id = $3',
-      ['connected', accountInfo.balance, accountId]
-    );
+    // Update database with connected status
+    await updateAccountStatus(accountId, 'connected', {
+      balance: accountInfo.balance,
+      last_sync: 'CURRENT_TIMESTAMP'
+    });
 
     // Get user_id for this account
     const result = await pool.query(
@@ -177,10 +246,11 @@ export const connectMT5Account = async (accountId, login, password, server) => {
     console.error('MT5 connection error:', error);
     
     // Update database with error status
-    await pool.query(
-      'UPDATE mt5_accounts SET status = $1 WHERE id = $2',
-      ['error', accountId]
-    );
+    try {
+      await updateAccountStatus(accountId, 'error');
+    } catch (updateError) {
+      console.error('Failed to update account status:', updateError.message);
+    }
     
     throw new Error(`Failed to connect to MT5: ${error.message}`);
   }
@@ -205,10 +275,8 @@ export const disconnectMT5Account = async (accountId) => {
     mt5Connections.delete(accountId);
     metaApiAccounts.delete(accountId);
 
-    await pool.query(
-      'UPDATE mt5_accounts SET status = $1 WHERE id = $2',
-      ['disconnected', accountId]
-    );
+    // Update database with disconnected status
+    await updateAccountStatus(accountId, 'disconnected');
 
     const result = await pool.query(
       'SELECT user_id FROM mt5_accounts WHERE id = $1',
@@ -421,27 +489,60 @@ export const getOpenPositions = async (accountId) => {
 // Initialize MT5 connections on server start
 export const initializeMT5Connections = async () => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM mt5_accounts WHERE status = $1',
-      ['connected']
-    );
-
-    for (const account of result.rows) {
-      try {
-        await connectMT5Account(
-          account.id,
-          account.mt5_login,
-          account.mt5_password,
-          account.mt5_server
-        );
-      } catch (error) {
-        console.error(`Failed to reconnect MT5 account ${account.id}:`, error);
+    console.log('Attempting to initialize MT5 connections...');
+    
+    // Try to query using the new 'status' column first
+    let result;
+    try {
+      result = await pool.query(
+        'SELECT * FROM mt5_accounts WHERE status = $1',
+        ['connected']
+      );
+      console.log(`Found ${result.rows.length} connected accounts using 'status' column`);
+    } catch (statusError) {
+      // If 'status' column doesn't exist, fall back to 'is_connected' column
+      if (statusError.message && statusError.message.includes('column "status" does not exist')) {
+        console.warn('⚠️  Column "status" does not exist, falling back to "is_connected" column');
+        console.warn('⚠️  Please run database migrations: npx prisma migrate deploy');
+        
+        try {
+          result = await pool.query(
+            'SELECT * FROM mt5_accounts WHERE is_connected = $1',
+            [true]
+          );
+          console.log(`Found ${result.rows.length} connected accounts using 'is_connected' column (legacy)`);
+        } catch (fallbackError) {
+          console.error('❌ Failed to query MT5 accounts with fallback:', fallbackError.message);
+          throw new Error('Unable to query MT5 accounts. Database schema may be outdated or corrupted.');
+        }
+      } else {
+        // Different error, re-throw
+        throw statusError;
       }
     }
 
-    console.log(`Initialized ${result.rows.length} MT5 connections`);
+    // Reconnect to previously connected accounts
+    if (result && result.rows && result.rows.length > 0) {
+      for (const account of result.rows) {
+        try {
+          await connectMT5Account(
+            account.id,
+            account.mt5_login,
+            account.mt5_password,
+            account.mt5_server
+          );
+        } catch (error) {
+          console.error(`Failed to reconnect MT5 account ${account.id}:`, error.message);
+        }
+      }
+      console.log(`✓ Successfully initialized ${result.rows.length} MT5 connections`);
+    } else {
+      console.log('No MT5 accounts to reconnect');
+    }
   } catch (error) {
-    console.error('Initialize MT5 connections error:', error);
+    console.error('❌ Initialize MT5 connections error:', error.message);
+    console.warn('⚠️  MT5 service will continue without reconnecting previous accounts');
+    // Don't throw - allow server to continue starting
   }
 };
 
