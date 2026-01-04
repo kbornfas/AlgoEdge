@@ -96,6 +96,9 @@ const metaApiAccounts = new Map();
  * Handles both new 'status' column and legacy 'is_connected' column
  */
 const updateAccountStatus = async (accountId, status, additionalFields = {}) => {
+  // Whitelist of allowed column names to prevent SQL injection
+  const ALLOWED_COLUMNS = ['balance', 'equity', 'last_sync', 'mt5_login', 'mt5_password', 'mt5_server'];
+  
   try {
     // Build the SET clause for additional fields
     const setClause = ['status = $1'];
@@ -103,6 +106,12 @@ const updateAccountStatus = async (accountId, status, additionalFields = {}) => 
     let paramIndex = 2;
     
     for (const [key, value] of Object.entries(additionalFields)) {
+      // Security: Only allow whitelisted column names
+      if (!ALLOWED_COLUMNS.includes(key)) {
+        console.warn(`⚠️  Ignoring non-whitelisted column: ${key}`);
+        continue;
+      }
+      
       if (key === 'last_sync' && value === 'CURRENT_TIMESTAMP') {
         setClause.push('last_sync = CURRENT_TIMESTAMP');
       } else {
@@ -127,6 +136,11 @@ const updateAccountStatus = async (accountId, status, additionalFields = {}) => 
       let paramIndex = 2;
       
       for (const [key, value] of Object.entries(additionalFields)) {
+        // Security: Only allow whitelisted column names
+        if (!ALLOWED_COLUMNS.includes(key)) {
+          continue;
+        }
+        
         if (key === 'last_sync' && value === 'CURRENT_TIMESTAMP') {
           setClause.push('last_sync = CURRENT_TIMESTAMP');
         } else {

@@ -22,6 +22,12 @@ const REQUIRED_TABLES = [
   'verification_codes', 'audit_logs', 'payment_proofs'
 ];
 
+// Critical columns that should exist after migrations
+const CRITICAL_COLUMNS = {
+  'mt5_accounts': ['status'], // Added in migration 20260104095900_add_status_to_mt5_accounts
+  'payment_proofs': ['created_at'] // Added in migration 20260103113015_add_created_at_to_payment_proofs
+};
+
 async function validateDatabase() {
   console.log('🔍 Validating database schema...');
   
@@ -62,25 +68,36 @@ async function validateDatabase() {
     // Check for critical columns that have been added in migrations
     console.log('🔍 Checking critical column migrations...');
     
-    try {
-      const columnCheck = await prisma.$queryRaw`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-        AND table_name = 'mt5_accounts'
-        AND column_name = 'status';
-      `;
-      
-      if (columnCheck.length > 0) {
-        console.log('✅ MT5 accounts "status" column exists (migration applied)');
-      } else {
-        console.warn('⚠️  MT5 accounts "status" column does not exist');
-        console.warn('   Migration 20260104095900_add_status_to_mt5_accounts may not have been applied');
-        console.warn('   The service will use fallback to "is_connected" column');
-        console.warn('   Run: npx prisma migrate deploy');
+    let allColumnsExist = true;
+    
+    for (const [tableName, columns] of Object.entries(CRITICAL_COLUMNS)) {
+      for (const columnName of columns) {
+        try {
+          const columnCheck = await prisma.$queryRaw`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = ${tableName}
+            AND column_name = ${columnName};
+          `;
+          
+          if (columnCheck.length > 0) {
+            console.log(`✅ ${tableName}.${columnName} exists`);
+          } else {
+            console.warn(`⚠️  ${tableName}.${columnName} does not exist`);
+            console.warn(`   A migration may not have been applied`);
+            console.warn(`   The service will use fallback logic where available`);
+            console.warn(`   Run: npx prisma migrate deploy`);
+            allColumnsExist = false;
+          }
+        } catch (columnError) {
+          console.warn(`⚠️  Could not verify ${tableName}.${columnName}:`, columnError.message);
+        }
       }
-    } catch (columnError) {
-      console.warn('⚠️  Could not verify status column:', columnError.message);
+    }
+    
+    if (allColumnsExist) {
+      console.log('✅ All critical columns exist');
     }
     
     console.log('✅ Database validation passed');
