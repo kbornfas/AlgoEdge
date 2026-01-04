@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { comparePassword, generateToken } from '@/lib/auth';
 import { z } from 'zod';
 
+// CRITICAL: Force dynamic rendering - do NOT prerender at build time
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 // Validation schema for admin login
 const adminLoginSchema = z.object({
   email: z.string().email(),
