@@ -29,6 +29,7 @@ services:
     # Note: Using set -e to fail fast on any error
     buildCommand: |
       set -e
+      set -o pipefail
       echo "================================"
       echo "  AlgoEdge Backend Build"
       echo "================================"

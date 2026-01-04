@@ -52,13 +52,14 @@ async function validateDatabase() {
       console.error('2. Verify the database exists and is accessible');
       console.error('3. Check Render build logs for migration errors');
       console.error('4. Manually run migrations: npx prisma migrate deploy');
+      await prisma.$disconnect();
       process.exit(1);
     }
     
     console.log('✅ All required tables exist');
     console.log(`   Found ${existingTables.length} tables: ${existingTables.join(', ')}`);
     console.log('✅ Database validation passed');
-    process.exit(0);
+    await prisma.$disconnect();
   } catch (error) {
     console.error('❌ Database validation failed:', error.message);
     console.error('');
@@ -69,9 +70,8 @@ async function validateDatabase() {
     console.error('2. Verify the database is running and accessible');
     console.error('3. Check that Prisma Client was generated: npx prisma generate');
     console.error('4. Check database connection string format');
-    process.exit(1);
-  } finally {
     await prisma.$disconnect();
+    process.exit(1);
   }
 }
 
