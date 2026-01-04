@@ -157,6 +157,125 @@ With this fix, the health check should pass and your service will stay live.
 
 ## Troubleshooting
 
+### Migration Failures
+
+If migrations fail during deployment, you'll see clear error messages in the Render logs:
+
+**Symptoms:**
+- `❌ Migration deployment failed` in build logs
+- `❌ Database validation failed` in build logs
+- `errorMissingColumn` errors at runtime
+
+**Common Causes:**
+
+1. **Database URL not set or incorrect**
+   ```
+   Error: P1001: Can't reach database server
+   ```
+   **Solution:** Check that `DATABASE_URL` environment variable is set correctly in Render
+
+2. **Database doesn't exist**
+   ```
+   Error: P1003: Database does not exist
+   ```
+   **Solution:** Ensure the PostgreSQL database service is created and linked to your web service
+
+3. **Migration conflicts**
+   ```
+   Error: Migration ... failed to apply
+   ```
+   **Solution:** Check migration history with `npx prisma migrate status`
+
+4. **Prisma Client not generated**
+   ```
+   Error: Cannot find module '@prisma/client'
+   ```
+   **Solution:** The build command should run `npx prisma generate` before migrations
+
+### Verifying Database State
+
+After a successful deployment, your Render build logs should show:
+
+```
+✅ Database connection successful
+✅ All required tables exist
+   Found 10 tables: users, subscriptions, mt5_accounts, trading_robots, ...
+✅ Database validation passed
+✅ Build completed successfully
+```
+
+If you see `❌ Missing tables`, the migrations didn't run properly.
+
+### Manual Migration Troubleshooting
+
+If automatic migrations fail, you can manually investigate:
+
+1. **Connect to your Render database:**
+   ```bash
+   # Get the DATABASE_URL from Render dashboard
+   psql "your-database-url-here"
+   ```
+
+2. **Check if tables exist:**
+   ```sql
+   \dt
+   -- or
+   SELECT table_name FROM information_schema.tables 
+   WHERE table_schema = 'public';
+   ```
+
+3. **Check migration history:**
+   ```sql
+   SELECT * FROM _prisma_migrations;
+   ```
+
+4. **Manually run migrations (if needed):**
+   ```bash
+   # In Render Shell or locally with DATABASE_URL set
+   npx prisma migrate deploy
+   ```
+
+### Force Fresh Migration
+
+If your database is in an inconsistent state:
+
+1. **⚠️ WARNING: This will delete all data!**
+2. In Render dashboard, go to your database service
+3. Delete and recreate the database
+4. Trigger a new deployment - migrations will run on the fresh database
+
+### Checking Current Deployment
+
+To verify your current deployment status:
+
+1. **Check Render logs:**
+   - Go to your web service in Render
+   - Click "Logs" tab
+   - Look for the build output and validation messages
+
+2. **Test the API:**
+   ```bash
+   curl https://your-app.onrender.com/health
+   ```
+
+3. **Check database connection:**
+   ```bash
+   # Run validation script (requires DATABASE_URL)
+   npm run render:validate
+   ```
+
+### Common Error Messages
+
+| Error | Meaning | Solution |
+|-------|---------|----------|
+| `errorMissingColumn` | Table or column doesn't exist | Migrations didn't run - check build logs |
+| `P1001` | Can't reach database | Check DATABASE_URL is set |
+| `P1003` | Database doesn't exist | Create database service in Render |
+| `P3005` | Migration conflict | Resolve with `prisma migrate resolve` |
+| `ECONNREFUSED` | Connection refused | Database not accessible from Render |
+
+## Troubleshooting
+
 ### If service still shuts down:
 1. Check the logs in Render dashboard
 2. Verify environment variables are set correctly
@@ -274,5 +393,5 @@ If you encounter issues:
 
 ---
 
-**Last Updated:** January 3, 2026
-**Branch:** copilot/fix-server-port-listening-again
+**Last Updated:** January 4, 2026
+**Branch:** copilot/fix-render-deployment-errors

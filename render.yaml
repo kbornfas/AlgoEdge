@@ -29,15 +29,38 @@ services:
     # Note: Using set -e to fail fast on any error
     buildCommand: |
       set -e
-      echo "Installing root dependencies..."
+      set -o pipefail
+      echo "================================"
+      echo "  AlgoEdge Backend Build"
+      echo "================================"
+      
+      # Install dependencies
+      echo ""
+      echo "📦 Installing root dependencies..."
       npm ci --prefix .
-      echo "Installing backend dependencies..."
+      
+      echo ""
+      echo "📦 Installing backend dependencies..."
       npm ci --prefix backend
-      echo "Generating Prisma Client..."
-      npx prisma generate
-      echo "Running database migrations..."
-      npx prisma migrate deploy
-      echo "Build completed successfully"
+      
+      # Generate Prisma Client
+      echo ""
+      echo "🔧 Generating Prisma Client..."
+      npx prisma generate || { echo "❌ Prisma generate failed"; exit 1; }
+      
+      # Deploy migrations
+      echo ""
+      echo "🔧 Deploying database migrations..."
+      npx prisma migrate deploy || { echo "❌ Migration deployment failed"; exit 1; }
+      
+      # Verify database setup
+      echo ""
+      echo "✅ Verifying database tables..."
+      node scripts/render-validate.js || { echo "❌ Database validation failed"; exit 1; }
+      
+      echo ""
+      echo "✅ Build completed successfully"
+      echo "================================"
     # Start the Express backend
     startCommand: cd backend && npm start
     envVars:
