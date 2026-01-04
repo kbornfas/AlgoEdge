@@ -140,7 +140,7 @@ app.use((err, req, res, next) => {
 
 // Initialize database and start server
 const startServer = async () => {
-  // START SERVER FIRST - Health checks must pass immediately
+  // START SERVER FIRST - Render health checks require open HTTP port immediately
   server.listen(PORT, '0.0.0.0', () => {
     console.log('\n🚀 AlgoEdge Backend Server');
     console.log('==========================');
@@ -185,8 +185,12 @@ const startServer = async () => {
       console.warn('⚠️  Balance sync scheduler failed:', schedError.message);
     }
   } catch (error) {
-    console.error('Initialization error:', error);
-    // Don't exit - server is already running and can handle requests
+    console.error('❌ Initialization error:', error);
+    console.error('⚠️  Server is running but some services may be unavailable:');
+    console.error('   - Check DATABASE_URL if database features are needed');
+    console.error('   - Check SMTP settings if email features are needed');
+    console.error('   - Check MetaAPI settings if MT5 trading is needed');
+    // Don't exit - server is already running and can handle basic requests
   }
 };
 

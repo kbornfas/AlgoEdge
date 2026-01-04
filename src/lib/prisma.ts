@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { validateEnvironmentOrThrow } from './env-validator';
 
 // Validate environment variables before initializing Prisma
-// Only validate at runtime, not during build
+// Skip validation during Vercel builds, validate at runtime otherwise
 if (typeof window === 'undefined' && process.env.VERCEL !== '1') {
   // Skip validation during Vercel build
   try {
