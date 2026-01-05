@@ -5,7 +5,45 @@ import { verifyToken } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 const META_API_TOKEN = process.env.METAAPI_TOKEN;
+const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
 const CLIENT_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
+
+/**
+ * Find existing MetaAPI account by login/server
+ */
+async function findMetaApiAccount(login: string, server: string): Promise<string | null> {
+  if (!META_API_TOKEN) return null;
+
+  try {
+    const response = await fetch(`${PROVISIONING_API_URL}/users/current/accounts`, {
+      headers: {
+        'auth-token': META_API_TOKEN,
+      },
+    });
+
+    if (!response.ok) return null;
+
+    const accounts = await response.json();
+    const account = accounts.find((acc: any) => acc.login === login && acc.server === server);
+    
+    if (account) {
+      // Make sure it's deployed
+      if (account.state !== 'DEPLOYED') {
+        await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${account._id}/deploy`, {
+          method: 'POST',
+          headers: { 'auth-token': META_API_TOKEN },
+        });
+        // Wait a bit for deployment
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+      return account._id;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error finding MetaAPI account:', error);
+    return null;
+  }
+}
 
 /**
  * Get account information from MetaAPI
@@ -80,13 +118,26 @@ export async function POST(req: NextRequest) {
     }
 
     // Get MetaAPI account ID (stored in apiKey field)
-    const metaApiAccountId = mt5Account.apiKey;
+    let metaApiAccountId = mt5Account.apiKey;
 
+    // If no MetaAPI account ID, try to find existing one
     if (!metaApiAccountId) {
-      return NextResponse.json(
-        { error: 'Account not properly provisioned with MetaAPI' },
-        { status: 400 }
-      );
+      console.log('No MetaAPI account ID found, searching for existing account...');
+      metaApiAccountId = await findMetaApiAccount(mt5Account.accountId, mt5Account.server);
+      
+      if (metaApiAccountId) {
+        // Store it for future use
+        await prisma.mt5Account.update({
+          where: { id: mt5Account.id },
+          data: { apiKey: metaApiAccountId },
+        });
+        console.log('Found and stored MetaAPI account ID:', metaApiAccountId);
+      } else {
+        return NextResponse.json(
+          { error: 'Account not provisioned with MetaAPI. Please disconnect and reconnect your account.' },
+          { status: 400 }
+        );
+      }
     }
 
     // Fetch real balance from MetaAPI
@@ -94,7 +145,7 @@ export async function POST(req: NextRequest) {
 
     if (!accountInfo) {
       return NextResponse.json(
-        { error: 'Failed to fetch account information from MetaAPI' },
+        { error: 'Failed to fetch account information from MetaAPI. The account may still be deploying.' },
         { status: 500 }
       );
     }
