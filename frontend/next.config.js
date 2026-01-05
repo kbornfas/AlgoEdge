@@ -6,14 +6,13 @@ const nextConfig = {
   
   // ESLint configuration for builds
   eslint: {
-    // Warnings won't fail the build, but errors will
+    // Continue to check for errors during builds (warnings won't fail the build)
     ignoreDuringBuilds: false,
   },
   
   // TypeScript configuration for builds  
   typescript: {
-    // Don't fail build on type errors during production builds
-    // Type checking happens separately in CI
+    // Continue to check for type errors during builds
     ignoreBuildErrors: false,
   },
   

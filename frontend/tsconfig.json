@@ -30,8 +30,7 @@
     "next-env.d.ts",
     ".next/types/**/*.ts",
     "**/*.ts",
-    "**/*.tsx",
-    "node_modules/@prisma/client/**/*.ts"
+    "**/*.tsx"
   ],
   "exclude": [
     "node_modules"
