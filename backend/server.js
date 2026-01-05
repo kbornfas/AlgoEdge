@@ -133,7 +133,7 @@ const startServer = async () => {
     setupRoutes(app);
     setupErrorHandlers(app);
 
-    await initDatabase();
+    // await initDatabase();
 
     initializeWebSocket(server);
 
