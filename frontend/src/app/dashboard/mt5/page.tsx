@@ -150,8 +150,21 @@ export default function MT5ConnectionPage() {
         } else {
           setError('Account connected but balance is 0. Ensure your MT5 account has funds.');
         }
+      } else if (data.step6_error) {
+        setError(`MetaAPI Error: ${data.step6_error.message || JSON.stringify(data.step6_error)}`);
+      } else if (data.step3_metaApiList?.error) {
+        setError(`MetaAPI list error: ${data.step3_metaApiList.error}`);
       } else {
-        setError('Debug complete - check browser console (F12) for details.');
+        // Show actual debug data for troubleshooting
+        const debugSummary = [
+          `Token: ${data.step1_tokenCheck?.hasMetaApiToken ? 'YES' : 'NO'}`,
+          `DB Account: ${data.step2_dbAccount?.accountId || 'NONE'}`,
+          `MetaAPI accounts: ${data.step3_metaApiList?.totalAccounts || 0}`,
+          `Matching: ${typeof data.step4_matchingAccount === 'object' ? 
+            `${data.step4_matchingAccount.state}/${data.step4_matchingAccount.connectionStatus}` : 
+            data.step4_matchingAccount}`,
+        ].join(' | ');
+        setError(`Debug: ${debugSummary}`);
       }
     } catch (err: any) {
       console.error('Debug error:', err);
