@@ -33,6 +33,7 @@
     "@mui/icons-material": "^5.15.0",
     "@mui/material": "^5.15.0",
     "@prisma/client": "^5.20.0",
+    "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.561.0",

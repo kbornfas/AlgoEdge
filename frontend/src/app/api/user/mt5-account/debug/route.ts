@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import axios from 'axios';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // Allow up to 60 seconds
+export const maxDuration = 60;
 
 const META_API_TOKEN = process.env.METAAPI_TOKEN;
 const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
@@ -11,7 +12,7 @@ const CLIENT_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
 
 /**
  * GET /api/user/mt5-account/debug
- * Debug MetaAPI connection and account status - also updates balance if found
+ * Debug MetaAPI connection and update balance
  */
 export async function GET(req: NextRequest) {
   const debug: any = { timestamp: new Date().toISOString() };
@@ -35,16 +36,13 @@ export async function GET(req: NextRequest) {
     };
 
     if (!META_API_TOKEN) {
-      debug.error = 'CRITICAL: METAAPI_TOKEN not found in environment. Add it to Vercel Environment Variables!';
+      debug.error = 'METAAPI_TOKEN not found. Add it to Vercel Environment Variables!';
       return NextResponse.json(debug);
     }
 
     // Get user's MT5 account from database
     const mt5Account = await prisma.mt5Account.findFirst({
-      where: {
-        userId: decoded.userId,
-        status: 'connected',
-      },
+      where: { userId: decoded.userId, status: 'connected' },
     });
 
     debug.step2_dbAccount = mt5Account ? {
@@ -53,47 +51,39 @@ export async function GET(req: NextRequest) {
       server: mt5Account.server,
       storedMetaApiId: mt5Account.apiKey || 'NOT SET',
       currentBalance: Number(mt5Account.balance),
-      currentEquity: Number(mt5Account.equity),
-    } : 'NO ACCOUNT IN DATABASE';
+    } : 'NO ACCOUNT';
 
     if (!mt5Account) {
       return NextResponse.json(debug);
     }
 
-    // List all MetaAPI accounts
+    // List all MetaAPI accounts using axios
     let accounts: any[] = [];
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      
-      const listResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts`, {
-        headers: { 'auth-token': META_API_TOKEN },
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      debug.step3_metaApiList = { status: listResponse.status };
-
-      if (!listResponse.ok) {
-        const errorText = await listResponse.text();
-        debug.step3_metaApiList.error = errorText;
-        return NextResponse.json(debug);
-      }
-
-      accounts = await listResponse.json();
-      debug.step3_metaApiList.totalAccounts = accounts.length;
-      debug.step3_metaApiList.allAccounts = accounts.map((acc: any) => ({
-        id: acc._id,
-        login: acc.login,
-        server: acc.server,
-        state: acc.state,
-        connectionStatus: acc.connectionStatus,
-      }));
-    } catch (fetchError: any) {
+      const listResponse = await axios.get(
+        `${PROVISIONING_API_URL}/users/current/accounts`,
+        { 
+          headers: { 'auth-token': META_API_TOKEN },
+          timeout: 30000,
+        }
+      );
+      accounts = listResponse.data;
       debug.step3_metaApiList = { 
-        error: fetchError.message || 'Fetch failed',
-        name: fetchError.name,
-        cause: fetchError.cause?.message || 'Unknown'
+        status: listResponse.status, 
+        totalAccounts: accounts.length,
+        accounts: accounts.map((a: any) => ({
+          id: a._id,
+          login: a.login,
+          server: a.server,
+          state: a.state,
+          connectionStatus: a.connectionStatus,
+        })),
+      };
+    } catch (err: any) {
+      debug.step3_metaApiList = { 
+        error: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
       };
       return NextResponse.json(debug);
     }
@@ -109,78 +99,60 @@ export async function GET(req: NextRequest) {
       server: matchingAccount.server,
       state: matchingAccount.state,
       connectionStatus: matchingAccount.connectionStatus,
-    } : `NOT FOUND - Looking for login=${mt5Account.accountId} server=${mt5Account.server}`;
+    } : `NOT FOUND for login=${mt5Account.accountId} server=${mt5Account.server}`;
 
     if (!matchingAccount) {
-      debug.suggestion = 'Account not in MetaAPI. Need to disconnect and reconnect with password.';
+      debug.action = 'Disconnect and reconnect with your MT5 password';
       return NextResponse.json(debug);
     }
 
-    // Store the MetaAPI ID if not stored
+    // Save MetaAPI ID
     if (!mt5Account.apiKey) {
       await prisma.mt5Account.update({
         where: { id: mt5Account.id },
         data: { apiKey: matchingAccount._id },
       });
-      debug.step4_storedMetaApiId = matchingAccount._id;
     }
 
-    // Check if account is deployed and connected
+    // Check deployment status
     if (matchingAccount.state !== 'DEPLOYED') {
-      debug.step5_deployment = `Account state is ${matchingAccount.state}, not DEPLOYED`;
-      
-      // Try to deploy
       try {
-        await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${matchingAccount._id}/deploy`, {
-          method: 'POST',
-          headers: { 'auth-token': META_API_TOKEN },
-        });
-        debug.step5_deployment = 'Sent deploy request. Wait 30 seconds and try again.';
-      } catch (e) {
-        debug.step5_deployment = 'Failed to deploy: ' + (e as any).message;
+        await axios.post(
+          `${PROVISIONING_API_URL}/users/current/accounts/${matchingAccount._id}/deploy`,
+          {},
+          { headers: { 'auth-token': META_API_TOKEN }, timeout: 10000 }
+        );
+        debug.step5 = 'Deploy request sent. Wait 30s and try again.';
+      } catch (e: any) {
+        debug.step5 = 'Deploy failed: ' + e.message;
       }
       return NextResponse.json(debug);
     }
 
     if (matchingAccount.connectionStatus !== 'CONNECTED') {
-      debug.step5_connection = `Connection status is ${matchingAccount.connectionStatus}, not CONNECTED`;
-      debug.suggestion = 'Account credentials may be wrong. Disconnect and reconnect with correct password.';
+      debug.step5 = `Status: ${matchingAccount.connectionStatus}. Reconnect with correct password.`;
       return NextResponse.json(debug);
     }
 
     // Get account info
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      
-      const infoResponse = await fetch(
+      const infoResponse = await axios.get(
         `${CLIENT_API_URL}/users/current/accounts/${matchingAccount._id}/account-information`,
         { 
           headers: { 'auth-token': META_API_TOKEN },
-          signal: controller.signal,
+          timeout: 30000,
         }
       );
-      clearTimeout(timeoutId);
 
-      debug.step6_accountInfo = { status: infoResponse.status };
-
-      if (!infoResponse.ok) {
-        const errorText = await infoResponse.text();
-        debug.step6_accountInfo.error = errorText;
-        return NextResponse.json(debug);
-      }
-
-      const info = await infoResponse.json();
-      debug.step6_accountInfo.data = {
+      const info = infoResponse.data;
+      debug.step6_accountInfo = {
         balance: info.balance,
         equity: info.equity,
         currency: info.currency,
-        leverage: info.leverage,
         name: info.name,
-        server: info.server,
       };
 
-      // UPDATE THE DATABASE with real balance!
+      // UPDATE DATABASE
       if (info.balance !== undefined) {
         const updated = await prisma.mt5Account.update({
           where: { id: mt5Account.id },
@@ -193,24 +165,22 @@ export async function GET(req: NextRequest) {
         });
         
         debug.step7_updated = {
-          success: true,
           newBalance: Number(updated.balance),
           newEquity: Number(updated.equity),
         };
+        debug.SUCCESS = `Balance updated to $${info.balance}! Refresh the page.`;
       }
-
-      debug.SUCCESS = 'Balance fetched and updated! Refresh the page to see new balance.';
-    } catch (infoError: any) {
-      debug.step6_accountInfo = {
-        error: infoError.message || 'Fetch failed',
-        name: infoError.name,
+    } catch (err: any) {
+      debug.step6_error = {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
       };
     }
 
     return NextResponse.json(debug);
   } catch (error: any) {
-    debug.error = error.message || String(error);
-    debug.stack = error.stack;
+    debug.error = error.message;
     return NextResponse.json(debug, { status: 500 });
   }
 }
