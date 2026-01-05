@@ -79,6 +79,17 @@ export async function POST(
       );
     }
 
+    // Get the MetaAPI account ID (stored in apiKey field)
+    const metaApiAccountId = mt5Account.apiKey;
+    if (!metaApiAccountId) {
+      return NextResponse.json(
+        { error: 'MT5 account is not properly configured. Please disconnect and reconnect.' },
+        { status: 400 }
+      );
+    }
+
+    console.log(`🔑 Using MetaAPI account ID: ${metaApiAccountId} (MT5 login: ${mt5Account.accountId})`);
+
     // Get or create user robot config
     let userRobotConfig = await prisma.userRobotConfig.findUnique({
       where: {
@@ -118,11 +129,12 @@ export async function POST(
     console.log(`🤖 Starting ${robot.name} on ${selectedTimeframe} timeframe with ${riskPercent}% risk`);
 
     // Run the robot trading logic with intelligent position management
+    // Use metaApiAccountId (from apiKey field) instead of accountId
     const result = await runRobotTrading(
       decoded.userId,
       robotId,
       mt5Account.id,
-      mt5Account.accountId,
+      metaApiAccountId,  // Use the MetaAPI account ID, not MT5 login
       riskPercent,
       metaApiTimeframe
     );

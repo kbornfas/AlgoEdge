@@ -494,8 +494,11 @@ export function analyzeMarket(symbol: string, candles: CandleData[]): TradingSig
   // Priority based on pair profitability
   const basePriority = TIER1_PAIRS.includes(symbol) ? 100 : TIER2_PAIRS.includes(symbol) ? 75 : 50;
 
-  // Only generate signal if confidence >= 70% (lowered from 75% for more trades)
-  if (buyConfidence >= 70 && buyConfidence > sellConfidence) {
+  // Lower threshold to 55% for more trading opportunities
+  // High-probability setups still get higher confidence scores
+  const CONFIDENCE_THRESHOLD = 55;
+
+  if (buyConfidence >= CONFIDENCE_THRESHOLD && buyConfidence > sellConfidence) {
     // INTELLIGENT STOP LOSS & TAKE PROFIT
     const volatilityAdjustedATR = atr * pairConfig.volatilityMultiplier;
 
@@ -569,6 +572,8 @@ export function analyzeMarket(symbol: string, candles: CandleData[]): TradingSig
     };
   }
 
+  // Return null if no signal meets threshold
+  console.log(`📊 ${symbol}: Buy score ${buyConfidence}, Sell score ${sellConfidence} - Below threshold (${CONFIDENCE_THRESHOLD}%)`);
   return null;
 }
 

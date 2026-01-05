@@ -476,29 +476,42 @@ export async function runRobotTrading(
     const pairsToAnalyze = [...TIER1_PAIRS, ...TIER2_PAIRS, ...TIER3_PAIRS];
     const analyzedSignals: TradingSignal[] = [];
 
+    console.log(`🔍 Analyzing ${pairsToAnalyze.length} pairs for trading signals...`);
+
     for (const symbol of pairsToAnalyze) {
       // Skip if already have an open position
-      if (openSymbols.has(symbol)) continue;
+      if (openSymbols.has(symbol)) {
+        console.log(`⏭️ Skipping ${symbol} - already have open position`);
+        continue;
+      }
 
       try {
         // Get candle data
+        console.log(`📊 Fetching candles for ${symbol}...`);
         const candles = await getCandles(metaApiAccountId, symbol, timeframe, 200);
-        if (candles.length < 200) {
-          console.log(`⚠️ Insufficient data for ${symbol}`);
+        
+        if (candles.length < 100) {
+          console.log(`⚠️ Insufficient data for ${symbol} (${candles.length} candles)`);
           continue;
         }
+
+        console.log(`✅ Got ${candles.length} candles for ${symbol}`);
 
         // Analyze market
         const signal = analyzeMarket(symbol, candles);
 
-        if (signal && signal.confidence >= 70) {
+        if (signal) {
           analyzedSignals.push(signal);
-          console.log(`📈 Signal: ${signal.type} ${symbol} @ ${signal.confidence}% confidence`);
+          console.log(`📈 Signal found: ${signal.type} ${symbol} @ ${signal.confidence}% confidence`);
         }
       } catch (err) {
+        console.error(`❌ Error analyzing ${symbol}:`, err);
         errors.push(`Error analyzing ${symbol}: ${err}`);
       }
     }
+
+    console.log(`📊 Found ${analyzedSignals.length} trading signals`);
+
 
     // Sort signals by priority and expected profit
     analyzedSignals.sort((a, b) => {
