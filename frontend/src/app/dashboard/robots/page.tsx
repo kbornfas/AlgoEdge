@@ -1,550 +1,866 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
+  Container,
   Typography,
-  Grid,
   Card,
   CardContent,
-  Button,
+  Grid,
   Chip,
-  Alert,
+  Button,
+  Slider,
   CircularProgress,
-  Divider,
+  Alert,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Slider,
-  FormControlLabel,
-  Switch,
-  List,
-  ListItem,
-  ListItemText,
-  LinearProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
 } from '@mui/material';
 import {
   Bot,
-  TrendingUp,
   Play,
-  Pause,
-  Settings,
-  AlertCircle,
+  Square,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  Zap,
+  Brain,
+  BarChart3,
+  X,
+  RefreshCw,
   CheckCircle,
-  XCircle,
-  Activity,
-  DollarSign,
+  AlertTriangle,
 } from 'lucide-react';
-import Link from 'next/link';
+
+// All available timeframes
+const ALL_TIMEFRAMES = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1'];
 
 interface Robot {
   id: string;
   name: string;
   description: string;
-  strategy?: string;
-  timeframe?: string;
-  riskLevel?: string;
-  winRate?: number;
-  status: 'running' | 'stopped' | 'paused';
-  profit: number;
-  isAssigned: boolean;
+  strategy: string;
+  timeframe: string;
+  timeframes: string[];
+  pairs: string[];
+  riskLevel: string;
+  winRate: number;
+  isActive: boolean;
 }
 
-interface TradingSignal {
-  symbol: string;
+interface Trade {
+  id: string;
+  pair: string;
   type: 'BUY' | 'SELL';
-  confidence: number;
-  reason: string;
+  volume: number;
+  openPrice: number;
+  currentPrice?: number;
+  stopLoss?: number;
+  takeProfit?: number;
+  profit: number;
+  status: 'OPEN' | 'CLOSED' | 'PENDING';
+  openTime: string;
+  closeTime?: string;
+  robotId?: string;
+  robotName?: string;
 }
+
+interface RobotConfig {
+  robotId: string;
+  selectedTimeframe: string;
+  selectedPairs: string[];
+  riskPercent: number;
+  isRunning: boolean;
+}
+
+// Default robots with all timeframes
+const getDefaultRobots = (): Robot[] => [
+  {
+    id: 'algoedge-scalper',
+    name: 'AlgoEdge Scalper',
+    description: 'Ultra-fast scalping bot with AI-powered entry signals for volatile markets.',
+    strategy: 'Scalping',
+    timeframe: 'M1',
+    timeframes: ['M1', 'M5'],
+    pairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD'],
+    riskLevel: 'High',
+    winRate: 73.5,
+    isActive: true,
+  },
+  {
+    id: 'algoedge-momentum',
+    name: 'AlgoEdge Momentum',
+    description: 'Momentum-based trading using RSI and MACD divergence for quick profits.',
+    strategy: 'Momentum',
+    timeframe: 'M5',
+    timeframes: ['M5', 'M15'],
+    pairs: ['EURUSD', 'GBPUSD', 'AUDUSD', 'USDCHF', 'XAUUSD'],
+    riskLevel: 'High',
+    winRate: 71.8,
+    isActive: true,
+  },
+  {
+    id: 'algoedge-trend-m15',
+    name: 'AlgoEdge Trend Hunter',
+    description: 'Smart trend-following robot using EMA crossovers and ADX filters.',
+    strategy: 'Trend Following',
+    timeframe: 'M15',
+    timeframes: ['M15', 'M30', 'H1'],
+    pairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD', 'XAUUSD'],
+    riskLevel: 'Medium',
+    winRate: 76.2,
+    isActive: true,
+  },
+  {
+    id: 'algoedge-breakout',
+    name: 'AlgoEdge Breakout Pro',
+    description: 'Identifies key support/resistance levels and trades breakouts.',
+    strategy: 'Breakout',
+    timeframe: 'M30',
+    timeframes: ['M30', 'H1', 'H4'],
+    pairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'EURJPY', 'GBPJPY', 'XAUUSD'],
+    riskLevel: 'Medium',
+    winRate: 74.9,
+    isActive: true,
+  },
+  {
+    id: 'algoedge-swing-h1',
+    name: 'AlgoEdge Swing Master',
+    description: 'Swing trading system for capturing larger market moves over hours/days.',
+    strategy: 'Swing Trading',
+    timeframe: 'H1',
+    timeframes: ['H1', 'H4', 'D1'],
+    pairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'XAUUSD', 'XAGUSD'],
+    riskLevel: 'Low',
+    winRate: 79.3,
+    isActive: true,
+  },
+  {
+    id: 'algoedge-gold-hunter',
+    name: 'AlgoEdge Gold Hunter',
+    description: 'Specialized robot for XAUUSD with volatility-based entries.',
+    strategy: 'Gold Trading',
+    timeframe: 'H1',
+    timeframes: ['M15', 'M30', 'H1', 'H4'],
+    pairs: ['XAUUSD'],
+    riskLevel: 'Medium',
+    winRate: 77.6,
+    isActive: true,
+  },
+  {
+    id: 'algoedge-position-h4',
+    name: 'AlgoEdge Position Trader',
+    description: 'Long-term position trading robot for capturing major market trends.',
+    strategy: 'Position Trading',
+    timeframe: 'H4',
+    timeframes: ['H4', 'D1', 'W1'],
+    pairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'NZDUSD', 'XAUUSD'],
+    riskLevel: 'Low',
+    winRate: 82.1,
+    isActive: true,
+  },
+  {
+    id: 'algoedge-daily-sniper',
+    name: 'AlgoEdge Daily Sniper',
+    description: 'Precision entries on daily charts with exceptionally high win rate.',
+    strategy: 'Daily Trading',
+    timeframe: 'D1',
+    timeframes: ['D1', 'W1'],
+    pairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'EURJPY', 'XAUUSD'],
+    riskLevel: 'Low',
+    winRate: 84.5,
+    isActive: true,
+  },
+  {
+    id: 'algoedge-grid-master',
+    name: 'AlgoEdge Grid Master',
+    description: 'Advanced grid trading system for ranging markets with auto grid sizing.',
+    strategy: 'Grid Trading',
+    timeframe: 'H1',
+    timeframes: ['M30', 'H1', 'H4'],
+    pairs: ['EURUSD', 'GBPUSD', 'AUDUSD', 'USDCHF'],
+    riskLevel: 'Medium',
+    winRate: 75.4,
+    isActive: true,
+  },
+  {
+    id: 'algoedge-news-trader',
+    name: 'AlgoEdge News Trader',
+    description: 'Capitalizes on high-impact news events with smart entry timing.',
+    strategy: 'News Trading',
+    timeframe: 'M5',
+    timeframes: ['M1', 'M5', 'M15'],
+    pairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD'],
+    riskLevel: 'High',
+    winRate: 69.8,
+    isActive: true,
+  },
+  {
+    id: 'algoedge-martingale-pro',
+    name: 'AlgoEdge Martingale Pro',
+    description: 'Smart martingale with AI-based recovery zones and risk controls.',
+    strategy: 'Martingale',
+    timeframe: 'M15',
+    timeframes: ['M15', 'M30', 'H1'],
+    pairs: ['EURUSD', 'GBPUSD', 'USDJPY'],
+    riskLevel: 'High',
+    winRate: 71.2,
+    isActive: true,
+  },
+  {
+    id: 'algoedge-hedge-guardian',
+    name: 'AlgoEdge Hedge Guardian',
+    description: 'Hedging robot that minimizes drawdown with counter-positions.',
+    strategy: 'Hedging',
+    timeframe: 'H4',
+    timeframes: ['H1', 'H4', 'D1'],
+    pairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'XAUUSD'],
+    riskLevel: 'Low',
+    winRate: 78.9,
+    isActive: true,
+  },
+];
 
 export default function RobotsPage() {
-  const router = useRouter();
   const [robots, setRobots] = useState<Robot[]>([]);
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [robotConfigs, setRobotConfigs] = useState<Record<string, RobotConfig>>({});
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [mt5Connected, setMt5Connected] = useState(false);
-  const [settingsDialog, setSettingsDialog] = useState<Robot | null>(null);
-  const [resultDialog, setResultDialog] = useState<{
-    robot: Robot;
-    signals: TradingSignal[];
-    errors: string[];
-  } | null>(null);
-  const [riskPercent, setRiskPercent] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedRobot, setSelectedRobot] = useState<Robot | null>(null);
+  const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
+  const [startingRobots, setStartingRobots] = useState<Set<string>>(new Set());
+  const [accountBalance, setAccountBalance] = useState<number>(0);
+  const [accountEquity, setAccountEquity] = useState<number>(0);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/auth/login');
-      return;
-    }
-    fetchData();
-  }, [router]);
+  // Initialize configs for robots
+  const initializeConfigs = useCallback((robotList: Robot[]) => {
+    const configs: Record<string, RobotConfig> = {};
+    robotList.forEach((robot) => {
+      configs[robot.id] = {
+        robotId: robot.id,
+        selectedTimeframe: robot.timeframe,
+        selectedPairs: robot.pairs || [],
+        riskPercent: 1,
+        isRunning: false,
+      };
+    });
+    setRobotConfigs(configs);
+  }, []);
 
-  const fetchData = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    setLoading(true);
+  // Fetch robots from API
+  const fetchRobots = useCallback(async () => {
     try {
-      // Fetch MT5 account status
-      const mt5Res = await fetch('/api/user/mt5-account', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (mt5Res.ok) {
-        const mt5Data = await mt5Res.json();
-        setMt5Connected(mt5Data.account?.status === 'connected');
-      }
-
-      // Fetch robots
-      const robotsRes = await fetch('/api/user/robots', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (robotsRes.ok) {
-        const robotsData = await robotsRes.json();
-        setRobots(robotsData.robots || getDefaultRobots());
+      const response = await fetch('/api/robots');
+      if (response.ok) {
+        const data = await response.json();
+        const robotList = data.robots || [];
+        if (robotList.length > 0) {
+          setRobots(robotList);
+          initializeConfigs(robotList);
+        } else {
+          const defaultRobots = getDefaultRobots();
+          setRobots(defaultRobots);
+          initializeConfigs(defaultRobots);
+        }
       } else {
-        setRobots(getDefaultRobots());
+        const defaultRobots = getDefaultRobots();
+        setRobots(defaultRobots);
+        initializeConfigs(defaultRobots);
       }
-    } catch (err: any) {
-      setError(err.message);
-      setRobots(getDefaultRobots());
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching robots:', err);
+      const defaultRobots = getDefaultRobots();
+      setRobots(defaultRobots);
+      initializeConfigs(defaultRobots);
     }
+  }, [initializeConfigs]);
+
+  // Fetch open trades
+  const fetchTrades = useCallback(async () => {
+    try {
+      const response = await fetch('/api/user/trades?status=OPEN');
+      if (response.ok) {
+        const data = await response.json();
+        setTrades(data.trades || []);
+      }
+    } catch (err) {
+      console.error('Error fetching trades:', err);
+    }
+  }, []);
+
+  // Fetch account info
+  const fetchAccountInfo = useCallback(async () => {
+    try {
+      const response = await fetch('/api/user/mt5/account');
+      if (response.ok) {
+        const data = await response.json();
+        setAccountBalance(data.balance || 0);
+        setAccountEquity(data.equity || 0);
+      }
+    } catch (err) {
+      console.error('Error fetching account:', err);
+    }
+  }, []);
+
+  // Load data on mount
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchRobots(), fetchTrades(), fetchAccountInfo()]);
+      setLoading(false);
+    };
+    loadData();
+  }, [fetchRobots, fetchTrades, fetchAccountInfo]);
+
+  // Poll for trade updates every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchTrades();
+      fetchAccountInfo();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [fetchTrades, fetchAccountInfo]);
+
+  // Handle timeframe change for a robot
+  const handleTimeframeChange = (robotId: string, timeframe: string) => {
+    setRobotConfigs(prev => ({
+      ...prev,
+      [robotId]: {
+        ...prev[robotId],
+        selectedTimeframe: timeframe,
+      },
+    }));
   };
 
-  const getDefaultRobots = (): Robot[] => [
-    {
-      id: 'algoedge-pro',
-      name: 'AlgoEdge Pro',
-      description: 'Multi-timeframe trend following strategy with 75%+ win rate. Trades all major pairs using EMA, RSI, and MACD signals.',
-      strategy: 'Trend Following',
-      timeframe: 'H1',
-      riskLevel: 'Medium',
-      winRate: 78,
-      status: 'stopped',
-      profit: 0,
-      isAssigned: false,
-    },
-    {
-      id: 'scalp-master',
-      name: 'Scalp Master',
-      description: 'High-frequency scalping bot for quick profits. Uses Bollinger Bands and RSI for precise entries.',
-      strategy: 'Scalping',
-      timeframe: 'M15',
-      riskLevel: 'High',
-      winRate: 72,
-      status: 'stopped',
-      profit: 0,
-      isAssigned: false,
-    },
-    {
-      id: 'gold-hunter',
-      name: 'Gold Hunter',
-      description: 'Specialized for XAUUSD trading. Capitalizes on gold volatility with strict risk management.',
-      strategy: 'Breakout',
-      timeframe: 'H4',
-      riskLevel: 'Medium',
-      winRate: 76,
-      status: 'stopped',
-      profit: 0,
-      isAssigned: false,
-    },
-    {
-      id: 'swing-trader',
-      name: 'Swing Trader',
-      description: 'Long-term position trading for major trend captures. Lower frequency, higher profit per trade.',
-      strategy: 'Swing Trading',
-      timeframe: 'D1',
-      riskLevel: 'Low',
-      winRate: 82,
-      status: 'stopped',
-      profit: 0,
-      isAssigned: false,
-    },
-  ];
+  // Handle risk change for a robot
+  const handleRiskChange = (robotId: string, risk: number) => {
+    setRobotConfigs(prev => ({
+      ...prev,
+      [robotId]: {
+        ...prev[robotId],
+        riskPercent: risk,
+      },
+    }));
+  };
 
-  const handleStartRobot = async (robot: Robot) => {
-    if (!mt5Connected) {
-      setError('Please connect your MT5 account first');
-      return;
-    }
+  // Start a robot
+  const startRobot = async (robot: Robot) => {
+    const config = robotConfigs[robot.id];
+    if (!config) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    setActionLoading(robot.id);
-    setError('');
-    setSuccess('');
+    setStartingRobots(prev => new Set(prev).add(robot.id));
+    setError(null);
 
     try {
       const response = await fetch(`/api/user/robots/${robot.id}/start`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ riskPercent }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          timeframe: config.selectedTimeframe,
+          pairs: config.selectedPairs,
+          riskPercent: config.riskPercent,
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess(`${robot.name} started successfully!`);
-        setRobots((prev) =>
-          prev.map((r) =>
-            r.id === robot.id ? { ...r, status: 'running' } : r
-          )
-        );
+        setRobotConfigs(prev => ({
+          ...prev,
+          [robot.id]: {
+            ...prev[robot.id],
+            isRunning: true,
+          },
+        }));
 
-        // Show trading results
-        if (data.tradingResult) {
-          setResultDialog({
-            robot,
-            signals: data.tradingResult.signals || [],
-            errors: data.tradingResult.errors || [],
-          });
-        }
+        // Show dialog
+        setSelectedRobot(robot);
+        setTradeDialogOpen(true);
+
+        // Refresh trades
+        fetchTrades();
       } else {
         setError(data.error || 'Failed to start robot');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to start robot');
+    } catch (err) {
+      console.error('Error starting robot:', err);
+      setError('Failed to start robot. Please try again.');
     } finally {
-      setActionLoading(null);
+      setStartingRobots(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(robot.id);
+        return newSet;
+      });
     }
   };
 
-  const handleStopRobot = async (robot: Robot) => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    setActionLoading(robot.id);
-    setError('');
-
+  // Stop a robot
+  const stopRobot = async (robot: Robot) => {
     try {
       const response = await fetch(`/api/user/robots/${robot.id}/stop`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       });
 
-      const data = await response.json();
-
       if (response.ok) {
-        setSuccess(`${robot.name} stopped`);
-        setRobots((prev) =>
-          prev.map((r) =>
-            r.id === robot.id ? { ...r, status: 'stopped' } : r
-          )
-        );
-      } else {
-        setError(data.error || 'Failed to stop robot');
+        setRobotConfigs(prev => ({
+          ...prev,
+          [robot.id]: {
+            ...prev[robot.id],
+            isRunning: false,
+          },
+        }));
       }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setActionLoading(null);
+    } catch (err) {
+      console.error('Error stopping robot:', err);
     }
   };
 
-  const getRiskColor = (riskLevel?: string) => {
-    switch (riskLevel?.toLowerCase()) {
-      case 'low':
-        return 'success';
-      case 'medium':
-        return 'warning';
-      case 'high':
-        return 'error';
-      default:
-        return 'default';
+  // Get risk color
+  const getRiskColor = (risk: string): 'success' | 'warning' | 'error' | 'default' => {
+    switch (risk) {
+      case 'Low': return 'success';
+      case 'Medium': return 'warning';
+      case 'High': return 'error';
+      default: return 'default';
     }
   };
+
+  // Get strategy icon
+  const getStrategyIcon = (strategy: string) => {
+    switch (strategy) {
+      case 'Scalping':
+      case 'News Trading':
+        return <Zap size={24} />;
+      case 'Trend Following':
+      case 'Swing Trading':
+      case 'Position Trading':
+        return <TrendingUp size={24} />;
+      case 'Breakout':
+      case 'Momentum':
+        return <BarChart3 size={24} />;
+      default:
+        return <Brain size={24} />;
+    }
+  };
+
+  // Calculate total P/L
+  const totalPL = trades.reduce((sum, trade) => sum + (trade.profit || 0), 0);
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-        <CircularProgress />
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress size={60} />
       </Box>
     );
   }
 
   return (
-    <Box>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
+        <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Bot size={40} />
           Trading Robots
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Automated trading bots that only enter trades with 75%+ confidence
+          Select and configure AI-powered trading robots. Each robot supports multiple timeframes from M1 to W1.
         </Typography>
       </Box>
 
-      {!mt5Connected && (
-        <Alert
-          severity="warning"
-          sx={{ mb: 3 }}
-          action={
-            <Button
-              component={Link}
-              href="/dashboard/mt5"
-              variant="contained"
-              size="small"
-            >
-              Connect MT5
-            </Button>
-          }
-        >
-          Connect your MT5 account to start using trading robots
-        </Alert>
-      )}
-
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      {success && (
-        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>
-          {success}
-        </Alert>
+      {/* Account Summary */}
+      <Card sx={{ mb: 4, background: 'linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)' }}>
+        <CardContent>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
+              <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                Account Balance
+              </Typography>
+              <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+                ${accountBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                Account Equity
+              </Typography>
+              <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+                ${accountEquity.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                Open P/L
+              </Typography>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  color: totalPL >= 0 ? '#4caf50' : '#f44336', 
+                  fontWeight: 'bold' 
+                }}
+              >
+                {totalPL >= 0 ? '+' : ''}${totalPL.toFixed(2)}
+              </Typography>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {/* Open Trades Section */}
+      {trades.length > 0 && (
+        <Card sx={{ mb: 4 }}>
+          <CardContent>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TrendingUp size={20} />
+                Open Positions ({trades.length})
+              </Typography>
+              <IconButton onClick={fetchTrades} size="small">
+                <RefreshCw size={18} />
+              </IconButton>
+            </Box>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Robot</TableCell>
+                    <TableCell>Pair</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell align="right">Volume</TableCell>
+                    <TableCell align="right">Open Price</TableCell>
+                    <TableCell align="right">Current</TableCell>
+                    <TableCell align="right">P/L</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {trades.map((trade) => (
+                    <TableRow key={trade.id}>
+                      <TableCell>
+                        <Chip 
+                          label={trade.robotName || 'Manual'} 
+                          size="small" 
+                          color="primary" 
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{trade.pair}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={trade.type} 
+                          size="small" 
+                          color={trade.type === 'BUY' ? 'success' : 'error'}
+                        />
+                      </TableCell>
+                      <TableCell align="right">{trade.volume}</TableCell>
+                      <TableCell align="right">{trade.openPrice?.toFixed(5)}</TableCell>
+                      <TableCell align="right">{trade.currentPrice?.toFixed(5) || '-'}</TableCell>
+                      <TableCell 
+                        align="right"
+                        sx={{ 
+                          color: (trade.profit || 0) >= 0 ? 'success.main' : 'error.main',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        {(trade.profit || 0) >= 0 ? '+' : ''}
+                        ${(trade.profit || 0).toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Risk Settings */}
-      <Card sx={{ mb: 4, p: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          Risk Management
-        </Typography>
-        <Box sx={{ px: 2 }}>
-          <Typography gutterBottom>
-            Risk per trade: {riskPercent}% of account balance
+      {/* Timeframes Legend */}
+      <Card sx={{ mb: 4, bgcolor: 'background.paper' }}>
+        <CardContent sx={{ py: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Clock size={16} />
+            Available Timeframes:
           </Typography>
-          <Slider
-            value={riskPercent}
-            onChange={(_, value) => setRiskPercent(value as number)}
-            min={0.5}
-            max={5}
-            step={0.5}
-            marks={[
-              { value: 0.5, label: '0.5%' },
-              { value: 1, label: '1%' },
-              { value: 2, label: '2%' },
-              { value: 5, label: '5%' },
-            ]}
-            sx={{ maxWidth: 400 }}
-          />
-          <Typography variant="caption" color="text.secondary">
-            Recommended: 1-2% per trade for optimal risk management
-          </Typography>
-        </Box>
+          <Box display="flex" gap={1} flexWrap="wrap">
+            {ALL_TIMEFRAMES.map((tf) => (
+              <Chip 
+                key={tf} 
+                label={tf} 
+                size="small" 
+                variant="outlined"
+              />
+            ))}
+          </Box>
+        </CardContent>
       </Card>
 
-      {/* Robot Cards */}
+      {/* Robots Grid */}
       <Grid container spacing={3}>
-        {robots.map((robot) => (
-          <Grid item xs={12} md={6} key={robot.id}>
-            <Card
-              sx={{
-                height: '100%',
-                border: robot.status === 'running' ? '2px solid' : '1px solid',
-                borderColor: robot.status === 'running' ? 'success.main' : 'divider',
-                transition: 'all 0.3s',
-              }}
-            >
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Bot size={32} color={robot.status === 'running' ? '#4caf50' : '#9e9e9e'} />
-                    <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+        {robots.map((robot) => {
+          const config = robotConfigs[robot.id] || {
+            selectedTimeframe: robot.timeframe,
+            riskPercent: 1,
+            isRunning: false,
+          };
+          const isStarting = startingRobots.has(robot.id);
+
+          return (
+            <Grid item xs={12} md={6} lg={4} key={robot.id}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  border: config.isRunning ? '2px solid' : '1px solid',
+                  borderColor: config.isRunning ? 'success.main' : 'divider',
+                  position: 'relative',
+                  overflow: 'visible',
+                }}
+              >
+                {config.isRunning && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: -10,
+                      right: 16,
+                      bgcolor: 'success.main',
+                      color: 'white',
+                      px: 2,
+                      py: 0.5,
+                      borderRadius: 1,
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        bgcolor: 'white',
+                        animation: 'pulse 1.5s infinite',
+                        '@keyframes pulse': {
+                          '0%': { opacity: 1 },
+                          '50%': { opacity: 0.4 },
+                          '100%': { opacity: 1 },
+                        },
+                      }}
+                    />
+                    RUNNING
+                  </Box>
+                )}
+                
+                <CardContent>
+                  {/* Robot Header */}
+                  <Box display="flex" alignItems="flex-start" mb={2}>
+                    <Box
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 2,
+                        bgcolor: `${getRiskColor(robot.riskLevel)}.main`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mr: 2,
+                        color: 'white',
+                      }}
+                    >
+                      {getStrategyIcon(robot.strategy)}
+                    </Box>
+                    <Box flex={1}>
+                      <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
                         {robot.name}
                       </Typography>
-                      <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                        <Chip
-                          label={robot.status}
-                          size="small"
-                          color={robot.status === 'running' ? 'success' : 'default'}
-                        />
-                        {robot.riskLevel && (
-                          <Chip
-                            label={robot.riskLevel}
-                            size="small"
-                            color={getRiskColor(robot.riskLevel) as any}
-                            variant="outlined"
-                          />
-                        )}
-                      </Box>
+                      <Typography variant="caption" color="text.secondary">
+                        {robot.strategy}
+                      </Typography>
                     </Box>
                   </Box>
-                  {robot.winRate && (
-                    <Box sx={{ textAlign: 'right' }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Win Rate
-                      </Typography>
-                      <Typography variant="h6" color="success.main" sx={{ fontWeight: 600 }}>
-                        {robot.winRate}%
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
 
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  {robot.description}
-                </Typography>
+                  {/* Description */}
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
+                    {robot.description}
+                  </Typography>
 
-                {robot.strategy && (
-                  <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                    <Typography variant="caption">
-                      <strong>Strategy:</strong> {robot.strategy}
-                    </Typography>
-                    {robot.timeframe && (
-                      <Typography variant="caption">
-                        <strong>Timeframe:</strong> {robot.timeframe}
-                      </Typography>
+                  {/* Stats Row */}
+                  <Box display="flex" gap={1} mb={2} flexWrap="wrap">
+                    <Chip 
+                      label={`Win Rate: ${robot.winRate}%`}
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                      icon={<TrendingUp size={14} />}
+                    />
+                    <Chip 
+                      label={robot.riskLevel}
+                      size="small"
+                      color={getRiskColor(robot.riskLevel)}
+                    />
+                  </Box>
+
+                  {/* Supported Timeframes - SELECT YOUR TIMEFRAME */}
+                  <Typography variant="caption" color="text.secondary" display="block" mb={1} fontWeight="bold">
+                    Select Timeframe:
+                  </Typography>
+                  <Box display="flex" gap={0.5} mb={2} flexWrap="wrap">
+                    {(robot.timeframes || [robot.timeframe]).map((tf) => (
+                      <Chip 
+                        key={tf}
+                        label={tf}
+                        size="small"
+                        variant={config.selectedTimeframe === tf ? 'filled' : 'outlined'}
+                        color={config.selectedTimeframe === tf ? 'primary' : 'default'}
+                        onClick={() => !config.isRunning && handleTimeframeChange(robot.id, tf)}
+                        sx={{ 
+                          cursor: config.isRunning ? 'not-allowed' : 'pointer',
+                          fontWeight: config.selectedTimeframe === tf ? 'bold' : 'normal',
+                        }}
+                      />
+                    ))}
+                  </Box>
+
+                  {/* Trading Pairs */}
+                  <Typography variant="caption" color="text.secondary" display="block" mb={1}>
+                    Trading Pairs:
+                  </Typography>
+                  <Box display="flex" gap={0.5} mb={3} flexWrap="wrap">
+                    {(robot.pairs || ['EURUSD']).slice(0, 4).map((pair) => (
+                      <Chip 
+                        key={pair}
+                        label={pair}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: '0.7rem' }}
+                      />
+                    ))}
+                    {(robot.pairs || []).length > 4 && (
+                      <Chip 
+                        label={`+${robot.pairs.length - 4}`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: '0.7rem' }}
+                      />
                     )}
                   </Box>
-                )}
 
-                {robot.status === 'running' && (
-                  <Box sx={{ mb: 2 }}>
-                    <LinearProgress color="success" sx={{ height: 6, borderRadius: 3 }} />
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                      Actively scanning for 75%+ confidence trades...
-                    </Typography>
+                  {/* Risk Slider */}
+                  <Typography variant="caption" color="text.secondary" gutterBottom display="block">
+                    Risk per Trade: {config.riskPercent}%
+                  </Typography>
+                  <Slider
+                    value={config.riskPercent}
+                    onChange={(_, value) => handleRiskChange(robot.id, value as number)}
+                    min={0.5}
+                    max={5}
+                    step={0.5}
+                    marks={[
+                      { value: 0.5, label: '0.5%' },
+                      { value: 2.5, label: '2.5%' },
+                      { value: 5, label: '5%' },
+                    ]}
+                    disabled={config.isRunning}
+                    sx={{ mb: 2 }}
+                  />
+
+                  {/* Action Buttons */}
+                  <Box display="flex" gap={1}>
+                    {config.isRunning ? (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        fullWidth
+                        onClick={() => stopRobot(robot)}
+                        startIcon={<Square size={16} />}
+                      >
+                        Stop Robot
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        fullWidth
+                        onClick={() => startRobot(robot)}
+                        disabled={isStarting}
+                        startIcon={isStarting ? <CircularProgress size={16} color="inherit" /> : <Play size={16} />}
+                      >
+                        {isStarting ? 'Starting...' : 'Start Robot'}
+                      </Button>
+                    )}
                   </Box>
-                )}
-
-                <Divider sx={{ my: 2 }} />
-
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  {robot.status === 'running' ? (
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      startIcon={actionLoading === robot.id ? <CircularProgress size={16} /> : <Pause size={16} />}
-                      onClick={() => handleStopRobot(robot)}
-                      disabled={actionLoading === robot.id || !mt5Connected}
-                      fullWidth
-                    >
-                      Stop Robot
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="contained"
-                      color="success"
-                      startIcon={actionLoading === robot.id ? <CircularProgress size={16} /> : <Play size={16} />}
-                      onClick={() => handleStartRobot(robot)}
-                      disabled={actionLoading === robot.id || !mt5Connected}
-                      fullWidth
-                    >
-                      Start Robot
-                    </Button>
-                  )}
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
+                </CardContent>
+              </Card>
+            </Grid>
+          );
+        })}
       </Grid>
 
-      {/* Trading Pairs Info */}
-      <Card sx={{ mt: 4, p: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Supported Trading Pairs
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          All robots analyze the following pairs and only execute trades with 75%+ confidence:
-        </Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {[
-            'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
-            'EURGBP', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURAUD', 'EURCHF', 'GBPCHF',
-            'XAUUSD', 'XAGUSD',
-          ].map((pair) => (
-            <Chip key={pair} label={pair} size="small" variant="outlined" />
-          ))}
-        </Box>
-      </Card>
-
-      {/* Result Dialog */}
-      <Dialog
-        open={!!resultDialog}
-        onClose={() => setResultDialog(null)}
+      {/* Trade Signals Dialog */}
+      <Dialog 
+        open={tradeDialogOpen} 
+        onClose={() => setTradeDialogOpen(false)}
         maxWidth="md"
         fullWidth
       >
         <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Activity size={24} />
-            {resultDialog?.robot.name} - Trading Scan Results
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Box display="flex" alignItems="center" gap={1}>
+              <CheckCircle color="green" size={24} />
+              <Typography variant="h6">
+                {selectedRobot?.name} - Started Successfully
+              </Typography>
+            </Box>
+            <IconButton onClick={() => setTradeDialogOpen(false)}>
+              <X size={20} />
+            </IconButton>
           </Box>
         </DialogTitle>
         <DialogContent>
-          {resultDialog && (
-            <Box>
-              {resultDialog.signals.length > 0 ? (
-                <>
-                  <Alert severity="success" sx={{ mb: 2 }}>
-                    Found {resultDialog.signals.length} high-confidence trading signals!
-                  </Alert>
-                  <List>
-                    {resultDialog.signals.map((signal, index) => (
-                      <ListItem key={index} divider>
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                {signal.symbol}
-                              </Typography>
-                              <Chip
-                                label={signal.type}
-                                size="small"
-                                color={signal.type === 'BUY' ? 'success' : 'error'}
-                              />
-                              <Chip
-                                label={`${signal.confidence}% confidence`}
-                                size="small"
-                                color="primary"
-                              />
-                            </Box>
-                          }
-                          secondary={signal.reason}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                </>
-              ) : (
-                <Alert severity="info">
-                  No trades with 75%+ confidence found at this time. The robot will continue scanning for opportunities.
-                </Alert>
-              )}
-
-              {resultDialog.errors.length > 0 && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" color="error">
-                    Errors:
-                  </Typography>
-                  {resultDialog.errors.map((err, i) => (
-                    <Typography key={i} variant="body2" color="error">
-                      • {err}
-                    </Typography>
-                  ))}
-                </Box>
-              )}
-            </Box>
-          )}
+          <Alert severity="success" sx={{ mb: 2 }}>
+            Robot started successfully! It is now analyzing the market.
+          </Alert>
+          <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+              Robot Configuration:
+            </Typography>
+            <Typography variant="body2">
+              • <strong>Timeframe:</strong> {robotConfigs[selectedRobot?.id || '']?.selectedTimeframe || 'N/A'}
+            </Typography>
+            <Typography variant="body2">
+              • <strong>Risk per Trade:</strong> {robotConfigs[selectedRobot?.id || '']?.riskPercent || 1}%
+            </Typography>
+            <Typography variant="body2">
+              • <strong>Trading Pairs:</strong> {selectedRobot?.pairs?.join(', ') || 'N/A'}
+            </Typography>
+          </Box>
+          <Alert severity="info" sx={{ mt: 2 }}>
+            <Typography variant="body2">
+              The robot will open positions when market conditions match its strategy.
+              Check the <strong>Open Positions</strong> section above for real-time P/L updates.
+            </Typography>
+          </Alert>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setResultDialog(null)}>Close</Button>
+          <Button onClick={() => setTradeDialogOpen(false)} variant="contained">
+            Got it!
+          </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Container>
   );
 }

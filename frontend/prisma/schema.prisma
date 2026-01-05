@@ -100,6 +100,8 @@ model TradingRobot {
   description String?  @db.Text
   strategy    String?  @db.VarChar(100)
   timeframe   String?  @db.VarChar(10)
+  timeframes  String[] @default([])
+  pairs       String[] @default([])
   riskLevel   String?  @map("risk_level") @db.VarChar(20)
   winRate     Decimal? @map("win_rate") @db.Decimal(5, 2)
   isActive    Boolean  @default(true) @map("is_active")

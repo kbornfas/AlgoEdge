@@ -11,16 +11,37 @@ import {
   TradingSignal,
   CandleData,
 } from './tradingStrategy';
+import axios from 'axios';
+import https from 'https';
 
-// MetaAPI configuration
-const META_API_TOKEN = process.env.METAAPI_TOKEN;
-const META_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
+// Create https agent that accepts self-signed certs (for serverless)
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
+
+// MetaAPI configuration - read at runtime
+function getMetaApiToken() {
+  return process.env.METAAPI_TOKEN || process.env.META_API_TOKEN;
+}
+
+// MetaAPI endpoints
+const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
+
+// Region-specific client API endpoints
+const REGION_ENDPOINTS: Record<string, string> = {
+  'vint-hill': 'https://mt-client-api-v1.vint-hill.agiliumtrade.ai',
+  'new-york': 'https://mt-client-api-v1.new-york.agiliumtrade.ai',
+  'london': 'https://mt-client-api-v1.london.agiliumtrade.ai',
+  'singapore': 'https://mt-client-api-v1.singapore.agiliumtrade.ai',
+};
 
 interface MetaApiAccount {
-  id: string;
+  _id: string;
+  id?: string;
   login: string;
   server: string;
   state: string;
+  region?: string;
 }
 
 interface MetaApiTrade {
@@ -34,31 +55,48 @@ interface MetaApiTrade {
 }
 
 /**
- * Get MetaAPI account by MT5 account ID
+ * Get all MetaAPI accounts
  */
-async function getMetaApiAccount(mt5AccountId: string): Promise<MetaApiAccount | null> {
-  if (!META_API_TOKEN) {
-    console.error('META_API_TOKEN not configured');
-    return null;
+async function getAllMetaApiAccounts(): Promise<MetaApiAccount[]> {
+  const token = getMetaApiToken();
+  if (!token) {
+    console.error('METAAPI_TOKEN not configured');
+    return [];
   }
 
   try {
-    const response = await fetch(`${META_API_URL}/users/current/accounts`, {
-      headers: {
-        'auth-token': META_API_TOKEN,
-      },
-    });
+    const response = await axios.get(
+      `${PROVISIONING_API_URL}/users/current/accounts`,
+      {
+        headers: {
+          'auth-token': token,
+          'Content-Type': 'application/json',
+        },
+        httpsAgent,
+      }
+    );
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch accounts: ${response.statusText}`);
-    }
-
-    const accounts: MetaApiAccount[] = await response.json();
-    return accounts.find(acc => acc.login === mt5AccountId) || null;
-  } catch (error) {
-    console.error('Error fetching MetaAPI account:', error);
-    return null;
+    return response.data || [];
+  } catch (error: any) {
+    console.error('Error fetching MetaAPI accounts:', error.message);
+    return [];
   }
+}
+
+/**
+ * Get MetaAPI account by login
+ */
+async function getMetaApiAccount(mt5Login: string): Promise<MetaApiAccount | null> {
+  const accounts = await getAllMetaApiAccounts();
+  return accounts.find(acc => String(acc.login) === String(mt5Login)) || null;
+}
+
+/**
+ * Get the client API URL for an account
+ */
+function getClientApiUrl(account: MetaApiAccount): string {
+  const region = account.region || 'vint-hill';
+  return REGION_ENDPOINTS[region] || REGION_ENDPOINTS['vint-hill'];
 }
 
 /**
@@ -70,25 +108,33 @@ async function getCandles(
   timeframe: string = '1h',
   limit: number = 200
 ): Promise<CandleData[]> {
-  if (!META_API_TOKEN) return [];
+  const token = getMetaApiToken();
+  if (!token) return [];
+
+  // First get the account to determine region
+  const accounts = await getAllMetaApiAccounts();
+  const account = accounts.find(a => a._id === metaApiAccountId);
+  if (!account) {
+    console.error('Account not found:', metaApiAccountId);
+    return [];
+  }
+
+  const clientApiUrl = getClientApiUrl(account);
 
   try {
-    const response = await fetch(
-      `${META_API_URL}/users/current/accounts/${metaApiAccountId}/historical-market-data/symbols/${symbol}/timeframes/${timeframe}/candles?limit=${limit}`,
+    const response = await axios.get(
+      `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/historical-market-data/symbols/${symbol}/timeframes/${timeframe}/candles`,
       {
+        params: { limit },
         headers: {
-          'auth-token': META_API_TOKEN,
+          'auth-token': token,
+          'Content-Type': 'application/json',
         },
+        httpsAgent,
       }
     );
 
-    if (!response.ok) {
-      console.error(`Failed to fetch candles for ${symbol}`);
-      return [];
-    }
-
-    const data = await response.json();
-    return data.map((candle: any) => ({
+    return (response.data || []).map((candle: any) => ({
       time: new Date(candle.time),
       open: candle.open,
       high: candle.high,
@@ -96,8 +142,8 @@ async function getCandles(
       close: candle.close,
       volume: candle.tickVolume || 0,
     }));
-  } catch (error) {
-    console.error(`Error fetching candles for ${symbol}:`, error);
+  } catch (error: any) {
+    console.error(`Error fetching candles for ${symbol}:`, error.message);
     return [];
   }
 }
@@ -111,29 +157,40 @@ export async function getAccountInfo(metaApiAccountId: string): Promise<{
   margin: number;
   freeMargin: number;
 } | null> {
-  if (!META_API_TOKEN) return null;
+  const token = getMetaApiToken();
+  if (!token) return null;
+
+  // First get the account to determine region
+  const accounts = await getAllMetaApiAccounts();
+  const account = accounts.find(a => a._id === metaApiAccountId);
+  if (!account) {
+    console.error('Account not found:', metaApiAccountId);
+    return null;
+  }
+
+  const clientApiUrl = getClientApiUrl(account);
 
   try {
-    const response = await fetch(
-      `${META_API_URL}/users/current/accounts/${metaApiAccountId}/account-information`,
+    const response = await axios.get(
+      `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/account-information`,
       {
         headers: {
-          'auth-token': META_API_TOKEN,
+          'auth-token': token,
+          'Content-Type': 'application/json',
         },
+        httpsAgent,
       }
     );
 
-    if (!response.ok) return null;
-
-    const data = await response.json();
+    const data = response.data;
     return {
-      balance: data.balance,
-      equity: data.equity,
-      margin: data.margin,
-      freeMargin: data.freeMargin,
+      balance: data.balance || 0,
+      equity: data.equity || 0,
+      margin: data.margin || 0,
+      freeMargin: data.freeMargin || 0,
     };
-  } catch (error) {
-    console.error('Error fetching account info:', error);
+  } catch (error: any) {
+    console.error('Error fetching account info:', error.message);
     return null;
   }
 }
@@ -146,40 +203,50 @@ export async function placeTrade(
   signal: TradingSignal,
   volume: number
 ): Promise<{ success: boolean; tradeId?: string; error?: string }> {
-  if (!META_API_TOKEN) {
-    return { success: false, error: 'META_API_TOKEN not configured' };
+  const token = getMetaApiToken();
+  if (!token) {
+    return { success: false, error: 'METAAPI_TOKEN not configured' };
   }
 
+  // First get the account to determine region
+  const accounts = await getAllMetaApiAccounts();
+  const account = accounts.find(a => a._id === metaApiAccountId);
+  if (!account) {
+    return { success: false, error: 'Account not found' };
+  }
+
+  const clientApiUrl = getClientApiUrl(account);
+
   try {
-    const response = await fetch(
-      `${META_API_URL}/users/current/accounts/${metaApiAccountId}/trade`,
+    const response = await axios.post(
+      `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/trade`,
       {
-        method: 'POST',
+        actionType: signal.type === 'BUY' ? 'ORDER_TYPE_BUY' : 'ORDER_TYPE_SELL',
+        symbol: signal.symbol,
+        volume: volume,
+        stopLoss: signal.stopLoss,
+        takeProfit: signal.takeProfit,
+        comment: `AlgoEdge ${signal.confidence}% confidence`,
+      },
+      {
         headers: {
-          'auth-token': META_API_TOKEN,
+          'auth-token': token,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          actionType: signal.type === 'BUY' ? 'ORDER_TYPE_BUY' : 'ORDER_TYPE_SELL',
-          symbol: signal.symbol,
-          volume: volume,
-          stopLoss: signal.stopLoss,
-          takeProfit: signal.takeProfit,
-          comment: `AlgoEdge ${signal.confidence}% confidence`,
-        }),
+        httpsAgent,
       }
     );
 
-    const data = await response.json();
+    const data = response.data;
 
-    if (response.ok && data.orderId) {
-      return { success: true, tradeId: data.orderId };
+    if (data.orderId || data.positionId) {
+      return { success: true, tradeId: data.orderId || data.positionId };
     } else {
       return { success: false, error: data.message || 'Trade execution failed' };
     }
-  } catch (error) {
-    console.error('Error placing trade:', error);
-    return { success: false, error: 'Network error' };
+  } catch (error: any) {
+    console.error('Error placing trade:', error.response?.data || error.message);
+    return { success: false, error: error.response?.data?.message || 'Network error' };
   }
 }
 
@@ -187,23 +254,34 @@ export async function placeTrade(
  * Get open positions
  */
 export async function getOpenPositions(metaApiAccountId: string): Promise<MetaApiTrade[]> {
-  if (!META_API_TOKEN) return [];
+  const token = getMetaApiToken();
+  if (!token) return [];
+
+  // First get the account to determine region
+  const accounts = await getAllMetaApiAccounts();
+  const account = accounts.find(a => a._id === metaApiAccountId);
+  if (!account) {
+    console.error('Account not found:', metaApiAccountId);
+    return [];
+  }
+
+  const clientApiUrl = getClientApiUrl(account);
 
   try {
-    const response = await fetch(
-      `${META_API_URL}/users/current/accounts/${metaApiAccountId}/positions`,
+    const response = await axios.get(
+      `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/positions`,
       {
         headers: {
-          'auth-token': META_API_TOKEN,
+          'auth-token': token,
+          'Content-Type': 'application/json',
         },
+        httpsAgent,
       }
     );
 
-    if (!response.ok) return [];
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching positions:', error);
+    return response.data || [];
+  } catch (error: any) {
+    console.error('Error fetching positions:', error.message);
     return [];
   }
 }
@@ -216,26 +294,37 @@ export async function getTradeHistory(
   startTime?: Date,
   endTime?: Date
 ): Promise<MetaApiTrade[]> {
-  if (!META_API_TOKEN) return [];
+  const token = getMetaApiToken();
+  if (!token) return [];
+
+  // First get the account to determine region
+  const accounts = await getAllMetaApiAccounts();
+  const account = accounts.find(a => a._id === metaApiAccountId);
+  if (!account) {
+    console.error('Account not found:', metaApiAccountId);
+    return [];
+  }
+
+  const clientApiUrl = getClientApiUrl(account);
 
   try {
     const start = startTime?.toISOString() || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const end = endTime?.toISOString() || new Date().toISOString();
 
-    const response = await fetch(
-      `${META_API_URL}/users/current/accounts/${metaApiAccountId}/history-deals/time/${start}/${end}`,
+    const response = await axios.get(
+      `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/history-deals/time/${start}/${end}`,
       {
         headers: {
-          'auth-token': META_API_TOKEN,
+          'auth-token': token,
+          'Content-Type': 'application/json',
         },
+        httpsAgent,
       }
     );
 
-    if (!response.ok) return [];
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching trade history:', error);
+    return response.data || [];
+  } catch (error: any) {
+    console.error('Error fetching trade history:', error.message);
     return [];
   }
 }
