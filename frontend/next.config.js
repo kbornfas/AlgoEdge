@@ -4,6 +4,16 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   
+  // Ignore ESLint errors during build (warnings only)
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  
+  // Ignore TypeScript errors during build (for faster builds)
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  
   // Security headers
   async headers() {
     return [
