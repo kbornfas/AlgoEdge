@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
         status: mt5Account.status,
         balance: mt5Account.balance,
         equity: mt5Account.equity,
-        connectedAt: mt5Account.connectedAt,
+        connectedAt: mt5Account.updatedAt,
       },
     });
   } catch (error) {
