@@ -527,11 +527,11 @@ export async function runRobotTrading(
 
     console.log(`📊 Found ${analyzedSignals.length} trading signals`);
 
-    // If no signals found, force analyze TIER1 pairs for ANY opportunity
+    // If no high-confidence signals, perform deeper analysis on TIER1 pairs
+    // This is NOT forced trading - it's deeper investigation to find the BEST opportunity
     if (analyzedSignals.length === 0 && availableSlots > 0) {
-      console.log('⚡ No signals found, forcing entry on TIER1 pairs...');
+      console.log('🔍 No initial signals - performing deep analysis on premium pairs...');
       
-      // Try ALL TIER1 pairs, not just the first one
       for (const symbol of TIER1_PAIRS) {
         if (openSymbols.has(symbol)) {
           console.log(`⏭️ ${symbol} already has open position, skipping`);
@@ -539,73 +539,33 @@ export async function runRobotTrading(
         }
         
         try {
-          console.log(`⚡ Forcing signal for ${symbol}...`);
+          console.log(`🔍 Deep analysis for ${symbol}...`);
           const candles = await getCandles(metaApiAccountId, symbol, timeframe, 200);
           
-          if (candles.length < 20) {
-            console.log(`⚠️ ${symbol}: Only ${candles.length} candles, need at least 20`);
+          if (candles.length < 100) {
+            console.log(`⚠️ ${symbol}: Insufficient data (${candles.length} candles)`);
             continue;
           }
           
-          // Force generate a signal based on simple trend
-          const closes = candles.slice(-20).map(c => c.close);
-          const currentPrice = closes[closes.length - 1];
-          const avgPrice = closes.reduce((a, b) => a + b, 0) / closes.length;
-          const atr = calculateATRSimple(candles);
+          // Perform comprehensive analysis
+          const signal = analyzeMarket(symbol, candles);
           
-          if (atr <= 0) {
-            console.log(`⚠️ ${symbol}: Invalid ATR (${atr}), using fallback`);
-            // Use 1% of price as fallback ATR
-            const fallbackAtr = currentPrice * 0.01;
-            const isBullish = currentPrice > avgPrice;
-            const signal: TradingSignal = {
-              symbol,
-              type: isBullish ? 'BUY' : 'SELL',
-              confidence: 35,
-              entryPrice: currentPrice,
-              stopLoss: isBullish ? currentPrice - (fallbackAtr * 2) : currentPrice + (fallbackAtr * 2),
-              takeProfit: isBullish ? currentPrice + (fallbackAtr * 3) : currentPrice - (fallbackAtr * 3),
-              takeProfit2: isBullish ? currentPrice + (fallbackAtr * 4) : currentPrice - (fallbackAtr * 4),
-              takeProfit3: isBullish ? currentPrice + (fallbackAtr * 5) : currentPrice - (fallbackAtr * 5),
-              trailingStop: fallbackAtr * 1.5,
-              reason: `Forced entry - ${isBullish ? 'bullish' : 'bearish'} bias (fallback ATR)`,
-              priority: 100,
-              expectedProfit: 1.5,
-              riskRewardRatio: 1.5,
-              indicators: {} as any,
-            };
-            analyzedSignals.push(signal);
-            console.log(`⚡ Forced signal (fallback): ${signal.type} ${symbol}`);
-            continue;
+          if (signal && signal.confidence >= 30) {
+            // Only add if risk/reward is acceptable (minimum 1.2:1)
+            if (signal.riskRewardRatio >= 1.2) {
+              analyzedSignals.push(signal);
+              console.log(`📈 Deep analysis signal: ${signal.type} ${symbol} @ ${signal.confidence}% (RR: ${signal.riskRewardRatio.toFixed(2)})`);
+            } else {
+              console.log(`⚠️ ${symbol}: Poor risk/reward (${signal.riskRewardRatio.toFixed(2)}), skipping`);
+            }
           }
-          
-          const isBullish = currentPrice > avgPrice;
-          const signal: TradingSignal = {
-            symbol,
-            type: isBullish ? 'BUY' : 'SELL',
-            confidence: 35,
-            entryPrice: currentPrice,
-            stopLoss: isBullish ? currentPrice - (atr * 2) : currentPrice + (atr * 2),
-            takeProfit: isBullish ? currentPrice + (atr * 3) : currentPrice - (atr * 3),
-            takeProfit2: isBullish ? currentPrice + (atr * 4) : currentPrice - (atr * 4),
-            takeProfit3: isBullish ? currentPrice + (atr * 5) : currentPrice - (atr * 5),
-            trailingStop: atr * 1.5,
-            reason: `Forced entry - ${isBullish ? 'bullish' : 'bearish'} bias`,
-            priority: 100,
-            expectedProfit: 1.5,
-            riskRewardRatio: 1.5,
-            indicators: {} as any,
-          };
-          
-          analyzedSignals.push(signal);
-          console.log(`⚡ Forced signal: ${signal.type} ${symbol} @ ${signal.confidence}%`);
         } catch (err) {
-          console.error(`❌ Error forcing signal for ${symbol}:`, err);
-          errors.push(`Force signal error for ${symbol}: ${err}`);
+          console.error(`❌ Error analyzing ${symbol}:`, err);
+          errors.push(`Analysis error for ${symbol}: ${err}`);
         }
       }
       
-      console.log(`⚡ Generated ${analyzedSignals.length} forced signals`);
+      console.log(`🔍 Deep analysis found ${analyzedSignals.length} viable signals`);
     }
 
     // Sort signals by priority and expected profit
