@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
-import { runRobotTrading, syncTrades } from '@/lib/services/metaApiTrading';
+import { runRobotTrading } from '@/lib/services/metaApiTrading';
 
 export const dynamic = 'force-dynamic';
 
+// Timeframe mapping for MetaAPI
+const TIMEFRAME_MAP: Record<string, string> = {
+  'M1': '1m',
+  'M5': '5m',
+  'M15': '15m',
+  'M30': '30m',
+  'H1': '1h',
+  'H4': '4h',
+  'D1': '1d',
+  'W1': '1w',
+};
+
 /**
  * POST /api/user/robots/[robotId]/start
- * Start a trading robot
+ * Start a trading robot with intelligent position management
  */
 export async function POST(
   req: NextRequest,
@@ -27,6 +39,18 @@ export async function POST(
     }
 
     const robotId = params.robotId;
+
+    // Parse request body for timeframe and risk settings
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      // No body provided, use defaults
+    }
+
+    const selectedTimeframe = body.timeframe || 'H1';
+    const riskPercent = body.riskPercent || 1;
+    const metaApiTimeframe = TIMEFRAME_MAP[selectedTimeframe] || '1h';
 
     // Verify robot exists
     const robot = await prisma.tradingRobot.findUnique({
@@ -65,33 +89,42 @@ export async function POST(
       },
     });
 
+    const configSettings = {
+      riskPercent,
+      timeframe: selectedTimeframe,
+      maxTrades: 5,
+      tradingPairs: body.pairs || 'all',
+    };
+
     if (!userRobotConfig) {
       userRobotConfig = await prisma.userRobotConfig.create({
         data: {
           userId: decoded.userId,
           robotId: robotId,
           isEnabled: true,
-          settings: {
-            riskPercent: 1,
-            maxTrades: 5,
-            tradingPairs: 'all',
-          },
+          settings: configSettings,
         },
       });
     } else {
       await prisma.userRobotConfig.update({
         where: { id: userRobotConfig.id },
-        data: { isEnabled: true },
+        data: { 
+          isEnabled: true,
+          settings: configSettings,
+        },
       });
     }
 
-    // Run the robot trading logic immediately
+    console.log(`🤖 Starting ${robot.name} on ${selectedTimeframe} timeframe with ${riskPercent}% risk`);
+
+    // Run the robot trading logic with intelligent position management
     const result = await runRobotTrading(
       decoded.userId,
       robotId,
       mt5Account.id,
       mt5Account.accountId,
-      (userRobotConfig.settings as any)?.riskPercent || 1
+      riskPercent,
+      metaApiTimeframe
     );
 
     // Log the action
@@ -102,7 +135,10 @@ export async function POST(
         details: {
           robotId,
           robotName: robot.name,
+          timeframe: selectedTimeframe,
+          riskPercent,
           tradesExecuted: result.tradesExecuted,
+          tradesClosed: result.tradesClosed,
           signals: result.signals.length,
         },
         ipAddress: req.headers.get('x-forwarded-for') || '',
@@ -115,13 +151,18 @@ export async function POST(
         id: robot.id,
         name: robot.name,
         status: 'running',
+        timeframe: selectedTimeframe,
       },
       tradingResult: {
         tradesExecuted: result.tradesExecuted,
+        tradesClosed: result.tradesClosed,
         signals: result.signals.map(s => ({
           symbol: s.symbol,
           type: s.type,
           confidence: s.confidence,
+          priority: s.priority,
+          riskRewardRatio: s.riskRewardRatio?.toFixed(2),
+          expectedProfit: s.expectedProfit?.toFixed(2),
           reason: s.reason,
         })),
         errors: result.errors,

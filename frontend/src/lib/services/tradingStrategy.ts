@@ -1,23 +1,66 @@
 /**
- * AlgoEdge Trading Strategy Service
- * Implements technical analysis and trading signals with 75%+ confidence
+ * AlgoEdge Intelligent Trading Strategy Service
+ * Prioritizes most traded & profitable pairs with smart entry/exit logic
  */
 
-// Trading pairs to monitor
-export const TRADING_PAIRS = [
-  'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
-  'EURGBP', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURAUD', 'EURCHF', 'GBPCHF',
-  'XAUUSD', 'XAGUSD', // Gold and Silver
-];
+// ============================================================================
+// PRIORITIZED TRADING PAIRS (Most Profitable & Liquid)
+// ============================================================================
+
+// Tier 1: Highest Priority - Most Profitable (Gold, Major Forex)
+export const TIER1_PAIRS = ['XAUUSD', 'EURUSD', 'GBPUSD', 'USDJPY'];
+
+// Tier 2: High Priority - High Volume Pairs
+export const TIER2_PAIRS = ['GBPJPY', 'EURJPY', 'AUDUSD', 'USDCHF', 'XAGUSD'];
+
+// Tier 3: Standard Priority - Other Majors
+export const TIER3_PAIRS = ['USDCAD', 'NZDUSD', 'EURGBP', 'EURAUD', 'AUDJPY'];
+
+// Combined with priority order
+export const TRADING_PAIRS = [...TIER1_PAIRS, ...TIER2_PAIRS, ...TIER3_PAIRS];
+
+// Pair-specific configurations for optimal trading
+export const PAIR_CONFIG: Record<string, {
+  pipValue: number;
+  minSpread: number;
+  volatilityMultiplier: number;
+  profitPotential: number; // 1-10 scale
+  bestSession: string[];
+}> = {
+  'XAUUSD': { pipValue: 1, minSpread: 30, volatilityMultiplier: 2.5, profitPotential: 10, bestSession: ['London', 'NewYork'] },
+  'EURUSD': { pipValue: 10, minSpread: 1, volatilityMultiplier: 1.0, profitPotential: 8, bestSession: ['London', 'NewYork'] },
+  'GBPUSD': { pipValue: 10, minSpread: 2, volatilityMultiplier: 1.3, profitPotential: 9, bestSession: ['London', 'NewYork'] },
+  'USDJPY': { pipValue: 7, minSpread: 1, volatilityMultiplier: 1.1, profitPotential: 8, bestSession: ['Tokyo', 'London'] },
+  'GBPJPY': { pipValue: 7, minSpread: 3, volatilityMultiplier: 1.8, profitPotential: 9, bestSession: ['London', 'Tokyo'] },
+  'EURJPY': { pipValue: 7, minSpread: 2, volatilityMultiplier: 1.4, profitPotential: 8, bestSession: ['London', 'Tokyo'] },
+  'AUDUSD': { pipValue: 10, minSpread: 1, volatilityMultiplier: 1.2, profitPotential: 7, bestSession: ['Sydney', 'Tokyo'] },
+  'USDCHF': { pipValue: 10, minSpread: 2, volatilityMultiplier: 1.0, profitPotential: 7, bestSession: ['London'] },
+  'XAGUSD': { pipValue: 50, minSpread: 20, volatilityMultiplier: 2.0, profitPotential: 8, bestSession: ['London', 'NewYork'] },
+  'USDCAD': { pipValue: 10, minSpread: 2, volatilityMultiplier: 1.1, profitPotential: 7, bestSession: ['NewYork'] },
+  'NZDUSD': { pipValue: 10, minSpread: 2, volatilityMultiplier: 1.2, profitPotential: 6, bestSession: ['Sydney', 'Tokyo'] },
+  'EURGBP': { pipValue: 10, minSpread: 2, volatilityMultiplier: 0.8, profitPotential: 6, bestSession: ['London'] },
+  'EURAUD': { pipValue: 10, minSpread: 3, volatilityMultiplier: 1.4, profitPotential: 7, bestSession: ['Sydney', 'London'] },
+  'AUDJPY': { pipValue: 7, minSpread: 2, volatilityMultiplier: 1.3, profitPotential: 7, bestSession: ['Sydney', 'Tokyo'] },
+};
+
+// ============================================================================
+// INTERFACES
+// ============================================================================
 
 export interface TradingSignal {
   symbol: string;
   type: 'BUY' | 'SELL';
-  confidence: number; // 0-100
+  confidence: number;
   entryPrice: number;
   stopLoss: number;
   takeProfit: number;
+  takeProfit2?: number; // Secondary TP for scaling out
+  takeProfit3?: number; // Third TP for runners
+  trailingStop?: number;
   reason: string;
+  priority: number; // Higher = more important
+  expectedProfit: number;
+  riskRewardRatio: number;
   indicators: {
     rsi: number;
     macd: { value: number; signal: number; histogram: number };
@@ -25,7 +68,11 @@ export interface TradingSignal {
     ema50: number;
     ema200: number;
     atr: number;
+    adx: number;
     bollingerBands: { upper: number; middle: number; lower: number };
+    support: number;
+    resistance: number;
+    trendStrength: number;
   };
 }
 
@@ -38,23 +85,46 @@ export interface CandleData {
   volume: number;
 }
 
+export interface MarketCondition {
+  trend: 'STRONG_UP' | 'UP' | 'SIDEWAYS' | 'DOWN' | 'STRONG_DOWN';
+  volatility: 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
+  momentum: 'BULLISH' | 'NEUTRAL' | 'BEARISH';
+  session: 'ASIAN' | 'LONDON' | 'NEWYORK' | 'OVERLAP';
+}
+
+// ============================================================================
+// TECHNICAL INDICATORS
+// ============================================================================
+
 /**
- * Calculate RSI (Relative Strength Index)
+ * Calculate RSI with smoothing
  */
 export function calculateRSI(prices: number[], period: number = 14): number {
   if (prices.length < period + 1) return 50;
 
-  let gains = 0;
-  let losses = 0;
+  let avgGain = 0;
+  let avgLoss = 0;
 
+  // Initial averages
   for (let i = 1; i <= period; i++) {
     const change = prices[i] - prices[i - 1];
-    if (change > 0) gains += change;
-    else losses -= change;
+    if (change > 0) avgGain += change;
+    else avgLoss -= change;
   }
+  avgGain /= period;
+  avgLoss /= period;
 
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
+  // Smoothed RSI calculation
+  for (let i = period + 1; i < prices.length; i++) {
+    const change = prices[i] - prices[i - 1];
+    if (change > 0) {
+      avgGain = (avgGain * (period - 1) + change) / period;
+      avgLoss = (avgLoss * (period - 1)) / period;
+    } else {
+      avgGain = (avgGain * (period - 1)) / period;
+      avgLoss = (avgLoss * (period - 1) - change) / period;
+    }
+  }
 
   if (avgLoss === 0) return 100;
   const rs = avgGain / avgLoss;
@@ -78,15 +148,31 @@ export function calculateEMA(prices: number[], period: number): number {
 }
 
 /**
- * Calculate MACD (Moving Average Convergence Divergence)
+ * Calculate SMA (Simple Moving Average)
+ */
+export function calculateSMA(prices: number[], period: number): number {
+  if (prices.length < period) return prices[prices.length - 1];
+  const slice = prices.slice(-period);
+  return slice.reduce((a, b) => a + b, 0) / period;
+}
+
+/**
+ * Calculate MACD with signal line
  */
 export function calculateMACD(prices: number[]): { value: number; signal: number; histogram: number } {
   const ema12 = calculateEMA(prices, 12);
   const ema26 = calculateEMA(prices, 26);
   const macdLine = ema12 - ema26;
-  
-  // For simplicity, using a rough signal line calculation
-  const signalLine = calculateEMA([...prices.slice(-9), macdLine], 9);
+
+  // Calculate signal line (9-period EMA of MACD)
+  const macdHistory: number[] = [];
+  for (let i = 26; i < prices.length; i++) {
+    const tempEma12 = calculateEMA(prices.slice(0, i + 1), 12);
+    const tempEma26 = calculateEMA(prices.slice(0, i + 1), 26);
+    macdHistory.push(tempEma12 - tempEma26);
+  }
+
+  const signalLine = macdHistory.length >= 9 ? calculateEMA(macdHistory, 9) : macdLine;
   const histogram = macdLine - signalLine;
 
   return { value: macdLine, signal: signalLine, histogram };
@@ -113,7 +199,45 @@ export function calculateATR(candles: CandleData[], period: number = 14): number
     trueRanges.push(tr);
   }
 
-  return trueRanges.slice(-period).reduce((a, b) => a + b, 0) / period;
+  // EMA-based ATR for smoother values
+  return calculateEMA(trueRanges, period);
+}
+
+/**
+ * Calculate ADX (Average Directional Index) - Trend Strength
+ */
+export function calculateADX(candles: CandleData[], period: number = 14): number {
+  if (candles.length < period * 2) return 25;
+
+  const plusDM: number[] = [];
+  const minusDM: number[] = [];
+  const trueRanges: number[] = [];
+
+  for (let i = 1; i < candles.length; i++) {
+    const highDiff = candles[i].high - candles[i - 1].high;
+    const lowDiff = candles[i - 1].low - candles[i].low;
+
+    plusDM.push(highDiff > lowDiff && highDiff > 0 ? highDiff : 0);
+    minusDM.push(lowDiff > highDiff && lowDiff > 0 ? lowDiff : 0);
+
+    const tr = Math.max(
+      candles[i].high - candles[i].low,
+      Math.abs(candles[i].high - candles[i - 1].close),
+      Math.abs(candles[i].low - candles[i - 1].close)
+    );
+    trueRanges.push(tr);
+  }
+
+  const smoothedPlusDM = calculateEMA(plusDM, period);
+  const smoothedMinusDM = calculateEMA(minusDM, period);
+  const smoothedTR = calculateEMA(trueRanges, period);
+
+  const plusDI = (smoothedPlusDM / smoothedTR) * 100;
+  const minusDI = (smoothedMinusDM / smoothedTR) * 100;
+
+  const dx = Math.abs(plusDI - minusDI) / (plusDI + minusDI) * 100;
+
+  return dx;
 }
 
 /**
@@ -127,7 +251,7 @@ export function calculateBollingerBands(prices: number[], period: number = 20, s
 
   const slice = prices.slice(-period);
   const middle = slice.reduce((a, b) => a + b, 0) / period;
-  
+
   const variance = slice.reduce((sum, price) => sum + Math.pow(price - middle, 2), 0) / period;
   const standardDeviation = Math.sqrt(variance);
 
@@ -139,145 +263,553 @@ export function calculateBollingerBands(prices: number[], period: number = 20, s
 }
 
 /**
- * Analyze market and generate trading signal
- * Returns signal only if confidence >= 75%
+ * Find Support and Resistance levels
+ */
+export function findSupportResistance(candles: CandleData[], lookback: number = 50): { support: number; resistance: number } {
+  const recentCandles = candles.slice(-lookback);
+
+  const highs = recentCandles.map(c => c.high);
+  const lows = recentCandles.map(c => c.low);
+
+  // Find swing highs and lows
+  const swingHighs: number[] = [];
+  const swingLows: number[] = [];
+
+  for (let i = 2; i < recentCandles.length - 2; i++) {
+    const high = recentCandles[i].high;
+    const low = recentCandles[i].low;
+
+    if (high > recentCandles[i - 1].high && high > recentCandles[i - 2].high &&
+        high > recentCandles[i + 1].high && high > recentCandles[i + 2].high) {
+      swingHighs.push(high);
+    }
+
+    if (low < recentCandles[i - 1].low && low < recentCandles[i - 2].low &&
+        low < recentCandles[i + 1].low && low < recentCandles[i + 2].low) {
+      swingLows.push(low);
+    }
+  }
+
+  const resistance = swingHighs.length > 0 ? Math.max(...swingHighs) : Math.max(...highs);
+  const support = swingLows.length > 0 ? Math.min(...swingLows) : Math.min(...lows);
+
+  return { support, resistance };
+}
+
+/**
+ * Determine current market condition
+ */
+export function getMarketCondition(candles: CandleData[], indicators: any): MarketCondition {
+  const { ema20, ema50, ema200, atr, adx, rsi } = indicators;
+  const currentPrice = candles[candles.length - 1].close;
+
+  // Trend determination
+  let trend: MarketCondition['trend'];
+  if (ema20 > ema50 && ema50 > ema200 && currentPrice > ema20) {
+    trend = adx > 40 ? 'STRONG_UP' : 'UP';
+  } else if (ema20 < ema50 && ema50 < ema200 && currentPrice < ema20) {
+    trend = adx > 40 ? 'STRONG_DOWN' : 'DOWN';
+  } else {
+    trend = 'SIDEWAYS';
+  }
+
+  // Volatility determination based on ATR
+  const avgPrice = candles.slice(-20).reduce((sum, c) => sum + c.close, 0) / 20;
+  const atrPercent = (atr / avgPrice) * 100;
+
+  let volatility: MarketCondition['volatility'];
+  if (atrPercent > 2) volatility = 'EXTREME';
+  else if (atrPercent > 1) volatility = 'HIGH';
+  else if (atrPercent > 0.5) volatility = 'MEDIUM';
+  else volatility = 'LOW';
+
+  // Momentum
+  let momentum: MarketCondition['momentum'];
+  if (rsi > 60) momentum = 'BULLISH';
+  else if (rsi < 40) momentum = 'BEARISH';
+  else momentum = 'NEUTRAL';
+
+  // Trading session (UTC-based)
+  const hour = new Date().getUTCHours();
+  let session: MarketCondition['session'];
+  if (hour >= 0 && hour < 8) session = 'ASIAN';
+  else if (hour >= 8 && hour < 13) session = 'LONDON';
+  else if (hour >= 13 && hour < 17) session = 'OVERLAP';
+  else session = 'NEWYORK';
+
+  return { trend, volatility, momentum, session };
+}
+
+// ============================================================================
+// INTELLIGENT SIGNAL GENERATION
+// ============================================================================
+
+/**
+ * Analyze market and generate intelligent trading signal
+ * Uses multiple confluence factors for high-probability setups
  */
 export function analyzeMarket(symbol: string, candles: CandleData[]): TradingSignal | null {
   if (candles.length < 200) return null;
 
   const closePrices = candles.map(c => c.close);
   const currentPrice = closePrices[closePrices.length - 1];
+  const pairConfig = PAIR_CONFIG[symbol] || { pipValue: 10, minSpread: 2, volatilityMultiplier: 1, profitPotential: 5, bestSession: ['London'] };
 
-  // Calculate indicators
+  // Calculate all indicators
   const rsi = calculateRSI(closePrices);
   const macd = calculateMACD(closePrices);
   const ema20 = calculateEMA(closePrices, 20);
   const ema50 = calculateEMA(closePrices, 50);
   const ema200 = calculateEMA(closePrices, 200);
   const atr = calculateATR(candles);
+  const adx = calculateADX(candles);
   const bollingerBands = calculateBollingerBands(closePrices);
+  const { support, resistance } = findSupportResistance(candles);
 
-  const indicators = { rsi, macd, ema20, ema50, ema200, atr, bollingerBands };
+  // Calculate trend strength (0-100)
+  const trendStrength = Math.min(100, adx * 2);
 
-  // Score-based confidence calculation
+  const indicators = {
+    rsi,
+    macd,
+    ema20,
+    ema50,
+    ema200,
+    atr,
+    adx,
+    bollingerBands,
+    support,
+    resistance,
+    trendStrength,
+  };
+
+  // Get market condition
+  const marketCondition = getMarketCondition(candles, indicators);
+
+  // Score-based confluence system
   let buyScore = 0;
   let sellScore = 0;
-  const reasons: string[] = [];
+  const buyReasons: string[] = [];
+  const sellReasons: string[] = [];
 
-  // Trend Analysis (EMA alignment)
-  if (ema20 > ema50 && ema50 > ema200) {
+  // ============================================================================
+  // SCORING SYSTEM - Multiple Confluence Factors
+  // ============================================================================
+
+  // 1. TREND ALIGNMENT (Max 25 points)
+  if (marketCondition.trend === 'STRONG_UP') {
+    buyScore += 25;
+    buyReasons.push('Strong uptrend');
+  } else if (marketCondition.trend === 'UP') {
+    buyScore += 15;
+    buyReasons.push('Uptrend');
+  } else if (marketCondition.trend === 'STRONG_DOWN') {
+    sellScore += 25;
+    sellReasons.push('Strong downtrend');
+  } else if (marketCondition.trend === 'DOWN') {
+    sellScore += 15;
+    sellReasons.push('Downtrend');
+  }
+
+  // 2. EMA POSITIONING (Max 15 points)
+  if (currentPrice > ema20 && ema20 > ema50) {
+    buyScore += 15;
+    buyReasons.push('Price above EMAs');
+  } else if (currentPrice < ema20 && ema20 < ema50) {
+    sellScore += 15;
+    sellReasons.push('Price below EMAs');
+  }
+
+  // 3. RSI SIGNALS (Max 20 points)
+  if (rsi < 25) {
     buyScore += 20;
-    reasons.push('Strong uptrend (EMA alignment)');
-  } else if (ema20 < ema50 && ema50 < ema200) {
+    buyReasons.push(`RSI extremely oversold (${rsi.toFixed(1)})`);
+  } else if (rsi < 35 && rsi > 25) {
+    buyScore += 15;
+    buyReasons.push(`RSI oversold (${rsi.toFixed(1)})`);
+  } else if (rsi > 75) {
     sellScore += 20;
-    reasons.push('Strong downtrend (EMA alignment)');
+    sellReasons.push(`RSI extremely overbought (${rsi.toFixed(1)})`);
+  } else if (rsi > 65 && rsi < 75) {
+    sellScore += 15;
+    sellReasons.push(`RSI overbought (${rsi.toFixed(1)})`);
   }
 
-  // Price position relative to EMAs
-  if (currentPrice > ema20 && currentPrice > ema50) {
-    buyScore += 10;
-  } else if (currentPrice < ema20 && currentPrice < ema50) {
-    sellScore += 10;
-  }
-
-  // RSI Analysis
-  if (rsi < 30) {
-    buyScore += 25; // Oversold
-    reasons.push(`RSI oversold (${rsi.toFixed(1)})`);
-  } else if (rsi > 70) {
-    sellScore += 25; // Overbought
-    reasons.push(`RSI overbought (${rsi.toFixed(1)})`);
-  } else if (rsi < 40 && rsi > 30) {
-    buyScore += 10;
-  } else if (rsi > 60 && rsi < 70) {
-    sellScore += 10;
-  }
-
-  // MACD Analysis
+  // 4. MACD CROSSOVER (Max 15 points)
   if (macd.histogram > 0 && macd.value > macd.signal) {
     buyScore += 15;
-    reasons.push('MACD bullish crossover');
+    buyReasons.push('MACD bullish');
   } else if (macd.histogram < 0 && macd.value < macd.signal) {
     sellScore += 15;
-    reasons.push('MACD bearish crossover');
+    sellReasons.push('MACD bearish');
   }
 
-  // Bollinger Bands Analysis
-  if (currentPrice <= bollingerBands.lower) {
-    buyScore += 20; // Price at lower band - potential reversal
-    reasons.push('Price at lower Bollinger Band');
-  } else if (currentPrice >= bollingerBands.upper) {
-    sellScore += 20; // Price at upper band - potential reversal
-    reasons.push('Price at upper Bollinger Band');
+  // 5. BOLLINGER BAND TOUCHES (Max 15 points)
+  const bbRange = bollingerBands.upper - bollingerBands.lower;
+  const bbLowerZone = bollingerBands.lower + bbRange * 0.1;
+  const bbUpperZone = bollingerBands.upper - bbRange * 0.1;
+
+  if (currentPrice <= bbLowerZone) {
+    buyScore += 15;
+    buyReasons.push('Price at lower BB');
+  } else if (currentPrice >= bbUpperZone) {
+    sellScore += 15;
+    sellReasons.push('Price at upper BB');
   }
 
-  // Volume confirmation (using recent candles)
-  const recentVolumes = candles.slice(-5).map(c => c.volume);
-  const avgVolume = candles.slice(-20).map(c => c.volume).reduce((a, b) => a + b, 0) / 20;
-  const currentVolume = recentVolumes[recentVolumes.length - 1];
-  
-  if (currentVolume > avgVolume * 1.5) {
-    // High volume confirms the move
+  // 6. SUPPORT/RESISTANCE (Max 15 points)
+  const srBuffer = atr * 0.5;
+  if (currentPrice <= support + srBuffer) {
+    buyScore += 15;
+    buyReasons.push('Near support level');
+  } else if (currentPrice >= resistance - srBuffer) {
+    sellScore += 15;
+    sellReasons.push('Near resistance level');
+  }
+
+  // 7. MOMENTUM CONFIRMATION (Max 10 points)
+  if (marketCondition.momentum === 'BULLISH' && buyScore > sellScore) {
     buyScore += 10;
+    buyReasons.push('Momentum confirmed');
+  } else if (marketCondition.momentum === 'BEARISH' && sellScore > buyScore) {
     sellScore += 10;
-    reasons.push('High volume confirmation');
+    sellReasons.push('Momentum confirmed');
   }
 
-  // Determine signal type and confidence
+  // 8. VOLUME SPIKE (Max 5 points)
+  const recentVolume = candles.slice(-5).reduce((sum, c) => sum + c.volume, 0) / 5;
+  const avgVolume = candles.slice(-20).reduce((sum, c) => sum + c.volume, 0) / 20;
+  if (recentVolume > avgVolume * 1.5) {
+    buyScore += 5;
+    sellScore += 5;
+  }
+
+  // ============================================================================
+  // SIGNAL GENERATION
+  // ============================================================================
+
   const buyConfidence = Math.min(buyScore, 100);
   const sellConfidence = Math.min(sellScore, 100);
 
-  // Only return signal if confidence >= 75%
-  if (buyConfidence >= 75 && buyConfidence > sellConfidence) {
-    const stopLossDistance = atr * 2;
-    const takeProfitDistance = atr * 3; // 1.5:1 risk-reward ratio
+  // Priority based on pair profitability
+  const basePriority = TIER1_PAIRS.includes(symbol) ? 100 : TIER2_PAIRS.includes(symbol) ? 75 : 50;
+
+  // Only generate signal if confidence >= 70% (lowered from 75% for more trades)
+  if (buyConfidence >= 70 && buyConfidence > sellConfidence) {
+    // INTELLIGENT STOP LOSS & TAKE PROFIT
+    const volatilityAdjustedATR = atr * pairConfig.volatilityMultiplier;
+
+    // Dynamic SL based on support and ATR
+    const slFromSupport = support - (atr * 0.5);
+    const slFromATR = currentPrice - (volatilityAdjustedATR * 1.5);
+    const stopLoss = Math.max(slFromSupport, slFromATR);
+
+    // Multiple take profit levels (1.5:1, 2:1, 3:1 RR)
+    const riskAmount = currentPrice - stopLoss;
+    const takeProfit = currentPrice + (riskAmount * 1.5);
+    const takeProfit2 = currentPrice + (riskAmount * 2);
+    const takeProfit3 = currentPrice + (riskAmount * 3);
+
+    // Trailing stop (starts at 1:1 profit)
+    const trailingStop = riskAmount;
+
+    const riskRewardRatio = (takeProfit - currentPrice) / (currentPrice - stopLoss);
+    const expectedProfit = riskRewardRatio * (buyConfidence / 100);
 
     return {
       symbol,
       type: 'BUY',
       confidence: buyConfidence,
       entryPrice: currentPrice,
-      stopLoss: currentPrice - stopLossDistance,
-      takeProfit: currentPrice + takeProfitDistance,
-      reason: reasons.join(', '),
+      stopLoss,
+      takeProfit,
+      takeProfit2,
+      takeProfit3,
+      trailingStop,
+      reason: buyReasons.join(' | '),
+      priority: basePriority + buyConfidence,
+      expectedProfit,
+      riskRewardRatio,
       indicators,
     };
-  } else if (sellConfidence >= 75 && sellConfidence > buyConfidence) {
-    const stopLossDistance = atr * 2;
-    const takeProfitDistance = atr * 3;
+  } else if (sellConfidence >= 70 && sellConfidence > buyConfidence) {
+    const volatilityAdjustedATR = atr * pairConfig.volatilityMultiplier;
+
+    // Dynamic SL based on resistance and ATR
+    const slFromResistance = resistance + (atr * 0.5);
+    const slFromATR = currentPrice + (volatilityAdjustedATR * 1.5);
+    const stopLoss = Math.min(slFromResistance, slFromATR);
+
+    // Multiple take profit levels
+    const riskAmount = stopLoss - currentPrice;
+    const takeProfit = currentPrice - (riskAmount * 1.5);
+    const takeProfit2 = currentPrice - (riskAmount * 2);
+    const takeProfit3 = currentPrice - (riskAmount * 3);
+
+    const trailingStop = riskAmount;
+
+    const riskRewardRatio = (currentPrice - takeProfit) / (stopLoss - currentPrice);
+    const expectedProfit = riskRewardRatio * (sellConfidence / 100);
 
     return {
       symbol,
       type: 'SELL',
       confidence: sellConfidence,
       entryPrice: currentPrice,
-      stopLoss: currentPrice + stopLossDistance,
-      takeProfit: currentPrice - takeProfitDistance,
-      reason: reasons.join(', '),
+      stopLoss,
+      takeProfit,
+      takeProfit2,
+      takeProfit3,
+      trailingStop,
+      reason: sellReasons.join(' | '),
+      priority: basePriority + sellConfidence,
+      expectedProfit,
+      riskRewardRatio,
       indicators,
     };
   }
 
-  return null; // No high-confidence signal
+  return null;
 }
 
 /**
- * Calculate position size based on risk management
+ * Analyze multiple pairs and return sorted by priority/profitability
+ */
+export function analyzeAllPairs(
+  pairCandles: Map<string, CandleData[]>
+): TradingSignal[] {
+  const signals: TradingSignal[] = [];
+
+  // Analyze Tier 1 pairs first (most profitable)
+  for (const symbol of TIER1_PAIRS) {
+    const candles = pairCandles.get(symbol);
+    if (candles) {
+      const signal = analyzeMarket(symbol, candles);
+      if (signal) signals.push(signal);
+    }
+  }
+
+  // Then Tier 2
+  for (const symbol of TIER2_PAIRS) {
+    const candles = pairCandles.get(symbol);
+    if (candles) {
+      const signal = analyzeMarket(symbol, candles);
+      if (signal) signals.push(signal);
+    }
+  }
+
+  // Then Tier 3
+  for (const symbol of TIER3_PAIRS) {
+    const candles = pairCandles.get(symbol);
+    if (candles) {
+      const signal = analyzeMarket(symbol, candles);
+      if (signal) signals.push(signal);
+    }
+  }
+
+  // Sort by priority (highest first), then by expected profit
+  return signals.sort((a, b) => {
+    if (b.priority !== a.priority) return b.priority - a.priority;
+    return b.expectedProfit - a.expectedProfit;
+  });
+}
+
+// ============================================================================
+// POSITION MANAGEMENT - Intelligent Close Logic
+// ============================================================================
+
+export interface PositionCloseSignal {
+  action: 'CLOSE' | 'PARTIAL_CLOSE' | 'MOVE_SL' | 'HOLD';
+  reason: string;
+  newStopLoss?: number;
+  closePercent?: number; // For partial close
+}
+
+/**
+ * Analyze whether to close or modify an existing position
+ */
+export function analyzePositionClose(
+  position: {
+    symbol: string;
+    type: 'BUY' | 'SELL';
+    openPrice: number;
+    currentPrice: number;
+    stopLoss: number;
+    takeProfit: number;
+    profit: number;
+    volume: number;
+  },
+  candles: CandleData[]
+): PositionCloseSignal {
+  if (candles.length < 50) {
+    return { action: 'HOLD', reason: 'Insufficient data' };
+  }
+
+  const closePrices = candles.map(c => c.close);
+  const currentPrice = position.currentPrice;
+  const atr = calculateATR(candles);
+  const rsi = calculateRSI(closePrices);
+  const macd = calculateMACD(closePrices);
+
+  const pips = position.type === 'BUY'
+    ? currentPrice - position.openPrice
+    : position.openPrice - currentPrice;
+
+  const riskAmount = Math.abs(position.openPrice - position.stopLoss);
+  const profitInR = pips / riskAmount; // Profit in terms of Risk units
+
+  // ============================================================================
+  // INTELLIGENT EXIT RULES
+  // ============================================================================
+
+  // 1. TAKE PROFIT at 1.5R - Close 50%
+  if (profitInR >= 1.5 && profitInR < 2) {
+    return {
+      action: 'PARTIAL_CLOSE',
+      reason: `TP1 reached (${profitInR.toFixed(2)}R) - Closing 50%`,
+      closePercent: 50,
+      newStopLoss: position.openPrice, // Move SL to breakeven
+    };
+  }
+
+  // 2. TAKE PROFIT at 2R - Close another 25%
+  if (profitInR >= 2 && profitInR < 3) {
+    return {
+      action: 'PARTIAL_CLOSE',
+      reason: `TP2 reached (${profitInR.toFixed(2)}R) - Closing 25%`,
+      closePercent: 25,
+      newStopLoss: position.openPrice + (riskAmount * 0.5), // Lock in profit
+    };
+  }
+
+  // 3. TAKE PROFIT at 3R - Close remaining
+  if (profitInR >= 3) {
+    return {
+      action: 'CLOSE',
+      reason: `TP3 reached (${profitInR.toFixed(2)}R) - Full close`,
+    };
+  }
+
+  // 4. RSI REVERSAL WARNING
+  if (position.type === 'BUY' && rsi > 80 && profitInR > 1) {
+    return {
+      action: 'CLOSE',
+      reason: `RSI overbought reversal (${rsi.toFixed(1)}) - Protecting profit`,
+    };
+  }
+  if (position.type === 'SELL' && rsi < 20 && profitInR > 1) {
+    return {
+      action: 'CLOSE',
+      reason: `RSI oversold reversal (${rsi.toFixed(1)}) - Protecting profit`,
+    };
+  }
+
+  // 5. MACD DIVERGENCE - Exit signal
+  if (position.type === 'BUY' && macd.histogram < 0 && macd.value < macd.signal && profitInR > 0.5) {
+    return {
+      action: 'CLOSE',
+      reason: 'MACD bearish divergence - Exiting long',
+    };
+  }
+  if (position.type === 'SELL' && macd.histogram > 0 && macd.value > macd.signal && profitInR > 0.5) {
+    return {
+      action: 'CLOSE',
+      reason: 'MACD bullish divergence - Exiting short',
+    };
+  }
+
+  // 6. TRAILING STOP - Move SL when in profit
+  if (profitInR >= 1) {
+    const trailDistance = atr * 1.5;
+    let newSL: number;
+
+    if (position.type === 'BUY') {
+      newSL = currentPrice - trailDistance;
+      if (newSL > position.stopLoss) {
+        return {
+          action: 'MOVE_SL',
+          reason: `Trailing stop to ${newSL.toFixed(5)}`,
+          newStopLoss: newSL,
+        };
+      }
+    } else {
+      newSL = currentPrice + trailDistance;
+      if (newSL < position.stopLoss) {
+        return {
+          action: 'MOVE_SL',
+          reason: `Trailing stop to ${newSL.toFixed(5)}`,
+          newStopLoss: newSL,
+        };
+      }
+    }
+  }
+
+  // 7. BREAKEVEN - Move SL to entry when in 0.5R profit
+  if (profitInR >= 0.5 && profitInR < 1) {
+    if (position.type === 'BUY' && position.stopLoss < position.openPrice) {
+      return {
+        action: 'MOVE_SL',
+        reason: 'Moving SL to breakeven',
+        newStopLoss: position.openPrice + (atr * 0.1), // Small buffer above entry
+      };
+    }
+    if (position.type === 'SELL' && position.stopLoss > position.openPrice) {
+      return {
+        action: 'MOVE_SL',
+        reason: 'Moving SL to breakeven',
+        newStopLoss: position.openPrice - (atr * 0.1),
+      };
+    }
+  }
+
+  return { action: 'HOLD', reason: 'No exit condition met' };
+}
+
+// ============================================================================
+// POSITION SIZING
+// ============================================================================
+
+/**
+ * Calculate intelligent position size based on risk management
  */
 export function calculatePositionSize(
   balance: number,
   riskPercent: number,
   entryPrice: number,
   stopLoss: number,
-  pipValue: number = 10 // Default pip value for standard lot
+  symbol: string = 'EURUSD'
 ): number {
+  const config = PAIR_CONFIG[symbol] || { pipValue: 10 };
+
   const riskAmount = balance * (riskPercent / 100);
-  const stopLossPips = Math.abs(entryPrice - stopLoss) * 10000; // Convert to pips
-  
-  if (stopLossPips === 0) return 0.01; // Minimum lot size
-  
-  const lotSize = riskAmount / (stopLossPips * pipValue);
-  
-  // Ensure lot size is within bounds
-  return Math.max(0.01, Math.min(lotSize, 10)); // Min 0.01, Max 10 lots
+  const stopLossPips = Math.abs(entryPrice - stopLoss);
+
+  // Adjust for different pip values (XAUUSD, JPY pairs, etc.)
+  let pipMultiplier = 10000; // Standard forex
+  if (symbol.includes('JPY')) pipMultiplier = 100;
+  if (symbol === 'XAUUSD') pipMultiplier = 10;
+  if (symbol === 'XAGUSD') pipMultiplier = 100;
+
+  const pips = stopLossPips * pipMultiplier;
+
+  if (pips === 0) return 0.01;
+
+  // Calculate lot size
+  const lotSize = riskAmount / (pips * config.pipValue);
+
+  // Round to 2 decimal places and ensure within bounds
+  const roundedLotSize = Math.round(lotSize * 100) / 100;
+
+  return Math.max(0.01, Math.min(roundedLotSize, 5)); // Min 0.01, Max 5 lots
+}
+
+/**
+ * Get optimal number of trades based on account size
+ */
+export function getMaxConcurrentTrades(balance: number): number {
+  if (balance < 1000) return 2;
+  if (balance < 5000) return 3;
+  if (balance < 10000) return 5;
+  if (balance < 50000) return 8;
+  return 10;
 }
