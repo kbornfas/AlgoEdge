@@ -151,7 +151,13 @@ export default function MT5ConnectionPage() {
           setError('Account connected but balance is 0. Ensure your MT5 account has funds.');
         }
       } else if (data.step6_error) {
-        setError(`MetaAPI Error: ${data.step6_error.message || JSON.stringify(data.step6_error)}`);
+        // Show detailed error info
+        const errInfo = data.step6_error;
+        if (errInfo.status === 404) {
+          setError(`Account not synced with MetaAPI. Click Disconnect, then Reconnect with your MT5 password.`);
+        } else {
+          setError(`MetaAPI Error (${errInfo.status}): ${errInfo.message || JSON.stringify(errInfo.response || errInfo)}`);
+        }
       } else if (data.step3_metaApiList?.error) {
         setError(`MetaAPI list error: ${data.step3_metaApiList.error}`);
       } else {

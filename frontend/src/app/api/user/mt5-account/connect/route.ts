@@ -151,7 +151,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
 }
 
 /**
- * Get account information from MetaAPI
+ * Get account information from MetaAPI (with region detection)
  */
 async function getAccountInfo(metaApiAccountId: string): Promise<{
   balance: number;
@@ -165,13 +165,31 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
   }
 
   const headers = { 'auth-token': META_API_TOKEN };
+  const config = { headers, timeout: 30000, httpsAgent };
 
   try {
     console.log('Fetching account info for MetaAPI account:', metaApiAccountId);
     
+    // First get account details to find region
+    const accountResponse = await axios.get(
+      `${PROVISIONING_API_URL}/users/current/accounts/${metaApiAccountId}`,
+      config
+    );
+    
+    const region = accountResponse.data.region || 'vint-hill';
+    const regionClientApiMap: Record<string, string> = {
+      'vint-hill': 'https://mt-client-api-v1.vint-hill.agiliumtrade.ai',
+      'new-york': 'https://mt-client-api-v1.new-york.agiliumtrade.ai',
+      'london': 'https://mt-client-api-v1.london.agiliumtrade.ai',
+      'singapore': 'https://mt-client-api-v1.singapore.agiliumtrade.ai',
+    };
+    const clientApiUrl = regionClientApiMap[region] || CLIENT_API_URL;
+    
+    console.log('Account region:', region, 'using:', clientApiUrl);
+    
     const response = await axios.get(
-      `${CLIENT_API_URL}/users/current/accounts/${metaApiAccountId}/account-information`,
-      { headers, timeout: 30000, httpsAgent }
+      `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/account-information`,
+      config
     );
 
     const data = response.data;

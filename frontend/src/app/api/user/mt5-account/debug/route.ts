@@ -142,10 +142,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(debug);
     }
 
+    // Determine the correct regional endpoint based on account region
+    // MetaAPI uses region-specific client API endpoints
+    const region = matchingAccount.region || 'vint-hill';
+    const regionClientApiMap: Record<string, string> = {
+      'vint-hill': 'https://mt-client-api-v1.vint-hill.agiliumtrade.ai',
+      'new-york': 'https://mt-client-api-v1.new-york.agiliumtrade.ai',
+      'london': 'https://mt-client-api-v1.london.agiliumtrade.ai',
+      'singapore': 'https://mt-client-api-v1.singapore.agiliumtrade.ai',
+    };
+    const clientApiUrl = regionClientApiMap[region] || CLIENT_API_URL;
+    
+    debug.step5_region = { region, clientApiUrl };
+
     // Get account info
     try {
       const infoResponse = await axios.get(
-        `${CLIENT_API_URL}/users/current/accounts/${matchingAccount._id}/account-information`,
+        `${clientApiUrl}/users/current/accounts/${matchingAccount._id}/account-information`,
         config
       );
 
