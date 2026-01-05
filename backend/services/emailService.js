@@ -3,26 +3,34 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Check if SMTP is configured
+const isSmtpConfigured = process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS;
+
 // Create email transporter with standardized env vars
-const transporter = nodemailer.createTransport({
+const transporter = isSmtpConfigured ? nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT),
   secure: process.env.SMTP_SECURE === 'true' || parseInt(process.env.SMTP_PORT) === 465,
   auth: {
     user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD, // Use SMTP_PASS (SMTP_PASSWORD deprecated)
+    pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
   },
-});
+}) : null;
 
-// Verify email configuration
-transporter.verify((error) => {
-  if (error) {
-    console.log('❌ Email service not configured properly. Check SMTP settings.');
-    console.log('   Required: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM');
-  } else {
-    console.log('✅ Email service ready');
-  }
-});
+// Verify email configuration (non-blocking)
+if (transporter) {
+  transporter.verify()
+    .then(() => {
+      console.log('✅ Email service ready');
+    })
+    .catch((error) => {
+      console.log('⚠️  Email verification failed, but service will still attempt to send emails.');
+      console.log('   Error:', error.message);
+    });
+} else {
+  console.log('⚠️  Email service not configured. Missing SMTP environment variables.');
+  console.log('   Required: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM');
+}
 
 // Email templates
 const emailTemplates = {
