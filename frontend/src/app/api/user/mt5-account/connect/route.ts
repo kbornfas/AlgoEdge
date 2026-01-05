@@ -24,10 +24,13 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
   error?: string;
 }> {
   if (!META_API_TOKEN) {
+    console.error('METAAPI_TOKEN not configured');
     return { success: false, error: 'MetaAPI token not configured' };
   }
 
   try {
+    console.log('Checking for existing MetaAPI account...');
+    
     // First, check if account already exists in MetaAPI
     const listResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts`, {
       headers: {
@@ -37,21 +40,46 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
 
     if (listResponse.ok) {
       const accounts = await listResponse.json();
-      const existingAccount = accounts.find((acc: any) => acc.login === accountId && acc.server === server);
+      console.log('Found', accounts.length, 'MetaAPI accounts');
+      
+      // Compare as strings to handle type mismatch
+      const existingAccount = accounts.find((acc: any) => 
+        String(acc.login) === String(accountId) && acc.server === server
+      );
       
       if (existingAccount) {
+        console.log('Found existing account:', existingAccount._id, 'state:', existingAccount.state);
+        
         // Account exists, deploy it if needed
         if (existingAccount.state !== 'DEPLOYED') {
+          console.log('Deploying existing account...');
           await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}/deploy`, {
             method: 'POST',
             headers: {
               'auth-token': META_API_TOKEN,
             },
           });
+          
+          // Wait for deployment
+          for (let i = 0; i < 15; i++) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const statusResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`, {
+              headers: { 'auth-token': META_API_TOKEN },
+            });
+            if (statusResponse.ok) {
+              const statusData = await statusResponse.json();
+              console.log('Existing account status:', statusData.state, statusData.connectionStatus);
+              if (statusData.state === 'DEPLOYED' && statusData.connectionStatus === 'CONNECTED') {
+                break;
+              }
+            }
+          }
         }
         return { success: true, metaApiAccountId: existingAccount._id };
       }
     }
+
+    console.log('Creating new MetaAPI account for', accountId, 'on', server);
 
     // Create new account in MetaAPI
     const createResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts`, {
@@ -72,6 +100,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
     });
 
     const createData = await createResponse.json();
+    console.log('Create account response:', createResponse.status, createData);
 
     if (!createResponse.ok) {
       console.error('MetaAPI create account error:', createData);
@@ -80,6 +109,8 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
         error: createData.message || 'Failed to provision account. Please verify your credentials.' 
       };
     }
+
+    console.log('Account created with ID:', createData.id, '- deploying...');
 
     // Deploy the account
     await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}/deploy`, {
@@ -102,6 +133,8 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
       
       if (statusResponse.ok) {
         const statusData = await statusResponse.json();
+        console.log('Deployment status:', statusData.state, statusData.connectionStatus);
+        
         if (statusData.state === 'DEPLOYED' && statusData.connectionStatus === 'CONNECTED') {
           deployed = true;
           break;
@@ -130,9 +163,14 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
   balance: number;
   equity: number;
 } | null> {
-  if (!META_API_TOKEN) return null;
+  if (!META_API_TOKEN) {
+    console.error('No META_API_TOKEN for getAccountInfo');
+    return null;
+  }
 
   try {
+    console.log('Fetching account info for MetaAPI account:', metaApiAccountId);
+    
     const response = await fetch(
       `${CLIENT_API_URL}/users/current/accounts/${metaApiAccountId}/account-information`,
       {
@@ -142,9 +180,17 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
       }
     );
 
-    if (!response.ok) return null;
+    console.log('Account info response status:', response.status);
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('Failed to get account info:', response.status, text);
+      return null;
+    }
 
     const data = await response.json();
+    console.log('Account info received:', JSON.stringify(data));
+    
     return {
       balance: data.balance || 0,
       equity: data.equity || 0,
@@ -175,6 +221,11 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { accountId, password, server } = connectSchema.parse(body);
+    
+    console.log('=== MT5 Connect Request ===');
+    console.log('User:', decoded.userId);
+    console.log('Account:', accountId);
+    console.log('Server:', server);
 
     // Check if user already has a connected account
     const existingAccount = await prisma.mt5Account.findFirst({
@@ -192,7 +243,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Provision account with MetaAPI (validates credentials)
+    console.log('Provisioning MetaAPI account...');
     const provisionResult = await provisionMetaApiAccount(accountId, password, server);
+    console.log('Provision result:', provisionResult);
 
     if (!provisionResult.success) {
       return NextResponse.json(
@@ -201,17 +254,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get real account balance
+    // Get real account balance - retry a few times if needed
     let balance = 0;
     let equity = 0;
     
     if (provisionResult.metaApiAccountId) {
-      const accountInfo = await getAccountInfo(provisionResult.metaApiAccountId);
-      if (accountInfo) {
-        balance = accountInfo.balance;
-        equity = accountInfo.equity;
+      console.log('Fetching account balance...');
+      
+      // Try multiple times as account may need time to sync
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const accountInfo = await getAccountInfo(provisionResult.metaApiAccountId);
+        if (accountInfo && (accountInfo.balance > 0 || accountInfo.equity > 0)) {
+          balance = accountInfo.balance;
+          equity = accountInfo.equity;
+          console.log('Got balance:', balance, 'equity:', equity);
+          break;
+        }
+        console.log('Attempt', attempt + 1, '- waiting for balance sync...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
+
+    console.log('Final balance:', balance, 'equity:', equity);
 
     // Create/update the account record with real data
     const mt5Account = await prisma.mt5Account.create({

@@ -37,10 +37,12 @@ async function findAndDeployMetaApiAccount(login: string, server: string): Promi
     const accounts = await response.json();
     console.log('Found MetaAPI accounts:', accounts.length);
     
-    const account = accounts.find((acc: any) => acc.login === login && acc.server === server);
+    // Compare as strings to handle type mismatch
+    const account = accounts.find((acc: any) => String(acc.login) === String(login) && acc.server === server);
     
     if (!account) {
       console.log('No matching account found for login:', login, 'server:', server);
+      console.log('Available accounts:', accounts.map((a: any) => ({ login: a.login, server: a.server })));
       return { accountId: null, state: 'NOT_FOUND', connectionStatus: 'NOT_FOUND', error: 'Account not found in MetaAPI' };
     }
 
