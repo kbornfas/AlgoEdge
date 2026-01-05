@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "buildCommand": "node scripts/vercel-build.js && npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "rootDirectory": "frontend",
+  "regions": ["iad1"],
+  "functions": {
+    "src/app/api/**/*.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "SKIP_DB_MIGRATIONS": "true"
+  }
+}
