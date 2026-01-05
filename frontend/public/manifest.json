@@ -1,16 +1,50 @@
 {
-  "name": "AlgoEdge",
+  "name": "AlgoEdge - AI-Powered Automated Forex Trading Platform",
   "short_name": "AlgoEdge",
-  "description": "Automated Forex Trading Platform with MetaTrader 5 Integration",
+  "description": "Connect your MT5 account and let our 12+ intelligent trading robots trade XAUUSD, EURUSD, GBPUSD and more with up to 84% win rate.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#0a0e27",
-  "theme_color": "#3B82F6",
+  "theme_color": "#1a237e",
+  "lang": "en-US",
+  "categories": ["finance", "business", "productivity"],
   "icons": [
     {
       "src": "/favicon.ico",
       "sizes": "any",
       "type": "image/x-icon"
+    },
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Login",
+      "url": "/auth/login",
+      "description": "Login to your AlgoEdge account"
+    },
+    {
+      "name": "Register",
+      "url": "/auth/register",
+      "description": "Create a new AlgoEdge account"
+    },
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "View your trading dashboard"
     }
   ]
 }
