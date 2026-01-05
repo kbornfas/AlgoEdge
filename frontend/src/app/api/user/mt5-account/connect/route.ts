@@ -7,7 +7,6 @@ import axios from 'axios';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Allow up to 60s for connection
 
-const META_API_TOKEN = process.env.METAAPI_TOKEN;
 const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
 const CLIENT_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
 
@@ -15,12 +14,6 @@ const connectSchema = z.object({
   accountId: z.string().min(1),
   password: z.string().min(1),
   server: z.string().min(1),
-});
-
-// Create axios instance with proper config for serverless
-const api = axios.create({
-  timeout: 30000,
-  headers: { 'auth-token': META_API_TOKEN || '' },
 });
 
 /**
@@ -31,16 +24,21 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
   metaApiAccountId?: string;
   error?: string;
 }> {
+  const META_API_TOKEN = process.env.METAAPI_TOKEN;
+  
   if (!META_API_TOKEN) {
     console.error('METAAPI_TOKEN not configured');
     return { success: false, error: 'MetaAPI token not configured. Contact admin.' };
   }
 
+  const headers = { 'auth-token': META_API_TOKEN };
+  const config = { headers, timeout: 30000 };
+
   try {
     console.log('Checking for existing MetaAPI account...');
     
     // First, check if account already exists in MetaAPI
-    const listResponse = await api.get(`${PROVISIONING_API_URL}/users/current/accounts`);
+    const listResponse = await axios.get(`${PROVISIONING_API_URL}/users/current/accounts`, config);
     const accounts = listResponse.data;
     console.log('Found', accounts.length, 'MetaAPI accounts');
     
@@ -55,13 +53,13 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
       // Account exists, deploy it if needed
       if (existingAccount.state !== 'DEPLOYED') {
         console.log('Deploying existing account...');
-        await api.post(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}/deploy`);
+        await axios.post(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}/deploy`, {}, config);
         
         // Wait for deployment
         for (let i = 0; i < 20; i++) {
           await new Promise(resolve => setTimeout(resolve, 2000));
           try {
-            const statusResponse = await api.get(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`);
+            const statusResponse = await axios.get(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`, config);
             const statusData = statusResponse.data;
             console.log('Account status:', statusData.state, statusData.connectionStatus);
             if (statusData.state === 'DEPLOYED' && statusData.connectionStatus === 'CONNECTED') {
@@ -77,7 +75,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
         for (let i = 0; i < 10; i++) {
           await new Promise(resolve => setTimeout(resolve, 2000));
           try {
-            const statusResponse = await api.get(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`);
+            const statusResponse = await axios.get(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`, config);
             if (statusResponse.data.connectionStatus === 'CONNECTED') {
               console.log('Account now connected!');
               break;
@@ -93,7 +91,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
     console.log('Creating new MetaAPI account for', accountId, 'on', server);
 
     // Create new account in MetaAPI
-    const createResponse = await api.post(`${PROVISIONING_API_URL}/users/current/accounts`, {
+    const createResponse = await axios.post(`${PROVISIONING_API_URL}/users/current/accounts`, {
       name: `AlgoEdge-${accountId}`,
       type: 'cloud',
       login: accountId,
@@ -101,14 +99,14 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
       server: server,
       platform: 'mt5',
       magic: 123456,
-    });
+    }, config);
 
     const createData = createResponse.data;
     console.log('Account created with ID:', createData.id);
 
     // Deploy the account
     console.log('Deploying new account...');
-    await api.post(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}/deploy`);
+    await axios.post(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}/deploy`, {}, config);
 
     // Wait for deployment and connection (poll for status)
     let deployed = false;
@@ -116,7 +114,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       try {
-        const statusResponse = await api.get(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}`);
+        const statusResponse = await axios.get(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}`, config);
         const statusData = statusResponse.data;
         console.log('Deployment status:', statusData.state, statusData.connectionStatus);
         
@@ -153,16 +151,21 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
   balance: number;
   equity: number;
 } | null> {
+  const META_API_TOKEN = process.env.METAAPI_TOKEN;
+  
   if (!META_API_TOKEN) {
     console.error('No META_API_TOKEN for getAccountInfo');
     return null;
   }
 
+  const headers = { 'auth-token': META_API_TOKEN };
+
   try {
     console.log('Fetching account info for MetaAPI account:', metaApiAccountId);
     
-    const response = await api.get(
-      `${CLIENT_API_URL}/users/current/accounts/${metaApiAccountId}/account-information`
+    const response = await axios.get(
+      `${CLIENT_API_URL}/users/current/accounts/${metaApiAccountId}/account-information`,
+      { headers, timeout: 30000 }
     );
 
     const data = response.data;

@@ -6,7 +6,6 @@ import axios from 'axios';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const META_API_TOKEN = process.env.METAAPI_TOKEN;
 const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
 const CLIENT_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
 
@@ -30,6 +29,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    // Read token at runtime, not module load
+    const META_API_TOKEN = process.env.METAAPI_TOKEN;
+    
     debug.step1_tokenCheck = {
       hasMetaApiToken: !!META_API_TOKEN,
       tokenLength: META_API_TOKEN?.length || 0,
@@ -39,6 +41,9 @@ export async function GET(req: NextRequest) {
       debug.error = 'METAAPI_TOKEN not found. Add it to Vercel Environment Variables!';
       return NextResponse.json(debug);
     }
+
+    const headers = { 'auth-token': META_API_TOKEN };
+    const config = { headers, timeout: 30000 };
 
     // Get user's MT5 account from database
     const mt5Account = await prisma.mt5Account.findFirst({
@@ -57,15 +62,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(debug);
     }
 
-    // List all MetaAPI accounts using axios
+    // List all MetaAPI accounts
     let accounts: any[] = [];
     try {
       const listResponse = await axios.get(
         `${PROVISIONING_API_URL}/users/current/accounts`,
-        { 
-          headers: { 'auth-token': META_API_TOKEN },
-          timeout: 30000,
-        }
+        config
       );
       accounts = listResponse.data;
       debug.step3_metaApiList = { 
@@ -120,7 +122,7 @@ export async function GET(req: NextRequest) {
         await axios.post(
           `${PROVISIONING_API_URL}/users/current/accounts/${matchingAccount._id}/deploy`,
           {},
-          { headers: { 'auth-token': META_API_TOKEN }, timeout: 10000 }
+          config
         );
         debug.step5 = 'Deploy request sent. Wait 30s and try again.';
       } catch (e: any) {
@@ -138,10 +140,7 @@ export async function GET(req: NextRequest) {
     try {
       const infoResponse = await axios.get(
         `${CLIENT_API_URL}/users/current/accounts/${matchingAccount._id}/account-information`,
-        { 
-          headers: { 'auth-token': META_API_TOKEN },
-          timeout: 30000,
-        }
+        config
       );
 
       const info = infoResponse.data;

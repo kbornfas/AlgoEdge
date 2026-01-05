@@ -6,7 +6,6 @@ import axios from 'axios';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const META_API_TOKEN = process.env.METAAPI_TOKEN;
 const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
 const CLIENT_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
 
@@ -19,15 +18,20 @@ async function getMetaApiAccountInfo(login: string, server: string): Promise<{
   equity: number;
   error?: string;
 }> {
+  const META_API_TOKEN = process.env.METAAPI_TOKEN;
+  
   if (!META_API_TOKEN) {
     return { metaApiId: null, balance: 0, equity: 0, error: 'No MetaAPI token' };
   }
+
+  const headers = { 'auth-token': META_API_TOKEN };
+  const config = { headers, timeout: 30000 };
 
   try {
     // List accounts
     const listResponse = await axios.get(
       `${PROVISIONING_API_URL}/users/current/accounts`,
-      { headers: { 'auth-token': META_API_TOKEN }, timeout: 30000 }
+      config
     );
 
     const accounts = listResponse.data;
@@ -51,7 +55,7 @@ async function getMetaApiAccountInfo(login: string, server: string): Promise<{
     // Get account info
     const infoResponse = await axios.get(
       `${CLIENT_API_URL}/users/current/accounts/${account._id}/account-information`,
-      { headers: { 'auth-token': META_API_TOKEN }, timeout: 30000 }
+      config
     );
 
     const info = infoResponse.data;
