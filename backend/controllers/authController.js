@@ -46,10 +46,10 @@ export const register = async (req, res) => {
     
     // Create user with OTP (not verified yet)
     const result = await client.query(
-      `INSERT INTO users (username, email, password_hash, is_verified, verification_code, verification_code_expires, verification_code_attempts)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO users (username, email, password_hash, is_verified, verification_token, verification_expires)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, username, email, created_at`,
-      [username, email, passwordHash, false, otpCode, otpExpires, 0]
+      [username, email, passwordHash, false, otpCode, otpExpires]
     );
     const user = result.rows[0];
     // Create default subscription
@@ -420,7 +420,7 @@ export const sendVerificationCode = async (req, res) => {
     // Store code in database
     await pool.query(
       `UPDATE users 
-       SET verification_code = $1, verification_code_expires = $2, verification_code_attempts = 0
+       SET verification_token = $1, verification_expires = $2
        WHERE id = $3`,
       [code, expiresAt, user.id]
     );
@@ -463,8 +463,8 @@ export const verifyCode = async (req, res) => {
 
     // Find user
     const userQuery = email
-      ? 'SELECT id, username, email, verification_code, verification_code_expires, verification_code_attempts FROM users WHERE email = $1'
-      : 'SELECT id, username, email, verification_code, verification_code_expires, verification_code_attempts FROM users WHERE phone = $1';
+      ? 'SELECT id, username, email, verification_token, verification_expires FROM users WHERE email = $1'
+      : 'SELECT id, username, email, verification_token, verification_expires FROM users WHERE phone = $1';
     
     const result = await pool.query(userQuery, [email || phone]);
 
@@ -475,49 +475,31 @@ export const verifyCode = async (req, res) => {
     const user = result.rows[0];
 
     // Check if code exists
-    if (!user.verification_code) {
+    if (!user.verification_token) {
       return res.status(400).json({ error: 'No verification code found. Please request a new one.' });
     }
 
     // Check if code expired
-    if (new Date() > new Date(user.verification_code_expires)) {
+    if (new Date() > new Date(user.verification_expires)) {
       await pool.query(
-        'UPDATE users SET verification_code = NULL, verification_code_expires = NULL WHERE id = $1',
+        'UPDATE users SET verification_token = NULL, verification_expires = NULL WHERE id = $1',
         [user.id]
       );
       return res.status(400).json({ error: 'Verification code expired. Please request a new one.' });
     }
 
-    // Check attempts (max 5)
-    if (user.verification_code_attempts >= 5) {
-      await pool.query(
-        'UPDATE users SET verification_code = NULL, verification_code_expires = NULL WHERE id = $1',
-        [user.id]
-      );
-      return res.status(429).json({ error: 'Too many attempts. Please request a new code.' });
-    }
-
     // Verify code
-    if (user.verification_code !== code) {
-      // Increment attempts
-      await pool.query(
-        'UPDATE users SET verification_code_attempts = verification_code_attempts + 1 WHERE id = $1',
-        [user.id]
-      );
-      
-      const attemptsLeft = 5 - (user.verification_code_attempts + 1);
+    if (user.verification_token !== code) {
       return res.status(400).json({ 
-        error: 'Invalid verification code',
-        attemptsLeft 
+        error: 'Invalid verification code'
       });
     }
 
     // Code is valid - clear it and mark user as verified
     await pool.query(
       `UPDATE users 
-       SET verification_code = NULL, 
-           verification_code_expires = NULL, 
-           verification_code_attempts = 0,
+       SET verification_token = NULL, 
+           verification_expires = NULL,
            is_verified = true
        WHERE id = $1`,
       [user.id]
