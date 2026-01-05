@@ -18,7 +18,8 @@ export const auditLog = async (userId, action, details = {}, req = null) => {
   }
 };
 
-export const auditMiddleware = (action) => {
+// Middleware factory - returns a middleware for specific actions
+export const auditMiddlewareFactory = (action) => {
   return async (req, res, next) => {
     const originalJson = res.json.bind(res);
     
@@ -36,4 +37,9 @@ export const auditMiddleware = (action) => {
     
     next();
   };
+};
+
+// Global audit middleware - just passes through (audit happens on specific routes)
+export const auditMiddleware = (req, res, next) => {
+  next();
 };
