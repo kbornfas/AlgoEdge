@@ -311,16 +311,20 @@ export default function RobotsPage() {
     }
   }, [getAuthHeaders]);
 
-  // Fetch account info
+  // Fetch account info from MT5 connection
   const fetchAccountInfo = useCallback(async () => {
     try {
-      const response = await fetch('/api/user/mt5/account', {
+      // Use the same endpoint as MT5 Connection page
+      const response = await fetch('/api/user/mt5-account', {
         headers: getAuthHeaders(),
       });
       if (response.ok) {
         const data = await response.json();
-        setAccountBalance(data.balance || 0);
-        setAccountEquity(data.equity || 0);
+        // Account data comes from data.account
+        if (data.account) {
+          setAccountBalance(data.account.balance || 0);
+          setAccountEquity(data.account.equity || 0);
+        }
       }
     } catch (err) {
       console.error('Error fetching account:', err);
