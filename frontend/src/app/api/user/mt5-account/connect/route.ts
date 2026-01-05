@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { z } from 'zod';
+import axios from 'axios';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Allow up to 60s for connection
 
 const META_API_TOKEN = process.env.METAAPI_TOKEN;
 const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
@@ -13,6 +15,12 @@ const connectSchema = z.object({
   accountId: z.string().min(1),
   password: z.string().min(1),
   server: z.string().min(1),
+});
+
+// Create axios instance with proper config for serverless
+const api = axios.create({
+  timeout: 30000,
+  headers: { 'auth-token': META_API_TOKEN || '' },
 });
 
 /**
@@ -25,114 +33,91 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
 }> {
   if (!META_API_TOKEN) {
     console.error('METAAPI_TOKEN not configured');
-    return { success: false, error: 'MetaAPI token not configured' };
+    return { success: false, error: 'MetaAPI token not configured. Contact admin.' };
   }
 
   try {
     console.log('Checking for existing MetaAPI account...');
     
     // First, check if account already exists in MetaAPI
-    const listResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts`, {
-      headers: {
-        'auth-token': META_API_TOKEN,
-      },
-    });
-
-    if (listResponse.ok) {
-      const accounts = await listResponse.json();
-      console.log('Found', accounts.length, 'MetaAPI accounts');
+    const listResponse = await api.get(`${PROVISIONING_API_URL}/users/current/accounts`);
+    const accounts = listResponse.data;
+    console.log('Found', accounts.length, 'MetaAPI accounts');
+    
+    // Compare as strings to handle type mismatch
+    const existingAccount = accounts.find((acc: any) => 
+      String(acc.login) === String(accountId) && acc.server === server
+    );
+    
+    if (existingAccount) {
+      console.log('Found existing account:', existingAccount._id, 'state:', existingAccount.state, 'connection:', existingAccount.connectionStatus);
       
-      // Compare as strings to handle type mismatch
-      const existingAccount = accounts.find((acc: any) => 
-        String(acc.login) === String(accountId) && acc.server === server
-      );
-      
-      if (existingAccount) {
-        console.log('Found existing account:', existingAccount._id, 'state:', existingAccount.state);
+      // Account exists, deploy it if needed
+      if (existingAccount.state !== 'DEPLOYED') {
+        console.log('Deploying existing account...');
+        await api.post(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}/deploy`);
         
-        // Account exists, deploy it if needed
-        if (existingAccount.state !== 'DEPLOYED') {
-          console.log('Deploying existing account...');
-          await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}/deploy`, {
-            method: 'POST',
-            headers: {
-              'auth-token': META_API_TOKEN,
-            },
-          });
-          
-          // Wait for deployment
-          for (let i = 0; i < 15; i++) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            const statusResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`, {
-              headers: { 'auth-token': META_API_TOKEN },
-            });
-            if (statusResponse.ok) {
-              const statusData = await statusResponse.json();
-              console.log('Existing account status:', statusData.state, statusData.connectionStatus);
-              if (statusData.state === 'DEPLOYED' && statusData.connectionStatus === 'CONNECTED') {
-                break;
-              }
+        // Wait for deployment
+        for (let i = 0; i < 20; i++) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          try {
+            const statusResponse = await api.get(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`);
+            const statusData = statusResponse.data;
+            console.log('Account status:', statusData.state, statusData.connectionStatus);
+            if (statusData.state === 'DEPLOYED' && statusData.connectionStatus === 'CONNECTED') {
+              break;
             }
+          } catch (e) {
+            console.log('Status check error, retrying...');
           }
         }
-        return { success: true, metaApiAccountId: existingAccount._id };
+      } else if (existingAccount.connectionStatus !== 'CONNECTED') {
+        // Account is deployed but not connected - wait for connection
+        console.log('Account deployed but not connected, waiting...');
+        for (let i = 0; i < 10; i++) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          try {
+            const statusResponse = await api.get(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`);
+            if (statusResponse.data.connectionStatus === 'CONNECTED') {
+              console.log('Account now connected!');
+              break;
+            }
+          } catch (e) {
+            console.log('Connection check error, retrying...');
+          }
+        }
       }
+      return { success: true, metaApiAccountId: existingAccount._id };
     }
 
     console.log('Creating new MetaAPI account for', accountId, 'on', server);
 
     // Create new account in MetaAPI
-    const createResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts`, {
-      method: 'POST',
-      headers: {
-        'auth-token': META_API_TOKEN,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: `AlgoEdge-${accountId}`,
-        type: 'cloud',
-        login: accountId,
-        password: password,
-        server: server,
-        platform: 'mt5',
-        magic: 123456,
-      }),
+    const createResponse = await api.post(`${PROVISIONING_API_URL}/users/current/accounts`, {
+      name: `AlgoEdge-${accountId}`,
+      type: 'cloud',
+      login: accountId,
+      password: password,
+      server: server,
+      platform: 'mt5',
+      magic: 123456,
     });
 
-    const createData = await createResponse.json();
-    console.log('Create account response:', createResponse.status, createData);
-
-    if (!createResponse.ok) {
-      console.error('MetaAPI create account error:', createData);
-      return { 
-        success: false, 
-        error: createData.message || 'Failed to provision account. Please verify your credentials.' 
-      };
-    }
-
-    console.log('Account created with ID:', createData.id, '- deploying...');
+    const createData = createResponse.data;
+    console.log('Account created with ID:', createData.id);
 
     // Deploy the account
-    await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}/deploy`, {
-      method: 'POST',
-      headers: {
-        'auth-token': META_API_TOKEN,
-      },
-    });
+    console.log('Deploying new account...');
+    await api.post(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}/deploy`);
 
-    // Wait for deployment (poll for status)
+    // Wait for deployment and connection (poll for status)
     let deployed = false;
     for (let i = 0; i < 30; i++) {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const statusResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}`, {
-        headers: {
-          'auth-token': META_API_TOKEN,
-        },
-      });
-      
-      if (statusResponse.ok) {
-        const statusData = await statusResponse.json();
+      try {
+        const statusResponse = await api.get(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}`);
+        const statusData = statusResponse.data;
         console.log('Deployment status:', statusData.state, statusData.connectionStatus);
         
         if (statusData.state === 'DEPLOYED' && statusData.connectionStatus === 'CONNECTED') {
@@ -140,19 +125,24 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
           break;
         }
         if (statusData.state === 'DEPLOY_FAILED') {
-          return { success: false, error: 'Account deployment failed. Please verify your MT5 credentials.' };
+          return { success: false, error: 'Account deployment failed. Please verify your MT5 credentials and server name.' };
         }
+      } catch (e) {
+        console.log('Status check failed, retrying...');
       }
     }
 
     if (!deployed) {
-      return { success: false, error: 'Account deployment timed out. Please try again.' };
+      // Even if not fully connected yet, return success - user can refresh later
+      console.log('Account may still be deploying, returning ID anyway');
+      return { success: true, metaApiAccountId: createData.id };
     }
 
     return { success: true, metaApiAccountId: createData.id };
-  } catch (error) {
-    console.error('MetaAPI provisioning error:', error);
-    return { success: false, error: 'Failed to connect to MetaAPI' };
+  } catch (error: any) {
+    console.error('MetaAPI provisioning error:', error.response?.data || error.message);
+    const errorMsg = error.response?.data?.message || error.message || 'Failed to connect to MetaAPI';
+    return { success: false, error: errorMsg };
   }
 }
 
@@ -171,32 +161,19 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
   try {
     console.log('Fetching account info for MetaAPI account:', metaApiAccountId);
     
-    const response = await fetch(
-      `${CLIENT_API_URL}/users/current/accounts/${metaApiAccountId}/account-information`,
-      {
-        headers: {
-          'auth-token': META_API_TOKEN,
-        },
-      }
+    const response = await api.get(
+      `${CLIENT_API_URL}/users/current/accounts/${metaApiAccountId}/account-information`
     );
 
-    console.log('Account info response status:', response.status);
-
-    if (!response.ok) {
-      const text = await response.text();
-      console.error('Failed to get account info:', response.status, text);
-      return null;
-    }
-
-    const data = await response.json();
+    const data = response.data;
     console.log('Account info received:', JSON.stringify(data));
     
     return {
       balance: data.balance || 0,
-      equity: data.equity || 0,
+      equity: data.equity || data.balance || 0,
     };
-  } catch (error) {
-    console.error('Error fetching account info:', error);
+  } catch (error: any) {
+    console.error('Error fetching account info:', error.response?.data || error.message);
     return null;
   }
 }
@@ -254,15 +231,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get real account balance - retry a few times if needed
+    // Get real account balance - retry multiple times with increasing delays
     let balance = 0;
     let equity = 0;
     
     if (provisionResult.metaApiAccountId) {
       console.log('Fetching account balance...');
       
+      // Wait a bit for sync to happen
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
       // Try multiple times as account may need time to sync
-      for (let attempt = 0; attempt < 5; attempt++) {
+      for (let attempt = 0; attempt < 8; attempt++) {
         const accountInfo = await getAccountInfo(provisionResult.metaApiAccountId);
         if (accountInfo && (accountInfo.balance > 0 || accountInfo.equity > 0)) {
           balance = accountInfo.balance;
@@ -270,8 +250,14 @@ export async function POST(req: NextRequest) {
           console.log('Got balance:', balance, 'equity:', equity);
           break;
         }
-        console.log('Attempt', attempt + 1, '- waiting for balance sync...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('Attempt', attempt + 1, '- balance is 0, waiting for sync...');
+        // Progressive delay: 2s, 3s, 4s, 5s...
+        await new Promise(resolve => setTimeout(resolve, 2000 + (attempt * 1000)));
+      }
+      
+      // If still 0, that's okay - user can refresh later
+      if (balance === 0) {
+        console.log('Balance still 0 - account may need more time to sync. User can refresh later.');
       }
     }
 

@@ -116,6 +116,10 @@ export default function MT5ConnectionPage() {
   };
 
   const handleDebug = async () => {
+    setRefreshing(true);
+    setError('');
+    setSuccess('');
+    
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/user/mt5-account/debug', {
@@ -127,23 +131,33 @@ export default function MT5ConnectionPage() {
       
       // Show meaningful info to user
       if (data.error) {
-        alert('ERROR: ' + data.error);
+        setError('ERROR: ' + data.error);
       } else if (data.SUCCESS) {
-        alert('SUCCESS! ' + data.SUCCESS + '\n\nBalance: $' + (data.step6_accountInfo?.data?.balance || 0));
-        // Refresh the page data
-        fetchMT5Account();
-      } else if (data.step4_matchingAccount === 'NOT FOUND - Looking for login=' + account?.accountId) {
-        alert('Account not found in MetaAPI.\n\nPlease DISCONNECT and RECONNECT with your MT5 password.');
-      } else if (data.step5_connection) {
-        alert('Connection issue: ' + data.step5_connection + '\n\nSuggestion: ' + (data.suggestion || 'Check credentials'));
+        setSuccess(data.SUCCESS);
+        // Refresh the page data after successful debug
+        await fetchMT5Account();
+      } else if (data.step4_matchingAccount && typeof data.step4_matchingAccount === 'string' && data.step4_matchingAccount.includes('NOT FOUND')) {
+        setError('Account not found in MetaAPI. Please DISCONNECT and RECONNECT with your MT5 password.');
+      } else if (data.step5 && typeof data.step5 === 'string') {
+        setError(data.step5);
       } else if (!data.step1_tokenCheck?.hasMetaApiToken) {
-        alert('METAAPI_TOKEN is not configured in Vercel!\n\nGo to Vercel Dashboard > Settings > Environment Variables and add METAAPI_TOKEN');
+        setError('METAAPI_TOKEN is not configured. Contact admin to add it in Vercel settings.');
+      } else if (data.step6_accountInfo) {
+        const bal = data.step6_accountInfo.balance || 0;
+        if (bal > 0) {
+          setSuccess(`Found balance: $${bal}. Refresh complete!`);
+          await fetchMT5Account();
+        } else {
+          setError('Account connected but balance is 0. Ensure your MT5 account has funds.');
+        }
       } else {
-        alert('Debug complete - check console (F12) for details.\n\nLast status: ' + JSON.stringify(data.step6_accountInfo || data.step4_matchingAccount || 'Unknown'));
+        setError('Debug complete - check browser console (F12) for details.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Debug error:', err);
-      alert('Debug failed: ' + err);
+      setError('Debug failed: ' + (err.message || err));
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -282,6 +296,11 @@ export default function MT5ConnectionPage() {
                     <Typography variant="h5" sx={{ fontWeight: 600 }}>
                       ${account.balance?.toLocaleString()}
                     </Typography>
+                    {account.balance === 0 && (
+                      <Typography variant="caption" color="warning.main">
+                        Balance may take 1-2 min to sync. Click Refresh.
+                      </Typography>
+                    )}
                   </CardContent>
                 </Card>
               </Grid>
