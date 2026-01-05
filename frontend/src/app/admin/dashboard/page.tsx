@@ -315,29 +315,40 @@ export default function AdminDashboard() {
                         {new Date(user.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        {!user.isActivated && user.approvalStatus !== 'rejected' ? (
-                          <Button
-                            size="small"
-                            variant="contained"
-                            color="success"
-                            startIcon={<CheckCircle size={16} />}
-                            onClick={() => handleActivateUser(user.id, true)}
-                          >
-                            Approve
-                          </Button>
-                        ) : user.approvalStatus === 'rejected' ? (
-                          <Chip label="Rejected" color="error" size="small" />
-                        ) : (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="error"
-                            startIcon={<XCircle size={16} />}
-                            onClick={() => handleActivateUser(user.id, false)}
-                          >
-                            Reject
-                          </Button>
-                        )}
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          {/* Show Approve button if payment is pending or user is not activated */}
+                          {(user.paymentStatus === 'pending' || !user.isActivated) && user.approvalStatus !== 'rejected' && (
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="success"
+                              startIcon={<CheckCircle size={16} />}
+                              onClick={() => handleActivateUser(user.id, true)}
+                            >
+                              Approve
+                            </Button>
+                          )}
+                          {/* Show Reject button if not already rejected */}
+                          {user.approvalStatus !== 'rejected' && user.paymentStatus !== 'approved' && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              startIcon={<XCircle size={16} />}
+                              onClick={() => handleActivateUser(user.id, false)}
+                            >
+                              Reject
+                            </Button>
+                          )}
+                          {/* Show rejected status */}
+                          {user.approvalStatus === 'rejected' && (
+                            <Chip label="Rejected" color="error" size="small" />
+                          )}
+                          {/* Show approved status when fully approved */}
+                          {user.paymentStatus === 'approved' && user.isActivated && user.approvalStatus !== 'rejected' && (
+                            <Chip label="Approved" color="success" size="small" />
+                          )}
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))}
