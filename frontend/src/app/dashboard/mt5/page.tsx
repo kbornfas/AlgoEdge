@@ -115,6 +115,21 @@ export default function MT5ConnectionPage() {
     }
   };
 
+  const handleDebug = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/user/mt5-account/debug', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      console.log('=== MetaAPI Debug Info ===');
+      console.log(JSON.stringify(data, null, 2));
+      alert('Debug info logged to console (F12 to view). Check accountInfo for real balance.');
+    } catch (err) {
+      console.error('Debug error:', err);
+    }
+  };
+
   const handleConnect = async () => {
     if (!formData.accountId || !formData.password || !formData.server) {
       setError('Please fill in all fields');
@@ -269,7 +284,7 @@ export default function MT5ConnectionPage() {
             )}
           </Grid>
 
-          <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
+          <Box sx={{ mt: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <Button
               variant="outlined"
               startIcon={refreshing ? <CircularProgress size={18} /> : <RefreshCw size={18} />}
@@ -285,6 +300,13 @@ export default function MT5ConnectionPage() {
               onClick={handleDisconnect}
             >
               Disconnect
+            </Button>
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={handleDebug}
+            >
+              Debug
             </Button>
           </Box>
         </Paper>
