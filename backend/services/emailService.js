@@ -7,14 +7,18 @@ dotenv.config();
 const isSmtpConfigured = process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS;
 
 // Create email transporter with standardized env vars
+// For Gmail, use 'smtp.gmail.com' with port 465 (SSL) or 587 (TLS)
 const transporter = isSmtpConfigured ? nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT),
-  secure: process.env.SMTP_SECURE === 'true' || parseInt(process.env.SMTP_PORT) === 465,
+  secure: parseInt(process.env.SMTP_PORT) === 465, // true for 465, false for other ports
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
   },
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
 }) : null;
 
 // Verify email configuration (non-blocking)
@@ -26,6 +30,7 @@ if (transporter) {
     .catch((error) => {
       console.log('⚠️  Email verification failed, but service will still attempt to send emails.');
       console.log('   Error:', error.message);
+      console.log('   Tip: For Gmail, try SMTP_PORT=465 with SSL or use a service like SendGrid/Resend');
     });
 } else {
   console.log('⚠️  Email service not configured. Missing SMTP environment variables.');
