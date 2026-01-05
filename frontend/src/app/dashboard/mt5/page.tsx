@@ -51,6 +51,8 @@ export default function MT5ConnectionPage() {
   const [success, setSuccess] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   
+  const [refreshing, setRefreshing] = useState(false);
+  
   const [formData, setFormData] = useState({
     accountId: '',
     password: '',
@@ -82,6 +84,34 @@ export default function MT5ConnectionPage() {
       console.error('Failed to fetch MT5 account:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (!account) return;
+    
+    setRefreshing(true);
+    setError('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/user/mt5-account/refresh', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setAccount(data.account);
+        setSuccess('Balance updated from MetaAPI');
+      } else {
+        setError(data.error || 'Failed to refresh balance');
+      }
+    } catch (err) {
+      setError('Failed to refresh balance');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -242,10 +272,11 @@ export default function MT5ConnectionPage() {
           <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
             <Button
               variant="outlined"
-              startIcon={<RefreshCw size={18} />}
-              onClick={fetchMT5Account}
+              startIcon={refreshing ? <CircularProgress size={18} /> : <RefreshCw size={18} />}
+              onClick={handleRefresh}
+              disabled={refreshing}
             >
-              Refresh
+              {refreshing ? 'Refreshing...' : 'Refresh'}
             </Button>
             <Button
               variant="outlined"
