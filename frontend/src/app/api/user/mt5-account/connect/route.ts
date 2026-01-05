@@ -3,12 +3,18 @@ import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { z } from 'zod';
 import axios from 'axios';
+import https from 'https';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Allow up to 60s for connection
 
 const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
 const CLIENT_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
+
+// Create https agent that handles SSL certificates properly
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false, // Allow self-signed certificates
+});
 
 const connectSchema = z.object({
   accountId: z.string().min(1),
@@ -32,7 +38,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
   }
 
   const headers = { 'auth-token': META_API_TOKEN };
-  const config = { headers, timeout: 30000 };
+  const config = { headers, timeout: 30000, httpsAgent };
 
   try {
     console.log('Checking for existing MetaAPI account...');
@@ -165,7 +171,7 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
     
     const response = await axios.get(
       `${CLIENT_API_URL}/users/current/accounts/${metaApiAccountId}/account-information`,
-      { headers, timeout: 30000 }
+      { headers, timeout: 30000, httpsAgent }
     );
 
     const data = response.data;

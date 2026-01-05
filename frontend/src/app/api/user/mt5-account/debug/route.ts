@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import axios from 'axios';
+import https from 'https';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
 const CLIENT_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
+
+// Create https agent that handles SSL certificates properly
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false,
+});
 
 /**
  * GET /api/user/mt5-account/debug
@@ -43,7 +49,7 @@ export async function GET(req: NextRequest) {
     }
 
     const headers = { 'auth-token': META_API_TOKEN };
-    const config = { headers, timeout: 30000 };
+    const config = { headers, timeout: 30000, httpsAgent };
 
     // Get user's MT5 account from database
     const mt5Account = await prisma.mt5Account.findFirst({
