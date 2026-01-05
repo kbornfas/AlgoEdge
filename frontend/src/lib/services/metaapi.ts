@@ -238,7 +238,7 @@ class MetaAPIService {
    * - Apply strategy-specific rules
    * - Implement proper risk management
    */
-  async executeRobotStrategy(robotId: string, symbol: string, timeframe: string): Promise<boolean> {
+  async executeRobotStrategy(robotId: string, symbol: string, _timeframe: string): Promise<boolean> {
     try {
       // Get current price
       const price = await this.getPrice(symbol);

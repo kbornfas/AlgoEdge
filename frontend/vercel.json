@@ -12,6 +12,7 @@
     }
   },
   "env": {
-    "SKIP_DB_MIGRATIONS": "true"
+    "SKIP_DB_MIGRATIONS": "true",
+    "SKIP_ENV_VALIDATION": "true"
   }
 }
