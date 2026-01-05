@@ -13,7 +13,7 @@ import {
 } from './tradingStrategy';
 
 // MetaAPI configuration
-const META_API_TOKEN = process.env.META_API_TOKEN;
+const META_API_TOKEN = process.env.METAAPI_TOKEN;
 const META_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
 
 interface MetaApiAccount {
