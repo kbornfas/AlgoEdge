@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Allow up to 60 seconds
 
 const META_API_TOKEN = process.env.METAAPI_TOKEN;
 const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
@@ -13,6 +14,8 @@ const CLIENT_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
  * Debug MetaAPI connection and account status - also updates balance if found
  */
 export async function GET(req: NextRequest) {
+  const debug: any = { timestamp: new Date().toISOString() };
+  
   try {
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -26,11 +29,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const debug: any = {
-      step1_tokenCheck: {
-        hasMetaApiToken: !!META_API_TOKEN,
-        tokenLength: META_API_TOKEN?.length || 0,
-      },
+    debug.step1_tokenCheck = {
+      hasMetaApiToken: !!META_API_TOKEN,
+      tokenLength: META_API_TOKEN?.length || 0,
     };
 
     if (!META_API_TOKEN) {
@@ -60,28 +61,42 @@ export async function GET(req: NextRequest) {
     }
 
     // List all MetaAPI accounts
-    const listResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts`, {
-      headers: { 'auth-token': META_API_TOKEN },
-    });
+    let accounts: any[] = [];
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      const listResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts`, {
+        headers: { 'auth-token': META_API_TOKEN },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-    debug.step3_metaApiList = { status: listResponse.status };
+      debug.step3_metaApiList = { status: listResponse.status };
 
-    if (!listResponse.ok) {
-      const errorText = await listResponse.text();
-      debug.step3_metaApiList.error = errorText;
+      if (!listResponse.ok) {
+        const errorText = await listResponse.text();
+        debug.step3_metaApiList.error = errorText;
+        return NextResponse.json(debug);
+      }
+
+      accounts = await listResponse.json();
+      debug.step3_metaApiList.totalAccounts = accounts.length;
+      debug.step3_metaApiList.allAccounts = accounts.map((acc: any) => ({
+        id: acc._id,
+        login: acc.login,
+        server: acc.server,
+        state: acc.state,
+        connectionStatus: acc.connectionStatus,
+      }));
+    } catch (fetchError: any) {
+      debug.step3_metaApiList = { 
+        error: fetchError.message || 'Fetch failed',
+        name: fetchError.name,
+        cause: fetchError.cause?.message || 'Unknown'
+      };
       return NextResponse.json(debug);
     }
-
-    const accounts = await listResponse.json();
-    debug.step3_metaApiList.totalAccounts = accounts.length;
-    debug.step3_metaApiList.allAccounts = accounts.map((acc: any) => ({
-      id: acc._id,
-      login: acc.login,
-      loginType: typeof acc.login,
-      server: acc.server,
-      state: acc.state,
-      connectionStatus: acc.connectionStatus,
-    }));
 
     // Find matching account
     const matchingAccount = accounts.find((acc: any) => 
@@ -115,11 +130,15 @@ export async function GET(req: NextRequest) {
       debug.step5_deployment = `Account state is ${matchingAccount.state}, not DEPLOYED`;
       
       // Try to deploy
-      await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${matchingAccount._id}/deploy`, {
-        method: 'POST',
-        headers: { 'auth-token': META_API_TOKEN },
-      });
-      debug.step5_deployment = 'Sent deploy request. Wait 30 seconds and try again.';
+      try {
+        await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${matchingAccount._id}/deploy`, {
+          method: 'POST',
+          headers: { 'auth-token': META_API_TOKEN },
+        });
+        debug.step5_deployment = 'Sent deploy request. Wait 30 seconds and try again.';
+      } catch (e) {
+        debug.step5_deployment = 'Failed to deploy: ' + (e as any).message;
+      }
       return NextResponse.json(debug);
     }
 
@@ -130,53 +149,68 @@ export async function GET(req: NextRequest) {
     }
 
     // Get account info
-    const infoResponse = await fetch(
-      `${CLIENT_API_URL}/users/current/accounts/${matchingAccount._id}/account-information`,
-      { headers: { 'auth-token': META_API_TOKEN } }
-    );
-
-    debug.step6_accountInfo = { status: infoResponse.status };
-
-    if (!infoResponse.ok) {
-      const errorText = await infoResponse.text();
-      debug.step6_accountInfo.error = errorText;
-      return NextResponse.json(debug);
-    }
-
-    const info = await infoResponse.json();
-    debug.step6_accountInfo.data = {
-      balance: info.balance,
-      equity: info.equity,
-      currency: info.currency,
-      leverage: info.leverage,
-      name: info.name,
-      server: info.server,
-      platform: info.platform,
-    };
-
-    // UPDATE THE DATABASE with real balance!
-    if (info.balance !== undefined) {
-      const updated = await prisma.mt5Account.update({
-        where: { id: mt5Account.id },
-        data: {
-          balance: info.balance,
-          equity: info.equity || info.balance,
-          apiKey: matchingAccount._id,
-          lastSync: new Date(),
-        },
-      });
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       
-      debug.step7_updated = {
-        success: true,
-        newBalance: Number(updated.balance),
-        newEquity: Number(updated.equity),
+      const infoResponse = await fetch(
+        `${CLIENT_API_URL}/users/current/accounts/${matchingAccount._id}/account-information`,
+        { 
+          headers: { 'auth-token': META_API_TOKEN },
+          signal: controller.signal,
+        }
+      );
+      clearTimeout(timeoutId);
+
+      debug.step6_accountInfo = { status: infoResponse.status };
+
+      if (!infoResponse.ok) {
+        const errorText = await infoResponse.text();
+        debug.step6_accountInfo.error = errorText;
+        return NextResponse.json(debug);
+      }
+
+      const info = await infoResponse.json();
+      debug.step6_accountInfo.data = {
+        balance: info.balance,
+        equity: info.equity,
+        currency: info.currency,
+        leverage: info.leverage,
+        name: info.name,
+        server: info.server,
+      };
+
+      // UPDATE THE DATABASE with real balance!
+      if (info.balance !== undefined) {
+        const updated = await prisma.mt5Account.update({
+          where: { id: mt5Account.id },
+          data: {
+            balance: info.balance,
+            equity: info.equity || info.balance,
+            apiKey: matchingAccount._id,
+            lastSync: new Date(),
+          },
+        });
+        
+        debug.step7_updated = {
+          success: true,
+          newBalance: Number(updated.balance),
+          newEquity: Number(updated.equity),
+        };
+      }
+
+      debug.SUCCESS = 'Balance fetched and updated! Refresh the page to see new balance.';
+    } catch (infoError: any) {
+      debug.step6_accountInfo = {
+        error: infoError.message || 'Fetch failed',
+        name: infoError.name,
       };
     }
 
-    debug.SUCCESS = 'Balance fetched and updated! Refresh the page to see new balance.';
-
     return NextResponse.json(debug);
-  } catch (error) {
-    return NextResponse.json({ error: String(error), stack: (error as any).stack }, { status: 500 });
+  } catch (error: any) {
+    debug.error = error.message || String(error);
+    debug.stack = error.stack;
+    return NextResponse.json(debug, { status: 500 });
   }
 }
