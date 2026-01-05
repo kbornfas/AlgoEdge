@@ -4,6 +4,19 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   
+  // ESLint configuration for builds
+  eslint: {
+    // Warnings won't fail the build, but errors will
+    ignoreDuringBuilds: false,
+  },
+  
+  // TypeScript configuration for builds  
+  typescript: {
+    // Don't fail build on type errors during production builds
+    // Type checking happens separately in CI
+    ignoreBuildErrors: false,
+  },
+  
   // Security headers
   async headers() {
     return [

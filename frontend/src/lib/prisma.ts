@@ -2,16 +2,24 @@ import { PrismaClient } from '@prisma/client';
 import { validateEnvironmentOrThrow } from './env-validator';
 
 // Validate environment variables before initializing Prisma
-// Skip validation during Vercel builds, validate at runtime otherwise
-if (typeof window === 'undefined' && process.env.VERCEL !== '1') {
-  // Skip validation during Vercel build
+// Skip validation during builds (Vercel, CI, or when SKIP_ENV_VALIDATION is set)
+if (
+  typeof window === 'undefined' && 
+  process.env.VERCEL !== '1' && 
+  process.env.CI !== 'true' &&
+  process.env.SKIP_ENV_VALIDATION !== 'true'
+) {
+  // Only validate at runtime, not during builds
   try {
     validateEnvironmentOrThrow();
   } catch (error) {
     console.error('Environment validation warning:', error);
     // Don't throw during build - only warn
     if (process.env.NODE_ENV === 'production' && !process.env.SKIP_ENV_VALIDATION) {
-      throw error;
+      // Allow build to continue even in production if we're still building
+      if (!process.env.NEXT_PHASE || process.env.NEXT_PHASE !== 'phase-production-build') {
+        throw error;
+      }
     }
   }
 }
