@@ -25,6 +25,21 @@ const httpsAgent = new https.Agent({
   rejectUnauthorized: false
 });
 
+// Simple ATR calculation for forced signals
+function calculateATRSimple(candles: CandleData[], period: number = 14): number {
+  if (candles.length < period + 1) return 0;
+  
+  let trSum = 0;
+  for (let i = candles.length - period; i < candles.length; i++) {
+    const high = candles[i].high;
+    const low = candles[i].low;
+    const prevClose = candles[i - 1]?.close || candles[i].open;
+    const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+    trSum += tr;
+  }
+  return trSum / period;
+}
+
 // MetaAPI configuration - read at runtime
 function getMetaApiToken() {
   return process.env.METAAPI_TOKEN || process.env.META_API_TOKEN;
@@ -512,6 +527,48 @@ export async function runRobotTrading(
 
     console.log(`📊 Found ${analyzedSignals.length} trading signals`);
 
+    // If no signals found, force analyze TIER1 pairs for ANY opportunity
+    if (analyzedSignals.length === 0 && availableSlots > 0) {
+      console.log('⚡ No signals found, forcing analysis on TIER1 pairs...');
+      for (const symbol of TIER1_PAIRS) {
+        if (openSymbols.has(symbol)) continue;
+        
+        try {
+          const candles = await getCandles(metaApiAccountId, symbol, timeframe, 200);
+          if (candles.length < 50) continue;
+          
+          // Force generate a signal based on simple trend
+          const closes = candles.slice(-20).map(c => c.close);
+          const currentPrice = closes[closes.length - 1];
+          const avgPrice = closes.reduce((a, b) => a + b, 0) / closes.length;
+          const atr = calculateATRSimple(candles);
+          
+          const isBullish = currentPrice > avgPrice;
+          const signal: TradingSignal = {
+            symbol,
+            type: isBullish ? 'BUY' : 'SELL',
+            confidence: 35,
+            entryPrice: currentPrice,
+            stopLoss: isBullish ? currentPrice - (atr * 2) : currentPrice + (atr * 2),
+            takeProfit: isBullish ? currentPrice + (atr * 3) : currentPrice - (atr * 3),
+            takeProfit2: isBullish ? currentPrice + (atr * 4) : currentPrice - (atr * 4),
+            takeProfit3: isBullish ? currentPrice + (atr * 5) : currentPrice - (atr * 5),
+            trailingStop: atr * 1.5,
+            reason: `Forced entry - ${isBullish ? 'bullish' : 'bearish'} bias`,
+            priority: 100,
+            expectedProfit: 1.5,
+            riskRewardRatio: 1.5,
+            indicators: {} as any,
+          };
+          
+          analyzedSignals.push(signal);
+          console.log(`⚡ Forced signal: ${signal.type} ${symbol} @ ${signal.confidence}%`);
+          break; // Just get one forced signal
+        } catch (err) {
+          console.error(`Error forcing signal for ${symbol}:`, err);
+        }
+      }
+    }
 
     // Sort signals by priority and expected profit
     analyzedSignals.sort((a, b) => {

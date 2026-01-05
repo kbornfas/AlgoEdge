@@ -494,9 +494,10 @@ export function analyzeMarket(symbol: string, candles: CandleData[]): TradingSig
   // Priority based on pair profitability
   const basePriority = TIER1_PAIRS.includes(symbol) ? 100 : TIER2_PAIRS.includes(symbol) ? 75 : 50;
 
-  // Lower threshold to 55% for more trading opportunities
-  // High-probability setups still get higher confidence scores
-  const CONFIDENCE_THRESHOLD = 55;
+  // AGGRESSIVE THRESHOLD - 40% confidence minimum
+  // This ensures trades are opened when basic conditions are met
+  // Higher confidence signals will still be prioritized
+  const CONFIDENCE_THRESHOLD = 40;
 
   if (buyConfidence >= CONFIDENCE_THRESHOLD && buyConfidence > sellConfidence) {
     // INTELLIGENT STOP LOSS & TAKE PROFIT
@@ -572,8 +573,79 @@ export function analyzeMarket(symbol: string, candles: CandleData[]): TradingSig
     };
   }
 
-  // Return null if no signal meets threshold
-  console.log(`📊 ${symbol}: Buy score ${buyConfidence}, Sell score ${sellConfidence} - Below threshold (${CONFIDENCE_THRESHOLD}%)`);
+  // Return signal even at lower confidence if there's clear direction
+  // This allows robots to always find trading opportunities
+  const minScore = Math.max(buyConfidence, sellConfidence);
+  
+  if (minScore >= 30) {
+    // Generate signal for best direction even at lower confidence
+    const isBuy = buyConfidence >= sellConfidence;
+    const confidence = isBuy ? buyConfidence : sellConfidence;
+    const reasons = isBuy ? buyReasons : sellReasons;
+    const volatilityAdjustedATR = atr * pairConfig.volatilityMultiplier;
+    
+    if (isBuy) {
+      const slFromSupport = support - (atr * 0.5);
+      const slFromATR = currentPrice - (volatilityAdjustedATR * 1.5);
+      const stopLoss = Math.max(slFromSupport, slFromATR);
+      const riskAmount = currentPrice - stopLoss;
+      const takeProfit = currentPrice + (riskAmount * 1.5);
+      const takeProfit2 = currentPrice + (riskAmount * 2);
+      const takeProfit3 = currentPrice + (riskAmount * 3);
+      const trailingStop = riskAmount;
+      const riskRewardRatio = riskAmount > 0 ? (takeProfit - currentPrice) / riskAmount : 1.5;
+      const expectedProfit = riskRewardRatio * (confidence / 100);
+      
+      console.log(`📊 ${symbol}: Generating BUY signal at ${confidence}% (lower threshold)`);
+      return {
+        symbol,
+        type: 'BUY',
+        confidence,
+        entryPrice: currentPrice,
+        stopLoss,
+        takeProfit,
+        takeProfit2,
+        takeProfit3,
+        trailingStop,
+        reason: reasons.length > 0 ? reasons.join(' | ') : 'Market analysis',
+        priority: basePriority + confidence,
+        expectedProfit,
+        riskRewardRatio,
+        indicators,
+      };
+    } else {
+      const slFromResistance = resistance + (atr * 0.5);
+      const slFromATR = currentPrice + (volatilityAdjustedATR * 1.5);
+      const stopLoss = Math.min(slFromResistance, slFromATR);
+      const riskAmount = stopLoss - currentPrice;
+      const takeProfit = currentPrice - (riskAmount * 1.5);
+      const takeProfit2 = currentPrice - (riskAmount * 2);
+      const takeProfit3 = currentPrice - (riskAmount * 3);
+      const trailingStop = riskAmount;
+      const riskRewardRatio = riskAmount > 0 ? (currentPrice - takeProfit) / riskAmount : 1.5;
+      const expectedProfit = riskRewardRatio * (confidence / 100);
+      
+      console.log(`📊 ${symbol}: Generating SELL signal at ${confidence}% (lower threshold)`);
+      return {
+        symbol,
+        type: 'SELL',
+        confidence,
+        entryPrice: currentPrice,
+        stopLoss,
+        takeProfit,
+        takeProfit2,
+        takeProfit3,
+        trailingStop,
+        reason: reasons.length > 0 ? reasons.join(' | ') : 'Market analysis',
+        priority: basePriority + confidence,
+        expectedProfit,
+        riskRewardRatio,
+        indicators,
+      };
+    }
+  }
+  
+  console.log(`📊 ${symbol}: Buy score ${buyConfidence}, Sell score ${sellConfidence} - No clear direction`);
   return null;
 }
 
