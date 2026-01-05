@@ -529,19 +529,55 @@ export async function runRobotTrading(
 
     // If no signals found, force analyze TIER1 pairs for ANY opportunity
     if (analyzedSignals.length === 0 && availableSlots > 0) {
-      console.log('⚡ No signals found, forcing analysis on TIER1 pairs...');
+      console.log('⚡ No signals found, forcing entry on TIER1 pairs...');
+      
+      // Try ALL TIER1 pairs, not just the first one
       for (const symbol of TIER1_PAIRS) {
-        if (openSymbols.has(symbol)) continue;
+        if (openSymbols.has(symbol)) {
+          console.log(`⏭️ ${symbol} already has open position, skipping`);
+          continue;
+        }
         
         try {
+          console.log(`⚡ Forcing signal for ${symbol}...`);
           const candles = await getCandles(metaApiAccountId, symbol, timeframe, 200);
-          if (candles.length < 50) continue;
+          
+          if (candles.length < 20) {
+            console.log(`⚠️ ${symbol}: Only ${candles.length} candles, need at least 20`);
+            continue;
+          }
           
           // Force generate a signal based on simple trend
           const closes = candles.slice(-20).map(c => c.close);
           const currentPrice = closes[closes.length - 1];
           const avgPrice = closes.reduce((a, b) => a + b, 0) / closes.length;
           const atr = calculateATRSimple(candles);
+          
+          if (atr <= 0) {
+            console.log(`⚠️ ${symbol}: Invalid ATR (${atr}), using fallback`);
+            // Use 1% of price as fallback ATR
+            const fallbackAtr = currentPrice * 0.01;
+            const isBullish = currentPrice > avgPrice;
+            const signal: TradingSignal = {
+              symbol,
+              type: isBullish ? 'BUY' : 'SELL',
+              confidence: 35,
+              entryPrice: currentPrice,
+              stopLoss: isBullish ? currentPrice - (fallbackAtr * 2) : currentPrice + (fallbackAtr * 2),
+              takeProfit: isBullish ? currentPrice + (fallbackAtr * 3) : currentPrice - (fallbackAtr * 3),
+              takeProfit2: isBullish ? currentPrice + (fallbackAtr * 4) : currentPrice - (fallbackAtr * 4),
+              takeProfit3: isBullish ? currentPrice + (fallbackAtr * 5) : currentPrice - (fallbackAtr * 5),
+              trailingStop: fallbackAtr * 1.5,
+              reason: `Forced entry - ${isBullish ? 'bullish' : 'bearish'} bias (fallback ATR)`,
+              priority: 100,
+              expectedProfit: 1.5,
+              riskRewardRatio: 1.5,
+              indicators: {} as any,
+            };
+            analyzedSignals.push(signal);
+            console.log(`⚡ Forced signal (fallback): ${signal.type} ${symbol}`);
+            continue;
+          }
           
           const isBullish = currentPrice > avgPrice;
           const signal: TradingSignal = {
@@ -563,11 +599,13 @@ export async function runRobotTrading(
           
           analyzedSignals.push(signal);
           console.log(`⚡ Forced signal: ${signal.type} ${symbol} @ ${signal.confidence}%`);
-          break; // Just get one forced signal
         } catch (err) {
-          console.error(`Error forcing signal for ${symbol}:`, err);
+          console.error(`❌ Error forcing signal for ${symbol}:`, err);
+          errors.push(`Force signal error for ${symbol}: ${err}`);
         }
       }
+      
+      console.log(`⚡ Generated ${analyzedSignals.length} forced signals`);
     }
 
     // Sort signals by priority and expected profit
