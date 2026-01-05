@@ -236,11 +236,13 @@ export default function RobotsPage() {
   const [robotConfigs, setRobotConfigs] = useState<Record<string, RobotConfig>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [selectedRobot, setSelectedRobot] = useState<Robot | null>(null);
   const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
   const [startingRobots, setStartingRobots] = useState<Set<string>>(new Set());
   const [accountBalance, setAccountBalance] = useState<number>(0);
   const [accountEquity, setAccountEquity] = useState<number>(0);
+  const [runningRobots, setRunningRobots] = useState<Set<string>>(new Set());
 
   // Get auth token from localStorage
   const getAuthHeaders = useCallback(() => {
@@ -251,8 +253,30 @@ export default function RobotsPage() {
     };
   }, []);
 
+  // Load running robots from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedRunning = localStorage.getItem('runningRobots');
+      if (savedRunning) {
+        try {
+          const parsed = JSON.parse(savedRunning);
+          setRunningRobots(new Set(parsed));
+        } catch (e) {
+          console.error('Error parsing running robots:', e);
+        }
+      }
+    }
+  }, []);
+
+  // Save running robots to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('runningRobots', JSON.stringify([...runningRobots]));
+    }
+  }, [runningRobots]);
+
   // Initialize configs for robots
-  const initializeConfigs = useCallback((robotList: Robot[]) => {
+  const initializeConfigs = useCallback((robotList: Robot[], savedRunning: Set<string>) => {
     const configs: Record<string, RobotConfig> = {};
     robotList.forEach((robot) => {
       configs[robot.id] = {
@@ -260,7 +284,7 @@ export default function RobotsPage() {
         selectedTimeframe: robot.timeframe,
         selectedPairs: robot.pairs || [],
         riskPercent: 1,
-        isRunning: false,
+        isRunning: savedRunning.has(robot.id),
       };
     });
     setRobotConfigs(configs);
@@ -269,6 +293,17 @@ export default function RobotsPage() {
   // Fetch robots from API
   const fetchRobots = useCallback(async () => {
     try {
+      // Load saved running robots from localStorage
+      let savedRunning = new Set<string>();
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('runningRobots');
+        if (saved) {
+          try {
+            savedRunning = new Set(JSON.parse(saved));
+          } catch (e) { /* ignore */ }
+        }
+      }
+
       const response = await fetch('/api/robots', {
         headers: getAuthHeaders(),
       });
@@ -277,22 +312,23 @@ export default function RobotsPage() {
         const robotList = data.robots || [];
         if (robotList.length > 0) {
           setRobots(robotList);
-          initializeConfigs(robotList);
+          initializeConfigs(robotList, savedRunning);
         } else {
           const defaultRobots = getDefaultRobots();
           setRobots(defaultRobots);
-          initializeConfigs(defaultRobots);
+          initializeConfigs(defaultRobots, savedRunning);
         }
       } else {
         const defaultRobots = getDefaultRobots();
         setRobots(defaultRobots);
-        initializeConfigs(defaultRobots);
+        initializeConfigs(defaultRobots, savedRunning);
       }
+      setRunningRobots(savedRunning);
     } catch (err) {
       console.error('Error fetching robots:', err);
       const defaultRobots = getDefaultRobots();
       setRobots(defaultRobots);
-      initializeConfigs(defaultRobots);
+      initializeConfigs(defaultRobots, new Set());
     }
   }, [initializeConfigs, getAuthHeaders]);
 
@@ -379,6 +415,7 @@ export default function RobotsPage() {
 
     setStartingRobots(prev => new Set(prev).add(robot.id));
     setError(null);
+    setSuccess(null);
 
     try {
       const response = await fetch(`/api/user/robots/${robot.id}/start`, {
@@ -394,6 +431,8 @@ export default function RobotsPage() {
       const data = await response.json();
 
       if (response.ok) {
+        // Mark robot as running
+        setRunningRobots(prev => new Set(prev).add(robot.id));
         setRobotConfigs(prev => ({
           ...prev,
           [robot.id]: {
@@ -402,7 +441,18 @@ export default function RobotsPage() {
           },
         }));
 
-        // Show dialog
+        // Show success message with trade info
+        const tradesOpened = data.tradingResult?.tradesExecuted || 0;
+        const signals = data.tradingResult?.signals?.length || 0;
+        if (tradesOpened > 0) {
+          setSuccess(`✅ ${robot.name} started! Opened ${tradesOpened} trade(s) from ${signals} signal(s).`);
+        } else if (signals > 0) {
+          setSuccess(`⚠️ ${robot.name} started! Found ${signals} signal(s) but conditions not met for entry.`);
+        } else {
+          setSuccess(`🔍 ${robot.name} started! Analyzing markets for opportunities...`);
+        }
+
+        // Show dialog with details
         setSelectedRobot(robot);
         setTradeDialogOpen(true);
 
@@ -432,6 +482,12 @@ export default function RobotsPage() {
       });
 
       if (response.ok) {
+        // Remove from running robots
+        setRunningRobots(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(robot.id);
+          return newSet;
+        });
         setRobotConfigs(prev => ({
           ...prev,
           [robot.id]: {
@@ -439,6 +495,7 @@ export default function RobotsPage() {
             isRunning: false,
           },
         }));
+        setSuccess(`${robot.name} stopped.`);
       }
     } catch (err) {
       console.error('Error stopping robot:', err);
@@ -498,6 +555,26 @@ export default function RobotsPage() {
       </Box>
 
       {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      {success && (
+        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
+          {success}
+        </Alert>
+      )}
+
+      {runningRobots.size > 0 && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <strong>{runningRobots.size} robot(s) running:</strong>{' '}
+          {[...runningRobots].map(id => {
+            const robot = robots.find(r => r.id === id);
+            return robot?.name || id;
+          }).join(', ')}
+        </Alert>
+      )}
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
         </Alert>
@@ -637,19 +714,20 @@ export default function RobotsPage() {
             isRunning: false,
           };
           const isStarting = startingRobots.has(robot.id);
+          const isRunning = runningRobots.has(robot.id);
 
           return (
             <Grid item xs={12} md={6} lg={4} key={robot.id}>
               <Card 
                 sx={{ 
                   height: '100%',
-                  border: config.isRunning ? '2px solid' : '1px solid',
-                  borderColor: config.isRunning ? 'success.main' : 'divider',
+                  border: isRunning ? '2px solid' : '1px solid',
+                  borderColor: isRunning ? 'success.main' : 'divider',
                   position: 'relative',
                   overflow: 'visible',
                 }}
               >
-                {config.isRunning && (
+                {isRunning && (
                   <Box
                     sx={{
                       position: 'absolute',
@@ -746,9 +824,9 @@ export default function RobotsPage() {
                         size="small"
                         variant={config.selectedTimeframe === tf ? 'filled' : 'outlined'}
                         color={config.selectedTimeframe === tf ? 'primary' : 'default'}
-                        onClick={() => !config.isRunning && handleTimeframeChange(robot.id, tf)}
+                        onClick={() => !isRunning && handleTimeframeChange(robot.id, tf)}
                         sx={{ 
-                          cursor: config.isRunning ? 'not-allowed' : 'pointer',
+                          cursor: isRunning ? 'not-allowed' : 'pointer',
                           fontWeight: config.selectedTimeframe === tf ? 'bold' : 'normal',
                         }}
                       />
@@ -794,13 +872,13 @@ export default function RobotsPage() {
                       { value: 2.5, label: '2.5%' },
                       { value: 5, label: '5%' },
                     ]}
-                    disabled={config.isRunning}
+                    disabled={isRunning}
                     sx={{ mb: 2 }}
                   />
 
                   {/* Action Buttons */}
                   <Box display="flex" gap={1}>
-                    {config.isRunning ? (
+                    {isRunning ? (
                       <Button
                         variant="outlined"
                         color="error"
