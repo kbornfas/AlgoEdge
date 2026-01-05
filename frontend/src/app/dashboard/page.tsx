@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -13,59 +13,163 @@ import {
   LinearProgress,
   Alert,
   AlertTitle,
+  Skeleton,
+  CircularProgress,
 } from '@mui/material';
-import { TrendingUp, DollarSign, Activity, Users, AlertCircle, Upload } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, Users, AlertCircle, Upload, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+
+interface MT5Account {
+  id: number;
+  accountId: string;
+  server: string;
+  status: string;
+  balance?: number;
+  equity?: number;
+  profit?: number;
+  margin?: number;
+  freeMargin?: number;
+}
+
+interface Trade {
+  id: number;
+  symbol: string;
+  type: 'BUY' | 'SELL';
+  profit: number;
+  openTime: string;
+  volume: number;
+}
+
+interface Robot {
+  id: number;
+  name: string;
+  status: 'running' | 'stopped' | 'paused';
+  profit: number;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
   const [paymentStatus, setPaymentStatus] = useState<any>(null);
+  const [mt5Account, setMt5Account] = useState<MT5Account | null>(null);
+  const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
+  const [robots, setRobots] = useState<Robot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [totalProfit, setTotalProfit] = useState(0);
+  const [totalTrades, setTotalTrades] = useState(0);
+  const [activeRobots, setActiveRobots] = useState(0);
 
-  useEffect(() => {
-    fetchPaymentStatus();
-  }, []);
-
-  const fetchPaymentStatus = async () => {
+  const fetchAllData = useCallback(async (showRefresh = false) => {
     const token = localStorage.getItem('token');
     if (!token) {
       router.push('/auth/login');
       return;
     }
 
-    try {
-      const response = await fetch('/api/payment-proof/status', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    if (showRefresh) setRefreshing(true);
 
-      if (response.ok) {
-        const data = await response.json();
+    try {
+      // Fetch all data in parallel
+      const [paymentRes, mt5Res, tradesRes, robotsRes] = await Promise.all([
+        fetch('/api/payment-proof/status', {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null),
+        fetch('/api/user/mt5-account', {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null),
+        fetch('/api/user/trades?limit=5', {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null),
+        fetch('/api/user/robots', {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null),
+      ]);
+
+      // Process payment status
+      if (paymentRes?.ok) {
+        const data = await paymentRes.json();
         setPaymentStatus(data);
       }
+
+      // Process MT5 account data
+      if (mt5Res?.ok) {
+        const data = await mt5Res.json();
+        setMt5Account(data.account);
+      }
+
+      // Process recent trades
+      if (tradesRes?.ok) {
+        const data = await tradesRes.json();
+        setRecentTrades(data.trades || []);
+        setTotalTrades(data.totalCount || data.trades?.length || 0);
+        setTotalProfit(data.totalProfit || 0);
+      }
+
+      // Process robots
+      if (robotsRes?.ok) {
+        const data = await robotsRes.json();
+        setRobots(data.robots || []);
+        setActiveRobots(data.robots?.filter((r: Robot) => r.status === 'running').length || 0);
+      }
     } catch (err) {
-      console.error('Failed to fetch payment status:', err);
+      console.error('Failed to fetch data:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, [router]);
+
+  useEffect(() => {
+    fetchAllData();
+    
+    // Set up auto-refresh every 30 seconds for real-time updates
+    const interval = setInterval(() => {
+      fetchAllData();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [fetchAllData]);
+
+  const handleRefresh = () => {
+    fetchAllData(true);
   };
 
-  // Mock data - will be replaced with real API calls
-  const stats = {
-    balance: 10000,
-    profit: 1250.50,
-    profitPercentage: 12.5,
-    activeRobots: 3,
-    totalTrades: 45,
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    return `${diffDays} days ago`;
   };
+
+  const isAccountConnected = mt5Account && mt5Account.status === 'connected';
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-        Welcome to AlgoEdge
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Monitor your automated trading performance
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box>
+          <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
+            Welcome to AlgoEdge
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Monitor your automated trading performance
+          </Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          startIcon={refreshing ? <CircularProgress size={16} /> : <RefreshCw size={16} />}
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          Refresh
+        </Button>
+      </Box>
 
       {/* Payment Status Alert */}
       {!loading && !paymentStatus?.isActivated && (
@@ -96,22 +200,48 @@ export default function DashboardPage() {
           </AlertTitle>
           {paymentStatus?.paymentStatus === 'submitted' ? (
             <Typography variant="body2">
-              Your payment proof is under admin review. You will be notified once approved. This usually takes 24 hours.
+              Your payment proof is under admin review. You will be notified once approved.
             </Typography>
           ) : paymentStatus?.paymentStatus === 'rejected' ? (
             <Typography variant="body2">
-              Your payment proof was rejected. Please submit a valid payment proof to activate your account.
+              Your payment proof was rejected. Please submit a valid payment proof.
             </Typography>
           ) : (
             <Typography variant="body2">
-              Please submit your payment proof to activate your account and access all trading features. Click the button to get started.
+              Please submit your payment proof to activate your account.
             </Typography>
           )}
         </Alert>
       )}
 
+      {/* MT5 Connection Alert */}
+      {!loading && !isAccountConnected && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 4 }}
+          icon={<LinkIcon size={24} />}
+          action={
+            <Button
+              component={Link}
+              href="/dashboard/mt5"
+              variant="contained"
+              size="small"
+              startIcon={<LinkIcon size={16} />}
+            >
+              Connect Account
+            </Button>
+          }
+        >
+          <AlertTitle>MT5 Account Not Connected</AlertTitle>
+          <Typography variant="body2">
+            Connect your MetaTrader 5 account to see your real balance and enable automated trading with our bots.
+          </Typography>
+        </Alert>
+      )}
+
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
+        {/* Balance Card - Only show if MT5 connected */}
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -131,15 +261,29 @@ export default function DashboardPage() {
                   <Typography variant="body2" color="text.secondary">
                     Balance
                   </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                    ${stats.balance.toLocaleString()}
-                  </Typography>
+                  {loading ? (
+                    <Skeleton width={100} height={32} />
+                  ) : isAccountConnected ? (
+                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                      ${mt5Account?.balance?.toLocaleString() ?? '0.00'}
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Connect MT5
+                    </Typography>
+                  )}
                 </Box>
               </Box>
+              {isAccountConnected && mt5Account?.equity && (
+                <Typography variant="caption" color="text.secondary">
+                  Equity: ${mt5Account.equity.toLocaleString()}
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </Grid>
 
+        {/* Profit Card */}
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -148,32 +292,43 @@ export default function DashboardPage() {
                   sx={{
                     p: 1,
                     borderRadius: 2,
-                    bgcolor: 'success.main',
+                    bgcolor: totalProfit >= 0 ? 'success.main' : 'error.main',
                     color: 'white',
                     mr: 2,
                   }}
                 >
-                  <TrendingUp size={24} />
+                  {totalProfit >= 0 ? <TrendingUp size={24} /> : <TrendingDown size={24} />}
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     Total Profit
                   </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                    ${stats.profit.toFixed(2)}
-                  </Typography>
-                  <Chip
-                    label={`+${stats.profitPercentage}%`}
-                    size="small"
-                    color="success"
-                    sx={{ mt: 0.5 }}
-                  />
+                  {loading ? (
+                    <Skeleton width={100} height={32} />
+                  ) : isAccountConnected ? (
+                    <>
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          fontWeight: 600,
+                          color: totalProfit >= 0 ? 'success.main' : 'error.main',
+                        }}
+                      >
+                        {totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(2)}
+                      </Typography>
+                    </>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Connect MT5
+                    </Typography>
+                  )}
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
+        {/* Active Robots Card */}
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -193,15 +348,20 @@ export default function DashboardPage() {
                   <Typography variant="body2" color="text.secondary">
                     Active Robots
                   </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                    {stats.activeRobots}
-                  </Typography>
+                  {loading ? (
+                    <Skeleton width={50} height={32} />
+                  ) : (
+                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                      {activeRobots}
+                    </Typography>
+                  )}
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
+        {/* Total Trades Card */}
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -221,9 +381,17 @@ export default function DashboardPage() {
                   <Typography variant="body2" color="text.secondary">
                     Total Trades
                   </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                    {stats.totalTrades}
-                  </Typography>
+                  {loading ? (
+                    <Skeleton width={50} height={32} />
+                  ) : isAccountConnected ? (
+                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                      {totalTrades}
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Connect MT5
+                    </Typography>
+                  )}
                 </Box>
               </Box>
             </CardContent>
@@ -233,6 +401,7 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       <Grid container spacing={3}>
+        {/* Trading Robots Section */}
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
@@ -242,31 +411,51 @@ export default function DashboardPage() {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 Manage your automated trading bots
               </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">AlgoEdge 1.0</Typography>
-                  <Chip label="Running" size="small" color="success" />
+              
+              {!isAccountConnected ? (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    Connect your MT5 account to activate and use trading robots.
+                  </Typography>
+                </Alert>
+              ) : loading ? (
+                <Box>
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} height={60} sx={{ mb: 1 }} />
+                  ))}
                 </Box>
-                <LinearProgress variant="determinate" value={75} sx={{ mb: 2 }} />
-                
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">EA888</Typography>
-                  <Chip label="Stopped" size="small" />
+              ) : robots.length > 0 ? (
+                <Box sx={{ mb: 2 }}>
+                  {robots.slice(0, 3).map((robot) => (
+                    <Box key={robot.id} sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2">{robot.name}</Typography>
+                        <Chip
+                          label={robot.status}
+                          size="small"
+                          color={robot.status === 'running' ? 'success' : 'default'}
+                        />
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={robot.status === 'running' ? 75 : 0}
+                        color={robot.status === 'running' ? 'primary' : 'inherit'}
+                      />
+                    </Box>
+                  ))}
                 </Box>
-                <LinearProgress variant="determinate" value={0} sx={{ mb: 2 }} />
-
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Scalp Master Pro</Typography>
-                  <Chip label="Running" size="small" color="success" />
-                </Box>
-                <LinearProgress variant="determinate" value={60} />
-              </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  No robots configured yet.
+                </Typography>
+              )}
+              
               <Button
                 component={Link}
                 href="/dashboard/robots"
                 variant="contained"
                 fullWidth
-                sx={{ mt: 2 }}
+                disabled={!isAccountConnected}
               >
                 Manage Robots
               </Button>
@@ -274,6 +463,7 @@ export default function DashboardPage() {
           </Card>
         </Grid>
 
+        {/* Recent Trades Section */}
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
@@ -283,52 +473,69 @@ export default function DashboardPage() {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 Your latest trading activity
               </Typography>
-              <Box>
-                {[
-                  { pair: 'EUR/USD', type: 'BUY', profit: 45.30, time: '2 hours ago' },
-                  { pair: 'GBP/USD', type: 'SELL', profit: -12.50, time: '5 hours ago' },
-                  { pair: 'USD/JPY', type: 'BUY', profit: 28.90, time: '1 day ago' },
-                ].map((trade, index) => (
-                  <Box
-                    key={index}
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      p: 2,
-                      mb: 1,
-                      borderRadius: 2,
-                      bgcolor: 'background.paper',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                    }}
-                  >
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {trade.pair}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {trade.type} • {trade.time}
-                      </Typography>
-                    </Box>
-                    <Typography
-                      variant="body2"
+              
+              {!isAccountConnected ? (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    Connect your MT5 account to view your trade history.
+                  </Typography>
+                </Alert>
+              ) : loading ? (
+                <Box>
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} height={60} sx={{ mb: 1 }} />
+                  ))}
+                </Box>
+              ) : recentTrades.length > 0 ? (
+                <Box>
+                  {recentTrades.map((trade) => (
+                    <Box
+                      key={trade.id}
                       sx={{
-                        fontWeight: 600,
-                        color: trade.profit > 0 ? 'success.main' : 'error.main',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        p: 2,
+                        mb: 1,
+                        borderRadius: 2,
+                        bgcolor: 'background.paper',
+                        border: '1px solid',
+                        borderColor: 'divider',
                       }}
                     >
-                      {trade.profit > 0 ? '+' : ''}${trade.profit.toFixed(2)}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {trade.symbol}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {trade.type} • {trade.volume} lots • {getTimeAgo(trade.openTime)}
+                        </Typography>
+                      </Box>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 600,
+                          color: trade.profit >= 0 ? 'success.main' : 'error.main',
+                        }}
+                      >
+                        {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  No trades yet. Activate a robot to start trading.
+                </Typography>
+              )}
+              
               <Button
                 component={Link}
                 href="/dashboard/history"
                 variant="outlined"
                 fullWidth
                 sx={{ mt: 2 }}
+                disabled={!isAccountConnected}
               >
                 View All Trades
               </Button>
