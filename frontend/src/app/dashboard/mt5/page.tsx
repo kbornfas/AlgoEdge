@@ -124,9 +124,26 @@ export default function MT5ConnectionPage() {
       const data = await response.json();
       console.log('=== MetaAPI Debug Info ===');
       console.log(JSON.stringify(data, null, 2));
-      alert('Debug info logged to console (F12 to view). Check accountInfo for real balance.');
+      
+      // Show meaningful info to user
+      if (data.error) {
+        alert('ERROR: ' + data.error);
+      } else if (data.SUCCESS) {
+        alert('SUCCESS! ' + data.SUCCESS + '\n\nBalance: $' + (data.step6_accountInfo?.data?.balance || 0));
+        // Refresh the page data
+        fetchMT5Account();
+      } else if (data.step4_matchingAccount === 'NOT FOUND - Looking for login=' + account?.accountId) {
+        alert('Account not found in MetaAPI.\n\nPlease DISCONNECT and RECONNECT with your MT5 password.');
+      } else if (data.step5_connection) {
+        alert('Connection issue: ' + data.step5_connection + '\n\nSuggestion: ' + (data.suggestion || 'Check credentials'));
+      } else if (!data.step1_tokenCheck?.hasMetaApiToken) {
+        alert('METAAPI_TOKEN is not configured in Vercel!\n\nGo to Vercel Dashboard > Settings > Environment Variables and add METAAPI_TOKEN');
+      } else {
+        alert('Debug complete - check console (F12) for details.\n\nLast status: ' + JSON.stringify(data.step6_accountInfo || data.step4_matchingAccount || 'Unknown'));
+      }
     } catch (err) {
       console.error('Debug error:', err);
+      alert('Debug failed: ' + err);
     }
   };
 
