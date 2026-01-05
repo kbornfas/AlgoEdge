@@ -242,6 +242,15 @@ export default function RobotsPage() {
   const [accountBalance, setAccountBalance] = useState<number>(0);
   const [accountEquity, setAccountEquity] = useState<number>(0);
 
+  // Get auth token from localStorage
+  const getAuthHeaders = useCallback(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    };
+  }, []);
+
   // Initialize configs for robots
   const initializeConfigs = useCallback((robotList: Robot[]) => {
     const configs: Record<string, RobotConfig> = {};
@@ -260,7 +269,9 @@ export default function RobotsPage() {
   // Fetch robots from API
   const fetchRobots = useCallback(async () => {
     try {
-      const response = await fetch('/api/robots');
+      const response = await fetch('/api/robots', {
+        headers: getAuthHeaders(),
+      });
       if (response.ok) {
         const data = await response.json();
         const robotList = data.robots || [];
@@ -283,12 +294,14 @@ export default function RobotsPage() {
       setRobots(defaultRobots);
       initializeConfigs(defaultRobots);
     }
-  }, [initializeConfigs]);
+  }, [initializeConfigs, getAuthHeaders]);
 
   // Fetch open trades
   const fetchTrades = useCallback(async () => {
     try {
-      const response = await fetch('/api/user/trades?status=OPEN');
+      const response = await fetch('/api/user/trades?status=OPEN', {
+        headers: getAuthHeaders(),
+      });
       if (response.ok) {
         const data = await response.json();
         setTrades(data.trades || []);
@@ -296,12 +309,14 @@ export default function RobotsPage() {
     } catch (err) {
       console.error('Error fetching trades:', err);
     }
-  }, []);
+  }, [getAuthHeaders]);
 
   // Fetch account info
   const fetchAccountInfo = useCallback(async () => {
     try {
-      const response = await fetch('/api/user/mt5/account');
+      const response = await fetch('/api/user/mt5/account', {
+        headers: getAuthHeaders(),
+      });
       if (response.ok) {
         const data = await response.json();
         setAccountBalance(data.balance || 0);
@@ -310,7 +325,7 @@ export default function RobotsPage() {
     } catch (err) {
       console.error('Error fetching account:', err);
     }
-  }, []);
+  }, [getAuthHeaders]);
 
   // Load data on mount
   useEffect(() => {
@@ -364,7 +379,7 @@ export default function RobotsPage() {
     try {
       const response = await fetch(`/api/user/robots/${robot.id}/start`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           timeframe: config.selectedTimeframe,
           pairs: config.selectedPairs,
@@ -409,6 +424,7 @@ export default function RobotsPage() {
     try {
       const response = await fetch(`/api/user/robots/${robot.id}/stop`, {
         method: 'POST',
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
