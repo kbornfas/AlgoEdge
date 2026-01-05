@@ -9,10 +9,17 @@ const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliu
 const CLIENT_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
 
 /**
- * Find existing MetaAPI account by login/server
+ * Find existing MetaAPI account by login/server and ensure it's deployed
  */
-async function findMetaApiAccount(login: string, server: string): Promise<string | null> {
-  if (!META_API_TOKEN) return null;
+async function findAndDeployMetaApiAccount(login: string, server: string): Promise<{
+  accountId: string | null;
+  state: string;
+  connectionStatus: string;
+  error?: string;
+}> {
+  if (!META_API_TOKEN) {
+    return { accountId: null, state: 'ERROR', connectionStatus: 'ERROR', error: 'MetaAPI token not configured' };
+  }
 
   try {
     const response = await fetch(`${PROVISIONING_API_URL}/users/current/accounts`, {
@@ -21,27 +28,55 @@ async function findMetaApiAccount(login: string, server: string): Promise<string
       },
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('Failed to list accounts:', response.status, text);
+      return { accountId: null, state: 'ERROR', connectionStatus: 'ERROR', error: `API error: ${response.status}` };
+    }
 
     const accounts = await response.json();
+    console.log('Found MetaAPI accounts:', accounts.length);
+    
     const account = accounts.find((acc: any) => acc.login === login && acc.server === server);
     
-    if (account) {
-      // Make sure it's deployed
-      if (account.state !== 'DEPLOYED') {
-        await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${account._id}/deploy`, {
-          method: 'POST',
+    if (!account) {
+      console.log('No matching account found for login:', login, 'server:', server);
+      return { accountId: null, state: 'NOT_FOUND', connectionStatus: 'NOT_FOUND', error: 'Account not found in MetaAPI' };
+    }
+
+    console.log('Found account:', account._id, 'state:', account.state, 'connectionStatus:', account.connectionStatus);
+
+    // Deploy if not deployed
+    if (account.state !== 'DEPLOYED') {
+      console.log('Deploying account...');
+      await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${account._id}/deploy`, {
+        method: 'POST',
+        headers: { 'auth-token': META_API_TOKEN },
+      });
+      
+      // Wait and check status
+      for (let i = 0; i < 10; i++) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        const statusResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${account._id}`, {
           headers: { 'auth-token': META_API_TOKEN },
         });
-        // Wait a bit for deployment
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          console.log('Account status:', statusData.state, statusData.connectionStatus);
+          
+          if (statusData.state === 'DEPLOYED' && statusData.connectionStatus === 'CONNECTED') {
+            return { accountId: account._id, state: statusData.state, connectionStatus: statusData.connectionStatus };
+          }
+        }
       }
-      return account._id;
     }
-    return null;
+
+    return { accountId: account._id, state: account.state, connectionStatus: account.connectionStatus };
   } catch (error) {
     console.error('Error finding MetaAPI account:', error);
-    return null;
+    return { accountId: null, state: 'ERROR', connectionStatus: 'ERROR', error: String(error) };
   }
 }
 
@@ -53,6 +88,7 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
   equity: number;
   margin: number;
   freeMargin: number;
+  error?: string;
 } | null> {
   if (!META_API_TOKEN) return null;
 
@@ -67,11 +103,13 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
     );
 
     if (!response.ok) {
-      console.error('MetaAPI account info response:', response.status, response.statusText);
-      return null;
+      const text = await response.text();
+      console.error('MetaAPI account info error:', response.status, text);
+      return { balance: 0, equity: 0, margin: 0, freeMargin: 0, error: `API returned ${response.status}: ${text}` };
     }
 
     const data = await response.json();
+    console.log('Account info received:', data);
     return {
       balance: data.balance || 0,
       equity: data.equity || 0,
@@ -119,13 +157,19 @@ export async function POST(req: NextRequest) {
 
     // Get MetaAPI account ID (stored in apiKey field)
     let metaApiAccountId = mt5Account.apiKey;
+    let accountState = '';
+    let connectionStatus = '';
 
     // If no MetaAPI account ID, try to find existing one
     if (!metaApiAccountId) {
       console.log('No MetaAPI account ID found, searching for existing account...');
-      metaApiAccountId = await findMetaApiAccount(mt5Account.accountId, mt5Account.server);
+      const result = await findAndDeployMetaApiAccount(mt5Account.accountId, mt5Account.server);
       
-      if (metaApiAccountId) {
+      if (result.accountId) {
+        metaApiAccountId = result.accountId;
+        accountState = result.state;
+        connectionStatus = result.connectionStatus;
+        
         // Store it for future use
         await prisma.mt5Account.update({
           where: { id: mt5Account.id },
@@ -134,10 +178,18 @@ export async function POST(req: NextRequest) {
         console.log('Found and stored MetaAPI account ID:', metaApiAccountId);
       } else {
         return NextResponse.json(
-          { error: 'Account not provisioned with MetaAPI. Please disconnect and reconnect your account.' },
+          { error: result.error || 'Account not found in MetaAPI. Please disconnect and reconnect your account with your MT5 password.' },
           { status: 400 }
         );
       }
+    }
+
+    // Check account state before fetching info
+    if (connectionStatus && connectionStatus !== 'CONNECTED') {
+      return NextResponse.json(
+        { error: `Account is ${accountState}/${connectionStatus}. Please wait for it to connect or try reconnecting.` },
+        { status: 400 }
+      );
     }
 
     // Fetch real balance from MetaAPI
@@ -146,6 +198,13 @@ export async function POST(req: NextRequest) {
     if (!accountInfo) {
       return NextResponse.json(
         { error: 'Failed to fetch account information from MetaAPI. The account may still be deploying.' },
+        { status: 500 }
+      );
+    }
+
+    if (accountInfo.error) {
+      return NextResponse.json(
+        { error: `MetaAPI error: ${accountInfo.error}` },
         { status: 500 }
       );
     }
