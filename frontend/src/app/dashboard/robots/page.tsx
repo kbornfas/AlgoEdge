@@ -386,6 +386,59 @@ export default function RobotsPage() {
     return () => clearInterval(interval);
   }, [fetchTrades, fetchAccountInfo]);
 
+  // CONTINUOUS TRADING LOOP - Run trading for all running robots
+  useEffect(() => {
+    if (runningRobots.size === 0) return;
+
+    const runTradingCycle = async () => {
+      for (const robotId of Array.from(runningRobots)) {
+        const config = robotConfigs[robotId];
+        const robot = robots.find(r => r.id === robotId);
+        if (!config || !robot) continue;
+
+        try {
+          console.log(`🔄 Running trading cycle for ${robot.name}...`);
+          const response = await fetch(`/api/user/robots/${robotId}/start`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+              timeframe: config.selectedTimeframe,
+              pairs: config.selectedPairs,
+              riskPercent: config.riskPercent,
+            }),
+          });
+
+          const data = await response.json();
+          if (response.ok) {
+            const tradesOpened = data.tradingResult?.tradesExecuted || 0;
+            if (tradesOpened > 0) {
+              setSuccess(`🎯 ${robot.name}: Opened ${tradesOpened} new trade(s)!`);
+              fetchTrades();
+            }
+          }
+        } catch (err) {
+          console.error(`Trading cycle error for ${robot.name}:`, err);
+        }
+      }
+    };
+
+    // Run immediately on first load
+    runTradingCycle();
+
+    // Then run every 30 seconds for M1, 60 seconds for others
+    const hasScalper = Array.from(runningRobots).some(id => {
+      const config = robotConfigs[id];
+      return config?.selectedTimeframe === 'M1' || config?.selectedTimeframe === 'M5';
+    });
+    
+    const intervalMs = hasScalper ? 30000 : 60000; // 30s for scalpers, 60s for others
+    console.log(`⏰ Trading loop interval: ${intervalMs / 1000}s`);
+    
+    const tradingInterval = setInterval(runTradingCycle, intervalMs);
+    return () => clearInterval(tradingInterval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runningRobots, robotConfigs, robots, getAuthHeaders]);
+
   // Handle timeframe change for a robot
   const handleTimeframeChange = (robotId: string, timeframe: string) => {
     setRobotConfigs(prev => ({
