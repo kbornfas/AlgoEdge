@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
-import axios from 'axios';
-import https from 'https';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
 const CLIENT_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
-
-// Create https agent that handles SSL certificates properly
-const httpsAgent = new https.Agent({
-  rejectUnauthorized: false,
-});
 
 /**
  * Find and get MetaAPI account info
@@ -30,17 +23,21 @@ async function getMetaApiAccountInfo(login: string, server: string): Promise<{
     return { metaApiId: null, balance: 0, equity: 0, error: 'No MetaAPI token' };
   }
 
-  const headers = { 'auth-token': META_API_TOKEN };
-  const config = { headers, timeout: 30000, httpsAgent };
+  const headers = { 
+    'auth-token': META_API_TOKEN,
+    'Content-Type': 'application/json',
+  };
 
   try {
     // List accounts
-    const listResponse = await axios.get(
+    const listResponse = await fetch(
       `${PROVISIONING_API_URL}/users/current/accounts`,
-      config
+      { headers }
     );
 
-    const accounts = listResponse.data;
+    if (!listResponse.ok) throw new Error(`HTTP ${listResponse.status}`);
+    const accounts = await listResponse.json();
+    
     const account = accounts.find((acc: any) => 
       String(acc.login) === String(login) && acc.server === server
     );
@@ -69,12 +66,14 @@ async function getMetaApiAccountInfo(login: string, server: string): Promise<{
     const clientApiUrl = regionClientApiMap[region] || CLIENT_API_URL;
 
     // Get account info using regional endpoint
-    const infoResponse = await axios.get(
+    const infoResponse = await fetch(
       `${clientApiUrl}/users/current/accounts/${account._id}/account-information`,
-      config
+      { headers }
     );
 
-    const info = infoResponse.data;
+    if (!infoResponse.ok) throw new Error(`HTTP ${infoResponse.status}`);
+    const info = await infoResponse.json();
+    
     return {
       metaApiId: account._id,
       balance: info.balance || 0,

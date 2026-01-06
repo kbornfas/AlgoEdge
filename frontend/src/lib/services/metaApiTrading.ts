@@ -17,13 +17,6 @@ import {
   CandleData,
   PositionCloseSignal,
 } from './tradingStrategy';
-import axios from 'axios';
-import https from 'https';
-
-// Create https agent that accepts self-signed certs (for serverless)
-const httpsAgent = new https.Agent({
-  rejectUnauthorized: false
-});
 
 // Simple ATR calculation for forced signals
 function calculateATRSimple(candles: CandleData[], period: number = 14): number {
@@ -89,18 +82,18 @@ async function getAllMetaApiAccounts(): Promise<MetaApiAccount[]> {
   }
 
   try {
-    const response = await axios.get(
+    const response = await fetch(
       `${PROVISIONING_API_URL}/users/current/accounts`,
       {
         headers: {
           'auth-token': token,
           'Content-Type': 'application/json',
         },
-        httpsAgent,
       }
     );
 
-    return response.data || [];
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json() || [];
   } catch (error: any) {
     console.error('Error fetching MetaAPI accounts:', error.message);
     return [];
@@ -146,19 +139,19 @@ async function getCandles(
   const clientApiUrl = getClientApiUrl(account);
 
   try {
-    const response = await axios.get(
-      `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/historical-market-data/symbols/${symbol}/timeframes/${timeframe}/candles`,
-      {
-        params: { limit },
-        headers: {
-          'auth-token': token,
-          'Content-Type': 'application/json',
-        },
-        httpsAgent,
-      }
-    );
+    const url = new URL(`${clientApiUrl}/users/current/accounts/${metaApiAccountId}/historical-market-data/symbols/${symbol}/timeframes/${timeframe}/candles`);
+    url.searchParams.set('limit', String(limit));
+    
+    const response = await fetch(url.toString(), {
+      headers: {
+        'auth-token': token,
+        'Content-Type': 'application/json',
+      },
+    });
 
-    return (response.data || []).map((candle: any) => ({
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return (data || []).map((candle: any) => ({
       time: new Date(candle.time),
       open: candle.open,
       high: candle.high,
@@ -195,18 +188,18 @@ export async function getAccountInfo(metaApiAccountId: string): Promise<{
   const clientApiUrl = getClientApiUrl(account);
 
   try {
-    const response = await axios.get(
+    const response = await fetch(
       `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/account-information`,
       {
         headers: {
           'auth-token': token,
           'Content-Type': 'application/json',
         },
-        httpsAgent,
       }
     );
 
-    const data = response.data;
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
     return {
       balance: data.balance || 0,
       equity: data.equity || 0,
@@ -242,26 +235,27 @@ export async function placeTrade(
   const clientApiUrl = getClientApiUrl(account);
 
   try {
-    const response = await axios.post(
+    const response = await fetch(
       `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/trade`,
       {
-        actionType: signal.type === 'BUY' ? 'ORDER_TYPE_BUY' : 'ORDER_TYPE_SELL',
-        symbol: signal.symbol,
-        volume: volume,
-        stopLoss: signal.stopLoss,
-        takeProfit: signal.takeProfit,
-        comment: `AlgoEdge ${signal.confidence}% confidence`,
-      },
-      {
+        method: 'POST',
         headers: {
           'auth-token': token,
           'Content-Type': 'application/json',
         },
-        httpsAgent,
+        body: JSON.stringify({
+          actionType: signal.type === 'BUY' ? 'ORDER_TYPE_BUY' : 'ORDER_TYPE_SELL',
+          symbol: signal.symbol,
+          volume: volume,
+          stopLoss: signal.stopLoss,
+          takeProfit: signal.takeProfit,
+          comment: `AlgoEdge ${signal.confidence}% confidence`,
+        }),
       }
     );
 
-    const data = response.data;
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
 
     if (data.orderId || data.positionId) {
       return { success: true, tradeId: data.orderId || data.positionId };
@@ -292,18 +286,18 @@ export async function getOpenPositions(metaApiAccountId: string): Promise<MetaAp
   const clientApiUrl = getClientApiUrl(account);
 
   try {
-    const response = await axios.get(
+    const response = await fetch(
       `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/positions`,
       {
         headers: {
           'auth-token': token,
           'Content-Type': 'application/json',
         },
-        httpsAgent,
       }
     );
 
-    return response.data || [];
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json() || [];
   } catch (error: any) {
     console.error('Error fetching positions:', error.message);
     return [];
@@ -335,18 +329,18 @@ export async function getTradeHistory(
     const start = startTime?.toISOString() || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const end = endTime?.toISOString() || new Date().toISOString();
 
-    const response = await axios.get(
+    const response = await fetch(
       `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/history-deals/time/${start}/${end}`,
       {
         headers: {
           'auth-token': token,
           'Content-Type': 'application/json',
         },
-        httpsAgent,
       }
     );
 
-    return response.data || [];
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json() || [];
   } catch (error: any) {
     console.error('Error fetching trade history:', error.message);
     return [];
@@ -680,25 +674,26 @@ export async function closePosition(
   const clientApiUrl = getClientApiUrl(account);
 
   try {
-    const response = await axios.post(
+    const response = await fetch(
       `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/trade`,
       {
-        actionType: 'POSITION_CLOSE_ID',
-        positionId: positionId,
-      },
-      {
+        method: 'POST',
         headers: {
           'auth-token': token,
           'Content-Type': 'application/json',
         },
-        httpsAgent,
+        body: JSON.stringify({
+          actionType: 'POSITION_CLOSE_ID',
+          positionId: positionId,
+        }),
       }
     );
 
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return { success: true };
   } catch (error: any) {
-    console.error('Error closing position:', error.response?.data || error.message);
-    return { success: false, error: error.response?.data?.message || 'Close failed' };
+    console.error('Error closing position:', error.message);
+    return { success: false, error: error.message || 'Close failed' };
   }
 }
 
@@ -724,26 +719,27 @@ export async function partialClosePosition(
   const clientApiUrl = getClientApiUrl(account);
 
   try {
-    const response = await axios.post(
+    const response = await fetch(
       `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/trade`,
       {
-        actionType: 'POSITION_PARTIAL',
-        positionId: positionId,
-        volume: Math.round(volume * 100) / 100, // Round to 2 decimals
-      },
-      {
+        method: 'POST',
         headers: {
           'auth-token': token,
           'Content-Type': 'application/json',
         },
-        httpsAgent,
+        body: JSON.stringify({
+          actionType: 'POSITION_PARTIAL',
+          positionId: positionId,
+          volume: Math.round(volume * 100) / 100,
+        }),
       }
     );
 
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return { success: true };
   } catch (error: any) {
-    console.error('Error partial closing position:', error.response?.data || error.message);
-    return { success: false, error: error.response?.data?.message || 'Partial close failed' };
+    console.error('Error partial closing position:', error.message);
+    return { success: false, error: error.message || 'Partial close failed' };
   }
 }
 
@@ -777,22 +773,23 @@ export async function modifyPosition(
     if (stopLoss !== undefined) body.stopLoss = stopLoss;
     if (takeProfit !== undefined) body.takeProfit = takeProfit;
 
-    const response = await axios.post(
+    const response = await fetch(
       `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/trade`,
-      body,
       {
+        method: 'POST',
         headers: {
           'auth-token': token,
           'Content-Type': 'application/json',
         },
-        httpsAgent,
+        body: JSON.stringify(body),
       }
     );
 
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return { success: true };
   } catch (error: any) {
-    console.error('Error modifying position:', error.response?.data || error.message);
-    return { success: false, error: error.response?.data?.message || 'Modify failed' };
+    console.error('Error modifying position:', error.message);
+    return { success: false, error: error.message || 'Modify failed' };
   }
 }
 
