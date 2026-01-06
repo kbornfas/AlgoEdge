@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
-import axios from 'axios';
-import https from 'https';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
 const CLIENT_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
-
-// Create https agent that handles SSL certificates properly
-const httpsAgent = new https.Agent({
-  rejectUnauthorized: false,
-});
 
 /**
  * GET /api/user/mt5-account/debug
@@ -48,8 +41,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(debug);
     }
 
-    const headers = { 'auth-token': META_API_TOKEN };
-    const config = { headers, timeout: 30000, httpsAgent };
+    const headers = { 
+      'auth-token': META_API_TOKEN,
+      'Content-Type': 'application/json',
+    };
 
     // Get user's MT5 account from database
     const mt5Account = await prisma.mt5Account.findFirst({
@@ -71,11 +66,12 @@ export async function GET(req: NextRequest) {
     // List all MetaAPI accounts
     let accounts: any[] = [];
     try {
-      const listResponse = await axios.get(
+      const listResponse = await fetch(
         `${PROVISIONING_API_URL}/users/current/accounts`,
-        config
+        { headers }
       );
-      accounts = listResponse.data;
+      if (!listResponse.ok) throw new Error(`HTTP ${listResponse.status}`);
+      accounts = await listResponse.json();
       debug.step3_metaApiList = { 
         status: listResponse.status, 
         totalAccounts: accounts.length,
@@ -125,10 +121,9 @@ export async function GET(req: NextRequest) {
     // Check deployment status
     if (matchingAccount.state !== 'DEPLOYED') {
       try {
-        await axios.post(
+        await fetch(
           `${PROVISIONING_API_URL}/users/current/accounts/${matchingAccount._id}/deploy`,
-          {},
-          config
+          { method: 'POST', headers }
         );
         debug.step5 = 'Deploy request sent. Wait 30s and try again.';
       } catch (e: any) {
@@ -157,12 +152,13 @@ export async function GET(req: NextRequest) {
 
     // Get account info
     try {
-      const infoResponse = await axios.get(
+      const infoResponse = await fetch(
         `${clientApiUrl}/users/current/accounts/${matchingAccount._id}/account-information`,
-        config
+        { headers }
       );
 
-      const info = infoResponse.data;
+      if (!infoResponse.ok) throw new Error(`HTTP ${infoResponse.status}`);
+      const info = await infoResponse.json();
       debug.step6_accountInfo = {
         balance: info.balance,
         equity: info.equity,

@@ -2,19 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { z } from 'zod';
-import axios from 'axios';
-import https from 'https';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Allow up to 60s for connection
 
 const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
 const CLIENT_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
-
-// Create https agent that handles SSL certificates properly
-const httpsAgent = new https.Agent({
-  rejectUnauthorized: false, // Allow self-signed certificates
-});
 
 const connectSchema = z.object({
   accountId: z.string().min(1),
@@ -37,15 +30,18 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
     return { success: false, error: 'MetaAPI token not configured. Contact admin.' };
   }
 
-  const headers = { 'auth-token': META_API_TOKEN };
-  const config = { headers, timeout: 30000, httpsAgent };
+  const headers = { 
+    'auth-token': META_API_TOKEN,
+    'Content-Type': 'application/json',
+  };
 
   try {
     console.log('Checking for existing MetaAPI account...');
     
     // First, check if account already exists in MetaAPI
-    const listResponse = await axios.get(`${PROVISIONING_API_URL}/users/current/accounts`, config);
-    const accounts = listResponse.data;
+    const listResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts`, { headers });
+    if (!listResponse.ok) throw new Error(`List failed: HTTP ${listResponse.status}`);
+    const accounts = await listResponse.json();
     console.log('Found', accounts.length, 'MetaAPI accounts');
     
     // Compare as strings to handle type mismatch
@@ -59,14 +55,17 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
       // Account exists, deploy it if needed
       if (existingAccount.state !== 'DEPLOYED') {
         console.log('Deploying existing account...');
-        await axios.post(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}/deploy`, {}, config);
+        await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}/deploy`, { 
+          method: 'POST', 
+          headers 
+        });
         
         // Wait for deployment
         for (let i = 0; i < 20; i++) {
           await new Promise(resolve => setTimeout(resolve, 2000));
           try {
-            const statusResponse = await axios.get(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`, config);
-            const statusData = statusResponse.data;
+            const statusResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`, { headers });
+            const statusData = await statusResponse.json();
             console.log('Account status:', statusData.state, statusData.connectionStatus);
             if (statusData.state === 'DEPLOYED' && statusData.connectionStatus === 'CONNECTED') {
               break;
@@ -81,8 +80,9 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
         for (let i = 0; i < 10; i++) {
           await new Promise(resolve => setTimeout(resolve, 2000));
           try {
-            const statusResponse = await axios.get(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`, config);
-            if (statusResponse.data.connectionStatus === 'CONNECTED') {
+            const statusResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`, { headers });
+            const statusData = await statusResponse.json();
+            if (statusData.connectionStatus === 'CONNECTED') {
               console.log('Account now connected!');
               break;
             }
@@ -97,22 +97,30 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
     console.log('Creating new MetaAPI account for', accountId, 'on', server);
 
     // Create new account in MetaAPI
-    const createResponse = await axios.post(`${PROVISIONING_API_URL}/users/current/accounts`, {
-      name: `AlgoEdge-${accountId}`,
-      type: 'cloud',
-      login: accountId,
-      password: password,
-      server: server,
-      platform: 'mt5',
-      magic: 123456,
-    }, config);
+    const createResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        name: `AlgoEdge-${accountId}`,
+        type: 'cloud',
+        login: accountId,
+        password: password,
+        server: server,
+        platform: 'mt5',
+        magic: 123456,
+      }),
+    });
 
-    const createData = createResponse.data;
+    if (!createResponse.ok) throw new Error(`Create failed: HTTP ${createResponse.status}`);
+    const createData = await createResponse.json();
     console.log('Account created with ID:', createData.id);
 
     // Deploy the account
     console.log('Deploying new account...');
-    await axios.post(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}/deploy`, {}, config);
+    await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}/deploy`, { 
+      method: 'POST', 
+      headers 
+    });
 
     // Wait for deployment and connection (poll for status)
     let deployed = false;
@@ -120,8 +128,8 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       try {
-        const statusResponse = await axios.get(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}`, config);
-        const statusData = statusResponse.data;
+        const statusResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}`, { headers });
+        const statusData = await statusResponse.json();
         console.log('Deployment status:', statusData.state, statusData.connectionStatus);
         
         if (statusData.state === 'DEPLOYED' && statusData.connectionStatus === 'CONNECTED') {
@@ -164,19 +172,23 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
     return null;
   }
 
-  const headers = { 'auth-token': META_API_TOKEN };
-  const config = { headers, timeout: 30000, httpsAgent };
+  const headers = { 
+    'auth-token': META_API_TOKEN,
+    'Content-Type': 'application/json',
+  };
 
   try {
     console.log('Fetching account info for MetaAPI account:', metaApiAccountId);
     
     // First get account details to find region
-    const accountResponse = await axios.get(
+    const accountResponse = await fetch(
       `${PROVISIONING_API_URL}/users/current/accounts/${metaApiAccountId}`,
-      config
+      { headers }
     );
     
-    const region = accountResponse.data.region || 'vint-hill';
+    if (!accountResponse.ok) throw new Error(`HTTP ${accountResponse.status}`);
+    const accountData = await accountResponse.json();
+    const region = accountData.region || 'vint-hill';
     const regionClientApiMap: Record<string, string> = {
       'vint-hill': 'https://mt-client-api-v1.vint-hill.agiliumtrade.ai',
       'new-york': 'https://mt-client-api-v1.new-york.agiliumtrade.ai',
@@ -187,12 +199,13 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
     
     console.log('Account region:', region, 'using:', clientApiUrl);
     
-    const response = await axios.get(
+    const response = await fetch(
       `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/account-information`,
-      config
+      { headers }
     );
 
-    const data = response.data;
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
     console.log('Account info received:', JSON.stringify(data));
     
     return {
@@ -200,7 +213,7 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
       equity: data.equity || data.balance || 0,
     };
   } catch (error: any) {
-    console.error('Error fetching account info:', error.response?.data || error.message);
+    console.error('Error fetching account info:', error.message);
     return null;
   }
 }
