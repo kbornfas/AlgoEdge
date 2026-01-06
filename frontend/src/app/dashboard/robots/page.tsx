@@ -271,7 +271,7 @@ export default function RobotsPage() {
   // Save running robots to localStorage whenever it changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('runningRobots', JSON.stringify([...runningRobots]));
+      localStorage.setItem('runningRobots', JSON.stringify(Array.from(runningRobots)));
     }
   }, [runningRobots]);
 
@@ -569,14 +569,10 @@ export default function RobotsPage() {
       {runningRobots.size > 0 && (
         <Alert severity="info" sx={{ mb: 3 }}>
           <strong>{runningRobots.size} robot(s) running:</strong>{' '}
-          {[...runningRobots].map(id => {
+          {Array.from(runningRobots).map(id => {
             const robot = robots.find(r => r.id === id);
             return robot?.name || id;
           }).join(', ')}
-        </Alert>
-      )}
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
         </Alert>
       )}
 
