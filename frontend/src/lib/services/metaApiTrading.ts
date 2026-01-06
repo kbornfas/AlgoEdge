@@ -6,6 +6,7 @@
 import { prisma } from '@/lib/prisma';
 import {
   analyzeMarket,
+  analyzeMarketScalper,
   analyzePositionClose,
   calculatePositionSize,
   getMaxConcurrentTrades,
@@ -17,6 +18,12 @@ import {
   CandleData,
   PositionCloseSignal,
 } from './tradingStrategy';
+
+// Helper to check if timeframe is scalping (M1, M5)
+function isScalpingTimeframe(timeframe: string): boolean {
+  const tf = timeframe.toLowerCase();
+  return tf === '1m' || tf === 'm1' || tf === '5m' || tf === 'm5';
+}
 
 // Simple ATR calculation for forced signals
 function calculateATRSimple(candles: CandleData[], period: number = 14): number {
@@ -481,11 +488,17 @@ export async function runRobotTrading(
       return { tradesExecuted, tradesClosed, signals, errors };
     }
 
+    // Check if this is SCALPING mode (M1/M5 timeframe)
+    const isScalping = isScalpingTimeframe(timeframe);
+    if (isScalping) {
+      console.log('🚀 SCALPER MODE ACTIVE - Aggressive trading enabled!');
+    }
+
     // Analyze pairs in priority order (Tier 1 first - most profitable)
     const pairsToAnalyze = [...TIER1_PAIRS, ...TIER2_PAIRS, ...TIER3_PAIRS];
     const analyzedSignals: TradingSignal[] = [];
 
-    console.log(`🔍 Analyzing ${pairsToAnalyze.length} pairs for trading signals...`);
+    console.log(`🔍 Analyzing ${pairsToAnalyze.length} pairs for trading signals... (Timeframe: ${timeframe})`);
 
     for (const symbol of pairsToAnalyze) {
       // Skip if already have an open position
@@ -495,19 +508,24 @@ export async function runRobotTrading(
       }
 
       try {
-        // Get candle data
-        console.log(`📊 Fetching candles for ${symbol}...`);
-        const candles = await getCandles(metaApiAccountId, symbol, timeframe, 200);
+        // Get candle data - fewer candles needed for scalping
+        const candleCount = isScalping ? 50 : 200;
+        console.log(`📊 Fetching ${candleCount} candles for ${symbol}...`);
+        const candles = await getCandles(metaApiAccountId, symbol, timeframe, candleCount);
         
-        if (candles.length < 100) {
-          console.log(`⚠️ Insufficient data for ${symbol} (${candles.length} candles)`);
+        // Lower threshold for scalping
+        const minCandles = isScalping ? 30 : 100;
+        if (candles.length < minCandles) {
+          console.log(`⚠️ Insufficient data for ${symbol} (${candles.length}/${minCandles} candles)`);
           continue;
         }
 
         console.log(`✅ Got ${candles.length} candles for ${symbol}`);
 
-        // Analyze market
-        const signal = analyzeMarket(symbol, candles);
+        // Use SCALPER analysis for M1/M5, regular analysis otherwise
+        const signal = isScalping 
+          ? analyzeMarketScalper(symbol, candles)
+          : analyzeMarket(symbol, candles);
 
         if (signal) {
           analyzedSignals.push(signal);
@@ -524,7 +542,7 @@ export async function runRobotTrading(
     // If no high-confidence signals, perform deeper analysis on TIER1 pairs
     // This is NOT forced trading - it's deeper investigation to find the BEST opportunity
     if (analyzedSignals.length === 0 && availableSlots > 0) {
-      console.log('🔍 No initial signals - performing deep analysis on premium pairs...');
+      console.log(`🔍 No initial signals - performing ${isScalping ? 'aggressive scalper' : 'deep'} analysis on premium pairs...`);
       
       for (const symbol of TIER1_PAIRS) {
         if (openSymbols.has(symbol)) {
@@ -533,22 +551,29 @@ export async function runRobotTrading(
         }
         
         try {
-          console.log(`🔍 Deep analysis for ${symbol}...`);
-          const candles = await getCandles(metaApiAccountId, symbol, timeframe, 200);
+          console.log(`🔍 ${isScalping ? 'Scalper' : 'Deep'} analysis for ${symbol}...`);
+          const candleCount = isScalping ? 50 : 200;
+          const candles = await getCandles(metaApiAccountId, symbol, timeframe, candleCount);
           
-          if (candles.length < 100) {
-            console.log(`⚠️ ${symbol}: Insufficient data (${candles.length} candles)`);
+          const minCandles = isScalping ? 30 : 100;
+          if (candles.length < minCandles) {
+            console.log(`⚠️ ${symbol}: Insufficient data (${candles.length}/${minCandles} candles)`);
             continue;
           }
           
-          // Perform comprehensive analysis
-          const signal = analyzeMarket(symbol, candles);
+          // Use scalper analysis for M1/M5, which is more aggressive
+          const signal = isScalping 
+            ? analyzeMarketScalper(symbol, candles)
+            : analyzeMarket(symbol, candles);
           
-          if (signal && signal.confidence >= 30) {
-            // Only add if risk/reward is acceptable (minimum 1.2:1)
-            if (signal.riskRewardRatio >= 1.2) {
+          // Lower confidence threshold for scalping
+          const minConfidence = isScalping ? 25 : 30;
+          const minRR = isScalping ? 1.0 : 1.2;
+          
+          if (signal && signal.confidence >= minConfidence) {
+            if (signal.riskRewardRatio >= minRR) {
               analyzedSignals.push(signal);
-              console.log(`📈 Deep analysis signal: ${signal.type} ${symbol} @ ${signal.confidence}% (RR: ${signal.riskRewardRatio.toFixed(2)})`);
+              console.log(`📈 ${isScalping ? 'SCALPER' : 'Deep'} signal: ${signal.type} ${symbol} @ ${signal.confidence}% (RR: ${signal.riskRewardRatio.toFixed(2)})`);
             } else {
               console.log(`⚠️ ${symbol}: Poor risk/reward (${signal.riskRewardRatio.toFixed(2)}), skipping`);
             }
@@ -559,7 +584,7 @@ export async function runRobotTrading(
         }
       }
       
-      console.log(`🔍 Deep analysis found ${analyzedSignals.length} viable signals`);
+      console.log(`🔍 ${isScalping ? 'Scalper' : 'Deep'} analysis found ${analyzedSignals.length} viable signals`);
     }
 
     // Sort signals by priority and expected profit

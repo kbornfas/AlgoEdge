@@ -341,6 +341,211 @@ export function getMarketCondition(candles: CandleData[], indicators: any): Mark
 }
 
 // ============================================================================
+// AGGRESSIVE SCALPER MODE - For M1/M5 timeframes
+// ============================================================================
+
+/**
+ * AGGRESSIVE SCALPER - Designed for M1 timeframe
+ * Lower confidence threshold, faster entries, tighter stops
+ */
+export function analyzeMarketScalper(symbol: string, candles: CandleData[]): TradingSignal | null {
+  if (candles.length < 30) return null; // Minimal data needed for fast scalping
+
+  const closePrices = candles.map(c => c.close);
+  const currentPrice = closePrices[closePrices.length - 1];
+  const pairConfig = PAIR_CONFIG[symbol] || { pipValue: 10, minSpread: 2, volatilityMultiplier: 1, profitPotential: 5, bestSession: ['London'] };
+
+  // Calculate indicators with shorter periods for scalping
+  const rsi = calculateRSI(closePrices, 7); // Faster RSI
+  const macd = calculateMACD(closePrices);
+  const ema8 = calculateEMA(closePrices, 8);
+  const ema20 = calculateEMA(closePrices, 20);
+  const ema50 = closePrices.length >= 50 ? calculateEMA(closePrices, 50) : ema20;
+  const atr = calculateATR(candles, 7); // Faster ATR
+  const bollingerBands = calculateBollingerBands(closePrices, 14, 2);
+
+  // Quick momentum check from last 5 candles
+  const recentCandles = candles.slice(-5);
+  const bullishCandles = recentCandles.filter(c => c.close > c.open).length;
+  const bearishCandles = recentCandles.filter(c => c.close < c.open).length;
+
+  let buyScore = 0;
+  let sellScore = 0;
+  const buyReasons: string[] = [];
+  const sellReasons: string[] = [];
+
+  // SCALPER SCORING - Quick Entry Signals
+
+  // 1. MOMENTUM (Max 35 points) - Most important for scalping
+  if (bullishCandles >= 4) {
+    buyScore += 35;
+    buyReasons.push('Strong bullish momentum');
+  } else if (bullishCandles >= 3) {
+    buyScore += 25;
+    buyReasons.push('Bullish momentum');
+  } else if (bullishCandles >= 2) {
+    buyScore += 15;
+    buyReasons.push('Slight bullish bias');
+  }
+  if (bearishCandles >= 4) {
+    sellScore += 35;
+    sellReasons.push('Strong bearish momentum');
+  } else if (bearishCandles >= 3) {
+    sellScore += 25;
+    sellReasons.push('Bearish momentum');
+  } else if (bearishCandles >= 2) {
+    sellScore += 15;
+    sellReasons.push('Slight bearish bias');
+  }
+
+  // 2. FAST EMA POSITIONING (Max 25 points)
+  if (currentPrice > ema8 && ema8 > ema20) {
+    buyScore += 25;
+    buyReasons.push('Above fast EMAs');
+  } else if (currentPrice > ema8) {
+    buyScore += 15;
+    buyReasons.push('Above EMA8');
+  }
+  if (currentPrice < ema8 && ema8 < ema20) {
+    sellScore += 25;
+    sellReasons.push('Below fast EMAs');
+  } else if (currentPrice < ema8) {
+    sellScore += 15;
+    sellReasons.push('Below EMA8');
+  }
+
+  // 3. RSI - Quick Reversals (Max 25 points)
+  if (rsi < 25) {
+    buyScore += 25;
+    buyReasons.push(`RSI very oversold (${rsi.toFixed(0)})`);
+  } else if (rsi < 35) {
+    buyScore += 20;
+    buyReasons.push(`RSI oversold (${rsi.toFixed(0)})`);
+  } else if (rsi < 45 && bullishCandles >= 2) {
+    buyScore += 10;
+    buyReasons.push(`RSI recovering`);
+  }
+  if (rsi > 75) {
+    sellScore += 25;
+    sellReasons.push(`RSI very overbought (${rsi.toFixed(0)})`);
+  } else if (rsi > 65) {
+    sellScore += 20;
+    sellReasons.push(`RSI overbought (${rsi.toFixed(0)})`);
+  } else if (rsi > 55 && bearishCandles >= 2) {
+    sellScore += 10;
+    sellReasons.push(`RSI weakening`);
+  }
+
+  // 4. BOLLINGER BAND TOUCHES (Max 20 points) - Great for scalping
+  const bbRange = bollingerBands.upper - bollingerBands.lower;
+  if (currentPrice <= bollingerBands.lower + (bbRange * 0.1)) {
+    buyScore += 20;
+    buyReasons.push('Near lower BB');
+  }
+  if (currentPrice >= bollingerBands.upper - (bbRange * 0.1)) {
+    sellScore += 20;
+    sellReasons.push('Near upper BB');
+  }
+
+  // 5. MACD Quick Cross (Max 15 points)
+  if (macd.histogram > 0) {
+    buyScore += 15;
+    buyReasons.push('MACD+');
+  } else if (macd.histogram < 0) {
+    sellScore += 15;
+    sellReasons.push('MACD-');
+  }
+
+  // 6. Price Action - Candle size (Max 15 points)
+  const lastCandle = candles[candles.length - 1];
+  const candleBody = Math.abs(lastCandle.close - lastCandle.open);
+  const avgBody = candles.slice(-10).reduce((sum, c) => sum + Math.abs(c.close - c.open), 0) / 10;
+  
+  if (lastCandle.close > lastCandle.open && candleBody > avgBody * 1.5) {
+    buyScore += 15;
+    buyReasons.push('Strong bullish candle');
+  }
+  if (lastCandle.close < lastCandle.open && candleBody > avgBody * 1.5) {
+    sellScore += 15;
+    sellReasons.push('Strong bearish candle');
+  }
+
+  const buyConfidence = Math.min(buyScore, 100);
+  const sellConfidence = Math.min(sellScore, 100);
+  const basePriority = TIER1_PAIRS.includes(symbol) ? 100 : TIER2_PAIRS.includes(symbol) ? 75 : 50;
+
+  // SCALPER THRESHOLD: Only 30% needed - VERY aggressive!
+  const SCALPER_THRESHOLD = 30;
+
+  const indicators = {
+    rsi,
+    macd,
+    ema20: ema8,
+    ema50: ema20,
+    ema200: ema50,
+    atr,
+    adx: 0,
+    bollingerBands,
+    support: currentPrice - (atr * 2),
+    resistance: currentPrice + (atr * 2),
+    trendStrength: Math.max(buyConfidence, sellConfidence),
+  };
+
+  // Generate BUY signal
+  if (buyConfidence >= SCALPER_THRESHOLD && buyConfidence > sellConfidence + 5) {
+    // SCALPER STOPS: Tight, based on ATR
+    const stopLoss = currentPrice - (atr * 1.2 * pairConfig.volatilityMultiplier);
+    const riskAmount = currentPrice - stopLoss;
+    const takeProfit = currentPrice + (riskAmount * 1.5); // 1.5:1 RR for quick scalps
+    const takeProfit2 = currentPrice + (riskAmount * 2.5);
+
+    console.log(`🎯 SCALPER BUY ${symbol}: ${buyConfidence}% - ${buyReasons.join(', ')}`);
+
+    return {
+      symbol,
+      type: 'BUY',
+      confidence: buyConfidence,
+      entryPrice: currentPrice,
+      stopLoss,
+      takeProfit,
+      takeProfit2,
+      reason: `SCALP: ${buyReasons.join(' | ')}`,
+      priority: basePriority + buyConfidence + 50, // Extra priority for scalper
+      expectedProfit: 1.5 * (buyConfidence / 100),
+      riskRewardRatio: 1.5,
+      indicators,
+    };
+  } 
+  
+  // Generate SELL signal
+  if (sellConfidence >= SCALPER_THRESHOLD && sellConfidence > buyConfidence + 5) {
+    const stopLoss = currentPrice + (atr * 1.2 * pairConfig.volatilityMultiplier);
+    const riskAmount = stopLoss - currentPrice;
+    const takeProfit = currentPrice - (riskAmount * 1.5);
+    const takeProfit2 = currentPrice - (riskAmount * 2.5);
+
+    console.log(`🎯 SCALPER SELL ${symbol}: ${sellConfidence}% - ${sellReasons.join(', ')}`);
+
+    return {
+      symbol,
+      type: 'SELL',
+      confidence: sellConfidence,
+      entryPrice: currentPrice,
+      stopLoss,
+      takeProfit,
+      takeProfit2,
+      reason: `SCALP: ${sellReasons.join(' | ')}`,
+      priority: basePriority + sellConfidence + 50,
+      expectedProfit: 1.5 * (sellConfidence / 100),
+      riskRewardRatio: 1.5,
+      indicators,
+    };
+  }
+
+  return null;
+}
+
+// ============================================================================
 // INTELLIGENT SIGNAL GENERATION
 // ============================================================================
 
