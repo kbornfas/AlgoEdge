@@ -177,26 +177,28 @@ const schedulerConnections = new Map();
 
 /**
  * Get or create MetaAPI connection for an account
+ * Uses the SDK's RPC connection which handles domains internally
  */
 async function getConnection(metaApiAccountId, mt5AccountId) {
   // Check mt5Service connections first (they're properly managed)
   if (mt5Connections.has(mt5AccountId)) {
     const conn = mt5Connections.get(mt5AccountId);
     if (conn && conn.connection) {
-      console.log(`  ✅ Using existing connection for account ${mt5AccountId}`);
+      console.log(`  ✅ Using existing mt5Service connection for account ${mt5AccountId}`);
       return conn.connection;
     }
   }
   
   // Check scheduler's cached connections
   if (schedulerConnections.has(mt5AccountId)) {
-    const conn = schedulerConnections.get(mt5AccountId);
-    if (conn && conn.connection) {
-      return conn.connection;
+    const cached = schedulerConnections.get(mt5AccountId);
+    if (cached && cached.rpcConnection) {
+      console.log(`  ✅ Using cached scheduler connection`);
+      return cached.rpcConnection;
     }
   }
   
-  // Create new connection via MetaAPI
+  // Create new connection via MetaAPI SDK (not REST)
   if (!metaApiAccountId) {
     console.log(`  ❌ No MetaAPI account ID for MT5 account ${mt5AccountId}`);
     return null;
@@ -224,231 +226,33 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       await account.waitConnected();
     }
     
-    // Try different connection methods based on SDK version
-    let tradingConnection = null;
+    // Get RPC connection - this is the standard way to trade
+    let rpcConnection = null;
     
-    // Method 1: Try streaming connection (newer SDK)
-    if (!tradingConnection && typeof account.getStreamingConnection === 'function') {
+    if (typeof account.getRPCConnection === 'function') {
       try {
-        console.log(`  🔄 Trying streaming connection...`);
-        tradingConnection = account.getStreamingConnection();
-        await tradingConnection.connect();
-        await tradingConnection.waitSynchronized({ timeoutInSeconds: 120 });
-        console.log(`  ✅ Streaming connection established`);
+        console.log(`  🔄 Getting RPC connection...`);
+        rpcConnection = account.getRPCConnection();
+        await rpcConnection.connect();
+        await rpcConnection.waitSynchronized({ timeoutInSeconds: 60 });
+        console.log(`  ✅ RPC connection synchronized`);
       } catch (e) {
-        console.log(`  ⚠️ Streaming failed: ${e.message}`);
-        tradingConnection = null;
+        console.log(`  ⚠️ RPC connection error: ${e.message}`);
+        rpcConnection = null;
       }
     }
     
-    // Method 2: Try RPC connection
-    if (!tradingConnection && typeof account.getRPCConnection === 'function') {
-      try {
-        console.log(`  🔄 Trying RPC connection...`);
-        tradingConnection = account.getRPCConnection();
-        await tradingConnection.connect();
-        await tradingConnection.waitSynchronized({ timeoutInSeconds: 120 });
-        console.log(`  ✅ RPC connection established`);
-      } catch (e) {
-        console.log(`  ⚠️ RPC failed: ${e.message}`);
-        tradingConnection = null;
-      }
+    if (!rpcConnection) {
+      console.log(`  ❌ Could not establish RPC connection`);
+      return null;
     }
     
-    // Method 3: Use account directly (some SDK versions)
-    if (!tradingConnection) {
-      console.log(`  🔄 Using REST API for trading...`);
-      tradingConnection = null; // Will use REST API
-    }
-    
-    // MetaAPI REST URLs - correct format (no region in subdomain)
-    // Updated: 2026-01-07 to fix ENOTFOUND error
-    const METAAPI_REST_URL = 'https://mt-client-api-v1.agiliumtrade.ai';
-    const metaApiToken = process.env.METAAPI_TOKEN;
-    console.log(`  🌐 REST API URL: ${METAAPI_REST_URL}`);
-    
-    // Create unified connection wrapper using REST API for trades
-    const connection = {
-      createMarketOrder: async (symbol, type, volume, sl, tp, options) => {
-        console.log(`  📤 Creating ${type} order: ${symbol} @ ${volume} lots`);
-        
-        // Use REST API for trade execution (most reliable)
-        try {
-          const response = await httpsRequest(
-            `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/trade`,
-            {
-              method: 'POST',
-              headers: {
-                'auth-token': metaApiToken,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                actionType: type.toUpperCase() === 'BUY' ? 'ORDER_TYPE_BUY' : 'ORDER_TYPE_SELL',
-                symbol: symbol,
-                volume: volume,
-                stopLoss: sl,
-                takeProfit: tp,
-                comment: options?.comment || 'AlgoEdge Trade',
-              }),
-            }
-          );
-          
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP ${response.status}: ${errorText}`);
-          }
-          
-          const result = await response.json();
-          console.log(`  ✅ Trade placed via REST API:`, result);
-          return result;
-        } catch (error) {
-          console.error(`  ❌ REST API trade failed:`, error.message);
-          throw error;
-        }
-      },
-      closePosition: async (positionId) => {
-        // Use REST API to close position
-        try {
-          const response = await httpsRequest(
-            `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/trade`,
-            {
-              method: 'POST',
-              headers: {
-                'auth-token': metaApiToken,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                actionType: 'POSITION_CLOSE_ID',
-                positionId: positionId,
-              }),
-            }
-          );
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-          
-          return await response.json();
-        } catch (error) {
-          console.error(`  ❌ Close position failed:`, error.message);
-          throw error;
-        }
-      },
-      getHistoricalCandles: async (symbol, timeframe, startTime, limit) => {
-        // Convert timeframe format: m1 -> 1m, m5 -> 5m, h1 -> 1h, d1 -> 1d
-        let tf = timeframe.toLowerCase();
-        if (tf.startsWith('m')) tf = tf.slice(1) + 'm';
-        else if (tf.startsWith('h')) tf = tf.slice(1) + 'h';
-        else if (tf.startsWith('d')) tf = tf.slice(1) + 'd';
-        
-        // Calculate start time if not provided
-        const now = new Date();
-        const startTimeMs = startTime || new Date(now.getTime() - (limit || 100) * 60000 * 5); // Default 5min candles
-        
-        // Try multiple methods for getting candles
-        const methods = [
-          // Method 1: historyStorage (streaming connection)
-          async () => {
-            if (tradingConnection && tradingConnection.historyStorage) {
-              const candles = tradingConnection.historyStorage.deals || [];
-              return candles.slice(-limit);
-            }
-            return null;
-          },
-          // Method 2: getCandles on connection
-          async () => {
-            if (tradingConnection && typeof tradingConnection.getCandles === 'function') {
-              return await tradingConnection.getCandles(symbol, tf, startTimeMs, limit);
-            }
-            return null;
-          },
-          // Method 3: subscribeToMarketData then get
-          async () => {
-            if (typeof tradingConnection.subscribeToMarketData === 'function') {
-              await tradingConnection.subscribeToMarketData(symbol);
-              // Wait a moment for data
-              await new Promise(r => setTimeout(r, 1000));
-              if (tradingConnection.terminalState?.specifications) {
-                return tradingConnection.terminalState.deals?.slice(-limit) || [];
-              }
-            }
-            return null;
-          },
-          // Method 4: Use terminal state price
-          async () => {
-            if (tradingConnection && tradingConnection.terminalState?.price) {
-              const price = tradingConnection.terminalState.price(symbol);
-              if (price) {
-                // Generate synthetic candles from current price for analysis
-                return generateSyntheticCandles(price, limit);
-              }
-            }
-            return null;
-          }
-        ];
-        
-        for (const method of methods) {
-          try {
-            const result = await method();
-            if (result && result.length > 0) {
-              console.log(`    📊 Got ${result.length} candles for ${symbol}`);
-              return result;
-            }
-          } catch (e) { 
-            // Try next method
-          }
-        }
-        
-        // If all methods fail, generate basic candles from symbol info
-        console.log(`    ⚠️ Using fallback price data for ${symbol}`);
-        return generateFallbackCandles(symbol, limit);
-      },
-      getPositions: async () => {
-        // Use REST API for positions
-        try {
-          const response = await httpsRequest(
-            `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/positions`,
-            {
-              headers: {
-                'auth-token': metaApiToken,
-                'Content-Type': 'application/json',
-              },
-            }
-          );
-          
-          if (!response.ok) return [];
-          return await response.json() || [];
-        } catch (e) { 
-          return [];
-        }
-      },
-      getAccountInformation: async () => {
-        // Use REST API for account info
-        try {
-          const response = await httpsRequest(
-            `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/account-information`,
-            {
-              headers: {
-                'auth-token': metaApiToken,
-                'Content-Type': 'application/json',
-              },
-            }
-          );
-          
-          if (!response.ok) return { balance: 0, equity: 0 };
-          return await response.json();
-        } catch (e) {
-          return { balance: 0, equity: 0 };
-        }
-      },
-    };
+    // Cache the connection
+    schedulerConnections.set(mt5AccountId, { rpcConnection, account });
     
     console.log(`  ✅ Connected to MetaAPI account ${metaApiAccountId}`);
+    return rpcConnection;
     
-    // Store connection
-    schedulerConnections.set(mt5AccountId, { connection, account });
-    
-    return connection;
   } catch (error) {
     console.error(`  ❌ Failed to connect to MetaAPI: ${error.message}`);
     return null;
@@ -460,7 +264,8 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
  */
 async function executeTradeViaMetaApi(connection, accountId, robotId, userId, signal) {
   try {
-    // Place order via MetaAPI
+    // Place order via MetaAPI RPC connection
+    console.log(`  📤 Executing ${signal.type} ${signal.symbol} @ ${signal.volume} lots`);
     const result = await connection.createMarketOrder(
       signal.symbol,
       signal.type.toLowerCase(), // 'buy' or 'sell'
