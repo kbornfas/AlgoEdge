@@ -220,9 +220,11 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       tradingConnection = null; // Will use REST API
     }
     
-    // REST API base URL
-    const METAAPI_REST_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
+    // Get account region for correct REST API URL
+    const accountRegion = account.region || 'vint-hill';
+    const METAAPI_REST_URL = `https://mt-client-api-v1.${accountRegion}.agiliumtrade.ai`;
     const metaApiToken = process.env.METAAPI_TOKEN;
+    console.log(`  🌐 Using REST API: ${METAAPI_REST_URL}`);
     
     // Create unified connection wrapper using REST API for trades
     const connection = {
