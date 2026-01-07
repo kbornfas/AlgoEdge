@@ -11,6 +11,9 @@ import { emitTradeSignal, emitTradeClosed } from './websocketService.js';
  * =========================================================================
  */
 
+// Allow self-signed certificates for MetaAPI connections
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 // Initialize MetaAPI
 let MetaApi;
 let api;
@@ -28,7 +31,15 @@ async function initMetaApi() {
       return null;
     }
     
-    api = new MetaApi(token);
+    // Initialize with options to handle SSL
+    api = new MetaApi(token, {
+      requestTimeout: 60000,
+      retryOpts: {
+        retries: 3,
+        minDelayInSeconds: 1,
+        maxDelayInSeconds: 30
+      }
+    });
     console.log('✅ MetaAPI initialized for trading scheduler');
     return api;
   } catch (error) {
