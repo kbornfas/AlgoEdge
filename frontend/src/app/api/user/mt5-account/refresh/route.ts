@@ -5,8 +5,7 @@ import { verifyToken } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
-const CLIENT_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
+const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.ai';
 
 /**
  * Find and get MetaAPI account info

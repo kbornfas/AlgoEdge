@@ -134,7 +134,7 @@ function getMetaApiToken() {
 }
 
 // MetaAPI endpoints
-const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
+const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.ai';
 
 // Region-specific client API endpoints
 const REGION_ENDPOINTS: Record<string, string> = {

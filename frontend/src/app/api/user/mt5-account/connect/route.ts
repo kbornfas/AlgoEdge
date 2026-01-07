@@ -6,8 +6,7 @@ import { z } from 'zod';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Allow up to 60s for connection
 
-const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
-const CLIENT_API_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
+const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.ai';
 
 const connectSchema = z.object({
   accountId: z.string().min(1),
