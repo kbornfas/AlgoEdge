@@ -25,6 +25,21 @@ function isScalpingTimeframe(timeframe: string): boolean {
   return tf === '1m' || tf === 'm1' || tf === '5m' || tf === 'm5';
 }
 
+// Convert frontend timeframe format (M1, H1) to MetaAPI format (1m, 1h)
+function convertTimeframe(tf: string): string {
+  const mapping: Record<string, string> = {
+    'M1': '1m', 'm1': '1m', '1m': '1m',
+    'M5': '5m', 'm5': '5m', '5m': '5m',
+    'M15': '15m', 'm15': '15m', '15m': '15m',
+    'M30': '30m', 'm30': '30m', '30m': '30m',
+    'H1': '1h', 'h1': '1h', '1h': '1h',
+    'H4': '4h', 'h4': '4h', '4h': '4h',
+    'D1': '1d', 'd1': '1d', '1d': '1d',
+    'W1': '1w', 'w1': '1w', '1w': '1w',
+  };
+  return mapping[tf] || tf.toLowerCase();
+}
+
 // Simple ATR calculation for forced signals
 function calculateATRSimple(candles: CandleData[], period: number = 14): number {
   if (candles.length < period + 1) return 0;
@@ -585,6 +600,81 @@ export async function runRobotTrading(
       }
       
       console.log(`🔍 ${isScalping ? 'Scalper' : 'Deep'} analysis found ${analyzedSignals.length} viable signals`);
+    }
+
+    // =========================================================================
+    // GUARANTEED TRADE ENTRY - Force trades when no signals found
+    // ALL robots will open trades based on momentum when market is open
+    // =========================================================================
+    if (analyzedSignals.length === 0 && availableSlots > 0) {
+      console.log('⚡ GUARANTEED ENTRY - No signals found, forcing trade based on momentum...');
+      
+      // Try each premium pair until we can force a trade
+      const forcePairs = ['XAUUSD', 'EURUSD', 'GBPUSD', 'USDJPY'];
+      
+      for (const symbol of forcePairs) {
+        if (openSymbols.has(symbol)) continue;
+        
+        try {
+          const candles = await getCandles(metaApiAccountId, symbol, timeframe, 50);
+          if (candles.length < 10) continue;
+          
+          const currentPrice = candles[candles.length - 1].close;
+          const atr = calculateATRSimple(candles, 7);
+          if (atr === 0) continue;
+          
+          // Quick momentum check from last 3-5 candles
+          const recentCandles = candles.slice(-5);
+          const bullish = recentCandles.filter(c => c.close > c.open).length;
+          const bearish = recentCandles.filter(c => c.close < c.open).length;
+          
+          // Determine direction from momentum (or random if equal)
+          const isBuy = bullish >= bearish;
+          
+          // Use tighter stops for scalping, wider for others
+          const slMultiplier = isScalping ? 1.5 : 2.0;
+          const tpMultiplier = isScalping ? 2.0 : 2.5;
+          
+          const stopLoss = isBuy 
+            ? currentPrice - (atr * slMultiplier) 
+            : currentPrice + (atr * slMultiplier);
+          const takeProfit = isBuy 
+            ? currentPrice + (atr * tpMultiplier) 
+            : currentPrice - (atr * tpMultiplier);
+          
+          const forcedSignal: TradingSignal = {
+            symbol,
+            type: isBuy ? 'BUY' : 'SELL',
+            confidence: 50, // Guaranteed entry
+            entryPrice: currentPrice,
+            stopLoss,
+            takeProfit,
+            reason: `GUARANTEED ENTRY: Momentum ${isBuy ? 'bullish' : 'bearish'} (${bullish}B/${bearish}S candles)`,
+            priority: 200,
+            expectedProfit: tpMultiplier / slMultiplier,
+            riskRewardRatio: tpMultiplier / slMultiplier,
+            indicators: {
+              rsi: 50,
+              macd: { value: 0, signal: 0, histogram: 0 },
+              ema20: currentPrice,
+              ema50: currentPrice,
+              ema200: currentPrice,
+              atr,
+              adx: 25,
+              bollingerBands: { upper: currentPrice + atr, middle: currentPrice, lower: currentPrice - atr },
+              support: currentPrice - atr * 2,
+              resistance: currentPrice + atr * 2,
+              trendStrength: 50,
+            },
+          };
+          
+          analyzedSignals.push(forcedSignal);
+          console.log(`⚡ GUARANTEED ${forcedSignal.type} ${symbol} @ ${currentPrice.toFixed(5)} (${bullish}B/${bearish}S)`);
+          break; // Only force one trade per cycle
+        } catch (err) {
+          console.error(`Failed to create guaranteed trade on ${symbol}:`, err);
+        }
+      }
     }
 
     // Sort signals by priority and expected profit
