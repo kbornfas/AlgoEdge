@@ -15,24 +15,43 @@ import https from 'https';
 // Allow self-signed certificates for MetaAPI connections
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-// Create HTTPS agent that ignores SSL errors
-const httpsAgent = new https.Agent({
-  rejectUnauthorized: false
-});
-
-// Custom fetch wrapper for MetaAPI with SSL handling
-async function metaApiFetch(url, options = {}) {
-  // Use dynamic import for node-fetch if native fetch not available
-  let fetchFn;
-  try {
-    fetchFn = globalThis.fetch || (await import('node-fetch')).default;
-  } catch {
-    fetchFn = globalThis.fetch;
-  }
-  
-  return fetchFn(url, {
-    ...options,
-    agent: httpsAgent,
+// Custom HTTPS request function that handles SSL properly
+function httpsRequest(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    
+    const reqOptions = {
+      hostname: urlObj.hostname,
+      port: urlObj.port || 443,
+      path: urlObj.pathname + urlObj.search,
+      method: options.method || 'GET',
+      headers: options.headers || {},
+      rejectUnauthorized: false, // Ignore SSL errors
+    };
+    
+    const req = https.request(reqOptions, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        resolve({
+          ok: res.statusCode >= 200 && res.statusCode < 300,
+          status: res.statusCode,
+          json: () => Promise.resolve(JSON.parse(data || '{}')),
+          text: () => Promise.resolve(data),
+        });
+      });
+    });
+    
+    req.on('error', (error) => {
+      console.error(`HTTPS request error: ${error.message}`);
+      reject(error);
+    });
+    
+    if (options.body) {
+      req.write(options.body);
+    }
+    
+    req.end();
   });
 }
 
@@ -255,7 +274,7 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
         
         // Use REST API for trade execution (most reliable)
         try {
-          const response = await metaApiFetch(
+          const response = await httpsRequest(
             `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/trade`,
             {
               method: 'POST',
@@ -290,7 +309,7 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       closePosition: async (positionId) => {
         // Use REST API to close position
         try {
-          const response = await metaApiFetch(
+          const response = await httpsRequest(
             `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/trade`,
             {
               method: 'POST',
@@ -387,7 +406,7 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       getPositions: async () => {
         // Use REST API for positions
         try {
-          const response = await metaApiFetch(
+          const response = await httpsRequest(
             `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/positions`,
             {
               headers: {
@@ -406,7 +425,7 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       getAccountInformation: async () => {
         // Use REST API for account info
         try {
-          const response = await metaApiFetch(
+          const response = await httpsRequest(
             `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/account-information`,
             {
               headers: {
