@@ -100,63 +100,91 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       await account.waitConnected();
     }
     
-    // Get RPC connection - this is required for all trading operations
-    let rpcConnection = null;
+    // Try different connection methods based on SDK version
+    let tradingConnection = null;
     
-    try {
-      rpcConnection = account.getRPCConnection();
-      await rpcConnection.connect();
-      await rpcConnection.waitSynchronized({ timeoutInSeconds: 120 });
-      console.log(`  ✅ RPC connection synchronized`);
-    } catch (rpcError) {
-      console.log(`  ❌ RPC connection failed: ${rpcError.message}`);
-      return null;
+    // Method 1: Try streaming connection (newer SDK)
+    if (!tradingConnection && typeof account.getStreamingConnection === 'function') {
+      try {
+        console.log(`  🔄 Trying streaming connection...`);
+        tradingConnection = account.getStreamingConnection();
+        await tradingConnection.connect();
+        await tradingConnection.waitSynchronized({ timeoutInSeconds: 120 });
+        console.log(`  ✅ Streaming connection established`);
+      } catch (e) {
+        console.log(`  ⚠️ Streaming failed: ${e.message}`);
+        tradingConnection = null;
+      }
     }
     
-    if (!rpcConnection) {
-      console.log(`  ❌ Could not establish RPC connection`);
-      return null;
+    // Method 2: Try RPC connection
+    if (!tradingConnection && typeof account.getRPCConnection === 'function') {
+      try {
+        console.log(`  🔄 Trying RPC connection...`);
+        tradingConnection = account.getRPCConnection();
+        await tradingConnection.connect();
+        await tradingConnection.waitSynchronized({ timeoutInSeconds: 120 });
+        console.log(`  ✅ RPC connection established`);
+      } catch (e) {
+        console.log(`  ⚠️ RPC failed: ${e.message}`);
+        tradingConnection = null;
+      }
     }
     
-    // All operations use the RPC connection
+    // Method 3: Use account directly (some SDK versions)
+    if (!tradingConnection) {
+      console.log(`  🔄 Using direct account methods...`);
+      // Check what methods are available
+      const methods = Object.keys(account).filter(k => typeof account[k] === 'function');
+      console.log(`  📋 Available methods: ${methods.slice(0, 10).join(', ')}...`);
+      
+      tradingConnection = account; // Use account directly
+    }
+    
+    // Create unified connection wrapper
     const connection = {
       createMarketOrder: async (symbol, type, volume, sl, tp, options) => {
         console.log(`  📤 Creating ${type} order: ${symbol} @ ${volume} lots`);
-        return await rpcConnection.createMarketOrder(symbol, type, volume, sl, tp, options);
+        if (typeof tradingConnection.createMarketOrder === 'function') {
+          return await tradingConnection.createMarketOrder(symbol, type, volume, sl, tp, options);
+        }
+        throw new Error('createMarketOrder not available');
       },
       getHistoricalCandles: async (symbol, timeframe, startTime, limit) => {
-        try {
-          // Convert timeframe format: m1 -> 1m, h1 -> 1h, d1 -> 1d
-          let tf = timeframe.toLowerCase();
-          if (tf.startsWith('m')) tf = tf.slice(1) + 'm';
-          else if (tf.startsWith('h')) tf = tf.slice(1) + 'h';
-          else if (tf.startsWith('d')) tf = tf.slice(1) + 'd';
-          
-          const candles = await rpcConnection.getCandles(symbol, tf, startTime, limit);
-          return candles || [];
-        } catch (error) {
-          // Try alternative method
+        // Try multiple methods for getting candles
+        const methods = [
+          () => tradingConnection.getCandles?.(symbol, timeframe, startTime, limit),
+          () => tradingConnection.getHistoricalCandles?.(symbol, timeframe, startTime, limit),
+          () => api?.metaApiWebsocketClient?.getCandles?.(metaApiAccountId, symbol, timeframe, startTime, limit),
+        ];
+        
+        for (const method of methods) {
           try {
-            const candles = await rpcConnection.getHistoricalCandles(symbol, timeframe, startTime, limit);
-            return candles || [];
-          } catch (e) {
-            console.log(`  ⚠️ Candle fetch failed for ${symbol}`);
-            return [];
-          }
+            const result = await method();
+            if (result && result.length > 0) return result;
+          } catch (e) { /* try next */ }
         }
+        return [];
       },
       getPositions: async () => {
         try {
-          return await rpcConnection.getPositions() || [];
-        } catch (error) {
-          return [];
-        }
+          if (typeof tradingConnection.getPositions === 'function') {
+            return await tradingConnection.getPositions() || [];
+          }
+        } catch (e) { }
+        return [];
       },
       getAccountInformation: async () => {
-        return await rpcConnection.getAccountInformation();
+        if (typeof tradingConnection.getAccountInformation === 'function') {
+          return await tradingConnection.getAccountInformation();
+        }
+        return { balance: 0, equity: 0 };
       },
       closePosition: async (positionId) => {
-        return await rpcConnection.closePosition(positionId);
+        if (typeof tradingConnection.closePosition === 'function') {
+          return await tradingConnection.closePosition(positionId);
+        }
+        throw new Error('closePosition not available');
       }
     };
     
