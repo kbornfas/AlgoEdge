@@ -216,22 +216,80 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
     
     // Method 3: Use account directly (some SDK versions)
     if (!tradingConnection) {
-      console.log(`  🔄 Using direct account methods...`);
-      // Check what methods are available
-      const methods = Object.keys(account).filter(k => typeof account[k] === 'function');
-      console.log(`  📋 Available methods: ${methods.slice(0, 10).join(', ')}...`);
-      
-      tradingConnection = account; // Use account directly
+      console.log(`  🔄 Using REST API for trading...`);
+      tradingConnection = null; // Will use REST API
     }
     
-    // Create unified connection wrapper
+    // REST API base URL
+    const METAAPI_REST_URL = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
+    const metaApiToken = process.env.METAAPI_TOKEN;
+    
+    // Create unified connection wrapper using REST API for trades
     const connection = {
       createMarketOrder: async (symbol, type, volume, sl, tp, options) => {
         console.log(`  📤 Creating ${type} order: ${symbol} @ ${volume} lots`);
-        if (typeof tradingConnection.createMarketOrder === 'function') {
-          return await tradingConnection.createMarketOrder(symbol, type, volume, sl, tp, options);
+        
+        // Use REST API for trade execution (most reliable)
+        try {
+          const response = await fetch(
+            `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/trade`,
+            {
+              method: 'POST',
+              headers: {
+                'auth-token': metaApiToken,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                actionType: type.toUpperCase() === 'BUY' ? 'ORDER_TYPE_BUY' : 'ORDER_TYPE_SELL',
+                symbol: symbol,
+                volume: volume,
+                stopLoss: sl,
+                takeProfit: tp,
+                comment: options?.comment || 'AlgoEdge Trade',
+              }),
+            }
+          );
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+          }
+          
+          const result = await response.json();
+          console.log(`  ✅ Trade placed via REST API:`, result);
+          return result;
+        } catch (error) {
+          console.error(`  ❌ REST API trade failed:`, error.message);
+          throw error;
         }
-        throw new Error('createMarketOrder not available');
+      },
+      closePosition: async (positionId) => {
+        // Use REST API to close position
+        try {
+          const response = await fetch(
+            `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/trade`,
+            {
+              method: 'POST',
+              headers: {
+                'auth-token': metaApiToken,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                actionType: 'POSITION_CLOSE_ID',
+                positionId: positionId,
+              }),
+            }
+          );
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          
+          return await response.json();
+        } catch (error) {
+          console.error(`  ❌ Close position failed:`, error.message);
+          throw error;
+        }
       },
       getHistoricalCandles: async (symbol, timeframe, startTime, limit) => {
         // Convert timeframe format: m1 -> 1m, m5 -> 5m, h1 -> 1h, d1 -> 1d
@@ -248,7 +306,7 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
         const methods = [
           // Method 1: historyStorage (streaming connection)
           async () => {
-            if (tradingConnection.historyStorage) {
+            if (tradingConnection && tradingConnection.historyStorage) {
               const candles = tradingConnection.historyStorage.deals || [];
               return candles.slice(-limit);
             }
@@ -256,7 +314,7 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
           },
           // Method 2: getCandles on connection
           async () => {
-            if (typeof tradingConnection.getCandles === 'function') {
+            if (tradingConnection && typeof tradingConnection.getCandles === 'function') {
               return await tradingConnection.getCandles(symbol, tf, startTimeMs, limit);
             }
             return null;
@@ -275,7 +333,7 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
           },
           // Method 4: Use terminal state price
           async () => {
-            if (tradingConnection.terminalState?.price) {
+            if (tradingConnection && tradingConnection.terminalState?.price) {
               const price = tradingConnection.terminalState.price(symbol);
               if (price) {
                 // Generate synthetic candles from current price for analysis
@@ -303,25 +361,43 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
         return generateFallbackCandles(symbol, limit);
       },
       getPositions: async () => {
+        // Use REST API for positions
         try {
-          if (typeof tradingConnection.getPositions === 'function') {
-            return await tradingConnection.getPositions() || [];
-          }
-        } catch (e) { }
-        return [];
+          const response = await fetch(
+            `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/positions`,
+            {
+              headers: {
+                'auth-token': metaApiToken,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          
+          if (!response.ok) return [];
+          return await response.json() || [];
+        } catch (e) { 
+          return [];
+        }
       },
       getAccountInformation: async () => {
-        if (typeof tradingConnection.getAccountInformation === 'function') {
-          return await tradingConnection.getAccountInformation();
+        // Use REST API for account info
+        try {
+          const response = await fetch(
+            `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/account-information`,
+            {
+              headers: {
+                'auth-token': metaApiToken,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          
+          if (!response.ok) return { balance: 0, equity: 0 };
+          return await response.json();
+        } catch (e) {
+          return { balance: 0, equity: 0 };
         }
-        return { balance: 0, equity: 0 };
       },
-      closePosition: async (positionId) => {
-        if (typeof tradingConnection.closePosition === 'function') {
-          return await tradingConnection.closePosition(positionId);
-        }
-        throw new Error('closePosition not available');
-      }
     };
     
     console.log(`  ✅ Connected to MetaAPI account ${metaApiAccountId}`);
