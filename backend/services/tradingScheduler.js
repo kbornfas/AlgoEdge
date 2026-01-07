@@ -89,22 +89,64 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       await account.waitConnected();
     }
     
-    // Create wrapper that uses account directly
-    const connection = {
+    // Try to get RPC connection first (preferred for trading)
+    let connection;
+    let rpcConnection = null;
+    
+    try {
+      // Try RPC connection
+      if (typeof account.getRPCConnection === 'function') {
+        rpcConnection = account.getRPCConnection();
+        await rpcConnection.connect();
+        await rpcConnection.waitSynchronized({ timeoutInSeconds: 60 });
+        console.log(`  ✅ RPC connection established`);
+      }
+    } catch (rpcError) {
+      console.log(`  ⚠️ RPC connection failed: ${rpcError.message}`);
+    }
+    
+    // Create wrapper using RPC connection or direct account
+    connection = {
       createMarketOrder: async (symbol, type, volume, sl, tp, options) => {
         console.log(`  📤 Creating ${type} order for ${symbol}, vol: ${volume}`);
+        if (rpcConnection) {
+          return await rpcConnection.createMarketOrder(symbol, type, volume, sl, tp, options);
+        }
         return await account.createMarketOrder(symbol, type, volume, { stopLoss: sl, takeProfit: tp, ...options });
       },
       getHistoricalCandles: async (symbol, timeframe, startTime, limit) => {
-        return await account.getHistoricalCandles(symbol, timeframe, startTime, limit);
+        try {
+          // Use the account's historical candles method
+          const candles = await account.getHistoricalCandles(symbol, timeframe, startTime, limit);
+          return candles || [];
+        } catch (error) {
+          console.log(`  ⚠️ Candle fetch error for ${symbol}: ${error.message}`);
+          return [];
+        }
       },
       getPositions: async () => {
-        return await account.getPositions();
+        try {
+          if (rpcConnection) {
+            return await rpcConnection.getPositions() || [];
+          }
+          // Fallback: try to get account information which includes positions
+          const info = await account.getAccountInformation();
+          return info?.positions || [];
+        } catch (error) {
+          console.log(`  ⚠️ getPositions error: ${error.message}`);
+          return [];
+        }
       },
       getAccountInformation: async () => {
+        if (rpcConnection) {
+          return await rpcConnection.getAccountInformation();
+        }
         return await account.getAccountInformation();
       },
       closePosition: async (positionId) => {
+        if (rpcConnection) {
+          return await rpcConnection.closePosition(positionId);
+        }
         return await account.closePosition(positionId);
       }
     };
@@ -238,14 +280,20 @@ const TIMEFRAME_INTERVALS = {
 };
 
 /**
- * Fetch candle data via MetaAPI
+ * Fetch candle data via MetaAPI with retry
  */
 async function fetchCandles(connection, symbol, timeframe, count = 50) {
   try {
     const history = await connection.getHistoricalCandles(symbol, timeframe, null, count);
-    return history || [];
+    if (!history || history.length === 0) {
+      return [];
+    }
+    return history;
   } catch (error) {
-    console.error(`Failed to fetch candles for ${symbol}:`, error.message);
+    // Don't spam logs with certificate errors
+    if (!error.message?.includes('certificate')) {
+      console.error(`Failed to fetch candles for ${symbol}:`, error.message);
+    }
     return [];
   }
 }
@@ -676,10 +724,17 @@ async function runTradingCycle() {
 async function manageOpenPositions(connection, accountId, userId) {
   try {
     // Get open positions from MT5
-    const positions = await connection.getPositions();
-    console.log(`  📈 Account ${accountId} has ${positions?.length || 0} open positions`);
+    let positions = [];
+    try {
+      positions = await connection.getPositions() || [];
+    } catch (posError) {
+      console.log(`  ⚠️ Could not fetch positions: ${posError.message}`);
+      return; // Skip position management this cycle
+    }
     
-    if (!positions || positions.length === 0) return;
+    console.log(`  📈 Account ${accountId} has ${positions.length} open positions`);
+    
+    if (positions.length === 0) return;
     
     for (const position of positions) {
       const profit = position.profit || 0;
