@@ -270,82 +270,128 @@ function calculateATR(candles, period = 14) {
 }
 
 /**
- * Analyze market and generate trading signal
- * Uses momentum-based strategy for reliable signals
+ * =========================================================================
+ * SMART MARKET ANALYSIS - Only trade on real opportunities
+ * =========================================================================
  */
 function analyzeMarket(candles, symbol, riskLevel = 'medium') {
-  if (!candles || candles.length < 20) return null;
+  if (!candles || candles.length < 30) return null;
   
-  const currentPrice = candles[candles.length - 1].close;
+  const closes = candles.map(c => c.close);
+  const currentPrice = closes[closes.length - 1];
   const atr = calculateATR(candles, 14);
   
   if (atr === 0) return null;
   
-  // Momentum analysis - look at last 5-10 candles
+  // Calculate indicators
+  const ema8 = calculateEMA(closes, 8);
+  const ema20 = calculateEMA(closes, 20);
+  const ema50 = calculateEMA(closes, 50);
+  const rsi = calculateRSI(closes, 14);
+  const currentRsi = rsi[rsi.length - 1] || 50;
+  
+  // Trend detection
+  const ema8Val = ema8[ema8.length - 1];
+  const ema20Val = ema20[ema20.length - 1];
+  const ema50Val = ema50[ema50.length - 1] || ema20Val;
+  
+  const isUptrend = ema8Val > ema20Val && ema20Val > ema50Val;
+  const isDowntrend = ema8Val < ema20Val && ema20Val < ema50Val;
+  
+  // EMA crossovers (fresh signals)
+  const emaCrossUp = ema8Val > ema20Val && ema8[ema8.length - 2] <= ema20[ema20.length - 2];
+  const emaCrossDown = ema8Val < ema20Val && ema8[ema8.length - 2] >= ema20[ema20.length - 2];
+  
+  // Momentum check
   const recentCandles = candles.slice(-5);
   const bullishCount = recentCandles.filter(c => c.close > c.open).length;
-  const bearishCount = recentCandles.filter(c => c.close < c.open).length;
+  const bearishCount = 5 - bullishCount;
   
-  // EMA crossover check
-  const ema8 = calculateEMA(candles.map(c => c.close), 8);
-  const ema20 = calculateEMA(candles.map(c => c.close), 20);
-  const emaCrossUp = ema8[ema8.length - 1] > ema20[ema20.length - 1] && 
-                     ema8[ema8.length - 2] <= ema20[ema20.length - 2];
-  const emaCrossDown = ema8[ema8.length - 1] < ema20[ema20.length - 1] && 
-                       ema8[ema8.length - 2] >= ema20[ema20.length - 2];
+  // Support/Resistance check
+  const recentLows = candles.slice(-20).map(c => c.low);
+  const recentHighs = candles.slice(-20).map(c => c.high);
+  const support = Math.min(...recentLows);
+  const resistance = Math.max(...recentHighs);
+  const nearSupport = currentPrice < support + (atr * 0.5);
+  const nearResistance = currentPrice > resistance - (atr * 0.5);
   
-  // Calculate RSI
-  const rsi = calculateRSI(candles.map(c => c.close), 14);
-  const currentRsi = rsi[rsi.length - 1];
-  
-  // Decision logic
-  let isBuy = false;
+  // =========================================================================
+  // QUALITY SIGNAL DETECTION - Only trade on high probability setups
+  // =========================================================================
+  let signal = null;
   let confidence = 0;
   let reason = '';
   
-  // Strong momentum OR EMA crossover OR RSI extremes
-  if (bullishCount >= 4 || emaCrossUp || currentRsi < 30) {
-    isBuy = true;
-    confidence = 60 + (bullishCount >= 4 ? 15 : 0) + (emaCrossUp ? 15 : 0) + (currentRsi < 30 ? 10 : 0);
-    reason = `BUY: Momentum (${bullishCount}B)${emaCrossUp ? ' + EMA Cross Up' : ''}${currentRsi < 30 ? ' + RSI Oversold' : ''}`;
-  } else if (bearishCount >= 4 || emaCrossDown || currentRsi > 70) {
-    isBuy = false;
-    confidence = 60 + (bearishCount >= 4 ? 15 : 0) + (emaCrossDown ? 15 : 0) + (currentRsi > 70 ? 10 : 0);
-    reason = `SELL: Momentum (${bearishCount}S)${emaCrossDown ? ' + EMA Cross Down' : ''}${currentRsi > 70 ? ' + RSI Overbought' : ''}`;
-  } else {
-    // Default to momentum direction when mixed signals
-    isBuy = bullishCount >= bearishCount;
-    confidence = 50; // Base confidence for forced entry
-    reason = `FORCED: ${isBuy ? 'Bullish' : 'Bearish'} momentum (${bullishCount}B/${bearishCount}S)`;
+  // BUY CONDITIONS: Strong bullish setup
+  if (
+    (isUptrend && currentRsi < 40 && nearSupport) ||  // Pullback in uptrend
+    (emaCrossUp && bullishCount >= 3) ||              // Fresh crossover with momentum
+    (currentRsi < 25 && bullishCount >= 3)            // Oversold reversal
+  ) {
+    confidence = 0;
+    reason = '';
+    
+    if (isUptrend) { confidence += 25; reason += 'Uptrend '; }
+    if (emaCrossUp) { confidence += 30; reason += 'EMA-Cross-Up '; }
+    if (currentRsi < 30) { confidence += 20; reason += 'RSI-Oversold '; }
+    if (nearSupport) { confidence += 15; reason += 'Near-Support '; }
+    if (bullishCount >= 4) { confidence += 10; reason += `Momentum(${bullishCount}B) `; }
+    
+    if (confidence >= 50) {
+      signal = { type: 'buy', confidence, reason: `BUY: ${reason.trim()}` };
+    }
   }
   
-  // Risk multipliers
+  // SELL CONDITIONS: Strong bearish setup
+  if (
+    !signal && (
+      (isDowntrend && currentRsi > 60 && nearResistance) ||  // Pullback in downtrend
+      (emaCrossDown && bearishCount >= 3) ||                  // Fresh crossover with momentum
+      (currentRsi > 75 && bearishCount >= 3)                  // Overbought reversal
+    )
+  ) {
+    confidence = 0;
+    reason = '';
+    
+    if (isDowntrend) { confidence += 25; reason += 'Downtrend '; }
+    if (emaCrossDown) { confidence += 30; reason += 'EMA-Cross-Down '; }
+    if (currentRsi > 70) { confidence += 20; reason += 'RSI-Overbought '; }
+    if (nearResistance) { confidence += 15; reason += 'Near-Resistance '; }
+    if (bearishCount >= 4) { confidence += 10; reason += `Momentum(${bearishCount}S) `; }
+    
+    if (confidence >= 50) {
+      signal = { type: 'sell', confidence, reason: `SELL: ${reason.trim()}` };
+    }
+  }
+  
+  // No quality signal found
+  if (!signal) {
+    console.log(`    📊 No quality signal: Trend=${isUptrend ? 'UP' : isDowntrend ? 'DOWN' : 'RANGE'}, RSI=${currentRsi.toFixed(0)}, Mom=${bullishCount}B/${bearishCount}S`);
+    return null;
+  }
+  
+  // Risk management
   const riskMultipliers = {
-    low: { sl: 2.5, tp: 3.0, volume: 0.01 },
-    medium: { sl: 2.0, tp: 2.5, volume: 0.05 },
-    high: { sl: 1.5, tp: 2.0, volume: 0.10 },
-    aggressive: { sl: 1.2, tp: 1.5, volume: 0.15 }
+    low: { sl: 2.5, tp: 4.0, volume: 0.01 },
+    medium: { sl: 2.0, tp: 3.0, volume: 0.03 },
+    high: { sl: 1.5, tp: 2.5, volume: 0.05 },
+    aggressive: { sl: 1.2, tp: 2.0, volume: 0.10 }
   };
   
   const risk = riskMultipliers[riskLevel] || riskMultipliers.medium;
-  
-  const stopLoss = isBuy
-    ? currentPrice - (atr * risk.sl)
-    : currentPrice + (atr * risk.sl);
-  const takeProfit = isBuy
-    ? currentPrice + (atr * risk.tp)
-    : currentPrice - (atr * risk.tp);
+  const isBuy = signal.type === 'buy';
   
   return {
     symbol,
-    type: isBuy ? 'buy' : 'sell',
+    type: signal.type,
     entryPrice: currentPrice,
-    stopLoss,
-    takeProfit,
+    stopLoss: isBuy ? currentPrice - (atr * risk.sl) : currentPrice + (atr * risk.sl),
+    takeProfit: isBuy ? currentPrice + (atr * risk.tp) : currentPrice - (atr * risk.tp),
     volume: risk.volume,
-    confidence,
-    reason,
-    atr
+    confidence: signal.confidence,
+    reason: signal.reason,
+    atr,
+    indicators: { rsi: currentRsi, ema8: ema8Val, ema20: ema20Val, support, resistance }
   };
 }
 
@@ -497,31 +543,33 @@ async function executeRobotTrade(robot) {
     for (const symbol of TRADING_PAIRS) {
       try {
         // Fetch candles
-        console.log(`  📊 Fetching candles for ${symbol}...`);
+        console.log(`  📊 Analyzing ${symbol}...`);
         const candles = await fetchCandles(connection, symbol, timeframe.toLowerCase(), 100);
         
-        if (!candles || candles.length < 20) {
+        if (!candles || candles.length < 30) {
           console.log(`  ⚠️ Insufficient data for ${symbol} (got ${candles?.length || 0} candles)`);
           continue;
         }
         
-        // Analyze market
+        // Analyze market - only returns signal if quality conditions met
         const signal = analyzeMarket(candles, symbol, riskLevel);
         
-        if (!signal || signal.confidence < 40) {
-          // Force trade if no signals found
-          console.log(`  ⚠️ Low confidence for ${symbol} (${signal?.confidence || 0}%) - forcing trade...`);
-          const forcedSignal = createForcedSignal(candles, symbol, riskLevel);
-          if (forcedSignal) {
-            await executeTrade(connection, accountId, robotId, userId, robotName, forcedSignal);
-            break; // One trade per robot per cycle
-          }
+        if (!signal) {
+          // No quality signal - wait for better opportunity
           continue;
         }
         
-        // Execute trade using helper
-        await executeTrade(connection, accountId, robotId, userId, robotName, signal);
-        break; // One trade per robot per cycle
+        // Only trade on high confidence signals (50%+)
+        if (signal.confidence < 50) {
+          console.log(`  ⚠️ Signal too weak: ${signal.confidence}% - waiting for better setup`);
+          continue;
+        }
+        
+        // Execute trade on quality signal
+        const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
+        if (trade) {
+          break; // One trade per robot per cycle
+        }
         
       } catch (symbolError) {
         console.error(`  ❌ Error processing ${symbol}:`, symbolError.message);
@@ -621,7 +669,9 @@ async function runTradingCycle() {
 }
 
 /**
- * Manage open positions - check P/L, close profitable trades, update database
+ * =========================================================================
+ * SMART POSITION MANAGEMENT - Exit on profits or market structure change
+ * =========================================================================
  */
 async function manageOpenPositions(connection, accountId, userId) {
   try {
@@ -635,15 +685,104 @@ async function manageOpenPositions(connection, accountId, userId) {
       const profit = position.profit || 0;
       const symbol = position.symbol;
       const positionId = position.id;
+      const positionType = position.type; // 'buy' or 'sell'
+      const openPrice = position.openPrice;
+      const currentPrice = position.currentPrice;
+      const volume = position.volume;
       
-      console.log(`    Position ${positionId}: ${symbol} ${position.type} P/L: $${profit.toFixed(2)}`);
+      console.log(`    Position ${positionId}: ${symbol} ${positionType} P/L: $${profit.toFixed(2)}`);
       
-      // Auto-close profitable trades over $5 or losses over -$10
-      const shouldClose = profit >= 5 || profit <= -10;
+      // Fetch current market data to check structure
+      let shouldClose = false;
+      let closeReason = '';
       
+      try {
+        const candles = await connection.getHistoricalCandles(symbol, 'm5', null, 30);
+        
+        if (candles && candles.length >= 20) {
+          const closes = candles.map(c => c.close);
+          const ema8 = calculateEMA(closes, 8);
+          const ema20 = calculateEMA(closes, 20);
+          const rsi = calculateRSI(closes, 14);
+          const currentRsi = rsi[rsi.length - 1] || 50;
+          const atr = calculateATR(candles, 7);
+          
+          const ema8Val = ema8[ema8.length - 1];
+          const ema20Val = ema20[ema20.length - 1];
+          
+          // Calculate profit in pips/points
+          const priceDiff = positionType === 'buy' 
+            ? currentPrice - openPrice 
+            : openPrice - currentPrice;
+          const profitInATR = atr > 0 ? priceDiff / atr : 0;
+          
+          // =========================================================================
+          // EXIT CONDITIONS
+          // =========================================================================
+          
+          // 1. SECURE PROFITS: Close when profit >= 1.5 ATR (good move captured)
+          if (profitInATR >= 1.5) {
+            shouldClose = true;
+            closeReason = `PROFIT SECURED: ${profitInATR.toFixed(1)} ATR move captured ($${profit.toFixed(2)})`;
+          }
+          
+          // 2. MARKET STRUCTURE CHANGE: Trend reversal against position
+          else if (positionType === 'buy' && ema8Val < ema20Val && currentRsi > 65) {
+            shouldClose = true;
+            closeReason = `STRUCTURE CHANGE: EMA bearish cross + RSI high (${currentRsi.toFixed(0)})`;
+          }
+          else if (positionType === 'sell' && ema8Val > ema20Val && currentRsi < 35) {
+            shouldClose = true;
+            closeReason = `STRUCTURE CHANGE: EMA bullish cross + RSI low (${currentRsi.toFixed(0)})`;
+          }
+          
+          // 3. TRAILING STOP: Lock in profits after 1 ATR move
+          else if (profitInATR >= 1.0 && profit > 0) {
+            // Check if momentum is fading
+            const recentCandles = candles.slice(-3);
+            const momentum = positionType === 'buy'
+              ? recentCandles.filter(c => c.close < c.open).length
+              : recentCandles.filter(c => c.close > c.open).length;
+            
+            if (momentum >= 2) {
+              shouldClose = true;
+              closeReason = `TRAILING STOP: Momentum fading after ${profitInATR.toFixed(1)} ATR profit`;
+            }
+          }
+          
+          // 4. CUT LOSSES: Close if loss exceeds 2 ATR or $15
+          else if (profitInATR <= -2.0 || profit <= -15) {
+            shouldClose = true;
+            closeReason = `STOP LOSS: ${profitInATR.toFixed(1)} ATR loss ($${profit.toFixed(2)})`;
+          }
+          
+          // 5. TIME-BASED: Close very small profits/losses after extended time
+          // (positions that aren't moving - free up capital)
+          else if (Math.abs(profit) < 2 && Math.abs(profitInATR) < 0.3) {
+            // Check if trade is stuck (sideways for 10+ candles)
+            const priceRange = Math.max(...closes.slice(-10)) - Math.min(...closes.slice(-10));
+            if (priceRange < atr * 0.5) {
+              shouldClose = true;
+              closeReason = `STAGNANT: Market ranging, freeing capital`;
+            }
+          }
+        }
+      } catch (analysisError) {
+        console.log(`    ⚠️ Could not analyze ${symbol}: ${analysisError.message}`);
+        // Fallback to simple profit/loss rules
+        if (profit >= 10) {
+          shouldClose = true;
+          closeReason = `PROFIT TARGET: $${profit.toFixed(2)}`;
+        } else if (profit <= -20) {
+          shouldClose = true;
+          closeReason = `MAX LOSS: $${profit.toFixed(2)}`;
+        }
+      }
+      
+      // Execute close if needed
       if (shouldClose) {
         try {
-          console.log(`    🔄 Closing position ${positionId} (P/L: $${profit.toFixed(2)})...`);
+          console.log(`    🔄 Closing: ${closeReason}`);
           await connection.closePosition(positionId);
           
           // Update trade in database
@@ -653,13 +792,15 @@ async function manageOpenPositions(connection, accountId, userId) {
             [profit, accountId, symbol]
           );
           
-          console.log(`    ✅ Position closed: ${symbol} $${profit.toFixed(2)}`);
+          console.log(`    ✅ Position closed: ${symbol} ${positionType} $${profit.toFixed(2)}`);
           
           // Emit trade closed event
-          emitTradeClosed(userId, { symbol, profit, positionId });
+          emitTradeClosed(userId, { symbol, profit, positionId, reason: closeReason });
         } catch (closeError) {
           console.error(`    ❌ Failed to close position:`, closeError.message);
         }
+      } else {
+        console.log(`    ⏳ Holding: ${symbol} ${positionType} $${profit.toFixed(2)}`);
       }
     }
     
