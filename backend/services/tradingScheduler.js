@@ -1,6 +1,7 @@
 import pool from '../config/database.js';
 import { mt5Connections, connectMT5Account } from './mt5Service.js';
 import { emitTradeSignal, emitTradeClosed } from './websocketService.js';
+import https from 'https';
 
 /**
  * =========================================================================
@@ -13,6 +14,27 @@ import { emitTradeSignal, emitTradeClosed } from './websocketService.js';
 
 // Allow self-signed certificates for MetaAPI connections
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+// Create HTTPS agent that ignores SSL errors
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
+
+// Custom fetch wrapper for MetaAPI with SSL handling
+async function metaApiFetch(url, options = {}) {
+  // Use dynamic import for node-fetch if native fetch not available
+  let fetchFn;
+  try {
+    fetchFn = globalThis.fetch || (await import('node-fetch')).default;
+  } catch {
+    fetchFn = globalThis.fetch;
+  }
+  
+  return fetchFn(url, {
+    ...options,
+    agent: httpsAgent,
+  });
+}
 
 // Approximate current prices for major pairs (updated periodically)
 const SYMBOL_PRICES = {
@@ -233,7 +255,7 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
         
         // Use REST API for trade execution (most reliable)
         try {
-          const response = await fetch(
+          const response = await metaApiFetch(
             `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/trade`,
             {
               method: 'POST',
@@ -268,7 +290,7 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       closePosition: async (positionId) => {
         // Use REST API to close position
         try {
-          const response = await fetch(
+          const response = await metaApiFetch(
             `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/trade`,
             {
               method: 'POST',
@@ -365,7 +387,7 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       getPositions: async () => {
         // Use REST API for positions
         try {
-          const response = await fetch(
+          const response = await metaApiFetch(
             `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/positions`,
             {
               headers: {
@@ -384,7 +406,7 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       getAccountInformation: async () => {
         // Use REST API for account info
         try {
-          const response = await fetch(
+          const response = await metaApiFetch(
             `${METAAPI_REST_URL}/users/current/accounts/${metaApiAccountId}/account-information`,
             {
               headers: {
