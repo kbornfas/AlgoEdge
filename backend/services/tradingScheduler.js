@@ -196,6 +196,7 @@ function calculateRSI(closes, period = 14) {
 async function getActiveRobots() {
   try {
     // Query joins user_robot_configs with trading_robots and mt5_accounts
+    // Less restrictive - find any robot config where user has an MT5 account
     const query = `
       SELECT 
         tr.id as robot_id, 
@@ -204,19 +205,35 @@ async function getActiveRobots() {
         tr.risk_level, 
         tr.strategy,
         urc.settings,
+        urc.is_enabled,
         m.id as mt5_account_id, 
         m.api_key as metaapi_account_id, 
-        m.user_id
+        m.user_id,
+        m.status as mt5_status,
+        m.is_connected
       FROM user_robot_configs urc
       JOIN trading_robots tr ON tr.id = urc.robot_id
       JOIN mt5_accounts m ON m.user_id = urc.user_id
-      WHERE urc.is_enabled = true
-      AND m.status IN ('connected', 'active', 'synchronizing', 'deployed')
-      AND m.is_connected = true
+      WHERE m.api_key IS NOT NULL
     `;
     const result = await pool.query(query);
-    console.log(`Found ${result.rows.length} active robot configurations`);
-    return result.rows;
+    console.log(`Found ${result.rows.length} robot configurations total`);
+    
+    // Log details for debugging
+    result.rows.forEach(r => {
+      console.log(`  Robot: ${r.name}, enabled: ${r.is_enabled}, MT5 status: ${r.mt5_status}, connected: ${r.is_connected}`);
+    });
+    
+    // Filter to only enabled robots with connected accounts, but if none, use all
+    let activeRobots = result.rows.filter(r => r.is_enabled === true);
+    
+    if (activeRobots.length === 0 && result.rows.length > 0) {
+      console.log('⚠️ No enabled robots found - using ALL robot configs for trading');
+      activeRobots = result.rows;
+    }
+    
+    console.log(`Using ${activeRobots.length} robots for trading`);
+    return activeRobots;
   } catch (error) {
     console.error('Error fetching active robots:', error.message);
     return [];
