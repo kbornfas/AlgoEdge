@@ -226,24 +226,64 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       await account.waitConnected();
     }
     
-    // Get RPC connection - this is the standard way to trade
+    // Log available methods on account object
+    const accountMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(account))
+      .filter(m => typeof account[m] === 'function');
+    console.log(`  📋 Account methods: ${accountMethods.slice(0, 15).join(', ')}`);
+    
+    // Try different ways to get a trading connection
     let rpcConnection = null;
     
-    if (typeof account.getRPCConnection === 'function') {
+    // Method 1: getRPCConnection (older SDK)
+    if (!rpcConnection && typeof account.getRPCConnection === 'function') {
       try {
-        console.log(`  🔄 Getting RPC connection...`);
+        console.log(`  🔄 Trying getRPCConnection...`);
         rpcConnection = account.getRPCConnection();
         await rpcConnection.connect();
         await rpcConnection.waitSynchronized({ timeoutInSeconds: 60 });
         console.log(`  ✅ RPC connection synchronized`);
       } catch (e) {
-        console.log(`  ⚠️ RPC connection error: ${e.message}`);
+        console.log(`  ⚠️ getRPCConnection error: ${e.message}`);
         rpcConnection = null;
       }
     }
     
+    // Method 2: getStreamingConnection (newer SDK)
+    if (!rpcConnection && typeof account.getStreamingConnection === 'function') {
+      try {
+        console.log(`  🔄 Trying getStreamingConnection...`);
+        rpcConnection = account.getStreamingConnection();
+        await rpcConnection.connect();
+        await rpcConnection.waitSynchronized({ timeoutInSeconds: 60 });
+        console.log(`  ✅ Streaming connection synchronized`);
+      } catch (e) {
+        console.log(`  ⚠️ getStreamingConnection error: ${e.message}`);
+        rpcConnection = null;
+      }
+    }
+    
+    // Method 3: createRpcConnection (some SDK versions)
+    if (!rpcConnection && typeof account.createRpcConnection === 'function') {
+      try {
+        console.log(`  🔄 Trying createRpcConnection...`);
+        rpcConnection = await account.createRpcConnection();
+        await rpcConnection.connect();
+        await rpcConnection.waitSynchronized({ timeoutInSeconds: 60 });
+        console.log(`  ✅ Created RPC connection synchronized`);
+      } catch (e) {
+        console.log(`  ⚠️ createRpcConnection error: ${e.message}`);
+        rpcConnection = null;
+      }
+    }
+    
+    // Method 4: Use account directly if it has trading methods
+    if (!rpcConnection && typeof account.createMarketBuyOrder === 'function') {
+      console.log(`  🔄 Using account directly for trading...`);
+      rpcConnection = account; // Account itself has trading methods
+    }
+    
     if (!rpcConnection) {
-      console.log(`  ❌ Could not establish RPC connection`);
+      console.log(`  ❌ Could not establish any connection. Available methods: ${accountMethods.join(', ')}`);
       return null;
     }
     
