@@ -1,6 +1,6 @@
 import pool from '../config/database.js';
-import { openTrade, mt5Connections } from './mt5Service.js';
-import { emitTradeSignal } from './websocketService.js';
+import { mt5Connections, connectMT5Account } from './mt5Service.js';
+import { emitTradeSignal, emitTradeClosed } from './websocketService.js';
 
 /**
  * =========================================================================
@@ -44,7 +44,16 @@ const schedulerConnections = new Map();
  * Get or create MetaAPI connection for an account
  */
 async function getConnection(metaApiAccountId, mt5AccountId) {
-  // Check scheduler's own connections first
+  // Check mt5Service connections first (they're properly managed)
+  if (mt5Connections.has(mt5AccountId)) {
+    const conn = mt5Connections.get(mt5AccountId);
+    if (conn && conn.connection) {
+      console.log(`  ✅ Using existing connection for account ${mt5AccountId}`);
+      return conn.connection;
+    }
+  }
+  
+  // Check scheduler's cached connections
   if (schedulerConnections.has(mt5AccountId)) {
     const conn = schedulerConnections.get(mt5AccountId);
     if (conn && conn.connection) {
@@ -52,15 +61,7 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
     }
   }
   
-  // Check mt5Service connections
-  if (mt5Connections.has(mt5AccountId)) {
-    const conn = mt5Connections.get(mt5AccountId);
-    if (conn && conn.connection) {
-      return conn.connection;
-    }
-  }
-  
-  // Create new connection
+  // Create new connection via MetaAPI
   if (!metaApiAccountId) {
     console.log(`  ❌ No MetaAPI account ID for MT5 account ${mt5AccountId}`);
     return null;
@@ -73,46 +74,40 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
     console.log(`  🔌 Connecting to MetaAPI account: ${metaApiAccountId}`);
     
     const account = await metaApi.metatraderAccountApi.getAccount(metaApiAccountId);
+    console.log(`  📊 Account state: ${account.state}, connectionStatus: ${account.connectionStatus}`);
     
     // Deploy if needed
     if (account.state !== 'DEPLOYED') {
-      console.log(`  📦 Deploying account (state: ${account.state})...`);
+      console.log(`  📦 Deploying account...`);
       await account.deploy();
       await account.waitDeployed();
     }
     
     // Wait for account to connect to broker
-    console.log(`  ⏳ Waiting for broker connection...`);
-    await account.waitConnected();
-    
-    // Get streaming connection (newer API) or RPC connection
-    let connection;
-    if (typeof account.getStreamingConnection === 'function') {
-      connection = account.getStreamingConnection();
-      await connection.connect();
-      await connection.waitSynchronized();
-    } else if (typeof account.getRPCConnection === 'function') {
-      connection = account.getRPCConnection();
-      await connection.connect();
-      await connection.waitSynchronized();
-    } else {
-      // Direct account methods for trading
-      console.log(`  ✅ Using direct account API for trading`);
-      connection = {
-        createMarketOrder: async (symbol, type, volume, sl, tp, options) => {
-          return await account.createMarketOrder(symbol, type, volume, sl, tp, options);
-        },
-        getHistoricalCandles: async (symbol, timeframe, startTime, limit) => {
-          return await account.getHistoricalCandles(symbol, timeframe, startTime, limit);
-        },
-        getPositions: async () => {
-          return await account.getPositions();
-        },
-        getAccountInformation: async () => {
-          return await account.getAccountInformation();
-        }
-      };
+    if (account.connectionStatus !== 'CONNECTED') {
+      console.log(`  ⏳ Waiting for broker connection...`);
+      await account.waitConnected();
     }
+    
+    // Create wrapper that uses account directly
+    const connection = {
+      createMarketOrder: async (symbol, type, volume, sl, tp, options) => {
+        console.log(`  📤 Creating ${type} order for ${symbol}, vol: ${volume}`);
+        return await account.createMarketOrder(symbol, type, volume, { stopLoss: sl, takeProfit: tp, ...options });
+      },
+      getHistoricalCandles: async (symbol, timeframe, startTime, limit) => {
+        return await account.getHistoricalCandles(symbol, timeframe, startTime, limit);
+      },
+      getPositions: async () => {
+        return await account.getPositions();
+      },
+      getAccountInformation: async () => {
+        return await account.getAccountInformation();
+      },
+      closePosition: async (positionId) => {
+        return await account.closePosition(positionId);
+      }
+    };
     
     console.log(`  ✅ Connected to MetaAPI account ${metaApiAccountId}`);
     
@@ -158,6 +153,69 @@ async function executeTradeViaMetaApi(connection, accountId, robotId, userId, si
     console.error(`  ❌ Failed to execute trade via MetaAPI:`, error.message);
     return null;
   }
+}
+
+/**
+ * Execute a trade with full logging
+ */
+async function executeTrade(connection, accountId, robotId, userId, robotName, signal) {
+  try {
+    console.log(`  ✅ SIGNAL: ${signal.type.toUpperCase()} ${signal.symbol} @ ${signal.entryPrice.toFixed(5)}`);
+    console.log(`     Confidence: ${signal.confidence}%, Reason: ${signal.reason}`);
+    console.log(`     SL: ${signal.stopLoss.toFixed(5)}, TP: ${signal.takeProfit.toFixed(5)}`);
+    
+    // Execute via MetaAPI
+    const trade = await executeTradeViaMetaApi(connection, accountId, robotId, userId, signal);
+    
+    if (trade) {
+      console.log(`  🎉 TRADE EXECUTED: #${trade.id} - ${signal.symbol} ${signal.type.toUpperCase()}`);
+      
+      // Emit trade signal
+      emitTradeSignal(userId, { robotId, robotName, signal, trade });
+      return trade;
+    }
+    return null;
+  } catch (error) {
+    console.error(`  ❌ Trade execution error:`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Create a forced signal based on momentum when no good signals found
+ */
+function createForcedSignal(candles, symbol, riskLevel = 'medium') {
+  if (!candles || candles.length < 10) return null;
+  
+  const currentPrice = candles[candles.length - 1].close;
+  const atr = calculateATR(candles, 7);
+  if (atr === 0) return null;
+  
+  // Quick momentum check
+  const recent = candles.slice(-5);
+  const bullish = recent.filter(c => c.close > c.open).length;
+  const isBuy = bullish >= 3;
+  
+  const riskMultipliers = {
+    low: { sl: 2.5, tp: 3.5, volume: 0.01 },
+    medium: { sl: 2.0, tp: 3.0, volume: 0.05 },
+    high: { sl: 1.5, tp: 2.5, volume: 0.10 },
+    aggressive: { sl: 1.2, tp: 2.0, volume: 0.15 }
+  };
+  
+  const risk = riskMultipliers[riskLevel] || riskMultipliers.medium;
+  
+  return {
+    symbol,
+    type: isBuy ? 'buy' : 'sell',
+    entryPrice: currentPrice,
+    stopLoss: isBuy ? currentPrice - (atr * risk.sl) : currentPrice + (atr * risk.sl),
+    takeProfit: isBuy ? currentPrice + (atr * risk.tp) : currentPrice - (atr * risk.tp),
+    volume: risk.volume,
+    confidence: 50,
+    reason: `FORCED: Momentum ${isBuy ? 'bullish' : 'bearish'} (${bullish}/5 candles)`,
+    atr
+  };
 }
 
 // Premium trading pairs
@@ -414,14 +472,15 @@ async function executeRobotTrade(robot) {
     risk_level: riskLevel = 'medium',
     mt5_account_id: accountId,
     metaapi_account_id: metaApiAccountId,
-    user_id: userId
+    user_id: userId,
+    connection: existingConnection
   } = robot;
   
   try {
     console.log(`\n🤖 Processing robot: ${robotName} (${timeframe || 'm15'})`);
     
-    // Get or create connection using scheduler's own connection manager
-    const connection = await getConnection(metaApiAccountId, accountId);
+    // Use passed connection or get new one
+    const connection = existingConnection || await getConnection(metaApiAccountId, accountId);
     if (!connection) {
       console.log(`  ⚠️ Could not establish connection for MT5 account ${accountId}`);
       return;
@@ -438,10 +497,11 @@ async function executeRobotTrade(robot) {
     for (const symbol of TRADING_PAIRS) {
       try {
         // Fetch candles
+        console.log(`  📊 Fetching candles for ${symbol}...`);
         const candles = await fetchCandles(connection, symbol, timeframe.toLowerCase(), 100);
         
         if (!candles || candles.length < 20) {
-          console.log(`  ⚠️ Insufficient data for ${symbol}`);
+          console.log(`  ⚠️ Insufficient data for ${symbol} (got ${candles?.length || 0} candles)`);
           continue;
         }
         
@@ -449,37 +509,19 @@ async function executeRobotTrade(robot) {
         const signal = analyzeMarket(candles, symbol, riskLevel);
         
         if (!signal || signal.confidence < 40) {
-          console.log(`  ⚠️ No signal for ${symbol} (conf: ${signal?.confidence || 0}%)`);
+          // Force trade if no signals found
+          console.log(`  ⚠️ Low confidence for ${symbol} (${signal?.confidence || 0}%) - forcing trade...`);
+          const forcedSignal = createForcedSignal(candles, symbol, riskLevel);
+          if (forcedSignal) {
+            await executeTrade(connection, accountId, robotId, userId, robotName, forcedSignal);
+            break; // One trade per robot per cycle
+          }
           continue;
         }
         
-        console.log(`  ✅ SIGNAL: ${signal.type.toUpperCase()} ${symbol} @ ${signal.entryPrice.toFixed(5)}`);
-        console.log(`     Confidence: ${signal.confidence}%, Reason: ${signal.reason}`);
-        console.log(`     SL: ${signal.stopLoss.toFixed(5)}, TP: ${signal.takeProfit.toFixed(5)}`);
-        
-        // Execute trade directly via MetaAPI
-        const trade = await executeTradeViaMetaApi(
-          connection,
-          accountId,
-          robotId,
-          userId,
-          signal
-        );
-        
-        if (trade) {
-          console.log(`  🎉 TRADE EXECUTED: #${trade.id} - ${signal.symbol} ${signal.type.toUpperCase()}`);
-          
-          // Emit trade signal to connected clients
-          emitTradeSignal(userId, {
-            robotId,
-            robotName,
-            signal,
-            trade
-          });
-          
-          // Only open one trade per robot per cycle
-          break;
-        }
+        // Execute trade using helper
+        await executeTrade(connection, accountId, robotId, userId, robotName, signal);
+        break; // One trade per robot per cycle
         
       } catch (symbolError) {
         console.error(`  ❌ Error processing ${symbol}:`, symbolError.message);
@@ -543,14 +585,118 @@ async function runTradingCycle() {
     console.log(`\n[${new Date().toLocaleTimeString()}] ========== TRADING CYCLE ==========`);
     console.log(`📊 Processing ${robots.length} active robot(s)...\n`);
     
+    // Group robots by MT5 account to manage trades efficiently
+    const accountRobots = new Map();
     for (const robot of robots) {
-      await executeRobotTrade(robot);
+      const key = robot.mt5_account_id;
+      if (!accountRobots.has(key)) {
+        accountRobots.set(key, { robots: [], metaApiAccountId: robot.metaapi_account_id, userId: robot.user_id });
+      }
+      accountRobots.get(key).robots.push(robot);
+    }
+    
+    // Process each account: check positions, close profits, open new trades
+    for (const [accountId, data] of accountRobots) {
+      try {
+        const connection = await getConnection(data.metaApiAccountId, accountId);
+        if (!connection) continue;
+        
+        // Step 1: Check and manage open positions
+        await manageOpenPositions(connection, accountId, data.userId);
+        
+        // Step 2: Execute new trades for each robot
+        for (const robot of data.robots) {
+          await executeRobotTrade({ ...robot, connection });
+        }
+      } catch (error) {
+        console.error(`Error processing account ${accountId}:`, error.message);
+      }
     }
     
     console.log(`\n[${new Date().toLocaleTimeString()}] ========== CYCLE COMPLETE ==========\n`);
     
   } catch (error) {
     console.error('Trading cycle error:', error);
+  }
+}
+
+/**
+ * Manage open positions - check P/L, close profitable trades, update database
+ */
+async function manageOpenPositions(connection, accountId, userId) {
+  try {
+    // Get open positions from MT5
+    const positions = await connection.getPositions();
+    console.log(`  📈 Account ${accountId} has ${positions?.length || 0} open positions`);
+    
+    if (!positions || positions.length === 0) return;
+    
+    for (const position of positions) {
+      const profit = position.profit || 0;
+      const symbol = position.symbol;
+      const positionId = position.id;
+      
+      console.log(`    Position ${positionId}: ${symbol} ${position.type} P/L: $${profit.toFixed(2)}`);
+      
+      // Auto-close profitable trades over $5 or losses over -$10
+      const shouldClose = profit >= 5 || profit <= -10;
+      
+      if (shouldClose) {
+        try {
+          console.log(`    🔄 Closing position ${positionId} (P/L: $${profit.toFixed(2)})...`);
+          await connection.closePosition(positionId);
+          
+          // Update trade in database
+          await pool.query(
+            `UPDATE trades SET status = 'closed', profit = $1, close_time = NOW() 
+             WHERE mt5_account_id = $2 AND status = 'open' AND pair = $3`,
+            [profit, accountId, symbol]
+          );
+          
+          console.log(`    ✅ Position closed: ${symbol} $${profit.toFixed(2)}`);
+          
+          // Emit trade closed event
+          emitTradeClosed(userId, { symbol, profit, positionId });
+        } catch (closeError) {
+          console.error(`    ❌ Failed to close position:`, closeError.message);
+        }
+      }
+    }
+    
+    // Sync database with actual positions
+    await syncTradesWithMT5(connection, accountId);
+    
+  } catch (error) {
+    console.error(`Error managing positions for account ${accountId}:`, error.message);
+  }
+}
+
+/**
+ * Sync local database with actual MT5 positions
+ */
+async function syncTradesWithMT5(connection, accountId) {
+  try {
+    const positions = await connection.getPositions();
+    const openPositionIds = new Set((positions || []).map(p => p.symbol));
+    
+    // Get open trades from database
+    const dbTrades = await pool.query(
+      `SELECT id, pair FROM trades WHERE mt5_account_id = $1 AND status = 'open'`,
+      [accountId]
+    );
+    
+    // Close trades in database that are no longer open in MT5
+    for (const trade of dbTrades.rows) {
+      if (!openPositionIds.has(trade.pair)) {
+        await pool.query(
+          `UPDATE trades SET status = 'closed', close_time = NOW() WHERE id = $1`,
+          [trade.id]
+        );
+        console.log(`    📊 Synced: Trade ${trade.id} (${trade.pair}) marked as closed`);
+      }
+    }
+  } catch (error) {
+    console.error('Error syncing trades:', error.message);
   }
 }
 
