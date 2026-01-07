@@ -100,65 +100,63 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       await account.waitConnected();
     }
     
-    // Try to get RPC connection first (preferred for trading)
-    let connection;
+    // Get RPC connection - this is required for all trading operations
     let rpcConnection = null;
     
     try {
-      // Try RPC connection
-      if (typeof account.getRPCConnection === 'function') {
-        rpcConnection = account.getRPCConnection();
-        await rpcConnection.connect();
-        await rpcConnection.waitSynchronized({ timeoutInSeconds: 60 });
-        console.log(`  ✅ RPC connection established`);
-      }
+      rpcConnection = account.getRPCConnection();
+      await rpcConnection.connect();
+      await rpcConnection.waitSynchronized({ timeoutInSeconds: 120 });
+      console.log(`  ✅ RPC connection synchronized`);
     } catch (rpcError) {
-      console.log(`  ⚠️ RPC connection failed: ${rpcError.message}`);
+      console.log(`  ❌ RPC connection failed: ${rpcError.message}`);
+      return null;
     }
     
-    // Create wrapper using RPC connection or direct account
-    connection = {
+    if (!rpcConnection) {
+      console.log(`  ❌ Could not establish RPC connection`);
+      return null;
+    }
+    
+    // All operations use the RPC connection
+    const connection = {
       createMarketOrder: async (symbol, type, volume, sl, tp, options) => {
-        console.log(`  📤 Creating ${type} order for ${symbol}, vol: ${volume}`);
-        if (rpcConnection) {
-          return await rpcConnection.createMarketOrder(symbol, type, volume, sl, tp, options);
-        }
-        return await account.createMarketOrder(symbol, type, volume, { stopLoss: sl, takeProfit: tp, ...options });
+        console.log(`  📤 Creating ${type} order: ${symbol} @ ${volume} lots`);
+        return await rpcConnection.createMarketOrder(symbol, type, volume, sl, tp, options);
       },
       getHistoricalCandles: async (symbol, timeframe, startTime, limit) => {
         try {
-          // Use the account's historical candles method
-          const candles = await account.getHistoricalCandles(symbol, timeframe, startTime, limit);
+          // Convert timeframe format: m1 -> 1m, h1 -> 1h, d1 -> 1d
+          let tf = timeframe.toLowerCase();
+          if (tf.startsWith('m')) tf = tf.slice(1) + 'm';
+          else if (tf.startsWith('h')) tf = tf.slice(1) + 'h';
+          else if (tf.startsWith('d')) tf = tf.slice(1) + 'd';
+          
+          const candles = await rpcConnection.getCandles(symbol, tf, startTime, limit);
           return candles || [];
         } catch (error) {
-          console.log(`  ⚠️ Candle fetch error for ${symbol}: ${error.message}`);
-          return [];
+          // Try alternative method
+          try {
+            const candles = await rpcConnection.getHistoricalCandles(symbol, timeframe, startTime, limit);
+            return candles || [];
+          } catch (e) {
+            console.log(`  ⚠️ Candle fetch failed for ${symbol}`);
+            return [];
+          }
         }
       },
       getPositions: async () => {
         try {
-          if (rpcConnection) {
-            return await rpcConnection.getPositions() || [];
-          }
-          // Fallback: try to get account information which includes positions
-          const info = await account.getAccountInformation();
-          return info?.positions || [];
+          return await rpcConnection.getPositions() || [];
         } catch (error) {
-          console.log(`  ⚠️ getPositions error: ${error.message}`);
           return [];
         }
       },
       getAccountInformation: async () => {
-        if (rpcConnection) {
-          return await rpcConnection.getAccountInformation();
-        }
-        return await account.getAccountInformation();
+        return await rpcConnection.getAccountInformation();
       },
       closePosition: async (positionId) => {
-        if (rpcConnection) {
-          return await rpcConnection.closePosition(positionId);
-        }
-        return await account.closePosition(positionId);
+        return await rpcConnection.closePosition(positionId);
       }
     };
     
