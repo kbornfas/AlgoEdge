@@ -261,10 +261,11 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       tradingConnection = null; // Will use REST API
     }
     
-    // MetaAPI REST URLs - use the correct format without region in subdomain
+    // MetaAPI REST URLs - correct format (no region in subdomain)
+    // Updated: 2026-01-07 to fix ENOTFOUND error
     const METAAPI_REST_URL = 'https://mt-client-api-v1.agiliumtrade.ai';
     const metaApiToken = process.env.METAAPI_TOKEN;
-    console.log(`  🌐 Using REST API: ${METAAPI_REST_URL}`);
+    console.log(`  🌐 REST API URL: ${METAAPI_REST_URL}`);
     
     // Create unified connection wrapper using REST API for trades
     const connection = {
