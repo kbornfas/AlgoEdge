@@ -222,7 +222,19 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
  * Connect a new MT5 account with real MetaAPI validation
  */
 export async function POST(req: NextRequest) {
+  console.log('=== MT5 Connect Request Started ===');
+  
   try {
+    // Check MetaAPI token first
+    const META_API_TOKEN = process.env.METAAPI_TOKEN;
+    if (!META_API_TOKEN) {
+      console.error('METAAPI_TOKEN not configured');
+      return NextResponse.json(
+        { error: 'MetaAPI not configured. Contact admin to add METAAPI_TOKEN in Vercel settings.' },
+        { status: 500 }
+      );
+    }
+    
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -343,7 +355,7 @@ export async function POST(req: NextRequest) {
         equity: mt5Account.equity,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Connect MT5 account error:', error);
 
     if (error instanceof z.ZodError) {
@@ -353,8 +365,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Return more detailed error message
+    const errorMessage = error?.message || 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to connect MT5 account' },
+      { error: `Failed to connect MT5 account: ${errorMessage}` },
       { status: 500 }
     );
   }
