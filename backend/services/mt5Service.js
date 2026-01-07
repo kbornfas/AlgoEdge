@@ -91,8 +91,8 @@ try {
 const token = process.env.METAAPI_TOKEN;
 const api = new MetaApi(token);
 
-// Store active MT5 connections
-const mt5Connections = new Map();
+// Store active MT5 connections - exported for trading scheduler
+export const mt5Connections = new Map();
 const metaApiAccounts = new Map();
 
 /**
