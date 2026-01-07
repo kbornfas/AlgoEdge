@@ -148,21 +148,30 @@ async function getCandles(
   limit: number = 200
 ): Promise<CandleData[]> {
   const token = getMetaApiToken();
-  if (!token) return [];
+  if (!token) {
+    console.error('❌ No MetaAPI token available');
+    return [];
+  }
+
+  // Convert timeframe to MetaAPI format
+  const metaApiTimeframe = convertTimeframe(timeframe);
+  console.log(`📊 getCandles: ${symbol} ${timeframe} -> ${metaApiTimeframe}, limit ${limit}`);
 
   // First get the account to determine region
   const accounts = await getAllMetaApiAccounts();
   const account = accounts.find(a => a._id === metaApiAccountId);
   if (!account) {
-    console.error('Account not found:', metaApiAccountId);
+    console.error('❌ Account not found:', metaApiAccountId);
     return [];
   }
 
   const clientApiUrl = getClientApiUrl(account);
 
   try {
-    const url = new URL(`${clientApiUrl}/users/current/accounts/${metaApiAccountId}/historical-market-data/symbols/${symbol}/timeframes/${timeframe}/candles`);
+    const url = new URL(`${clientApiUrl}/users/current/accounts/${metaApiAccountId}/historical-market-data/symbols/${symbol}/timeframes/${metaApiTimeframe}/candles`);
     url.searchParams.set('limit', String(limit));
+    
+    console.log(`📡 Fetching candles from: ${url.toString().substring(0, 100)}...`);
     
     const response = await fetch(url.toString(), {
       headers: {
@@ -171,8 +180,13 @@ async function getCandles(
       },
     });
 
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      console.error(`❌ Candle fetch failed: HTTP ${response.status}`);
+      throw new Error(`HTTP ${response.status}`);
+    }
     const data = await response.json();
+    console.log(`✅ Got ${data?.length || 0} candles for ${symbol}`);
+
     return (data || []).map((candle: any) => ({
       time: new Date(candle.time),
       open: candle.open,
@@ -757,6 +771,112 @@ export async function runRobotTrading(
         }
       } catch (err) {
         errors.push(`Error executing ${signal.symbol}: ${err}`);
+      }
+    }
+
+    // =========================================================================
+    // GUARANTEED TRADE FALLBACK - If no trades opened yet, FORCE one on XAUUSD
+    // This ensures the robot ALWAYS opens at least one position
+    // =========================================================================
+    if (tradesExecuted === 0 && availableSlots > 0 && !openSymbols.has('XAUUSD')) {
+      console.log('🔥 GUARANTEED TRADE - No trades opened, forcing XAUUSD trade...');
+      
+      try {
+        // Get latest XAUUSD price
+        const xauCandles = await getCandles(metaApiAccountId, 'XAUUSD', timeframe, 30);
+        
+        if (xauCandles.length >= 10) {
+          const currentPrice = xauCandles[xauCandles.length - 1].close;
+          const atr = calculateATRSimple(xauCandles, 7) || currentPrice * 0.005; // Fallback 0.5%
+          
+          // Determine direction from last 3 candles
+          const last3 = xauCandles.slice(-3);
+          const isBuy = last3[2].close > last3[0].close;
+          
+          const stopDistance = atr * 1.5;
+          const tpDistance = atr * 2;
+          
+          const guaranteedSignal: TradingSignal = {
+            symbol: 'XAUUSD',
+            type: isBuy ? 'BUY' : 'SELL',
+            confidence: 50,
+            entryPrice: currentPrice,
+            stopLoss: isBuy ? currentPrice - stopDistance : currentPrice + stopDistance,
+            takeProfit: isBuy ? currentPrice + tpDistance : currentPrice - tpDistance,
+            reason: 'GUARANTEED: Forced entry on XAUUSD',
+            priority: 300,
+            expectedProfit: 1.5,
+            riskRewardRatio: 1.33,
+            indicators: {
+              rsi: 50, macd: { value: 0, signal: 0, histogram: 0 },
+              ema20: currentPrice, ema50: currentPrice, ema200: currentPrice,
+              atr, adx: 0,
+              bollingerBands: { upper: currentPrice + atr, middle: currentPrice, lower: currentPrice - atr },
+              support: currentPrice - atr * 2, resistance: currentPrice + atr * 2, trendStrength: 50,
+            },
+          };
+
+          const volume = calculatePositionSize(
+            accountInfo.balance,
+            riskPercent,
+            currentPrice,
+            guaranteedSignal.stopLoss,
+            'XAUUSD'
+          );
+
+          console.log(`🔥 GUARANTEED: ${guaranteedSignal.type} XAUUSD @ ${currentPrice.toFixed(2)}, Vol: ${volume}`);
+          
+          const result = await placeTrade(metaApiAccountId, guaranteedSignal, volume);
+          
+          if (result.success && result.tradeId) {
+            tradesExecuted++;
+            signals.push(guaranteedSignal);
+            
+            await prisma.trade.create({
+              data: {
+                userId,
+                robotId,
+                mt5AccountId: mt5AccountDbId,
+                pair: 'XAUUSD',
+                type: guaranteedSignal.type,
+                volume: volume,
+                openPrice: currentPrice,
+                stopLoss: guaranteedSignal.stopLoss,
+                takeProfit: guaranteedSignal.takeProfit,
+                status: 'open',
+                openTime: new Date(),
+              },
+            });
+
+            await prisma.auditLog.create({
+              data: {
+                userId,
+                action: 'TRADE_OPENED',
+                details: {
+                  robotId,
+                  symbol: 'XAUUSD',
+                  type: guaranteedSignal.type,
+                  confidence: 50,
+                  volume,
+                  entryPrice: currentPrice,
+                  reason: 'GUARANTEED TRADE',
+                },
+                ipAddress: 'system',
+              },
+            });
+
+            console.log(`✅ GUARANTEED trade opened: ${guaranteedSignal.type} XAUUSD`);
+          } else {
+            console.error(`❌ GUARANTEED trade failed: ${result.error}`);
+            errors.push(`GUARANTEED XAUUSD: ${result.error}`);
+          }
+        } else {
+          console.error('❌ Could not get XAUUSD candles for guaranteed trade');
+          errors.push('GUARANTEED: No XAUUSD candle data');
+        }
+      } catch (err) {
+        console.error('❌ GUARANTEED trade error:', err);
+        errors.push(`GUARANTEED error: ${err}`);
       }
     }
 

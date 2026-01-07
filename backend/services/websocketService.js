@@ -114,6 +114,14 @@ export const emitNotification = (userId, notification) => {
   }
 };
 
+// Emit trade signal to specific user
+export const emitTradeSignal = (userId, signal) => {
+  if (io) {
+    io.to(`user:${userId}`).emit('trade:signal', signal);
+    console.log(`📡 Trade signal emitted to user ${userId}:`, signal.signal?.symbol);
+  }
+};
+
 // Get Socket.io instance
 export const getIO = () => io;
 
@@ -127,5 +135,6 @@ export default {
   emitBalanceUpdate,
   emitRobotStatus,
   emitNotification,
+  emitTradeSignal,
   getIO,
 };
