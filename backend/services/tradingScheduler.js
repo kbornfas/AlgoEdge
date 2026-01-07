@@ -195,18 +195,30 @@ function calculateRSI(closes, period = 14) {
  */
 async function getActiveRobots() {
   try {
+    // Query joins user_robot_configs with trading_robots and mt5_accounts
     const query = `
-      SELECT r.id, r.name, r.timeframe, r.risk_level, r.trading_pairs, r.settings,
-             m.id as mt5_account_id, m.api_key as metaapi_account_id, m.user_id
-      FROM robots r
-      JOIN mt5_accounts m ON m.user_id = r.user_id
-      WHERE r.status = 'active'
-      AND m.status IN ('connected', 'active', 'synchronizing')
+      SELECT 
+        tr.id as robot_id, 
+        tr.name, 
+        tr.timeframe, 
+        tr.risk_level, 
+        tr.strategy,
+        urc.settings,
+        m.id as mt5_account_id, 
+        m.api_key as metaapi_account_id, 
+        m.user_id
+      FROM user_robot_configs urc
+      JOIN trading_robots tr ON tr.id = urc.robot_id
+      JOIN mt5_accounts m ON m.user_id = urc.user_id
+      WHERE urc.is_enabled = true
+      AND m.status IN ('connected', 'active', 'synchronizing', 'deployed')
+      AND m.is_connected = true
     `;
     const result = await pool.query(query);
+    console.log(`Found ${result.rows.length} active robot configurations`);
     return result.rows;
   } catch (error) {
-    console.error('Error fetching active robots:', error);
+    console.error('Error fetching active robots:', error.message);
     return [];
   }
 }
@@ -232,17 +244,17 @@ async function getOpenTradesCount(accountId) {
  */
 async function executeRobotTrade(robot) {
   const {
-    id: robotId,
+    robot_id: robotId,
     name: robotName,
-    timeframe,
-    risk_level: riskLevel,
+    timeframe = 'm15',
+    risk_level: riskLevel = 'medium',
     mt5_account_id: accountId,
     metaapi_account_id: metaApiAccountId,
     user_id: userId
   } = robot;
   
   try {
-    console.log(`\n🤖 Processing robot: ${robotName} (${timeframe})`);
+    console.log(`\n🤖 Processing robot: ${robotName} (${timeframe || 'm15'})`);
     
     // Check connection
     const connectionData = mt5Connections.get(accountId);
