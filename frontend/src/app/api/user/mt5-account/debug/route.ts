@@ -145,7 +145,7 @@ export async function GET(req: NextRequest) {
       'london': 'https://mt-client-api-v1.london.agiliumtrade.ai',
       'singapore': 'https://mt-client-api-v1.singapore.agiliumtrade.ai',
     };
-    const clientApiUrl = regionClientApiMap[region] || CLIENT_API_URL;
+    const clientApiUrl = regionClientApiMap[region] || 'https://mt-client-api-v1.vint-hill.agiliumtrade.ai';
     
     debug.step5_region = { region, clientApiUrl };
 

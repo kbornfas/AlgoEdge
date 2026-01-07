@@ -62,7 +62,7 @@ async function getMetaApiAccountInfo(login: string, server: string): Promise<{
       'london': 'https://mt-client-api-v1.london.agiliumtrade.ai',
       'singapore': 'https://mt-client-api-v1.singapore.agiliumtrade.ai',
     };
-    const clientApiUrl = regionClientApiMap[region] || CLIENT_API_URL;
+    const clientApiUrl = regionClientApiMap[region] || 'https://mt-client-api-v1.vint-hill.agiliumtrade.ai';
 
     // Get account info using regional endpoint
     const infoResponse = await fetch(
