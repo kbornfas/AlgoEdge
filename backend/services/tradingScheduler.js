@@ -11,14 +11,133 @@ import { emitTradeSignal } from './websocketService.js';
  * =========================================================================
  */
 
+// Initialize MetaAPI
+let MetaApi;
+let api;
+
+async function initMetaApi() {
+  if (api) return api;
+  
+  try {
+    const metaApiModule = await import('metaapi.cloud-sdk');
+    MetaApi = metaApiModule.default?.default || metaApiModule.default || metaApiModule.MetaApi;
+    
+    const token = process.env.METAAPI_TOKEN;
+    if (!token) {
+      console.error('❌ METAAPI_TOKEN not set');
+      return null;
+    }
+    
+    api = new MetaApi(token);
+    console.log('✅ MetaAPI initialized for trading scheduler');
+    return api;
+  } catch (error) {
+    console.error('❌ Failed to initialize MetaAPI:', error.message);
+    return null;
+  }
+}
+
+// Store scheduler's own connections
+const schedulerConnections = new Map();
+
+/**
+ * Get or create MetaAPI connection for an account
+ */
+async function getConnection(metaApiAccountId, mt5AccountId) {
+  // Check scheduler's own connections first
+  if (schedulerConnections.has(mt5AccountId)) {
+    const conn = schedulerConnections.get(mt5AccountId);
+    if (conn && conn.connection) {
+      return conn.connection;
+    }
+  }
+  
+  // Check mt5Service connections
+  if (mt5Connections.has(mt5AccountId)) {
+    const conn = mt5Connections.get(mt5AccountId);
+    if (conn && conn.connection) {
+      return conn.connection;
+    }
+  }
+  
+  // Create new connection
+  if (!metaApiAccountId) {
+    console.log(`  ❌ No MetaAPI account ID for MT5 account ${mt5AccountId}`);
+    return null;
+  }
+  
+  try {
+    const metaApi = await initMetaApi();
+    if (!metaApi) return null;
+    
+    console.log(`  🔌 Connecting to MetaAPI account: ${metaApiAccountId}`);
+    
+    const account = await metaApi.metatraderAccountApi.getAccount(metaApiAccountId);
+    
+    // Deploy if needed
+    if (account.state !== 'DEPLOYED') {
+      console.log(`  📦 Deploying account...`);
+      await account.deploy();
+      await account.waitDeployed();
+    }
+    
+    // Get RPC connection
+    const connection = account.getRPCConnection();
+    await connection.connect();
+    await connection.waitSynchronized({ timeoutInSeconds: 30 });
+    
+    console.log(`  ✅ Connected to MetaAPI account ${metaApiAccountId}`);
+    
+    // Store connection
+    schedulerConnections.set(mt5AccountId, { connection, account });
+    
+    return connection;
+  } catch (error) {
+    console.error(`  ❌ Failed to connect to MetaAPI: ${error.message}`);
+    return null;
+  }
+}
+
+/**
+ * Execute trade directly via MetaAPI connection
+ */
+async function executeTradeViaMetaApi(connection, accountId, robotId, userId, signal) {
+  try {
+    // Place order via MetaAPI
+    const result = await connection.createMarketOrder(
+      signal.symbol,
+      signal.type.toLowerCase(), // 'buy' or 'sell'
+      signal.volume,
+      signal.stopLoss,
+      signal.takeProfit,
+      { comment: `AlgoEdge-${robotId}` }
+    );
+    
+    console.log(`  📊 MetaAPI order result:`, result);
+    
+    // Save to database
+    const tradeResult = await pool.query(
+      `INSERT INTO trades (user_id, mt5_account_id, robot_id, pair, type, volume, 
+       open_price, stop_loss, take_profit, status, open_time)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open', NOW())
+       RETURNING *`,
+      [userId, accountId, robotId, signal.symbol, signal.type.toLowerCase(), signal.volume, 
+       result.price || signal.entryPrice, signal.stopLoss, signal.takeProfit]
+    );
+    
+    return tradeResult.rows[0];
+  } catch (error) {
+    console.error(`  ❌ Failed to execute trade via MetaAPI:`, error.message);
+    return null;
+  }
+}
+
 // Premium trading pairs
 const TRADING_PAIRS = [
   'XAUUSD',  // Gold - high volatility
   'EURUSD',  // Major forex pair
   'GBPUSD',  // British Pound
   'USDJPY',  // Japanese Yen
-  'BTCUSD',  // Bitcoin
-  'ETHUSD',  // Ethereum
 ];
 
 // Trading interval by timeframe
@@ -273,21 +392,19 @@ async function executeRobotTrade(robot) {
   try {
     console.log(`\n🤖 Processing robot: ${robotName} (${timeframe || 'm15'})`);
     
-    // Check connection
-    const connectionData = mt5Connections.get(accountId);
-    if (!connectionData || !connectionData.connection) {
-      console.log(`  ⚠️ MT5 account ${accountId} not connected - skipping`);
+    // Get or create connection using scheduler's own connection manager
+    const connection = await getConnection(metaApiAccountId, accountId);
+    if (!connection) {
+      console.log(`  ⚠️ Could not establish connection for MT5 account ${accountId}`);
       return;
     }
     
-    // Check open trades limit (max 3 per account)
+    // Check open trades limit (max 5 per account)
     const openTrades = await getOpenTradesCount(accountId);
-    if (openTrades >= 3) {
-      console.log(`  ⚠️ Max trades reached (${openTrades}/3) - skipping`);
+    if (openTrades >= 5) {
+      console.log(`  ⚠️ Max trades reached (${openTrades}/5) - skipping`);
       return;
     }
-    
-    const connection = connectionData.connection;
     
     // Try each trading pair
     for (const symbol of TRADING_PAIRS) {
@@ -312,29 +429,29 @@ async function executeRobotTrade(robot) {
         console.log(`     Confidence: ${signal.confidence}%, Reason: ${signal.reason}`);
         console.log(`     SL: ${signal.stopLoss.toFixed(5)}, TP: ${signal.takeProfit.toFixed(5)}`);
         
-        // Execute trade
-        const trade = await openTrade(
+        // Execute trade directly via MetaAPI
+        const trade = await executeTradeViaMetaApi(
+          connection,
           accountId,
           robotId,
-          signal.symbol,
-          signal.type,
-          signal.volume,
-          signal.stopLoss,
-          signal.takeProfit
+          userId,
+          signal
         );
         
-        console.log(`  🎉 TRADE EXECUTED: #${trade.id} - ${signal.symbol} ${signal.type.toUpperCase()}`);
-        
-        // Emit trade signal to connected clients
-        emitTradeSignal(userId, {
-          robotId,
-          robotName,
-          signal,
-          trade
-        });
-        
-        // Only open one trade per robot per cycle
-        break;
+        if (trade) {
+          console.log(`  🎉 TRADE EXECUTED: #${trade.id} - ${signal.symbol} ${signal.type.toUpperCase()}`);
+          
+          // Emit trade signal to connected clients
+          emitTradeSignal(userId, {
+            robotId,
+            robotName,
+            signal,
+            trade
+          });
+          
+          // Only open one trade per robot per cycle
+          break;
+        }
         
       } catch (symbolError) {
         console.error(`  ❌ Error processing ${symbol}:`, symbolError.message);
