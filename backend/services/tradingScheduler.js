@@ -76,15 +76,43 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
     
     // Deploy if needed
     if (account.state !== 'DEPLOYED') {
-      console.log(`  📦 Deploying account...`);
+      console.log(`  📦 Deploying account (state: ${account.state})...`);
       await account.deploy();
       await account.waitDeployed();
     }
     
-    // Get RPC connection
-    const connection = account.getRPCConnection();
-    await connection.connect();
-    await connection.waitSynchronized({ timeoutInSeconds: 30 });
+    // Wait for account to connect to broker
+    console.log(`  ⏳ Waiting for broker connection...`);
+    await account.waitConnected();
+    
+    // Get streaming connection (newer API) or RPC connection
+    let connection;
+    if (typeof account.getStreamingConnection === 'function') {
+      connection = account.getStreamingConnection();
+      await connection.connect();
+      await connection.waitSynchronized();
+    } else if (typeof account.getRPCConnection === 'function') {
+      connection = account.getRPCConnection();
+      await connection.connect();
+      await connection.waitSynchronized();
+    } else {
+      // Direct account methods for trading
+      console.log(`  ✅ Using direct account API for trading`);
+      connection = {
+        createMarketOrder: async (symbol, type, volume, sl, tp, options) => {
+          return await account.createMarketOrder(symbol, type, volume, sl, tp, options);
+        },
+        getHistoricalCandles: async (symbol, timeframe, startTime, limit) => {
+          return await account.getHistoricalCandles(symbol, timeframe, startTime, limit);
+        },
+        getPositions: async () => {
+          return await account.getPositions();
+        },
+        getAccountInformation: async () => {
+          return await account.getAccountInformation();
+        }
+      };
+    }
     
     console.log(`  ✅ Connected to MetaAPI account ${metaApiAccountId}`);
     
