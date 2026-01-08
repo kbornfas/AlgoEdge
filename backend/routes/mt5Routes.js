@@ -1,5 +1,5 @@
 import express from 'express';
-import { authMiddleware } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -43,7 +43,7 @@ async function ensureOk(response, context) {
  * POST /api/mt5/provision
  * Backend provisioning of MetaAPI accounts (more reliable than frontend)
  */
-router.post('/provision', authMiddleware, async (req, res) => {
+router.post('/provision', authenticate, async (req, res) => {
   console.log('=== MT5 Provision Request ===');
   
   if (!META_API_TOKEN) {
@@ -169,7 +169,7 @@ router.post('/provision', authMiddleware, async (req, res) => {
  * GET /api/mt5/account-info/:accountId
  * Get account balance and equity from MetaAPI
  */
-router.get('/account-info/:accountId', authMiddleware, async (req, res) => {
+router.get('/account-info/:accountId', authenticate, async (req, res) => {
   if (!META_API_TOKEN) {
     return res.status(500).json({ error: 'MetaAPI token not configured' });
   }
