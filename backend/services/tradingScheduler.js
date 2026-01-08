@@ -307,14 +307,38 @@ async function executeTradeViaMetaApi(connection, accountId, robotId, userId, si
   try {
     // Place order via MetaAPI RPC connection
     console.log(`  📤 Executing ${signal.type} ${signal.symbol} @ ${signal.volume} lots`);
-    const result = await connection.createMarketOrder(
-      signal.symbol,
-      signal.type.toLowerCase(), // 'buy' or 'sell'
-      signal.volume,
-      signal.stopLoss,
-      signal.takeProfit,
-      { comment: `AlgoEdge-${robotId}` }
-    );
+    // Prefer explicit buy/sell helpers when available
+    let result;
+    const type = signal.type.toLowerCase();
+    if (type === 'buy' && typeof connection.createMarketBuyOrder === 'function') {
+      result = await connection.createMarketBuyOrder(
+        signal.symbol,
+        signal.volume,
+        signal.stopLoss,
+        signal.takeProfit,
+        { comment: `AlgoEdge-${robotId}` }
+      );
+    } else if (type === 'sell' && typeof connection.createMarketSellOrder === 'function') {
+      result = await connection.createMarketSellOrder(
+        signal.symbol,
+        signal.volume,
+        signal.stopLoss,
+        signal.takeProfit,
+        { comment: `AlgoEdge-${robotId}` }
+      );
+    } else if (typeof connection.createMarketOrder === 'function') {
+      // Fallback to generic method if available
+      result = await connection.createMarketOrder(
+        signal.symbol,
+        type,
+        signal.volume,
+        signal.stopLoss,
+        signal.takeProfit,
+        { comment: `AlgoEdge-${robotId}` }
+      );
+    } else {
+      throw new Error('createMarketOrder/createMarketBuyOrder/createMarketSellOrder not available on connection');
+    }
     
     console.log(`  📊 MetaAPI order result:`, result);
     
@@ -453,28 +477,54 @@ async function getAccount(metaApiAccountId, mt5AccountId) {
   }
 }
 
+// Simple rate-limited logger to avoid log spam
+const LAST_LOG_MAP = new Map();
+const LOG_SUPPRESS_MS = 5000;
+function rateLimitLog(key, message) {
+  const now = Date.now();
+  const last = LAST_LOG_MAP.get(key) || 0;
+  if (now - last > LOG_SUPPRESS_MS) {
+    console.log(message);
+    LAST_LOG_MAP.set(key, now);
+  }
+}
+
+// Convert timeframe to MetaAPI expected format (e.g., m5 -> 5m, h1 -> 1h)
+function normalizeTimeframe(tf = 'm5') {
+  const lower = tf.toLowerCase();
+  const match = lower.match(/^(m|h|d)(\d+)$/);
+  if (match) {
+    const unit = match[1];
+    const val = match[2];
+    return `${val}${unit}`;
+  }
+  // If already number-first (e.g., 5m) keep it
+  if (/^\d+(m|h|d|w)$/.test(lower)) return lower;
+  // Fallback to 5m
+  return '5m';
+}
+
 /**
  * Fetch candle data via MetaAPI with retry
  */
 async function fetchCandles(account, symbol, timeframe, count = 50) {
   if (!account) {
-    console.log(`  ⚠️ No account for candle fetch`);
+    rateLimitLog(`candles-${symbol}`, `  ⚠️ No account for candle fetch (${symbol}), using fallback`);
     return generateFallbackCandles(symbol, count);
   }
   
   try {
-    // Convert timeframe format if needed (SDK uses format like 'm5', 'h1')
-    const sdkTimeframe = timeframe || 'm5';
+    const sdkTimeframe = normalizeTimeframe(timeframe || 'm5');
     const candles = await account.getHistoricalCandles(symbol, sdkTimeframe, undefined, count);
     
     if (!candles || candles.length === 0) {
-      console.log(`  ⚠️ No historical candles for ${symbol}, using fallback`);
+      rateLimitLog(`candles-${symbol}`, `  ⚠️ No historical candles for ${symbol} (${sdkTimeframe}), using fallback`);
       return generateFallbackCandles(symbol, count);
     }
     
     return candles;
   } catch (error) {
-    console.log(`  ⚠️ Failed to fetch candles for ${symbol}: ${error.message}, using fallback`);
+    rateLimitLog(`candles-${symbol}`, `  ⚠️ Failed to fetch candles for ${symbol}: ${error.message}, using fallback`);
     return generateFallbackCandles(symbol, count);
   }
 }
