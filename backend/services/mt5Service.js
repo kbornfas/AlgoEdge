@@ -9,20 +9,30 @@ import {
 
 // Safe MetaAPI SDK import for Node.js (ESM compatible)
 let MetaApi;
-try {
-  // Dynamic import for ESM compatibility
-  // Prefer ESM build to avoid CJS/ESM interop issues
-  const metaApiModule = await import('metaapi.cloud-sdk/esm-node');
-  // Handle different export structures
-  MetaApi = metaApiModule.default?.default || metaApiModule.default || metaApiModule.MetaApi;
-  if (!MetaApi || typeof MetaApi !== 'function') {
-    throw new Error('MetaApi constructor not found in module');
+
+async function initializeMetaApi() {
+  try {
+    // Import the ESM Node version of MetaAPI SDK
+    const { default: MetaApiClass } = await import('metaapi.cloud-sdk/esm-node');
+    MetaApi = MetaApiClass;
+    if (!MetaApi || typeof MetaApi !== 'function') {
+      throw new Error('MetaApi constructor not found in module');
+    }
+    console.log('✅ MetaAPI SDK loaded successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to load MetaAPI SDK:', error.message);
+    console.log('⚠️  Using mock MetaAPI implementation');
+    return false;
   }
-  console.log('✅ MetaAPI SDK loaded successfully');
-} catch (error) {
-  console.error('❌ Failed to load MetaAPI SDK:', error.message);
-  console.log('⚠️  Using mock MetaAPI implementation');
-  // Fallback mock implementation
+}
+
+// Initialize on module load
+let metaApiReady = false;
+initializeMetaApi().then(success => { metaApiReady = success; });
+
+if (!metaApiReady) {
+  // Fallback mock implementation if SDK fails to load
   MetaApi = class {
     constructor(token) {
       this.token = token;

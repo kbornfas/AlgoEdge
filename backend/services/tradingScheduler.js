@@ -146,9 +146,9 @@ async function initMetaApi() {
   if (api) return api;
   
   try {
-    // Use ESM build explicitly to avoid CJS/ESM token errors
-    const metaApiModule = await import('metaapi.cloud-sdk/esm-node');
-    MetaApi = metaApiModule.default?.default || metaApiModule.default || metaApiModule.MetaApi;
+    // Import the ESM Node version of MetaAPI SDK
+    const { default: MetaApiClass } = await import('metaapi.cloud-sdk/esm-node');
+    MetaApi = MetaApiClass;
     
     const token = process.env.METAAPI_TOKEN;
     if (!token) {
