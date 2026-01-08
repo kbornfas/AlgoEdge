@@ -13,9 +13,12 @@ async function fetchWithTimeout(url: string, options: any = {}, timeoutMs = 3000
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    console.log(`[fetch] ${options.method || 'GET'} ${url}`);
     const response = await fetch(url, { ...options, signal: controller.signal });
+    console.log(`[fetch] Response: ${response.status} ${response.statusText}`);
     return response;
   } catch (err: any) {
+    console.error(`[fetch] Error on ${url}:`, err.message);
     if (err.name === 'AbortError') {
       throw new Error(`Request timeout after ${timeoutMs}ms to ${url}`);
     }
@@ -61,8 +64,9 @@ async function provisionMetaApiAccount(
 }> {
   const META_API_TOKEN = process.env.METAAPI_TOKEN;
   
+  console.log('[provisionMetaApiAccount] METAAPI_TOKEN check:', !!META_API_TOKEN);
   if (!META_API_TOKEN) {
-    console.error('METAAPI_TOKEN not configured');
+    console.error('[provisionMetaApiAccount] METAAPI_TOKEN not configured');
     return { success: false, error: 'MetaAPI token not configured. Contact admin.' };
   }
 
@@ -263,17 +267,20 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
  */
 export async function POST(req: NextRequest) {
   console.log('=== MT5 Connect Request Started ===');
+  console.log('Available env vars:', Object.keys(process.env).filter(k => k.includes('META') || k.includes('API')).join(', '));
   
   try {
     // Check MetaAPI token first
     const META_API_TOKEN = process.env.METAAPI_TOKEN;
+    console.log('METAAPI_TOKEN exists:', !!META_API_TOKEN);
     if (!META_API_TOKEN) {
-      console.error('METAAPI_TOKEN not configured');
+      console.error('METAAPI_TOKEN not configured in Vercel');
       return NextResponse.json(
-        { error: 'MetaAPI not configured. Contact admin to add METAAPI_TOKEN in Vercel settings.' },
+        { error: 'MetaAPI token not configured in Vercel environment. Set METAAPI_TOKEN in project settings.' },
         { status: 500 }
       );
     }
+    console.log('METAAPI_TOKEN loaded, starting provisioning...');
     
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
