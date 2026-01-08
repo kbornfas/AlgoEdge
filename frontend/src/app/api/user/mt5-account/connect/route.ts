@@ -33,6 +33,9 @@ export async function POST(req: NextRequest) {
     
     console.log('Using backend URL:', BACKEND_URL);
     
+    // Remove trailing slash if present
+    const backendUrl = BACKEND_URL.replace(/\/$/, '');
+    
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -51,11 +54,11 @@ export async function POST(req: NextRequest) {
     console.log('User:', decoded.userId);
     console.log('Account:', accountId);
     console.log('Server:', server);
-    console.log('Calling backend at:', BACKEND_URL);
+    console.log('Calling backend at:', backendUrl);
 
     // Call backend to provision account
     console.log('Calling backend /api/mt5/provision...');
-    const provisionResp = await fetch(`${BACKEND_URL}/api/mt5/provision`, {
+    const provisionResp = await fetch(`${backendUrl}/api/mt5/provision`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -94,7 +97,7 @@ export async function POST(req: NextRequest) {
       await new Promise(resolve => setTimeout(resolve, 3000));
       
       for (let attempt = 0; attempt < 5; attempt++) {
-        const infoResp = await fetch(`${BACKEND_URL}/api/mt5/account-info/${metaApiAccountId}`, {
+        const infoResp = await fetch(`${backendUrl}/api/mt5/account-info/${metaApiAccountId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
