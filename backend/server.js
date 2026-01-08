@@ -40,6 +40,10 @@ if (!process.env.JWT_SECRET) {
 /* -------------------------------------------------------------------------- */
 
 const app = express();
+
+// Trust proxy for Railway/Heroku/etc (needed for rate limiting and X-Forwarded-For)
+app.set('trust proxy', 1);
+
 const server = http.createServer(app);
 
 /* -------------------------------------------------------------------------- */
