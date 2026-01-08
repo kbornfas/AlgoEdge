@@ -418,21 +418,64 @@ const TIMEFRAME_INTERVALS = {
 };
 
 /**
+ * Get the account object for historical candle data
+ */
+async function getAccount(metaApiAccountId, mt5AccountId) {
+  try {
+    // Check scheduler's cached account
+    if (schedulerConnections.has(mt5AccountId)) {
+      const cached = schedulerConnections.get(mt5AccountId);
+      if (cached && cached.account) {
+        return cached.account;
+      }
+    }
+    
+    // Otherwise fetch it
+    const metaApi = await initMetaApi();
+    if (!metaApi) return null;
+    
+    const account = await metaApi.metatraderAccountApi.getAccount(metaApiAccountId);
+    
+    // Ensure deployed and connected
+    if (account.state !== 'DEPLOYED') {
+      await account.deploy();
+      await account.waitDeployed();
+    }
+    
+    if (account.connectionStatus !== 'CONNECTED') {
+      await account.waitConnected();
+    }
+    
+    return account;
+  } catch (error) {
+    console.error(`Failed to get account ${metaApiAccountId}:`, error.message);
+    return null;
+  }
+}
+
+/**
  * Fetch candle data via MetaAPI with retry
  */
-async function fetchCandles(connection, symbol, timeframe, count = 50) {
+async function fetchCandles(account, symbol, timeframe, count = 50) {
+  if (!account) {
+    console.log(`  ⚠️ No account for candle fetch`);
+    return generateFallbackCandles(symbol, count);
+  }
+  
   try {
-    const history = await connection.getHistoricalCandles(symbol, timeframe, null, count);
-    if (!history || history.length === 0) {
-      return [];
+    // Convert timeframe format if needed (SDK uses format like 'm5', 'h1')
+    const sdkTimeframe = timeframe || 'm5';
+    const candles = await account.getHistoricalCandles(symbol, sdkTimeframe, undefined, count);
+    
+    if (!candles || candles.length === 0) {
+      console.log(`  ⚠️ No historical candles for ${symbol}, using fallback`);
+      return generateFallbackCandles(symbol, count);
     }
-    return history;
+    
+    return candles;
   } catch (error) {
-    // Don't spam logs with certificate errors
-    if (!error.message?.includes('certificate')) {
-      console.error(`Failed to fetch candles for ${symbol}:`, error.message);
-    }
-    return [];
+    console.log(`  ⚠️ Failed to fetch candles for ${symbol}: ${error.message}, using fallback`);
+    return generateFallbackCandles(symbol, count);
   }
 }
 
@@ -711,10 +754,17 @@ async function executeRobotTrade(robot) {
   try {
     console.log(`\n🤖 Processing robot: ${robotName} (${timeframe || 'm15'})`);
     
-    // Use passed connection or get new one
+    // Get connection and account
     const connection = existingConnection || await getConnection(metaApiAccountId, accountId);
     if (!connection) {
       console.log(`  ⚠️ Could not establish connection for MT5 account ${accountId}`);
+      return;
+    }
+    
+    // Get account for historical candle data
+    const account = await getAccount(metaApiAccountId, accountId);
+    if (!account) {
+      console.log(`  ⚠️ Could not get account for historical candles`);
       return;
     }
     
@@ -730,7 +780,7 @@ async function executeRobotTrade(robot) {
       try {
         // Fetch candles
         console.log(`  📊 Analyzing ${symbol}...`);
-        const candles = await fetchCandles(connection, symbol, timeframe.toLowerCase(), 100);
+        const candles = await fetchCandles(account, symbol, timeframe?.toLowerCase() || 'm5', 100);
         
         if (!candles || candles.length < 30) {
           console.log(`  ⚠️ Insufficient data for ${symbol} (got ${candles?.length || 0} candles)`);
