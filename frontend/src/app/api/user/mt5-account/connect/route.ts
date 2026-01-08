@@ -20,7 +20,18 @@ export async function POST(req: NextRequest) {
   console.log('=== MT5 Connect Request ===');
   
   try {
-    const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+    // Use NEXT_PUBLIC_API_URL or BACKEND_URL
+    const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || process.env.API_URL;
+    
+    if (!BACKEND_URL) {
+      console.error('No BACKEND_URL or NEXT_PUBLIC_API_URL configured');
+      return NextResponse.json(
+        { error: 'Backend URL not configured. Set NEXT_PUBLIC_API_URL in Vercel settings to your Railway URL.' },
+        { status: 500 }
+      );
+    }
+    
+    console.log('Using backend URL:', BACKEND_URL);
     
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
