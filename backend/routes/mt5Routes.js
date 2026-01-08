@@ -3,57 +3,57 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
-const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.ai';
 const META_API_TOKEN = process.env.METAAPI_TOKEN;
 
-// Health check for MT5 routes
-router.get('/health', (req, res) => {
-  res.json({ status: 'ok', route: 'mt5', metaApiConfigured: !!META_API_TOKEN });
-});
+// Import MetaAPI SDK
+let MetaApi;
+let api;
 
-// Helper: fetch with timeout
-async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+async function initMetaApi() {
+  if (!META_API_TOKEN) {
+    console.error('METAAPI_TOKEN not configured');
+    return false;
+  }
+  
   try {
-    console.log(`[fetch] ${options.method || 'GET'} ${url}`);
-    const response = await fetch(url, { ...options, signal: controller.signal });
-    console.log(`[fetch] ${response.status} ${response.statusText}`);
-    return response;
+    const { default: MetaApiClass } = await import('metaapi.cloud-sdk/esm-node');
+    MetaApi = MetaApiClass;
+    api = new MetaApi(META_API_TOKEN);
+    console.log('✅ MT5Routes: MetaAPI SDK initialized');
+    return true;
   } catch (err) {
-    console.error(`[fetch] Failed on ${url}:`, err.message);
-    throw err;
-  } finally {
-    clearTimeout(timeoutId);
+    console.error('❌ MT5Routes: Failed to load MetaAPI SDK:', err.message);
+    return false;
   }
 }
 
-// Helper: ensure response is OK
-async function ensureOk(response, context) {
-  if (response.ok) return;
-  let body;
-  try {
-    const text = await response.text();
-    try {
-      body = JSON.parse(text || '{}');
-    } catch {
-      body = text;
-    }
-  } catch {}
-  const detail = typeof body === 'string' ? body : body?.message || body?.error || JSON.stringify(body || {});
-  throw new Error(`${context} failed: HTTP ${response.status}${detail ? ` - ${detail}` : ''}`);
-}
+// Initialize on load
+initMetaApi();
+
+// Health check for MT5 routes
+router.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    route: 'mt5', 
+    metaApiConfigured: !!META_API_TOKEN, 
+    sdkLoaded: !!api 
+  });
+});
 
 /**
  * POST /api/mt5/provision
- * Backend provisioning of MetaAPI accounts (more reliable than frontend)
+ * Backend provisioning of MetaAPI accounts using SDK
  */
 router.post('/provision', authenticate, async (req, res) => {
   console.log('=== MT5 Provision Request ===');
   
-  if (!META_API_TOKEN) {
-    console.error('METAAPI_TOKEN not configured on backend');
-    return res.status(500).json({ error: 'MetaAPI token not configured on backend. Contact admin.' });
+  if (!api) {
+    // Try to initialize again
+    await initMetaApi();
+    if (!api) {
+      console.error('MetaAPI SDK not initialized');
+      return res.status(500).json({ error: 'MetaAPI SDK not initialized. Contact admin.' });
+    }
   }
 
   const { accountId, password, server } = req.body;
@@ -66,17 +66,10 @@ router.post('/provision', authenticate, async (req, res) => {
   console.log('Account:', accountId);
   console.log('Server:', server);
 
-  const headers = {
-    'auth-token': META_API_TOKEN,
-    'Content-Type': 'application/json',
-  };
-
   try {
-    // Check for existing account
+    // Check for existing account using SDK
     console.log('Checking for existing MetaAPI account...');
-    const listResponse = await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts`, { headers });
-    await ensureOk(listResponse, 'List accounts');
-    const accounts = await listResponse.json();
+    const accounts = await api.metatraderAccountApi.getAccounts();
     console.log('Found', accounts.length, 'existing accounts');
 
     // Look for matching account
@@ -85,84 +78,40 @@ router.post('/provision', authenticate, async (req, res) => {
     );
 
     if (existingAccount) {
-      console.log('Found existing account:', existingAccount._id);
+      console.log('Found existing account:', existingAccount.id, 'state:', existingAccount.state);
       
       // Deploy if needed
       if (existingAccount.state !== 'DEPLOYED') {
         console.log('Deploying existing account...');
-        const deployResp = await fetchWithTimeout(
-          `${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}/deploy`,
-          { method: 'POST', headers }
-        );
-        await ensureOk(deployResp, 'Deploy');
-        
-        // Wait for deployment
-        for (let i = 0; i < 20; i++) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          const statusResp = await fetchWithTimeout(
-            `${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`,
-            { headers }
-          );
-          await ensureOk(statusResp, 'Status check');
-          const status = await statusResp.json();
-          console.log('Deployment status:', status.state, status.connectionStatus);
-          if (status.state === 'DEPLOYED' && status.connectionStatus === 'CONNECTED') {
-            break;
-          }
-        }
+        await existingAccount.deploy();
+        await existingAccount.waitDeployed();
+        console.log('Account deployed');
       }
       
-      return res.json({ success: true, metaApiAccountId: existingAccount._id });
+      return res.json({ success: true, metaApiAccountId: existingAccount.id });
     }
 
-    // Create new account
+    // Create new account using SDK
     console.log('Creating new MetaAPI account...');
-    const createResp = await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        login: accountId,
-        password,
-        server,
-        platform: 'mt5',
-        application: 'MetaApi',
-        reliability: 'high',
-      }),
+    const newAccount = await api.metatraderAccountApi.createAccount({
+      login: accountId,
+      password,
+      server,
+      platform: 'mt5',
+      application: 'MetaApi',
+      magic: 123456,
     });
-    await ensureOk(createResp, 'Create account');
-    const createData = await createResp.json();
-    console.log('Account created:', createData.id);
+    console.log('Account created:', newAccount.id);
 
-    // Deploy
+    // Deploy and wait
     console.log('Deploying new account...');
-    const deployResp = await fetchWithTimeout(
-      `${PROVISIONING_API_URL}/users/current/accounts/${createData.id}/deploy`,
-      { method: 'POST', headers }
-    );
-    await ensureOk(deployResp, 'Deploy');
+    await newAccount.deploy();
+    
+    console.log('Waiting for deployment...');
+    await newAccount.waitDeployed();
+    console.log('Account deployed successfully');
 
-    // Wait for deployment
-    for (let i = 0; i < 30; i++) {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const statusResp = await fetchWithTimeout(
-        `${PROVISIONING_API_URL}/users/current/accounts/${createData.id}`,
-        { headers }
-      );
-      await ensureOk(statusResp, 'Status check');
-      const status = await statusResp.json();
-      console.log('Deployment status:', status.state, status.connectionStatus);
-      
-      if (status.state === 'DEPLOYED' && status.connectionStatus === 'CONNECTED') {
-        return res.json({ success: true, metaApiAccountId: createData.id });
-      }
-      
-      if (status.state === 'DEPLOY_FAILED') {
-        return res.status(400).json({ error: 'Deployment failed. Verify MT5 credentials and server name.' });
-      }
-    }
-
-    // Even if not fully connected yet, return success
-    return res.json({ success: true, metaApiAccountId: createData.id });
+    return res.json({ success: true, metaApiAccountId: newAccount.id });
     
   } catch (error) {
     console.error('MT5 provision error:', error.message);
@@ -172,46 +121,42 @@ router.post('/provision', authenticate, async (req, res) => {
 
 /**
  * GET /api/mt5/account-info/:accountId
- * Get account balance and equity from MetaAPI
+ * Get account balance and equity from MetaAPI using SDK
  */
 router.get('/account-info/:accountId', authenticate, async (req, res) => {
-  if (!META_API_TOKEN) {
-    return res.status(500).json({ error: 'MetaAPI token not configured' });
+  if (!api) {
+    await initMetaApi();
+    if (!api) {
+      return res.status(500).json({ error: 'MetaAPI SDK not initialized' });
+    }
   }
 
   const { accountId } = req.params;
-  const headers = {
-    'auth-token': META_API_TOKEN,
-    'Content-Type': 'application/json',
-  };
 
   try {
-    // Get account details for region
     console.log('Fetching account info for:', accountId);
-    const accountResp = await fetchWithTimeout(
-      `${PROVISIONING_API_URL}/users/current/accounts/${accountId}`,
-      { headers }
-    );
-    await ensureOk(accountResp, 'Get account');
-    const accountData = await accountResp.json();
-    const region = accountData.region || 'vint-hill';
-
-    const regionMap = {
-      'vint-hill': 'https://mt-client-api-v1.vint-hill.agiliumtrade.ai',
-      'new-york': 'https://mt-client-api-v1.new-york.agiliumtrade.ai',
-      'london': 'https://mt-client-api-v1.london.agiliumtrade.ai',
-      'singapore': 'https://mt-client-api-v1.singapore.agiliumtrade.ai',
-    };
-    const clientApiUrl = regionMap[region] || regionMap['vint-hill'];
-    console.log('Region:', region, 'URL:', clientApiUrl);
-
+    
+    // Get account from SDK
+    const account = await api.metatraderAccountApi.getAccount(accountId);
+    
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+    
+    // Ensure deployed
+    if (account.state !== 'DEPLOYED') {
+      console.log('Account not deployed, deploying...');
+      await account.deploy();
+      await account.waitDeployed();
+    }
+    
+    // Get RPC connection
+    const connection = account.getRPCConnection();
+    await connection.connect();
+    await connection.waitSynchronized();
+    
     // Get account info
-    const infoResp = await fetchWithTimeout(
-      `${clientApiUrl}/users/current/accounts/${accountId}/account-information`,
-      { headers }
-    );
-    await ensureOk(infoResp, 'Get account info');
-    const info = await infoResp.json();
+    const info = await connection.getAccountInformation();
     console.log('Account info:', { balance: info.balance, equity: info.equity });
 
     return res.json({
