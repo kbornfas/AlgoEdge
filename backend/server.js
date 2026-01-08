@@ -19,6 +19,7 @@ import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import tradeRoutes from './routes/tradeRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
+import mt5Routes from './routes/mt5Routes.js';
 
 /* -------------------------------------------------------------------------- */
 /*                              ENV & CONSTANTS                               */
@@ -105,6 +106,7 @@ const setupRoutes = (app) => {
   app.use('/api/users', userRoutes);
   app.use('/api/trades', tradeRoutes);
   app.use('/api/payments', paymentRoutes);
+  app.use('/api/mt5', mt5Routes);
 };
 
 const setupErrorHandlers = (app) => {
