@@ -110,7 +110,8 @@ const ENV_CONFIG: EnvConfig[] = [
   // MetaAPI (Optional for basic functionality)
   {
     name: 'METAAPI_TOKEN',
-    required: false,
+    required: true,
+    errorMessage: 'METAAPI_TOKEN is required for MT5 connection'
   },
   {
     name: 'METAAPI_ACCOUNT_ID',
