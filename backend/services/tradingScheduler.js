@@ -725,8 +725,7 @@ function calculateRSI(closes, period = 14) {
  */
 async function getActiveRobots() {
   try {
-    // Query joins user_robot_configs with trading_robots and mt5_accounts
-    // Less restrictive - find any robot config where user has an MT5 account
+    // Query ONLY enabled robots with connected MT5 accounts
     const query = `
       SELECT 
         tr.id as robot_id, 
@@ -744,26 +743,24 @@ async function getActiveRobots() {
       FROM user_robot_configs urc
       JOIN trading_robots tr ON tr.id = urc.robot_id
       JOIN mt5_accounts m ON m.user_id = urc.user_id
-      WHERE m.api_key IS NOT NULL
+      WHERE urc.is_enabled = true 
+        AND m.api_key IS NOT NULL
+        AND m.status IN ('connected', 'active')
     `;
     const result = await pool.query(query);
-    console.log(`Found ${result.rows.length} robot configurations total`);
+    
+    if (result.rows.length === 0) {
+      return [];
+    }
+    
+    console.log(`Found ${result.rows.length} enabled robot(s) with connected accounts`);
     
     // Log details for debugging
     result.rows.forEach(r => {
-      console.log(`  Robot: ${r.name}, enabled: ${r.is_enabled}, MT5 status: ${r.mt5_status}, connected: ${r.is_connected}`);
+      console.log(`  Robot: ${r.name}, MT5 account: ${r.mt5_account_id}, status: ${r.mt5_status}`);
     });
     
-    // Filter to only enabled robots with connected accounts, but if none, use all
-    let activeRobots = result.rows.filter(r => r.is_enabled === true);
-    
-    if (activeRobots.length === 0 && result.rows.length > 0) {
-      console.log('⚠️ No enabled robots found - using ALL robot configs for trading');
-      activeRobots = result.rows;
-    }
-    
-    console.log(`Using ${activeRobots.length} robots for trading`);
-    return activeRobots;
+    return result.rows;
   } catch (error) {
     console.error('Error fetching active robots:', error.message);
     return [];
@@ -912,7 +909,7 @@ async function runTradingCycle() {
     const robots = await getActiveRobots();
     
     if (robots.length === 0) {
-      console.log(`[${new Date().toLocaleTimeString()}] No active robots found`);
+      // Silent - no spam when no robots enabled
       return;
     }
     
