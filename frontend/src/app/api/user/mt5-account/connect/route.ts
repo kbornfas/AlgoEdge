@@ -8,6 +8,36 @@ export const maxDuration = 60; // Allow up to 60s for connection
 
 const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.ai';
 
+// Test basic connectivity to MetaAPI
+async function testMetaApiConnectivity(token: string) {
+  try {
+    console.log('[test] Checking MetaAPI connectivity...');
+    const response = await fetch(`${PROVISIONING_API_URL}/users/current/profile`, {
+      method: 'GET',
+      headers: {
+        'auth-token': token,
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+    
+    console.log(`[test] MetaAPI connectivity check: ${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      const body = await response.text();
+      console.log('[test] Error response:', body);
+    }
+    return response.ok;
+  } catch (error: any) {
+    console.error('[test] MetaAPI connectivity failed:', error.message);
+    console.error('[test] Error details:', {
+      cause: error.cause,
+      code: error.code,
+      errno: error.errno,
+    });
+    return false;
+  }
+}
+
 // Fetch with timeout to avoid hanging requests
 async function fetchWithTimeout(url: string, options: any = {}, timeoutMs = 30000) {
   const controller = new AbortController();
@@ -290,7 +320,16 @@ export async function POST(req: NextRequest) {
     }
     console.log('METAAPI_TOKEN loaded, starting provisioning...');
     
-    const authHeader = req.headers.get('authorization');
+    // Test connectivity first
+    const canConnect = await testMetaApiConnectivity(META_API_TOKEN);
+    if (!canConnect) {
+      return NextResponse.json(
+        { error: 'Cannot reach MetaAPI servers. The service may be temporarily unavailable or blocked by network. Try again in a few moments.' },
+        { status: 503 }
+      );
+    }
+    
+    console.log('MetaAPI connectivity confirmed, proceeding...');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
