@@ -6,6 +6,11 @@ const router = express.Router();
 const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.ai';
 const META_API_TOKEN = process.env.METAAPI_TOKEN;
 
+// Health check for MT5 routes
+router.get('/health', (req, res) => {
+  res.json({ status: 'ok', route: 'mt5', metaApiConfigured: !!META_API_TOKEN });
+});
+
 // Helper: fetch with timeout
 async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
   const controller = new AbortController();
