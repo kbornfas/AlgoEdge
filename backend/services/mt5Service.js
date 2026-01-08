@@ -11,7 +11,8 @@ import {
 let MetaApi;
 try {
   // Dynamic import for ESM compatibility
-  const metaApiModule = await import('metaapi.cloud-sdk');
+  // Prefer ESM build to avoid CJS/ESM interop issues
+  const metaApiModule = await import('metaapi.cloud-sdk/esm-node');
   // Handle different export structures
   MetaApi = metaApiModule.default?.default || metaApiModule.default || metaApiModule.MetaApi;
   if (!MetaApi || typeof MetaApi !== 'function') {
