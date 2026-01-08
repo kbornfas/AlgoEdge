@@ -18,11 +18,16 @@ async function fetchWithTimeout(url: string, options: any = {}, timeoutMs = 3000
     console.log(`[fetch] Response: ${response.status} ${response.statusText}`);
     return response;
   } catch (err: any) {
-    console.error(`[fetch] Error on ${url}:`, err.message);
+    const errMsg = err?.message || String(err);
+    console.error(`[fetch] FAILED on ${url}:`, errMsg);
+    console.error(`[fetch] Error cause:`, err?.cause);
+    console.error(`[fetch] Error code:`, err?.code);
+    console.error(`[fetch] Error errno:`, err?.errno);
     if (err.name === 'AbortError') {
       throw new Error(`Request timeout after ${timeoutMs}ms to ${url}`);
     }
-    throw err;
+    // Re-throw with more context
+    throw new Error(`Fetch failed on ${url}: ${errMsg}`);
   } finally {
     clearTimeout(timeoutId);
   }
@@ -195,8 +200,11 @@ async function provisionMetaApiAccount(
 
     return { success: true, metaApiAccountId: createData.id };
   } catch (error: any) {
-    console.error('MetaAPI provisioning error:', error.message);
-    const errorMsg = error.message || 'Failed to connect to MetaAPI';
+    const fullError = error instanceof Error ? error.message : String(error);
+    console.error('MetaAPI provisioning error:', fullError);
+    console.error('Error stack:', error?.stack);
+    console.error('Error type:', error?.constructor?.name);
+    const errorMsg = fullError || 'Failed to connect to MetaAPI';
     return { success: false, error: errorMsg };
   }
 }
