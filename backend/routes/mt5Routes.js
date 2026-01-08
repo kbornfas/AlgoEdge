@@ -69,7 +69,26 @@ router.post('/provision', authenticate, async (req, res) => {
   try {
     // Check for existing account using SDK
     console.log('Checking for existing MetaAPI account...');
-    const accounts = await api.metatraderAccountApi.getAccounts();
+    
+    // The SDK method is getAccounts() on metatraderAccountApi
+    // But we need to handle both old and new SDK versions
+    let accounts = [];
+    try {
+      if (typeof api.metatraderAccountApi.getAccounts === 'function') {
+        accounts = await api.metatraderAccountApi.getAccounts();
+      } else if (typeof api.metatraderAccountApi.getAccountsWithInfiniteScrollPagination === 'function') {
+        const result = await api.metatraderAccountApi.getAccountsWithInfiniteScrollPagination();
+        accounts = result.items || [];
+      } else {
+        // Try to list accounts differently
+        console.log('Available methods:', Object.keys(api.metatraderAccountApi));
+        throw new Error('Cannot find method to list accounts');
+      }
+    } catch (listErr) {
+      console.log('Error listing accounts, trying to create directly:', listErr.message);
+      accounts = [];
+    }
+    
     console.log('Found', accounts.length, 'existing accounts');
 
     // Look for matching account
