@@ -25,6 +25,22 @@ async function fetchWithTimeout(url: string, options: any = {}, timeoutMs = 3000
   }
 }
 
+// Helper to throw if response is not OK
+async function ensureOk(response: Response, context: string) {
+  if (response.ok) return;
+  let body: any = null;
+  try {
+    const text = await response.text();
+    try {
+      body = JSON.parse(text || '{}');
+    } catch {
+      body = text;
+    }
+  } catch {}
+  const detail = typeof body === 'string' ? body : body?.message || body?.error || JSON.stringify(body || {});
+  throw new Error(`${context} failed: HTTP ${response.status}${detail ? ` - ${detail}` : ''}`);
+}
+
 const connectSchema = z.object({
   accountId: z.string().min(1),
   password: z.string().min(1),
@@ -34,7 +50,11 @@ const connectSchema = z.object({
 /**
  * Create or find MetaAPI account for the MT5 credentials
  */
-async function provisionMetaApiAccount(accountId: string, password: string, server: string): Promise<{
+async function provisionMetaApiAccount(
+  accountId: string,
+  password: string,
+  server: string
+): Promise<{
   success: boolean;
   metaApiAccountId?: string;
   error?: string;
@@ -56,7 +76,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
     
     // First, check if account already exists in MetaAPI
     const listResponse = await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts`, { headers });
-    if (!listResponse.ok) throw new Error(`List failed: HTTP ${listResponse.status}`);
+    await ensureOk(listResponse, 'List accounts');
     const accounts = await listResponse.json();
     console.log('Found', accounts.length, 'MetaAPI accounts');
     
@@ -71,16 +91,18 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
       // Account exists, deploy it if needed
       if (existingAccount.state !== 'DEPLOYED') {
         console.log('Deploying existing account...');
-        await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}/deploy`, { 
+        const deployResp = await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}/deploy`, { 
           method: 'POST', 
           headers 
         });
+        await ensureOk(deployResp, 'Deploy existing');
         
         // Wait for deployment
         for (let i = 0; i < 20; i++) {
           await new Promise(resolve => setTimeout(resolve, 2000));
           try {
             const statusResponse = await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`, { headers });
+            await ensureOk(statusResponse, 'Status existing');
             const statusData = await statusResponse.json();
             console.log('Account status:', statusData.state, statusData.connectionStatus);
             if (statusData.state === 'DEPLOYED' && statusData.connectionStatus === 'CONNECTED') {
@@ -97,6 +119,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
           await new Promise(resolve => setTimeout(resolve, 2000));
           try {
             const statusResponse = await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`, { headers });
+            await ensureOk(statusResponse, 'Status existing');
             const statusData = await statusResponse.json();
             if (statusData.connectionStatus === 'CONNECTED') {
               console.log('Account now connected!');
@@ -117,26 +140,25 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
       method: 'POST',
       headers,
       body: JSON.stringify({
-        name: `AlgoEdge-${accountId}`,
-        type: 'cloud',
         login: accountId,
-        password: password,
-        server: server,
+        password,
+        server,
         platform: 'mt5',
-        magic: 123456,
-      }),
+        application: 'MetaApi',
+        reliability: 'high',
+      })
     });
-
-    if (!createResponse.ok) throw new Error(`Create failed: HTTP ${createResponse.status}`);
+    await ensureOk(createResponse, 'Create account');
     const createData = await createResponse.json();
     console.log('Account created with ID:', createData.id);
 
     // Deploy the account
     console.log('Deploying new account...');
-    await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}/deploy`, { 
+    const deployRespNew = await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}/deploy`, { 
       method: 'POST', 
       headers 
     });
+    await ensureOk(deployRespNew, 'Deploy new');
 
     // Wait for deployment and connection (poll for status)
     let deployed = false;
@@ -145,6 +167,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
       
       try {
         const statusResponse = await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}`, { headers });
+        await ensureOk(statusResponse, 'Status new');
         const statusData = await statusResponse.json();
         console.log('Deployment status:', statusData.state, statusData.connectionStatus);
         
@@ -168,8 +191,8 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
 
     return { success: true, metaApiAccountId: createData.id };
   } catch (error: any) {
-    console.error('MetaAPI provisioning error:', error.response?.data || error.message);
-    const errorMsg = error.response?.data?.message || error.message || 'Failed to connect to MetaAPI';
+    console.error('MetaAPI provisioning error:', error.message);
+    const errorMsg = error.message || 'Failed to connect to MetaAPI';
     return { success: false, error: errorMsg };
   }
 }
@@ -202,7 +225,7 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
       { headers }
     );
     
-    if (!accountResponse.ok) throw new Error(`HTTP ${accountResponse.status}`);
+    await ensureOk(accountResponse, 'Get account details');
     const accountData = await accountResponse.json();
     const region = accountData.region || 'vint-hill';
     const regionClientApiMap: Record<string, string> = {
@@ -220,7 +243,7 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
       { headers }
     );
 
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    await ensureOk(response, 'Get account information');
     const data = await response.json();
     console.log('Account info received:', JSON.stringify(data));
     
