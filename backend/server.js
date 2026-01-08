@@ -111,6 +111,7 @@ const setupRoutes = (app) => {
   app.use('/api/trades', tradeRoutes);
   app.use('/api/payments', paymentRoutes);
   app.use('/api/mt5', mt5Routes);
+  console.log('✅ All routes registered');
 };
 
 const setupErrorHandlers = (app) => {
