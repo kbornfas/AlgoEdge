@@ -305,6 +305,16 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
  */
 async function executeTradeViaMetaApi(connection, accountId, robotId, userId, signal) {
   try {
+    // Validate symbol is tradable on this account before sending order
+    try {
+      if (typeof connection.getSymbolPrice === 'function') {
+        await connection.getSymbolPrice(signal.symbol);
+      }
+    } catch (symErr) {
+      console.log(`  ⚠️ Symbol not available on account: ${signal.symbol} (${symErr.message})`);
+      return null;
+    }
+
     // Place order via MetaAPI RPC connection
     console.log(`  📤 Executing ${signal.type} ${signal.symbol} @ ${signal.volume} lots`);
     // Prefer explicit buy/sell helpers when available
