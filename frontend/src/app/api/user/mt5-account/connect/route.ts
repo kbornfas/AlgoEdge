@@ -8,6 +8,23 @@ export const maxDuration = 60; // Allow up to 60s for connection
 
 const PROVISIONING_API_URL = 'https://mt-provisioning-api-v1.agiliumtrade.ai';
 
+// Fetch with timeout to avoid hanging requests
+async function fetchWithTimeout(url: string, options: any = {}, timeoutMs = 30000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return response;
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw new Error(`Request timeout after ${timeoutMs}ms to ${url}`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 const connectSchema = z.object({
   accountId: z.string().min(1),
   password: z.string().min(1),
@@ -38,7 +55,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
     console.log('Checking for existing MetaAPI account...');
     
     // First, check if account already exists in MetaAPI
-    const listResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts`, { headers });
+    const listResponse = await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts`, { headers });
     if (!listResponse.ok) throw new Error(`List failed: HTTP ${listResponse.status}`);
     const accounts = await listResponse.json();
     console.log('Found', accounts.length, 'MetaAPI accounts');
@@ -54,7 +71,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
       // Account exists, deploy it if needed
       if (existingAccount.state !== 'DEPLOYED') {
         console.log('Deploying existing account...');
-        await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}/deploy`, { 
+        await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}/deploy`, { 
           method: 'POST', 
           headers 
         });
@@ -63,7 +80,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
         for (let i = 0; i < 20; i++) {
           await new Promise(resolve => setTimeout(resolve, 2000));
           try {
-            const statusResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`, { headers });
+            const statusResponse = await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`, { headers });
             const statusData = await statusResponse.json();
             console.log('Account status:', statusData.state, statusData.connectionStatus);
             if (statusData.state === 'DEPLOYED' && statusData.connectionStatus === 'CONNECTED') {
@@ -79,7 +96,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
         for (let i = 0; i < 10; i++) {
           await new Promise(resolve => setTimeout(resolve, 2000));
           try {
-            const statusResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`, { headers });
+            const statusResponse = await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts/${existingAccount._id}`, { headers });
             const statusData = await statusResponse.json();
             if (statusData.connectionStatus === 'CONNECTED') {
               console.log('Account now connected!');
@@ -96,7 +113,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
     console.log('Creating new MetaAPI account for', accountId, 'on', server);
 
     // Create new account in MetaAPI
-    const createResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts`, {
+    const createResponse = await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -116,7 +133,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
 
     // Deploy the account
     console.log('Deploying new account...');
-    await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}/deploy`, { 
+    await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}/deploy`, { 
       method: 'POST', 
       headers 
     });
@@ -127,7 +144,7 @@ async function provisionMetaApiAccount(accountId: string, password: string, serv
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       try {
-        const statusResponse = await fetch(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}`, { headers });
+        const statusResponse = await fetchWithTimeout(`${PROVISIONING_API_URL}/users/current/accounts/${createData.id}`, { headers });
         const statusData = await statusResponse.json();
         console.log('Deployment status:', statusData.state, statusData.connectionStatus);
         
@@ -180,7 +197,7 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
     console.log('Fetching account info for MetaAPI account:', metaApiAccountId);
     
     // First get account details to find region
-    const accountResponse = await fetch(
+    const accountResponse = await fetchWithTimeout(
       `${PROVISIONING_API_URL}/users/current/accounts/${metaApiAccountId}`,
       { headers }
     );
@@ -198,7 +215,7 @@ async function getAccountInfo(metaApiAccountId: string): Promise<{
     
     console.log('Account region:', region, 'using:', clientApiUrl);
     
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `${clientApiUrl}/users/current/accounts/${metaApiAccountId}/account-information`,
       { headers }
     );
