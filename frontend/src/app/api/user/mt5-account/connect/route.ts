@@ -58,14 +58,24 @@ export async function POST(req: NextRequest) {
 
     // Call backend to provision account
     console.log('Calling backend /api/mt5/provision...');
-    const provisionResp = await fetch(`${backendUrl}/api/mt5/provision`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ accountId, password, server }),
-    });
+    
+    let provisionResp;
+    try {
+      provisionResp = await fetch(`${backendUrl}/api/mt5/provision`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accountId, password, server }),
+      });
+    } catch (fetchError: any) {
+      console.error('Network error calling backend:', fetchError.message);
+      return NextResponse.json(
+        { error: `Cannot reach backend server: ${fetchError.message}` },
+        { status: 503 }
+      );
+    }
 
     if (!provisionResp.ok) {
       const error = await provisionResp.text();
