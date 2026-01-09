@@ -330,7 +330,28 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
     
     console.log(`  🔌 Connecting to MetaAPI account: ${metaApiAccountId}`);
     
-    const account = await metaApi.metatraderAccountApi.getAccount(metaApiAccountId);
+    let account;
+    try {
+      account = await metaApi.metatraderAccountApi.getAccount(metaApiAccountId);
+    } catch (accountErr) {
+      // Account not found in MetaAPI - mark as invalid and skip
+      if (accountErr.message?.includes('not found') || accountErr.message?.includes('404')) {
+        console.log(`  ⚠️ MetaAPI account ${metaApiAccountId} not found - skipping (stale reference)`);
+        // Mark this account as needing reconnection in database
+        try {
+          await pool.query(
+            `UPDATE mt5_accounts SET status = 'disconnected', api_key = NULL WHERE api_key = $1`,
+            [metaApiAccountId]
+          );
+          console.log(`  🔄 Cleared stale MetaAPI reference from database`);
+        } catch (dbErr) {
+          // Ignore DB errors here
+        }
+        return null;
+      }
+      throw accountErr;
+    }
+    
     console.log(`  📊 Account state: ${account.state}, connectionStatus: ${account.connectionStatus}`);
     
     // Deploy if needed
@@ -651,7 +672,16 @@ async function getAccount(metaApiAccountId, mt5AccountId) {
     const metaApi = await initMetaApi();
     if (!metaApi) return null;
     
-    const account = await metaApi.metatraderAccountApi.getAccount(metaApiAccountId);
+    let account;
+    try {
+      account = await metaApi.metatraderAccountApi.getAccount(metaApiAccountId);
+    } catch (accountErr) {
+      // Account not found - skip silently
+      if (accountErr.message?.includes('not found') || accountErr.message?.includes('404')) {
+        return null;
+      }
+      throw accountErr;
+    }
     
     // Ensure deployed and connected
     if (account.state !== 'DEPLOYED') {
@@ -665,7 +695,8 @@ async function getAccount(metaApiAccountId, mt5AccountId) {
     
     return account;
   } catch (error) {
-    console.error(`Failed to get account ${metaApiAccountId}:`, error.message);
+    // Rate limit these error logs
+    rateLimitLog(`account-err-${metaApiAccountId}`, `  ⚠️ Account ${metaApiAccountId}: ${error.message}`);
     return null;
   }
 }
