@@ -751,6 +751,55 @@ async function getOpenTradesCount(accountId) {
 }
 
 /**
+ * Get existing open positions for an account (by symbol and direction)
+ * Used to prevent opening opposing positions
+ */
+async function getOpenPositions(accountId) {
+  try {
+    const result = await pool.query(
+      `SELECT pair, type FROM trades 
+       WHERE mt5_account_id = $1 AND status = 'open'`,
+      [accountId]
+    );
+    return result.rows;
+  } catch (error) {
+    return [];
+  }
+}
+
+/**
+ * Check if we can open a trade (prevents opposing positions)
+ */
+function canOpenTrade(existingPositions, symbol, newDirection) {
+  const oppositeDirection = newDirection.toLowerCase() === 'buy' ? 'sell' : 'buy';
+  
+  // Check if there's an existing position on this symbol in the opposite direction
+  const hasOpposite = existingPositions.some(pos => 
+    pos.pair === symbol && pos.type.toLowerCase() === oppositeDirection
+  );
+  
+  if (hasOpposite) {
+    console.log(`    ⛔ Cannot open ${newDirection} on ${symbol} - already have ${oppositeDirection} position`);
+    return false;
+  }
+  
+  // Check if there's already a position on this symbol in the same direction
+  const hasSame = existingPositions.some(pos => 
+    pos.pair === symbol && pos.type.toLowerCase() === newDirection.toLowerCase()
+  );
+  
+  if (hasSame) {
+    console.log(`    ⛔ Already have ${newDirection} position on ${symbol} - skipping duplicate`);
+    return false;
+  }
+  
+  return true;
+}
+
+// Track last trade time per symbol to add cooldown
+const lastTradeTime = new Map();
+
+/**
  * Execute a single trading cycle for a robot
  */
 async function executeRobotTrade(robot) {
@@ -789,9 +838,21 @@ async function executeRobotTrade(robot) {
       return;
     }
     
+    // Get existing open positions to prevent opposing trades
+    const existingPositions = await getOpenPositions(accountId);
+    console.log(`  📋 Existing positions: ${existingPositions.length}`);
+    
     // Try each trading pair
     for (const symbol of TRADING_PAIRS) {
       try {
+        // Check cooldown (5 minutes between trades on same symbol)
+        const lastTrade = lastTradeTime.get(`${accountId}-${symbol}`);
+        const cooldownMs = 5 * 60 * 1000; // 5 minutes
+        if (lastTrade && Date.now() - lastTrade < cooldownMs) {
+          console.log(`  ⏳ ${symbol} on cooldown - ${Math.round((cooldownMs - (Date.now() - lastTrade)) / 1000)}s remaining`);
+          continue;
+        }
+        
         // Fetch candles
         console.log(`  📊 Analyzing ${symbol}...`);
         const candles = await fetchCandles(account, symbol, timeframe?.toLowerCase() || 'm5', 100);
@@ -805,19 +866,21 @@ async function executeRobotTrade(robot) {
         let signal = analyzeMarket(candles, symbol, riskLevel);
         
         if (!signal) {
-          // No quality signal - use forced signal based on momentum
-          console.log(`    🔄 No quality signal, creating momentum-based entry...`);
-          signal = createForcedSignal(candles, symbol, riskLevel);
+          // No quality signal - skip this symbol entirely (don't force trades)
+          console.log(`    ⏸️ No quality signal for ${symbol} - skipping`);
+          continue;
         }
         
-        if (!signal) {
-          console.log(`    ⏸️ Could not generate any signal for ${symbol}`);
+        // Check if we can open this trade (no opposing positions)
+        if (!canOpenTrade(existingPositions, symbol, signal.type)) {
           continue;
         }
         
         // Execute trade
         const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
         if (trade) {
+          // Record trade time for cooldown
+          lastTradeTime.set(`${accountId}-${symbol}`, Date.now());
           break; // One trade per robot per cycle
         }
         
