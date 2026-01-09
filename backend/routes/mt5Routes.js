@@ -92,15 +92,34 @@ router.post('/provision', authenticate, async (req, res) => {
       accounts = [];
     }
     
-    console.log('Found', accounts.length, 'existing accounts');
+    console.log(`Found ${accounts.length} existing MetaAPI accounts`);
+    
+    // Log all accounts for debugging
+    if (accounts.length > 0) {
+      accounts.forEach(acc => {
+        console.log(`  - Account: ${acc.login}@${acc.server} (id: ${acc.id}, state: ${acc.state})`);
+      });
+    }
 
-    // Look for matching account
+    // Look for matching account (case-insensitive server comparison)
     const existingAccount = accounts.find((acc) =>
-      String(acc.login) === String(accountId) && acc.server === server
+      String(acc.login) === String(accountId) && 
+      acc.server?.toLowerCase() === server?.toLowerCase()
     );
 
     if (existingAccount) {
-      console.log('Found existing account:', existingAccount.id, 'state:', existingAccount.state);
+      console.log(`✅ REUSING existing MetaAPI account: ${existingAccount.id} (state: ${existingAccount.state})`);
+      console.log(`   Login: ${existingAccount.login}, Server: ${existingAccount.server}`);
+      
+      // Update password if the account exists (in case user changed it)
+      try {
+        if (typeof existingAccount.update === 'function') {
+          console.log('Updating account credentials...');
+          await existingAccount.update({ password });
+        }
+      } catch (updateErr) {
+        console.log('Could not update password (non-critical):', updateErr.message);
+      }
       
       // Deploy if needed
       if (existingAccount.state !== 'DEPLOYED') {
@@ -110,11 +129,26 @@ router.post('/provision', authenticate, async (req, res) => {
         console.log('Account deployed');
       }
       
-      return res.json({ success: true, metaApiAccountId: existingAccount.id });
+      // Wait for broker connection
+      if (existingAccount.connectionStatus !== 'CONNECTED') {
+        console.log('Waiting for broker connection...');
+        try {
+          await existingAccount.waitConnected({ timeoutInSeconds: 60 });
+        } catch (connErr) {
+          console.log('Connection timeout, but account is usable:', connErr.message);
+        }
+      }
+      
+      return res.json({ 
+        success: true, 
+        metaApiAccountId: existingAccount.id,
+        reused: true,
+        message: 'Reused existing MetaAPI account'
+      });
     }
 
     // Create new account using SDK
-    console.log('Creating new MetaAPI account...');
+    console.log('📝 Creating NEW MetaAPI account (no existing match found)...');
     const newAccount = await api.metatraderAccountApi.createAccount({
       name: `AlgoEdge_${accountId}`,
       type: 'cloud',
@@ -134,7 +168,12 @@ router.post('/provision', authenticate, async (req, res) => {
     await newAccount.waitDeployed();
     console.log('Account deployed successfully');
 
-    return res.json({ success: true, metaApiAccountId: newAccount.id });
+    return res.json({ 
+      success: true, 
+      metaApiAccountId: newAccount.id,
+      reused: false,
+      message: 'Created new MetaAPI account'
+    });
     
   } catch (error) {
     console.error('MT5 provision error:', error.message);

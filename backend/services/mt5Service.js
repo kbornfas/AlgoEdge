@@ -181,14 +181,31 @@ export const connectMT5Account = async (accountId, login, password, server) => {
       accounts = [];
     }
     
-    const existingAccount = accounts.find(acc => String(acc.login) === String(login) && acc.server === server);
+    console.log(`Found ${accounts.length} existing MetaAPI accounts`);
+    
+    // Case-insensitive server comparison to catch matches
+    const existingAccount = accounts.find(acc => 
+      String(acc.login) === String(login) && 
+      acc.server?.toLowerCase() === server?.toLowerCase()
+    );
     
     if (existingAccount) {
-      console.log(`Found existing MetaAPI account: ${existingAccount.id}`);
+      console.log(`✅ REUSING existing MetaAPI account: ${existingAccount.id}`);
+      console.log(`   Login: ${existingAccount.login}, Server: ${existingAccount.server}, State: ${existingAccount.state}`);
       metaApiAccount = existingAccount;
+      
+      // Try to update password in case it changed
+      try {
+        if (typeof existingAccount.update === 'function') {
+          await existingAccount.update({ password });
+          console.log('   Password updated');
+        }
+      } catch (updateErr) {
+        console.log('   Could not update password:', updateErr.message);
+      }
     } else {
       // Create new MetaAPI account
-      console.log('Creating new MetaAPI account...');
+      console.log('📝 Creating NEW MetaAPI account...');
       metaApiAccount = await metaApi.metatraderAccountApi.createAccount({
         name: `AlgoEdge_${login}`,
         type: 'cloud',
@@ -198,7 +215,7 @@ export const connectMT5Account = async (accountId, login, password, server) => {
         platform: 'mt5',
         magic: 123456, // Your EA magic number
       });
-      console.log(`MetaAPI account created: ${metaApiAccount.id}`);
+      console.log(`   New account created: ${metaApiAccount.id}`);
     }
     
     // Deploy account
