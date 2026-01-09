@@ -189,16 +189,10 @@ async function initMetaApi() {
       return null;
     }
     
-    // Initialize with options to handle SSL
-    api = new MetaApi(token, {
-      requestTimeout: 60000,
-      retryOpts: {
-        retries: 3,
-        minDelayInSeconds: 1,
-        maxDelayInSeconds: 30
-      }
-    });
-    console.log('✅ MetaAPI initialized for trading scheduler');
+    // Initialize WITHOUT region option (SDK auto-detects from account)
+    // Per MetaAPI docs: "do not pass region option to MetaApi constructor for javascript SDKs"
+    api = new MetaApi(token);
+    console.log('✅ MetaAPI initialized for trading scheduler (auto-region)');
     return api;
   } catch (error) {
     console.error('❌ Failed to initialize MetaAPI:', error.message);
@@ -346,10 +340,18 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       return null;
     }
     
-    // Cache the connection
-    schedulerConnections.set(mt5AccountId, { rpcConnection, account });
+    // Verify trading is possible
+    if (typeof rpcConnection.createMarketBuyOrder !== 'function' && 
+        typeof rpcConnection.createMarketOrder !== 'function') {
+      console.log(`  ⚠️ Connection may not support trading - missing order methods`);
+    }
     
-    console.log(`  ✅ Connected to MetaAPI account ${metaApiAccountId}`);
+    // Cache the connection AND account for later use
+    schedulerConnections.set(mt5AccountId, { rpcConnection, account });
+    // Also cache by metaApiAccountId for easier lookup
+    schedulerConnections.set(metaApiAccountId, { rpcConnection, account });
+    
+    console.log(`  ✅ Connected to MetaAPI account ${metaApiAccountId} with trading enabled`);
     return rpcConnection;
     
   } catch (error) {
@@ -370,49 +372,78 @@ async function executeTradeViaMetaApi(connection, accountId, robotId, userId, si
       return null;
     }
     
+    // Check if connection is synchronized and trading is enabled
+    try {
+      const terminalState = connection.terminalState;
+      if (terminalState && !terminalState.connected) {
+        console.log(`  ⚠️ Terminal not connected - waiting for reconnection...`);
+        await connection.waitSynchronized({ timeoutInSeconds: 10 });
+      }
+    } catch (stateErr) {
+      // Ignore - some SDK versions don't have terminalState
+    }
+    
     // Validate symbol is tradable on this account before sending order
     try {
       if (typeof connection.getSymbolPrice === 'function') {
-        await connection.getSymbolPrice(signal.symbol);
+        const price = await connection.getSymbolPrice(signal.symbol);
+        if (!price) {
+          console.log(`  ⚠️ Could not get price for ${signal.symbol} - market may be closed`);
+          return null;
+        }
       }
     } catch (symErr) {
-      console.log(`  ⚠️ Symbol not available on account: ${signal.symbol} (${symErr.message})`);
+      console.log(`  ⚠️ Symbol not available: ${signal.symbol} (${symErr.message})`);
       return null;
     }
 
     // Place order via MetaAPI RPC connection
     console.log(`  📤 Executing ${signal.type} ${signal.symbol} @ ${signal.volume} lots`);
-    // Prefer explicit buy/sell helpers when available
     let result;
     const type = signal.type.toLowerCase();
-    if (type === 'buy' && typeof connection.createMarketBuyOrder === 'function') {
-      result = await connection.createMarketBuyOrder(
-        signal.symbol,
-        signal.volume,
-        signal.stopLoss,
-        signal.takeProfit,
-        { comment: `AlgoEdge-${robotId}` }
-      );
-    } else if (type === 'sell' && typeof connection.createMarketSellOrder === 'function') {
-      result = await connection.createMarketSellOrder(
-        signal.symbol,
-        signal.volume,
-        signal.stopLoss,
-        signal.takeProfit,
-        { comment: `AlgoEdge-${robotId}` }
-      );
-    } else if (typeof connection.createMarketOrder === 'function') {
-      // Fallback to generic method if available
-      result = await connection.createMarketOrder(
-        signal.symbol,
-        type,
-        signal.volume,
-        signal.stopLoss,
-        signal.takeProfit,
-        { comment: `AlgoEdge-${robotId}` }
-      );
-    } else {
-      throw new Error('createMarketOrder/createMarketBuyOrder/createMarketSellOrder not available on connection');
+    
+    try {
+      if (type === 'buy' && typeof connection.createMarketBuyOrder === 'function') {
+        result = await connection.createMarketBuyOrder(
+          signal.symbol,
+          signal.volume,
+          signal.stopLoss,
+          signal.takeProfit,
+          { comment: `AlgoEdge-${robotId}` }
+        );
+      } else if (type === 'sell' && typeof connection.createMarketSellOrder === 'function') {
+        result = await connection.createMarketSellOrder(
+          signal.symbol,
+          signal.volume,
+          signal.stopLoss,
+          signal.takeProfit,
+          { comment: `AlgoEdge-${robotId}` }
+        );
+      } else if (typeof connection.createMarketOrder === 'function') {
+        result = await connection.createMarketOrder(
+          signal.symbol,
+          type,
+          signal.volume,
+          signal.stopLoss,
+          signal.takeProfit,
+          { comment: `AlgoEdge-${robotId}` }
+        );
+      } else {
+        throw new Error('No trading methods available on connection');
+      }
+    } catch (orderErr) {
+      // Handle specific errors
+      if (orderErr.message?.includes('Trade is disabled')) {
+        console.log(`  ⚠️ Trading disabled on this account - check MetaAPI account settings`);
+        console.log(`     Make sure 'Trading enabled' is ON in MetaAPI dashboard`);
+      } else if (orderErr.message?.includes('market is closed')) {
+        console.log(`  ⚠️ Market is closed for ${signal.symbol}`);
+      } else if (orderErr.message?.includes('not enough money')) {
+        console.log(`  ⚠️ Insufficient margin for trade`);
+      } else {
+        console.log(`  ⚠️ Order error: ${orderErr.message}`);
+      }
+      return null;
     }
     
     console.log(`  📊 MetaAPI order result:`, result);
