@@ -243,6 +243,7 @@ export default function RobotsPage() {
   const [accountBalance, setAccountBalance] = useState<number>(0);
   const [accountEquity, setAccountEquity] = useState<number>(0);
   const [runningRobots, setRunningRobots] = useState<Set<string>>(new Set());
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // Get auth token from localStorage
   const getAuthHeaders = useCallback(() => {
@@ -341,6 +342,9 @@ export default function RobotsPage() {
           setAccountEquity(posData.account.equity || 0);
         }
         
+        // Update last updated timestamp
+        setLastUpdated(new Date());
+        
         if (posData.positions && posData.positions.length > 0) {
           // Map positions to trade format for display
           const mappedTrades = posData.positions.map((p: any) => ({
@@ -369,6 +373,7 @@ export default function RobotsPage() {
       if (response.ok) {
         const data = await response.json();
         setTrades(data.trades || []);
+        setLastUpdated(new Date());
       }
     } catch (err) {
       console.error('Error fetching trades:', err);
@@ -406,12 +411,35 @@ export default function RobotsPage() {
     loadData();
   }, [fetchRobots, fetchTrades]);
 
-  // Poll for real-time trade/P&L updates every 1 second
+  // Poll for real-time trade/P&L updates - smart polling that waits for response
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchTrades(); // This fetches live positions with current prices and P/L
-    }, 1000); // 1 second for real-time price updates
-    return () => clearInterval(interval);
+    let isMounted = true;
+    let isPolling = false;
+    
+    const pollTrades = async () => {
+      if (!isMounted || isPolling) return;
+      isPolling = true;
+      
+      try {
+        await fetchTrades();
+      } catch (err) {
+        // Silent
+      }
+      
+      isPolling = false;
+      
+      // Schedule next poll after this one completes
+      if (isMounted) {
+        setTimeout(pollTrades, 1000);
+      }
+    };
+    
+    // Start polling
+    pollTrades();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [fetchTrades]);
 
   // REMOVED: Frontend trading loop
@@ -700,14 +728,35 @@ export default function RobotsPage() {
       {trades.length > 0 && (
         <Card sx={{ mb: 4, overflow: 'hidden' }}>
           <CardContent sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
               <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 <TrendingUp size={20} />
                 Open Positions ({trades.length})
               </Typography>
-              <IconButton onClick={fetchTrades} size="small">
-                <RefreshCw size={18} />
-              </IconButton>
+              <Box display="flex" alignItems="center" gap={1}>
+                {lastUpdated && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box 
+                      component="span" 
+                      sx={{ 
+                        width: 8, 
+                        height: 8, 
+                        borderRadius: '50%', 
+                        bgcolor: '#4caf50',
+                        animation: 'pulse 1s ease-in-out infinite',
+                        '@keyframes pulse': {
+                          '0%, 100%': { opacity: 1 },
+                          '50%': { opacity: 0.4 },
+                        },
+                      }} 
+                    />
+                    Live • {lastUpdated.toLocaleTimeString()}
+                  </Typography>
+                )}
+                <IconButton onClick={fetchTrades} size="small" title="Refresh">
+                  <RefreshCw size={18} />
+                </IconButton>
+              </Box>
             </Box>
             <TableContainer sx={{ overflowX: 'auto' }}>
               <Table size="small" sx={{ minWidth: 600 }}>
