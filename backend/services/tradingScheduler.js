@@ -874,11 +874,11 @@ async function executeRobotTrade(robot) {
       return;
     }
     
-    const MAX_TRADES = 5; // Always aim for 5 trades
+    const MAX_TRADES = 999; // No limit - open as many as signals allow
     
     // Get existing open positions
     let existingPositions = await getOpenPositions(accountId);
-    console.log(`  📋 Current open positions: ${existingPositions.length}/${MAX_TRADES}`);
+    console.log(`  📋 Current open positions: ${existingPositions.length}`);
     
     // Collect all signals from all pairs first
     const signals = [];
@@ -1053,7 +1053,7 @@ export async function startTradingScheduler() {
   isRunning = true;
   console.log('\n========================================');
   console.log('🚀 TRADING SCHEDULER STARTED');
-  console.log('   Max trades: 5 | Cycle: 15 seconds');
+  console.log('   No trade limit | Cycle: 15 seconds');
   console.log('========================================\n');
   
   // Run immediately on start
