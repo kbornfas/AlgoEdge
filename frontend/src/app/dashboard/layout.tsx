@@ -39,7 +39,7 @@ const drawerWidth = 260;
 const menuItems = [
   { text: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
   { text: 'Trading Robots', icon: PlayCircle, href: '/dashboard/robots' },
-  { text: 'Trade History', icon: History, href: '/dashboard/history' },
+  { text: 'Trades', icon: History, href: '/dashboard/history' },
   { text: 'MT5 Connection', icon: TrendingUp, href: '/dashboard/mt5' },
   { text: 'Settings', icon: Settings, href: '/dashboard/settings' },
 ];

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -21,8 +21,23 @@ import {
   InputLabel,
   Pagination,
   Skeleton,
+  CircularProgress,
 } from '@mui/material';
-import { Search, TrendingUp, TrendingDown } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, RefreshCw, Clock, CheckCircle } from 'lucide-react';
+
+interface Position {
+  id: string;
+  symbol: string;
+  type: 'BUY' | 'SELL';
+  volume: number;
+  openPrice: number;
+  currentPrice?: number;
+  profit: number;
+  openTime: string;
+  stopLoss?: number;
+  takeProfit?: number;
+  comment?: string;
+}
 
 interface Trade {
   id: number;
@@ -38,14 +53,97 @@ interface Trade {
   status: 'open' | 'closed';
 }
 
-export default function TradeHistoryPage() {
+interface AccountInfo {
+  balance: number;
+  equity: number;
+  profit: number;
+}
+
+export default function TradesPage() {
   const router = useRouter();
-  const [trades, setTrades] = useState<Trade[]>([]);
+  const [openPositions, setOpenPositions] = useState<Position[]>([]);
+  const [closedTrades, setClosedTrades] = useState<Trade[]>([]);
+  const [accountInfo, setAccountInfo] = useState<AccountInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [page, setPage] = useState(1);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const rowsPerPage = 10;
+
+  const getAuthHeaders = useCallback(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }, []);
+
+  // Fetch live open positions from MetaAPI
+  const fetchOpenPositions = useCallback(async () => {
+    try {
+      const response = await fetch('/api/user/positions', {
+        headers: getAuthHeaders(),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.account) {
+          setAccountInfo({
+            balance: data.account.balance || 0,
+            equity: data.account.equity || 0,
+            profit: data.account.profit ?? ((data.account.equity || 0) - (data.account.balance || 0)),
+          });
+        }
+        
+        if (data.positions) {
+          setOpenPositions(data.positions.map((p: any) => ({
+            id: p.id,
+            symbol: p.symbol,
+            type: p.type?.toUpperCase() || 'BUY',
+            volume: p.volume,
+            openPrice: p.openPrice,
+            currentPrice: p.currentPrice,
+            profit: p.profit || 0,
+            openTime: p.openTime,
+            stopLoss: p.stopLoss,
+            takeProfit: p.takeProfit,
+            comment: p.comment,
+          })));
+        }
+        
+        setLastUpdated(new Date());
+      }
+    } catch (err) {
+      console.error('Failed to fetch positions:', err);
+    }
+  }, [getAuthHeaders]);
+
+  // Fetch closed trades from database
+  const fetchClosedTrades = useCallback(async () => {
+    try {
+      const response = await fetch('/api/user/trades?status=closed', {
+        headers: getAuthHeaders(),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const mappedTrades = (data.trades || []).map((trade: any) => ({
+          ...trade,
+          lotSize: trade.volume || trade.lotSize || 0,
+          openPrice: Number(trade.openPrice) || 0,
+          closePrice: trade.closePrice ? Number(trade.closePrice) : null,
+          profit: Number(trade.profit) || 0,
+          status: 'closed' as const,
+        }));
+        setClosedTrades(mappedTrades);
+      }
+    } catch (err) {
+      console.error('Failed to fetch closed trades:', err);
+    }
+  }, [getAuthHeaders]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -53,143 +151,118 @@ export default function TradeHistoryPage() {
       router.push('/auth/login');
       return;
     }
-    fetchTrades();
-  }, [router]);
-
-  const fetchTrades = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/user/trades', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // Map API response to expected format
-        const mappedTrades = (data.trades || []).map((trade: any) => ({
-          ...trade,
-          lotSize: trade.volume || trade.lotSize || 0,
-          openPrice: Number(trade.openPrice) || 0,
-          closePrice: trade.closePrice ? Number(trade.closePrice) : null,
-          profit: Number(trade.profit) || 0,
-          status: (trade.status || 'open').toLowerCase() as 'open' | 'closed',
-        }));
-        setTrades(mappedTrades);
-      } else {
-        // Use mock data for demo
-        setTrades(getMockTrades());
-      }
-    } catch (err) {
-      console.error('Failed to fetch trades:', err);
-      setTrades(getMockTrades());
-    } finally {
+    
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchOpenPositions(), fetchClosedTrades()]);
       setLoading(false);
-    }
+    };
+    
+    loadData();
+  }, [router, fetchOpenPositions, fetchClosedTrades]);
+
+  // Poll for real-time position updates
+  useEffect(() => {
+    let isMounted = true;
+    
+    const pollPositions = async () => {
+      if (!isMounted) return;
+      await fetchOpenPositions();
+      if (isMounted) {
+        setTimeout(pollPositions, 2000); // Poll every 2 seconds
+      }
+    };
+    
+    // Start polling after initial load
+    const timer = setTimeout(pollPositions, 2000);
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [fetchOpenPositions]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchOpenPositions(), fetchClosedTrades()]);
+    setRefreshing(false);
   };
 
-  const getMockTrades = (): Trade[] => [
-    {
-      id: 1,
-      symbol: 'EUR/USD',
-      type: 'BUY',
-      openPrice: 1.0850,
-      closePrice: 1.0895,
-      profit: 45.30,
-      lotSize: 0.10,
-      openTime: '2026-01-05T10:30:00Z',
-      closeTime: '2026-01-05T12:45:00Z',
-      status: 'closed',
-    },
-    {
-      id: 2,
-      symbol: 'GBP/USD',
-      type: 'SELL',
-      openPrice: 1.2650,
-      closePrice: 1.2675,
-      profit: -12.50,
-      lotSize: 0.05,
-      openTime: '2026-01-05T08:15:00Z',
-      closeTime: '2026-01-05T11:30:00Z',
-      status: 'closed',
-    },
-    {
-      id: 3,
-      symbol: 'USD/JPY',
-      type: 'BUY',
-      openPrice: 148.50,
-      closePrice: 148.79,
-      profit: 28.90,
-      lotSize: 0.10,
-      openTime: '2026-01-04T14:00:00Z',
-      closeTime: '2026-01-04T18:30:00Z',
-      status: 'closed',
-    },
-    {
-      id: 4,
-      symbol: 'XAU/USD',
-      type: 'BUY',
-      openPrice: 2045.50,
-      closePrice: 2058.30,
-      profit: 128.00,
-      lotSize: 0.01,
-      openTime: '2026-01-04T09:00:00Z',
-      closeTime: '2026-01-04T15:45:00Z',
-      status: 'closed',
-    },
-    {
-      id: 5,
-      symbol: 'EUR/GBP',
-      type: 'SELL',
-      openPrice: 0.8580,
-      closePrice: 0.8565,
-      profit: 15.00,
-      lotSize: 0.10,
-      openTime: '2026-01-03T11:30:00Z',
-      closeTime: '2026-01-03T16:00:00Z',
-      status: 'closed',
-    },
-  ];
+  // Filter closed trades
+  const filteredClosedTrades = closedTrades.filter((trade) => {
+    const matchesSearch = trade.symbol.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterType === 'all' || trade.type === filterType;
+    return matchesSearch && matchesFilter;
+  });
 
-  const filteredTrades = trades
-    .filter((trade) => {
-      const matchesSearch = trade.symbol.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter = filterType === 'all' || trade.type === filterType;
-      return matchesSearch && matchesFilter;
-    });
-
-  const paginatedTrades = filteredTrades.slice(
+  const paginatedClosedTrades = filteredClosedTrades.slice(
     (page - 1) * rowsPerPage,
     page * rowsPerPage
   );
 
-  const totalProfit = trades.reduce((sum, trade) => sum + (Number(trade.profit) || 0), 0);
-  const winRate = trades.length > 0
-    ? (trades.filter((t) => (t.profit || 0) > 0).length / trades.length) * 100
-    : 0;
+  // Calculate stats
+  const openProfit = openPositions.reduce((sum, p) => sum + (p.profit || 0), 0);
+  const closedProfit = closedTrades.reduce((sum, t) => sum + (Number(t.profit) || 0), 0);
+  const totalProfit = openProfit + closedProfit;
+  const winningTrades = closedTrades.filter((t) => (t.profit || 0) > 0).length;
+  const winRate = closedTrades.length > 0 ? (winningTrades / closedTrades.length) * 100 : 0;
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-        Trade History
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        View your complete trading history and performance
-      </Typography>
+      {/* Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box>
+          <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
+            Trades
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            View your open positions and trading history
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {lastUpdated && (
+            <Typography variant="caption" color="text.secondary">
+              Updated: {lastUpdated.toLocaleTimeString()}
+            </Typography>
+          )}
+          <Chip
+            icon={refreshing ? <CircularProgress size={14} /> : <RefreshCw size={14} />}
+            label="Refresh"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            sx={{ cursor: 'pointer' }}
+          />
+        </Box>
+      </Box>
 
       {/* Summary Stats */}
       <Box sx={{ display: 'flex', gap: 3, mb: 4, flexWrap: 'wrap' }}>
         <Paper sx={{ p: 2, minWidth: 150 }}>
-          <Typography variant="body2" color="text.secondary">Total Trades</Typography>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>{trades.length}</Typography>
+          <Typography variant="body2" color="text.secondary">Open Positions</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 600, color: 'primary.main' }}>
+            {openPositions.length}
+          </Typography>
         </Paper>
         <Paper sx={{ p: 2, minWidth: 150 }}>
-          <Typography variant="body2" color="text.secondary">Total Profit</Typography>
+          <Typography variant="body2" color="text.secondary">Floating P/L</Typography>
           <Typography
             variant="h5"
-            sx={{ fontWeight: 600, color: totalProfit >= 0 ? 'success.main' : 'error.main' }}
+            sx={{ fontWeight: 600, color: openProfit >= 0 ? 'success.main' : 'error.main' }}
           >
-            ${totalProfit.toFixed(2)}
+            {openProfit >= 0 ? '+' : ''}${openProfit.toFixed(2)}
+          </Typography>
+        </Paper>
+        <Paper sx={{ p: 2, minWidth: 150 }}>
+          <Typography variant="body2" color="text.secondary">Closed Trades</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>{closedTrades.length}</Typography>
+        </Paper>
+        <Paper sx={{ p: 2, minWidth: 150 }}>
+          <Typography variant="body2" color="text.secondary">Realized P/L</Typography>
+          <Typography
+            variant="h5"
+            sx={{ fontWeight: 600, color: closedProfit >= 0 ? 'success.main' : 'error.main' }}
+          >
+            {closedProfit >= 0 ? '+' : ''}${closedProfit.toFixed(2)}
           </Typography>
         </Paper>
         <Paper sx={{ p: 2, minWidth: 150 }}>
@@ -198,125 +271,223 @@ export default function TradeHistoryPage() {
         </Paper>
       </Box>
 
-      {/* Filters */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-        <TextField
-          placeholder="Search by symbol..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          size="small"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search size={20} />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ minWidth: 200 }}
-        />
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Type</InputLabel>
-          <Select
-            value={filterType}
-            label="Type"
-            onChange={(e) => setFilterType(e.target.value)}
-          >
-            <MenuItem value="all">All</MenuItem>
-            <MenuItem value="BUY">Buy</MenuItem>
-            <MenuItem value="SELL">Sell</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
-
-      {/* Trades Table */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Symbol</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Lot Size</TableCell>
-              <TableCell>Open Price</TableCell>
-              <TableCell>Close Price</TableCell>
-              <TableCell>Profit/Loss</TableCell>
-              <TableCell>Open Time</TableCell>
-              <TableCell>Status</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              [...Array(5)].map((_, i) => (
-                <TableRow key={i}>
-                  {[...Array(8)].map((_, j) => (
-                    <TableCell key={j}>
-                      <Skeleton />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : paginatedTrades.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} align="center">
-                  <Typography color="text.secondary" sx={{ py: 4 }}>
-                    No trades found
-                  </Typography>
-                </TableCell>
+      {/* ==================== OPEN POSITIONS SECTION ==================== */}
+      <Paper sx={{ mb: 4, overflow: 'hidden' }}>
+        <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'white', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Clock size={20} />
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Open Positions ({openPositions.length})
+          </Typography>
+        </Box>
+        
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'action.hover' }}>
+                <TableCell>Symbol</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Volume</TableCell>
+                <TableCell>Open Price</TableCell>
+                <TableCell>Current Price</TableCell>
+                <TableCell>SL</TableCell>
+                <TableCell>TP</TableCell>
+                <TableCell>P/L</TableCell>
+                <TableCell>Open Time</TableCell>
               </TableRow>
-            ) : (
-              paginatedTrades.map((trade) => (
-                <TableRow key={trade.id}>
-                  <TableCell>
-                    <Typography sx={{ fontWeight: 500 }}>{trade.symbol}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      icon={trade.type === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                      label={trade.type}
-                      color={trade.type === 'BUY' ? 'success' : 'error'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>{trade.lotSize ?? trade.volume ?? '-'}</TableCell>
-                  <TableCell>{trade.openPrice?.toFixed(5) ?? '-'}</TableCell>
-                  <TableCell>{trade.closePrice?.toFixed(5) ?? '-'}</TableCell>
-                  <TableCell>
-                    <Typography
-                      sx={{
-                        color: (trade.profit || 0) >= 0 ? 'success.main' : 'error.main',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {(trade.profit || 0) >= 0 ? '+' : ''}${(trade.profit || 0).toFixed(2)}
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                [...Array(3)].map((_, i) => (
+                  <TableRow key={i}>
+                    {[...Array(9)].map((_, j) => (
+                      <TableCell key={j}><Skeleton /></TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : openPositions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} align="center">
+                    <Typography color="text.secondary" sx={{ py: 3 }}>
+                      No open positions
                     </Typography>
                   </TableCell>
-                  <TableCell>
-                    {trade.openTime ? new Date(trade.openTime).toLocaleString() : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={trade.status}
-                      color={trade.status === 'closed' ? 'default' : 'primary'}
-                      size="small"
-                    />
+                </TableRow>
+              ) : (
+                openPositions.map((position) => (
+                  <TableRow key={position.id} hover>
+                    <TableCell>
+                      <Typography sx={{ fontWeight: 600 }}>{position.symbol}</Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        icon={position.type === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                        label={position.type}
+                        color={position.type === 'BUY' ? 'success' : 'error'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>{position.volume}</TableCell>
+                    <TableCell>{position.openPrice?.toFixed(5)}</TableCell>
+                    <TableCell>
+                      <Typography sx={{ color: 'info.main', fontWeight: 500 }}>
+                        {position.currentPrice?.toFixed(5) || '-'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ color: 'error.main' }}>
+                      {position.stopLoss?.toFixed(5) || '-'}
+                    </TableCell>
+                    <TableCell sx={{ color: 'success.main' }}>
+                      {position.takeProfit?.toFixed(5) || '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Typography
+                        sx={{
+                          color: position.profit >= 0 ? 'success.main' : 'error.main',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {position.profit >= 0 ? '+' : ''}${position.profit.toFixed(2)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="caption">
+                        {position.openTime ? new Date(position.openTime).toLocaleString() : '-'}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+
+      {/* ==================== CLOSED TRADES SECTION ==================== */}
+      <Paper sx={{ overflow: 'hidden' }}>
+        <Box sx={{ p: 2, bgcolor: 'grey.700', color: 'white', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <CheckCircle size={20} />
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Trade History ({closedTrades.length})
+          </Typography>
+        </Box>
+
+        {/* Filters */}
+        <Box sx={{ p: 2, display: 'flex', gap: 2, flexWrap: 'wrap', borderBottom: 1, borderColor: 'divider' }}>
+          <TextField
+            placeholder="Search by symbol..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            size="small"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={20} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ minWidth: 200 }}
+          />
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>Type</InputLabel>
+            <Select
+              value={filterType}
+              label="Type"
+              onChange={(e) => setFilterType(e.target.value)}
+            >
+              <MenuItem value="all">All</MenuItem>
+              <MenuItem value="BUY">Buy</MenuItem>
+              <MenuItem value="SELL">Sell</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'action.hover' }}>
+                <TableCell>Symbol</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Volume</TableCell>
+                <TableCell>Open Price</TableCell>
+                <TableCell>Close Price</TableCell>
+                <TableCell>P/L</TableCell>
+                <TableCell>Open Time</TableCell>
+                <TableCell>Close Time</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                [...Array(5)].map((_, i) => (
+                  <TableRow key={i}>
+                    {[...Array(8)].map((_, j) => (
+                      <TableCell key={j}><Skeleton /></TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : paginatedClosedTrades.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center">
+                    <Typography color="text.secondary" sx={{ py: 3 }}>
+                      No closed trades found
+                    </Typography>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                paginatedClosedTrades.map((trade) => (
+                  <TableRow key={trade.id} hover>
+                    <TableCell>
+                      <Typography sx={{ fontWeight: 500 }}>{trade.symbol}</Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        icon={trade.type === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                        label={trade.type}
+                        color={trade.type === 'BUY' ? 'success' : 'error'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>{trade.lotSize ?? trade.volume ?? '-'}</TableCell>
+                    <TableCell>{trade.openPrice?.toFixed(5) ?? '-'}</TableCell>
+                    <TableCell>{trade.closePrice?.toFixed(5) ?? '-'}</TableCell>
+                    <TableCell>
+                      <Typography
+                        sx={{
+                          color: (trade.profit || 0) >= 0 ? 'success.main' : 'error.main',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {(trade.profit || 0) >= 0 ? '+' : ''}${(trade.profit || 0).toFixed(2)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="caption">
+                        {trade.openTime ? new Date(trade.openTime).toLocaleString() : '-'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="caption">
+                        {trade.closeTime ? new Date(trade.closeTime).toLocaleString() : '-'}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      {/* Pagination */}
-      {filteredTrades.length > rowsPerPage && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-          <Pagination
-            count={Math.ceil(filteredTrades.length / rowsPerPage)}
-            page={page}
-            onChange={(_, value) => setPage(value)}
-            color="primary"
-          />
-        </Box>
-      )}
+        {/* Pagination */}
+        {filteredClosedTrades.length > rowsPerPage && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+            <Pagination
+              count={Math.ceil(filteredClosedTrades.length / rowsPerPage)}
+              page={page}
+              onChange={(_, value) => setPage(value)}
+              color="primary"
+            />
+          </Box>
+        )}
+      </Paper>
     </Box>
   );
 }
