@@ -83,6 +83,206 @@ const RISK_CONFIG = {
 };
 
 // =========================================================================
+// BOT CONFIGURATION - Controls which bots can trade and their rules
+// Only bots with canTrade: true will open new positions
+// =========================================================================
+const BOT_CONFIG = {
+  // SCALPER - Only bot allowed to trade currently
+  'algoedge-scalper': {
+    canTrade: true,           // ✅ ALLOWED TO TRADE
+    description: 'Ultra-fast scalping with AI-powered entries',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD'],
+    timeframes: ['m1', 'm5'],
+    minConfidence: 70,        // Need 70%+ confidence for scalping
+    maxLotSize: 0.03,         // Smaller lots for scalping
+    maxPositions: 2,          // Max 2 positions at a time
+    cooldownMs: 180000,       // 3 minute cooldown for scalper
+    requirements: {
+      minSpreadPips: 3,       // Don't trade if spread > 3 pips
+      minVolatility: true,    // Need volatility for scalping
+      avoidNews: true,        // Avoid high-impact news
+    }
+  },
+  
+  // MOMENTUM - Disabled until profitable signals confirmed
+  'algoedge-momentum': {
+    canTrade: false,          // ❌ DISABLED - Need momentum divergence confirmation
+    description: 'RSI and MACD divergence momentum trading',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'AUDUSD', 'USDCHF', 'XAUUSD'],
+    timeframes: ['m5', 'm15'],
+    minConfidence: 75,
+    requirements: {
+      needsMACDDivergence: true,
+      needsRSIDivergence: true,
+      minMomentumStrength: 60,
+    }
+  },
+  
+  // TREND HUNTER - Disabled until trend confirmation logic tested
+  'algoedge-trend-m15': {
+    canTrade: false,          // ❌ DISABLED - Need EMA crossover + ADX filter
+    description: 'EMA crossover trend following with ADX filter',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD', 'XAUUSD'],
+    timeframes: ['m15', 'm30', 'h1'],
+    minConfidence: 70,
+    requirements: {
+      needsEMACrossover: true,  // EMA 8 must cross EMA 20
+      minADX: 25,               // ADX must be > 25 for trend
+      trendAlignment: true,     // All timeframes must agree
+    }
+  },
+  
+  // BREAKOUT PRO - Disabled until support/resistance logic improved
+  'algoedge-breakout': {
+    canTrade: false,          // ❌ DISABLED - Need proper S/R detection
+    description: 'Support/resistance breakout trading',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'EURJPY', 'GBPJPY', 'XAUUSD'],
+    timeframes: ['m30', 'h1', 'h4'],
+    minConfidence: 75,
+    requirements: {
+      needsBreakoutConfirmation: true, // Price must close beyond level
+      minVolume: true,                  // Need volume spike on breakout
+      retestPattern: true,              // Wait for retest if possible
+    }
+  },
+  
+  // SWING MASTER - Disabled until multi-timeframe analysis ready
+  'algoedge-swing-h1': {
+    canTrade: false,          // ❌ DISABLED - Need multi-TF confirmation
+    description: 'Swing trading with multi-timeframe analysis',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'XAUUSD'],
+    timeframes: ['h1', 'h4', 'd1'],
+    minConfidence: 70,
+    requirements: {
+      multiTimeframeAlign: true,  // H1, H4, D1 must agree
+      minSwingSize: 50,           // Min 50 pips potential
+      clearStructure: true,       // Clear higher highs/lows
+    }
+  },
+  
+  // GOLD HUNTER - Disabled until gold-specific volatility handling ready
+  'algoedge-gold-hunter': {
+    canTrade: false,          // ❌ DISABLED - Gold too volatile, need special handling
+    description: 'Specialized XAUUSD trading with volatility filters',
+    allowedPairs: ['XAUUSD'],
+    timeframes: ['m15', 'm30', 'h1', 'h4'],
+    minConfidence: 80,        // Need HIGH confidence for gold
+    maxLotSize: 0.02,         // Very small lots for gold
+    requirements: {
+      maxVolatility: true,    // Don't trade during extreme volatility
+      sessionFilter: true,    // Only trade London/NY overlap
+      minATR: 10,             // Need movement but not chaos
+      maxATR: 50,             // Avoid when too volatile
+    }
+  },
+  
+  // POSITION TRADER - Disabled until daily analysis working
+  'algoedge-position-h4': {
+    canTrade: false,          // ❌ DISABLED - Need daily/weekly trend analysis
+    description: 'Long-term position trading on major trends',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'NZDUSD', 'XAUUSD'],
+    timeframes: ['h4', 'd1', 'w1'],
+    minConfidence: 80,
+    requirements: {
+      weeklyTrendAlign: true,  // Must align with weekly trend
+      fundamentalSupport: true, // Need fundamental backing
+      minHoldTime: '1day',     // Expect to hold 1+ days
+    }
+  },
+  
+  // DAILY SNIPER - Disabled until daily chart signals tested
+  'algoedge-daily-sniper': {
+    canTrade: false,          // ❌ DISABLED - Daily signals need backtesting
+    description: 'High-accuracy daily chart entries',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'EURJPY', 'XAUUSD'],
+    timeframes: ['d1', 'w1'],
+    minConfidence: 85,        // Very high confidence needed
+    requirements: {
+      endOfDayEntry: true,    // Only enter at daily close
+      keyLevelAlignment: true, // Must be at key S/R level
+      candlePattern: true,    // Need confirming candle pattern
+    }
+  },
+  
+  // GRID MASTER - DANGEROUS: Disabled permanently
+  'algoedge-grid-master': {
+    canTrade: false,          // ❌ PERMANENTLY DISABLED - Grid trading too risky
+    description: 'Grid trading for ranging markets',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'AUDUSD', 'USDCHF'],
+    timeframes: ['m30', 'h1', 'h4'],
+    requirements: {
+      reason: 'Grid trading can cause unlimited losses in trending markets',
+    }
+  },
+  
+  // NEWS TRADER - Disabled until news API integrated properly
+  'algoedge-news-trader': {
+    canTrade: false,          // ❌ DISABLED - News API needs proper integration
+    description: 'High-impact news event trading',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD'],
+    timeframes: ['m1', 'm5', 'm15'],
+    minConfidence: 75,
+    requirements: {
+      newsEventDetected: true,  // Must have actual news event
+      minImpact: 'HIGH',        // Only high impact news
+      preNewsBuffer: 15,        // Enter 15 mins before news
+      postNewsDelay: 5,         // Or 5 mins after for momentum
+    }
+  },
+  
+  // MARTINGALE PRO - DANGEROUS: Disabled permanently
+  'algoedge-martingale-pro': {
+    canTrade: false,          // ❌ PERMANENTLY DISABLED - Martingale blows accounts
+    description: 'Smart martingale with risk controls',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY'],
+    timeframes: ['m15', 'm30', 'h1'],
+    requirements: {
+      reason: 'Martingale strategy can cause catastrophic losses - NEVER enable',
+    }
+  },
+  
+  // HEDGE GUARDIAN - Disabled as hedging contradicts our no-hedge policy
+  'algoedge-hedge-guardian': {
+    canTrade: false,          // ❌ DISABLED - Conflicts with PREVENT_HEDGING
+    description: 'Hedging to minimize drawdown',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'XAUUSD'],
+    timeframes: ['h1', 'h4', 'd1'],
+    requirements: {
+      reason: 'Hedging disabled - conflicts with risk management policy',
+    }
+  },
+};
+
+// Helper function to check if a bot is allowed to trade
+function canBotTrade(robotId, robotName) {
+  // Try to find config by ID first
+  let config = BOT_CONFIG[robotId];
+  
+  // If not found by ID, try to match by name pattern
+  if (!config) {
+    const nameLower = robotName.toLowerCase();
+    for (const [id, cfg] of Object.entries(BOT_CONFIG)) {
+      if (nameLower.includes(id.replace('algoedge-', '').replace('-', ' '))) {
+        config = cfg;
+        break;
+      }
+    }
+  }
+  
+  if (!config) {
+    console.log(`  ⚠️ Unknown bot "${robotName}" (${robotId}) - NOT ALLOWED to trade`);
+    return { allowed: false, reason: 'Unknown bot - not configured' };
+  }
+  
+  if (!config.canTrade) {
+    console.log(`  🚫 Bot "${robotName}" is DISABLED - ${config.requirements?.reason || 'Not ready for live trading'}`);
+    return { allowed: false, reason: config.requirements?.reason || 'Bot disabled' };
+  }
+  
+  return { allowed: true, config };
+}
+
+// =========================================================================
 // CANDLE CACHE - Reduces API calls to avoid rate limiting
 // =========================================================================
 const candleCache = new Map();
@@ -886,6 +1086,117 @@ function calculateATR(candles, period = 14) {
 
 /**
  * =========================================================================
+ * SCALPING ANALYSIS - Ultra-fast entries with tight risk
+ * Designed for M1/M5 timeframes with quick profit targets
+ * =========================================================================
+ */
+function analyzeMarketForScalping(candles, symbol, riskLevel = 'medium') {
+  if (!candles || candles.length < 30) return null;
+  
+  const closes = candles.map(c => c.close);
+  const currentPrice = closes[closes.length - 1];
+  const atr = calculateATR(candles, 7); // Shorter ATR for scalping
+  
+  if (atr === 0) return null;
+  
+  // Calculate fast indicators for scalping
+  const ema5 = calculateEMA(closes, 5);
+  const ema10 = calculateEMA(closes, 10);
+  const ema20 = calculateEMA(closes, 20);
+  const rsi = calculateRSI(closes, 7); // Faster RSI for scalping
+  const currentRsi = rsi[rsi.length - 1] || 50;
+  
+  const ema5Val = ema5[ema5.length - 1];
+  const ema10Val = ema10[ema10.length - 1];
+  const ema20Val = ema20[ema20.length - 1];
+  
+  // Quick trend check
+  const fastTrendUp = ema5Val > ema10Val && ema10Val > ema20Val;
+  const fastTrendDown = ema5Val < ema10Val && ema10Val < ema20Val;
+  
+  // Momentum check - need 3 candles in same direction for scalp
+  const recentCandles = candles.slice(-3);
+  const bullishCandles = recentCandles.filter(c => c.close > c.open).length;
+  const bearishCandles = 3 - bullishCandles;
+  
+  // Price momentum
+  const priceChange = (currentPrice - closes[closes.length - 4]) / currentPrice * 100;
+  const strongMomentum = Math.abs(priceChange) > 0.1; // 0.1% move
+  
+  // Candle body strength (strong bodies = conviction)
+  const lastCandle = candles[candles.length - 1];
+  const bodySize = Math.abs(lastCandle.close - lastCandle.open);
+  const wickSize = lastCandle.high - lastCandle.low - bodySize;
+  const strongBody = bodySize > wickSize; // Body > wicks = conviction
+  
+  let signal = null;
+  let confidence = 0;
+  let reason = '';
+  
+  // SCALP BUY: Quick momentum entries
+  if (fastTrendUp && bullishCandles >= 2 && strongBody) {
+    confidence = 50;
+    reason = 'SCALP-BUY: ';
+    
+    if (fastTrendUp) { confidence += 20; reason += 'FastTrend '; }
+    if (currentRsi > 50 && currentRsi < 70) { confidence += 10; reason += 'RSI-Good '; }
+    if (strongMomentum && priceChange > 0) { confidence += 15; reason += 'Momentum '; }
+    if (bullishCandles === 3) { confidence += 10; reason += '3-Green '; }
+    if (strongBody && lastCandle.close > lastCandle.open) { confidence += 10; reason += 'StrongCandle '; }
+    
+    // Must hit minimum 70% for scalping
+    if (confidence >= 70) {
+      signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim() };
+    }
+  }
+  
+  // SCALP SELL: Quick momentum entries
+  if (!signal && fastTrendDown && bearishCandles >= 2 && strongBody) {
+    confidence = 50;
+    reason = 'SCALP-SELL: ';
+    
+    if (fastTrendDown) { confidence += 20; reason += 'FastTrend '; }
+    if (currentRsi < 50 && currentRsi > 30) { confidence += 10; reason += 'RSI-Good '; }
+    if (strongMomentum && priceChange < 0) { confidence += 15; reason += 'Momentum '; }
+    if (bearishCandles === 3) { confidence += 10; reason += '3-Red '; }
+    if (strongBody && lastCandle.close < lastCandle.open) { confidence += 10; reason += 'StrongCandle '; }
+    
+    // Must hit minimum 70% for scalping
+    if (confidence >= 70) {
+      signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
+    }
+  }
+  
+  if (!signal) return null;
+  
+  // Scalping uses TIGHT stops and quick targets
+  const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
+  const isBuy = signal.type === 'buy';
+  
+  // Scalping SL/TP - tight stops, 1:1.5 R:R for quick wins
+  const slPips = isGold ? 30 : 15;  // Tight stops
+  const tpPips = isGold ? 45 : 25;  // Quick targets
+  const pipSize = getPipSize(symbol);
+  
+  return {
+    symbol,
+    type: signal.type,
+    entryPrice: currentPrice,
+    stopLoss: isBuy ? currentPrice - (slPips * pipSize) : currentPrice + (slPips * pipSize),
+    takeProfit: isBuy ? currentPrice + (tpPips * pipSize) : currentPrice - (tpPips * pipSize),
+    volume: 0.01, // Will be recalculated
+    confidence: signal.confidence,
+    reason: signal.reason,
+    atr,
+    isScalp: true,
+    slPips,
+    tpPips,
+    indicators: { rsi: currentRsi, ema5: ema5Val, ema10: ema10Val, ema20: ema20Val }
+  };
+}
+
+/**
+ * =========================================================================
  * SMART MARKET ANALYSIS - Only trade on real opportunities
  * =========================================================================
  */
@@ -1260,6 +1571,24 @@ async function executeRobotTrade(robot) {
   try {
     console.log(`\n🤖 Processing robot: ${robotName} (${timeframe || 'm15'})`);
     
+    // ================================================================
+    // BOT PERMISSION CHECK - Only allowed bots can trade
+    // ================================================================
+    const botPermission = canBotTrade(robotId, robotName);
+    if (!botPermission.allowed) {
+      console.log(`  ⛔ SKIPPING: ${botPermission.reason}`);
+      return;
+    }
+    
+    const botConfig = botPermission.config;
+    console.log(`  ✅ Bot "${robotName}" is ALLOWED to trade`);
+    
+    // Apply bot-specific settings
+    const botMinConfidence = botConfig.minConfidence || RISK_CONFIG.MIN_SIGNAL_CONFIDENCE;
+    const botMaxLotSize = botConfig.maxLotSize || RISK_CONFIG.MAX_LOT_SIZE;
+    const botMaxPositions = botConfig.maxPositions || 3;
+    const botCooldown = botConfig.cooldownMs || RISK_CONFIG.TRADE_COOLDOWN_MS;
+    
     // Get connection and account
     const connection = existingConnection || await getConnection(metaApiAccountId, accountId);
     if (!connection) {
@@ -1317,14 +1646,20 @@ async function executeRobotTrade(robot) {
     
     // Check if this is a News Trader bot
     const isNewsTrader = robotName.toLowerCase().includes('news');
+    const isScalper = robotName.toLowerCase().includes('scalp');
     
-    console.log(`  📋 Scanning ${TRADING_PAIRS.length} pairs: ${TRADING_PAIRS.join(', ')}`);
+    // Get allowed pairs for this bot (or use all if not specified)
+    const allowedPairs = botConfig.allowedPairs || TRADING_PAIRS;
+    const pairsToScan = TRADING_PAIRS.filter(p => allowedPairs.includes(p));
     
-    for (const symbol of TRADING_PAIRS) {
+    console.log(`  📋 Scanning ${pairsToScan.length} pairs for ${robotName}: ${pairsToScan.join(', ')}`);
+    console.log(`  ⚙️ Bot settings: minConf=${botMinConfidence}%, maxLot=${botMaxLotSize}, cooldown=${botCooldown/1000}s`);
+    
+    for (const symbol of pairsToScan) {
       try {
-        // Check cooldown (skip for this check - we'll apply cooldown after getting signal)
+        // Check cooldown using BOT-SPECIFIC cooldown
         const lastTrade = lastTradeTime.get(symbol) || 0;
-        const onCooldown = Date.now() - lastTrade < RISK_CONFIG.TRADE_COOLDOWN_MS;
+        const onCooldown = Date.now() - lastTrade < botCooldown;
         
         // Get signal first to check confidence level
         const candles = await fetchCandles(account, symbol, timeframe?.toLowerCase() || 'm15', 100);
@@ -1340,9 +1675,18 @@ async function executeRobotTrade(robot) {
         let signal = null;
         
         // ================================================================
+        // SCALPER BOT - Use specific scalping analysis
+        // ================================================================
+        if (isScalper) {
+          signal = analyzeMarketForScalping(candles, symbol, riskLevel);
+          if (signal) {
+            console.log(`  ⚡ ${symbol}: SCALP ${signal.type} signal (${signal.confidence}%) - ${signal.reason}`);
+          }
+        }
+        // ================================================================
         // NEWS TRADER BOT - Uses advanced news analysis
         // ================================================================
-        if (isNewsTrader) {
+        else if (isNewsTrader) {
           try {
             // Check for news-based signal
             signal = await generateNewsSignal(symbol, candles, currentPrice);
@@ -1370,7 +1714,11 @@ async function executeRobotTrade(robot) {
           signal = analyzeMarket(candles, symbol, riskLevel);
         }
         
-        if (!signal || signal.confidence < RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
+        // Use BOT-SPECIFIC minimum confidence
+        if (!signal || signal.confidence < botMinConfidence) {
+          if (signal) {
+            skippedSymbols.push(`${symbol}(${signal.confidence}%<${botMinConfidence}%)`);
+          }
           continue;
         }
         
