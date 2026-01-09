@@ -203,6 +203,59 @@ export default function Home() {
           </Stack>
         </Box>
 
+        {/* Demo Video Section */}
+        <Box sx={{ py: 6 }}>
+          <Typography
+            variant="h4"
+            align="center"
+            sx={{
+              fontWeight: 700,
+              mb: 4,
+              color: '#10b981',
+              textShadow: '0 2px 10px rgba(16, 185, 129, 0.3)',
+            }}
+          >
+            See AlgoEdge in Action
+          </Typography>
+          <Box
+            sx={{
+              maxWidth: '900px',
+              mx: 'auto',
+              borderRadius: 3,
+              overflow: 'hidden',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+              border: '2px solid rgba(16, 185, 129, 0.3)',
+            }}
+          >
+            <video
+              controls
+              autoPlay
+              muted
+              loop
+              playsInline
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block',
+              }}
+            >
+              <source src="/video/demo.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </Box>
+          <Typography
+            variant="body1"
+            align="center"
+            sx={{
+              mt: 3,
+              color: 'text.secondary',
+              fontStyle: 'italic',
+            }}
+          >
+            Watch how our AI-powered robots analyze markets and execute trades automatically
+          </Typography>
+        </Box>
+
         {/* Connect with Us CTA Section */}
         <Box sx={{ py: 6 }}>
           <Typography
