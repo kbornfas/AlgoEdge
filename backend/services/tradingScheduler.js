@@ -79,6 +79,12 @@ const RISK_CONFIG = {
   PREVENT_HEDGING: true,         // Never open opposite positions on same pair
 };
 
+// =========================================================================
+// CANDLE CACHE - Reduces API calls to avoid rate limiting
+// =========================================================================
+const candleCache = new Map();
+const CANDLE_CACHE_TTL = 30000; // 30 seconds cache
+
 /**
  * Get max positions based on account balance
  * Bigger accounts can handle more positions
@@ -451,19 +457,8 @@ async function executeTradeViaMetaApi(connection, accountId, robotId, userId, si
       // Ignore - some SDK versions don't have terminalState
     }
     
-    // Validate symbol is tradable on this account before sending order
-    try {
-      if (typeof connection.getSymbolPrice === 'function') {
-        const price = await connection.getSymbolPrice(signal.symbol);
-        if (!price) {
-          console.log(`  ⚠️ Could not get price for ${signal.symbol} - market may be closed`);
-          return null;
-        }
-      }
-    } catch (symErr) {
-      console.log(`  ⚠️ Symbol not available: ${signal.symbol} (${symErr.message})`);
-      return null;
-    }
+    // NOTE: Removed getSymbolPrice check - it was hitting rate limits and blocking trades
+    // The createMarketOrder will fail on its own if symbol is not available
 
     // Place order via MetaAPI RPC connection
     console.log(`  📤 Executing ${signal.type} ${signal.symbol} @ ${signal.volume} lots`);
@@ -703,12 +698,19 @@ function normalizeTimeframe(tf = 'm5') {
 }
 
 /**
- * Fetch candle data via MetaAPI - NO FALLBACK, REAL DATA ONLY
+ * Fetch candle data via MetaAPI - WITH CACHING to avoid rate limits
  */
 async function fetchCandles(account, symbol, timeframe, count = 50) {
   if (!account) {
     console.log(`  ❌ No account for candle fetch (${symbol}) - skipping (no fake data)`);
     return null;
+  }
+  
+  // Check cache first
+  const cacheKey = `${symbol}_${timeframe}_${count}`;
+  const cached = candleCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CANDLE_CACHE_TTL) {
+    return cached.candles;
   }
   
   try {
@@ -720,9 +722,19 @@ async function fetchCandles(account, symbol, timeframe, count = 50) {
       return null;
     }
     
+    // Cache the result
+    candleCache.set(cacheKey, { candles, timestamp: Date.now() });
+    
     console.log(`  ✅ Got ${candles.length} real candles for ${symbol}`);
     return candles;
   } catch (error) {
+    // If rate limited, try to use cached data even if expired
+    if (error.message?.includes('cpu credits') || error.message?.includes('rate limit')) {
+      console.log(`  ⚠️ Rate limited on ${symbol} - using cached data if available`);
+      if (cached) {
+        return cached.candles;
+      }
+    }
     console.log(`  ❌ Failed to fetch candles for ${symbol}: ${error.message} - skipping (no fake data)`);
     return null;
   }
