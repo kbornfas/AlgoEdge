@@ -113,11 +113,12 @@ router.post('/provision', authenticate, async (req, res) => {
     // Create new account using SDK
     console.log('Creating new MetaAPI account...');
     const newAccount = await api.metatraderAccountApi.createAccount({
+      name: `AlgoEdge_${accountId}`,
+      type: 'cloud',
       login: accountId,
       password,
       server,
       platform: 'mt5',
-      application: 'MetaApi',
       magic: 123456,
     });
     console.log('Account created:', newAccount.id);
