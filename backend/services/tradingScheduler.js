@@ -1,6 +1,7 @@
 import pool from '../config/database.js';
 import { mt5Connections, connectMT5Account, isMetaApiReady, waitForMetaApi } from './mt5Service.js';
 import { emitTradeSignal, emitTradeClosed, emitPositionUpdate, emitBalanceUpdate } from './websocketService.js';
+import { generateNewsSignal, shouldAvoidTradingDueToNews, IMPACT } from './newsService.js';
 import https from 'https';
 
 /**
@@ -1049,6 +1050,9 @@ async function executeRobotTrade(robot) {
     // Collect signals from trading pairs
     const signals = [];
     
+    // Check if this is a News Trader bot
+    const isNewsTrader = robotName.toLowerCase().includes('news');
+    
     for (const symbol of TRADING_PAIRS) {
       try {
         // Check cooldown (skip for this check - we'll apply cooldown after getting signal)
@@ -1062,7 +1066,42 @@ async function executeRobotTrade(robot) {
           continue;
         }
         
-        const signal = analyzeMarket(candles, symbol, riskLevel);
+        // Get current price from latest candle
+        const currentPrice = candles[candles.length - 1].close;
+        
+        let signal = null;
+        
+        // ================================================================
+        // NEWS TRADER BOT - Uses advanced news analysis
+        // ================================================================
+        if (isNewsTrader) {
+          try {
+            // Check for news-based signal
+            signal = await generateNewsSignal(symbol, candles, currentPrice);
+            
+            if (signal) {
+              console.log(`  📰 ${symbol}: NEWS ${signal.type} signal (${signal.confidence}%) - ${signal.reason}`);
+              console.log(`     Impact: ${signal.impactLevel}, Mode: ${signal.tradingMode}, SL: ${signal.slPips}pips, TP: ${signal.tpPips}pips`);
+            } else {
+              // If no news signal, check if we should avoid trading due to upcoming news
+              const newsAvoid = await shouldAvoidTradingDueToNews(symbol);
+              if (newsAvoid.avoid) {
+                console.log(`  ⏸️ ${symbol}: Avoiding - ${newsAvoid.reason}`);
+                continue;
+              }
+              // Fall back to regular analysis if no news
+              signal = analyzeMarket(candles, symbol, riskLevel);
+            }
+          } catch (newsErr) {
+            console.log(`  ⚠️ News analysis error for ${symbol}: ${newsErr.message}`);
+            // Fall back to regular analysis
+            signal = analyzeMarket(candles, symbol, riskLevel);
+          }
+        } else {
+          // Regular bots: Use standard market analysis
+          signal = analyzeMarket(candles, symbol, riskLevel);
+        }
+        
         if (!signal || signal.confidence < RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
           continue;
         }
@@ -1118,11 +1157,48 @@ async function executeRobotTrade(robot) {
     // Sort signals by confidence (strongest first)
     signals.sort((a, b) => b.signal.confidence - a.signal.confidence);
     
-    // Separate high-confidence (70%+) and normal signals
+    // Separate high-confidence (70%+), news signals, and normal signals
     const highConfidenceSignals = signals.filter(s => s.signal.confidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD);
-    const normalSignals = signals.filter(s => s.signal.confidence < RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD);
+    const newsSignals = signals.filter(s => s.signal.impactLevel && (s.signal.impactLevel === 'HIGH' || s.signal.impactLevel === 'MEDIUM'));
+    const normalSignals = signals.filter(s => s.signal.confidence < RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD && !s.signal.impactLevel);
     
-    console.log(`  🎯 Found ${signals.length} signal(s): ${highConfidenceSignals.length} HIGH CONFIDENCE (70%+), ${normalSignals.length} normal`);
+    console.log(`  🎯 Found ${signals.length} signal(s): ${highConfidenceSignals.length} HIGH CONF, ${newsSignals.length} NEWS, ${normalSignals.length} normal`);
+    
+    // ================================================================
+    // NEWS SIGNALS - Prioritize high-impact news trades
+    // ================================================================
+    if (newsSignals.length > 0 && isNewsTrader) {
+      console.log(`  📰 NEWS TRADING MODE - Processing ${newsSignals.length} news signal(s)...`);
+      
+      for (const { symbol, signal } of newsSignals) {
+        const currentPL = livePositions.reduce((sum, p) => sum + (p.profit || 0), 0);
+        const riskCheck = canOpenMoreTrades(accountInfo.balance, accountInfo.equity, livePositions.length, currentPL, signal.confidence);
+        
+        if (!riskCheck.canTrade) {
+          console.log(`    ⛔ ${symbol}: ${riskCheck.reason}`);
+          continue;
+        }
+        
+        try {
+          // News signals already have SL/TP calculated
+          const lotSize = calculatePositionSize(accountInfo.balance, signal.slPips, symbol, signal.confidence);
+          signal.volume = lotSize;
+          
+          console.log(`    📰 ${symbol}: ${signal.impactLevel} IMPACT NEWS - ${signal.tradingMode}`);
+          console.log(`       ${signal.type} @ ${signal.entryPrice?.toFixed(5)}, SL: ${signal.stopLoss?.toFixed(5)}, TP: ${signal.takeProfit?.toFixed(5)}`);
+          console.log(`       R:R ${signal.riskReward}:1, Lots: ${lotSize}`);
+          
+          const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
+          if (trade) {
+            lastTradeTime.set(symbol, Date.now());
+            livePositions = await connection.getPositions();
+            console.log(`    ✅ NEWS trade opened on ${symbol}`);
+          }
+        } catch (err) {
+          console.error(`    ❌ Failed to open news trade on ${symbol}:`, err.message);
+        }
+      }
+    }
     
     // For HIGH CONFIDENCE signals - unlimited positions allowed
     if (highConfidenceSignals.length > 0) {
