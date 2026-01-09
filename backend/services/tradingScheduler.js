@@ -666,12 +666,12 @@ function analyzeMarket(candles, symbol, riskLevel = 'medium') {
   const recentHighs = candles.slice(-20).map(c => c.high);
   const support = Math.min(...recentLows);
   const resistance = Math.max(...recentHighs);
-  const nearSupport = currentPrice < support + (atr * 0.3);
-  const nearResistance = currentPrice > resistance - (atr * 0.3);
+  const nearSupport = currentPrice < support + (atr * 0.5);
+  const nearResistance = currentPrice > resistance - (atr * 0.5);
   
   // =========================================================================
-  // CONSERVATIVE SIGNAL DETECTION - Only trade strong setups
-  // Requires 60%+ confidence minimum
+  // SIGNAL DETECTION - Trade when opportunities present
+  // 50%+ = Normal trade, 70%+ = High confidence unlimited
   // =========================================================================
   let signal = null;
   let confidence = 0;
@@ -680,12 +680,13 @@ function analyzeMarket(candles, symbol, riskLevel = 'medium') {
   // Get previous market structure
   const prevStructure = marketStructure.get(symbol);
   
-  // BUY CONDITIONS: Require STRONG bullish setup
+  // BUY CONDITIONS: Various bullish setups
   if (
-    (isUptrend && bullishCount >= 4) ||              // Strong uptrend + momentum
-    (emaCrossUp && bullishCount >= 3) ||             // Fresh crossover + confirmation
-    (currentRsi < 30 && bullishCount >= 4) ||        // Deeply oversold + reversal
-    (nearSupport && bullishCount >= 4)               // Strong bounce from support
+    (isUptrend) ||                                   // Any uptrend
+    (emaCrossUp) ||                                  // Fresh crossover
+    (currentRsi < 40 && bullishCount >= 3) ||        // Oversold with momentum
+    (bullishCount >= 3) ||                           // Momentum
+    (nearSupport && bullishCount >= 2)               // Bounce from support
   ) {
     confidence = 0;
     reason = '';
@@ -693,24 +694,27 @@ function analyzeMarket(candles, symbol, riskLevel = 'medium') {
     if (isUptrend) { confidence += 25; reason += 'Uptrend '; }
     if (emaCrossUp) { confidence += 30; reason += 'EMA-Cross-Up '; }
     if (currentRsi < 30) { confidence += 25; reason += 'RSI-Oversold '; }
-    if (currentRsi < 40) { confidence += 10; reason += 'RSI-Low '; }
+    else if (currentRsi < 40) { confidence += 15; reason += 'RSI-Low '; }
     if (nearSupport) { confidence += 15; reason += 'Support-Bounce '; }
-    if (bullishCount >= 4) { confidence += 20; reason += `Momentum(${bullishCount}/${RISK_CONFIG.STRUCTURE_SHIFT_CANDLES}) `; }
-    if (ema8Val > ema20Val && ema20Val > ema50Val) { confidence += 10; reason += 'EMA-Aligned '; }
+    if (bullishCount >= 4) { confidence += 25; reason += `Strong-Mom(${bullishCount}/5) `; }
+    else if (bullishCount >= 3) { confidence += 15; reason += `Momentum(${bullishCount}/5) `; }
+    if (ema8Val > ema20Val && ema20Val > ema50Val) { confidence += 15; reason += 'EMA-Aligned '; }
+    else if (ema8Val > ema20Val) { confidence += 10; reason += 'EMA-Bullish '; }
     
     if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
-      signal = { type: 'buy', confidence, reason: `BUY: ${reason.trim()}` };
+      signal = { type: 'buy', confidence: Math.min(confidence, 100), reason: `BUY: ${reason.trim()}` };
       marketStructure.set(symbol, 'bullish');
     }
   }
   
-  // SELL CONDITIONS: Require STRONG bearish setup
+  // SELL CONDITIONS: Various bearish setups
   if (
     !signal && (
-      (isDowntrend && bearishCount >= 4) ||           // Strong downtrend + momentum
-      (emaCrossDown && bearishCount >= 3) ||          // Fresh crossover + confirmation
-      (currentRsi > 70 && bearishCount >= 4) ||       // Deeply overbought + reversal
-      (nearResistance && bearishCount >= 4)           // Strong rejection from resistance
+      (isDowntrend) ||                               // Any downtrend
+      (emaCrossDown) ||                              // Fresh crossover
+      (currentRsi > 60 && bearishCount >= 3) ||      // Overbought with momentum
+      (bearishCount >= 3) ||                         // Momentum
+      (nearResistance && bearishCount >= 2)          // Rejection from resistance
     )
   ) {
     confidence = 0;
@@ -719,25 +723,36 @@ function analyzeMarket(candles, symbol, riskLevel = 'medium') {
     if (isDowntrend) { confidence += 25; reason += 'Downtrend '; }
     if (emaCrossDown) { confidence += 30; reason += 'EMA-Cross-Down '; }
     if (currentRsi > 70) { confidence += 25; reason += 'RSI-Overbought '; }
-    if (currentRsi > 60) { confidence += 10; reason += 'RSI-High '; }
+    else if (currentRsi > 60) { confidence += 15; reason += 'RSI-High '; }
     if (nearResistance) { confidence += 15; reason += 'Resistance-Reject '; }
-    if (bearishCount >= 4) { confidence += 20; reason += `Momentum(${bearishCount}/${RISK_CONFIG.STRUCTURE_SHIFT_CANDLES}) `; }
-    if (ema8Val < ema20Val && ema20Val < ema50Val) { confidence += 10; reason += 'EMA-Aligned '; }
+    if (bearishCount >= 4) { confidence += 25; reason += `Strong-Mom(${bearishCount}/5) `; }
+    else if (bearishCount >= 3) { confidence += 15; reason += `Momentum(${bearishCount}/5) `; }
+    if (ema8Val < ema20Val && ema20Val < ema50Val) { confidence += 15; reason += 'EMA-Aligned '; }
+    else if (ema8Val < ema20Val) { confidence += 10; reason += 'EMA-Bearish '; }
     
     if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
-      signal = { type: 'sell', confidence, reason: `SELL: ${reason.trim()}` };
+      signal = { type: 'sell', confidence: Math.min(confidence, 100), reason: `SELL: ${reason.trim()}` };
       marketStructure.set(symbol, 'bearish');
     }
   }
   
-  // NO FALLBACK MOMENTUM TRADES - Only trade when confident
+  // FALLBACK: If no signal but clear momentum, generate a lower confidence signal
+  if (!signal && (bullishCount >= 3 || bearishCount >= 3)) {
+    const isBullish = bullishCount > bearishCount;
+    confidence = 40 + (Math.abs(bullishCount - bearishCount) * 5);
+    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
+      reason = isBullish ? `Momentum(${bullishCount}/5 bullish)` : `Momentum(${bearishCount}/5 bearish)`;
+      signal = { type: isBullish ? 'buy' : 'sell', confidence, reason };
+      marketStructure.set(symbol, isBullish ? 'bullish' : 'bearish');
+    }
+  }
   
   // No signal at all
   if (!signal) {
     return null;
   }
   
-  // Risk management - use conservative settings
+  // Risk management
   const riskMultipliers = {
     low: { sl: 3.0, tp: 4.5, volume: 0.01 },
     medium: { sl: 2.5, tp: 3.5, volume: 0.02 },
@@ -1208,7 +1223,7 @@ async function streamPositions() {
   try {
     // Get all connected MT5 accounts with active robots
     const result = await pool.query(`
-      SELECT DISTINCT m.id as account_id, m.metaapi_account_id, m.user_id
+      SELECT DISTINCT m.id as account_id, m.api_key as metaapi_account_id, m.user_id
       FROM mt5_accounts m
       JOIN user_robot_configs urc ON urc.user_id = m.user_id
       WHERE urc.is_enabled = true AND m.status = 'connected'
