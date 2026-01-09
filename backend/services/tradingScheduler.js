@@ -101,10 +101,40 @@ function getPositionLimits(balance) {
 const marketStructure = new Map();
 
 /**
+ * Get pip size for a symbol (the decimal place value of 1 pip)
+ * @param {string} symbol - Trading symbol
+ * @returns {number} - Pip size
+ */
+function getPipSize(symbol) {
+  if (symbol.includes('XAU') || symbol.includes('GOLD')) {
+    return 0.1;  // Gold: 1 pip = $0.10 movement
+  } else if (symbol.includes('JPY')) {
+    return 0.01; // JPY pairs: 1 pip = 0.01
+  } else {
+    return 0.0001; // Standard pairs: 1 pip = 0.0001
+  }
+}
+
+/**
+ * Get pip value per lot for a symbol
+ * @param {string} symbol - Trading symbol  
+ * @returns {number} - Dollar value per pip for 1 standard lot
+ */
+function getPipValuePerLot(symbol) {
+  if (symbol.includes('XAU') || symbol.includes('GOLD')) {
+    return 1;  // Gold: $1 per pip (0.1 move) per 1 lot
+  } else if (symbol.includes('JPY')) {
+    return 9;  // JPY pairs: ~$9 per pip per lot
+  } else {
+    return 10; // Standard pairs: $10 per pip per lot
+  }
+}
+
+/**
  * Calculate position size based on account balance and risk
  * Proper lot sizing for account size
  * @param {number} balance - Account balance
- * @param {number} stopLossPips - Stop loss in pips
+ * @param {number} stopLossPips - Stop loss in pips (already converted)
  * @param {string} symbol - Trading symbol
  * @param {number} confidence - Signal confidence
  * @returns {number} - Lot size
@@ -123,25 +153,17 @@ function calculatePositionSize(balance, stopLossPips, symbol, confidence = 50) {
   
   const riskAmount = balance * riskPercent;
   
-  // Calculate proper pip value based on pair
-  // For 1 standard lot (100,000 units):
-  // - EURUSD, GBPUSD, etc: $10 per pip
-  // - USDJPY: ~$9 per pip (depends on rate)
-  // - XAUUSD: $1 per 0.1 move (10 pips = $10)
-  let pipValue;
-  if (symbol.includes('XAU') || symbol.includes('GOLD')) {
-    // Gold: 1 pip = $0.10 per 0.01 lot, so $10 per 1 lot
-    pipValue = 10;
-  } else if (symbol.includes('JPY')) {
-    pipValue = 9; // Approximate for JPY pairs
-  } else {
-    pipValue = 10; // Standard pairs
-  }
+  // Get pip value per standard lot for this symbol
+  const pipValuePerLot = getPipValuePerLot(symbol);
+  
+  // Ensure reasonable SL pips (20-100 for forex, 50-500 for gold)
+  const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
+  const minSL = isGold ? 50 : 15;
+  const maxSL = isGold ? 500 : 100;
+  const effectiveSL = Math.max(minSL, Math.min(maxSL, stopLossPips));
   
   // Calculate lot size: Risk Amount / (Stop Loss Pips * Pip Value per lot)
-  // If SL is 0 or very small, use a default of 30 pips
-  const effectiveSL = Math.max(stopLossPips, 20);
-  let lotSize = riskAmount / (effectiveSL * pipValue);
+  let lotSize = riskAmount / (effectiveSL * pipValuePerLot);
   
   // Round to 2 decimal places
   lotSize = Math.round(lotSize * 100) / 100;
@@ -1325,7 +1347,8 @@ async function executeRobotTrade(robot) {
         
         try {
           // Calculate position size with high-confidence settings (1% risk, tighter SL)
-          const stopLossPips = Math.abs(signal.entryPrice - signal.stopLoss) / (symbol.includes('JPY') ? 0.01 : 0.0001);
+          const pipSize = getPipSize(symbol);
+          const stopLossPips = Math.abs(signal.entryPrice - signal.stopLoss) / pipSize;
           const lotSize = calculatePositionSize(accountInfo.balance, stopLossPips, symbol, signal.confidence);
           signal.volume = lotSize;
           
@@ -1374,7 +1397,8 @@ async function executeRobotTrade(robot) {
           
           try {
             // Calculate proper position size based on account balance
-            const stopLossPips = Math.abs(signal.entryPrice - signal.stopLoss) / (symbol.includes('JPY') ? 0.01 : 0.0001);
+            const pipSize = getPipSize(symbol);
+            const stopLossPips = Math.abs(signal.entryPrice - signal.stopLoss) / pipSize;
             const lotSize = calculatePositionSize(accountInfo.balance, stopLossPips, symbol, signal.confidence);
             signal.volume = lotSize;
             
