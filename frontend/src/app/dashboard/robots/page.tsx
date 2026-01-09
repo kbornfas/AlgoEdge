@@ -241,6 +241,7 @@ export default function RobotsPage() {
   const [startingRobots, setStartingRobots] = useState<Set<string>>(new Set());
   const [accountBalance, setAccountBalance] = useState<number>(0);
   const [accountEquity, setAccountEquity] = useState<number>(0);
+  const [accountProfit, setAccountProfit] = useState<number>(0);
   const [runningRobots, setRunningRobots] = useState<Set<string>>(new Set());
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -339,6 +340,9 @@ export default function RobotsPage() {
         if (posData.account) {
           setAccountBalance(posData.account.balance || 0);
           setAccountEquity(posData.account.equity || 0);
+          // Use account.profit (equity - balance) for live P/L, fallback to calculated
+          const liveProfit = posData.account.profit ?? (posData.account.equity - posData.account.balance) ?? 0;
+          setAccountProfit(liveProfit);
         }
         
         // Update last updated timestamp
@@ -597,8 +601,9 @@ export default function RobotsPage() {
     }
   };
 
-  // Calculate total P/L
-  const totalPL = trades.reduce((sum, trade) => sum + (trade.profit || 0), 0);
+  // Calculate total P/L - use live account profit first, fallback to trade calculation
+  const calculatedPL = trades.reduce((sum, trade) => sum + (trade.profit || 0), 0);
+  const totalPL = accountProfit !== 0 ? accountProfit : calculatedPL;
 
   if (loading) {
     return (
@@ -609,7 +614,7 @@ export default function RobotsPage() {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4, px: { xs: 1, sm: 2, md: 3 }, overflow: 'hidden' }}>
+    <Container maxWidth="xl" sx={{ py: 4, px: { xs: 1, sm: 2, md: 3 }, overflowX: 'auto' }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -757,8 +762,14 @@ export default function RobotsPage() {
                 </IconButton>
               </Box>
             </Box>
-            <Box sx={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', mx: { xs: -1, sm: 0 } }}>
-              <Table size="small" sx={{ minWidth: 650 }}>
+            <Box sx={{ 
+              overflowX: 'auto', 
+              WebkitOverflowScrolling: 'touch', 
+              mx: { xs: -1, sm: 0 },
+              '&::-webkit-scrollbar': { height: 8 },
+              '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 4 },
+            }}>
+              <Table size="small" sx={{ minWidth: 700 }}>
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>Robot</TableCell>
