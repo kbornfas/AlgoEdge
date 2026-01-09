@@ -1454,8 +1454,11 @@ async function runTradingCycle() {
         const connection = await getConnection(data.metaApiAccountId, accountId);
         if (!connection) continue;
         
+        // Also get the account object for historical candles
+        const account = await getAccount(data.metaApiAccountId, accountId);
+        
         // Step 1: Check and manage open positions
-        await manageOpenPositions(connection, accountId, data.userId);
+        await manageOpenPositions(connection, account, accountId, data.userId);
         
         // Step 2: Execute new trades for each robot
         for (const robot of data.robots) {
@@ -1478,7 +1481,7 @@ async function runTradingCycle() {
  * SMART POSITION MANAGEMENT - Exit on profits or market structure change
  * =========================================================================
  */
-async function manageOpenPositions(connection, accountId, userId) {
+async function manageOpenPositions(connection, account, accountId, userId) {
   try {
     // Get open positions from MT5
     let positions = [];
@@ -1509,7 +1512,14 @@ async function manageOpenPositions(connection, accountId, userId) {
       let closeReason = '';
       
       try {
-        const candles = await connection.getHistoricalCandles(symbol, 'm5', null, 30);
+        // Use account object for historical candles (not connection)
+        let candles = null;
+        if (account && typeof account.getHistoricalCandles === 'function') {
+          candles = await account.getHistoricalCandles(symbol, '5m', null, 30);
+        } else {
+          console.log(`    ⚠️ Could not analyze ${symbol}: no account for candles`);
+          continue;
+        }
         
         if (candles && candles.length >= 20) {
           const closes = candles.map(c => c.close);
