@@ -1132,11 +1132,14 @@ async function executeRobotTrade(robot) {
           continue;
         }
         
-        // For HIGH CONFIDENCE signals (70%+) - skip cooldown and pair limits
+        // Check if we're under target positions - if so, be more aggressive
+        const underTarget = livePositions.length < RISK_CONFIG.TARGET_POSITIONS;
         const isHighConfidence = signal.confidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD;
         
-        if (!isHighConfidence) {
-          // Normal signals: Apply cooldown and pair limits
+        // When under target: Skip cooldown and per-pair limits for 50%+ signals
+        // We want to fill up to 10 positions ASAP
+        if (!underTarget && !isHighConfidence) {
+          // Only apply restrictions when AT or ABOVE target
           if (onCooldown) {
             continue; // Skip - recently traded
           }
@@ -1147,29 +1150,31 @@ async function executeRobotTrade(robot) {
           }
         }
         
-        // Check for opposing positions - only close on REAL structure shift
+        // Check for opposing positions - allow hedging but prefer same direction
         const oppositeDirection = signal.type.toLowerCase() === 'buy' ? 'sell' : 'buy';
         const hasOpposing = livePositions.some(p => 
           p.symbol === symbol && p.type?.toLowerCase() === oppositeDirection
         );
         
         if (hasOpposing) {
-          // Check if this is a REAL structure shift (not just noise)
-          const prevStructure = marketStructure.get(symbol);
-          const newStructure = signal.type === 'buy' ? 'bullish' : 'bearish';
-          
-          if (prevStructure && prevStructure !== newStructure && signal.confidence >= 70) {
-            console.log(`  🔄 CONFIRMED STRUCTURE SHIFT on ${symbol}: ${prevStructure} → ${newStructure} (${signal.confidence}%)`);
+          // If we're under target and have strong signal, just skip this pair (don't close)
+          if (underTarget && signal.confidence < 70) {
+            continue; // Find another pair instead
+          }
+          // Only close opposing on STRONG structure shift (70%+)
+          if (signal.confidence >= 70) {
+            const prevStructure = marketStructure.get(symbol);
+            const newStructure = signal.type === 'buy' ? 'bullish' : 'bearish';
+            console.log(`  🔄 STRUCTURE SHIFT on ${symbol}: ${prevStructure || 'unknown'} → ${newStructure} (${signal.confidence}%)`);
             await closeOpposingPositions(connection, accountId, userId, symbol, signal.type);
             livePositions = await connection.getPositions();
           } else {
-            console.log(`  ⏸️ ${symbol}: Signal against existing position, waiting for stronger confirmation`);
-            continue; // Don't trade against existing positions without strong confirmation
+            continue; // Skip this pair, find another
           }
         }
         
         signals.push({ symbol, signal, candles });
-        console.log(`  📊 ${symbol}: ${signal.type.toUpperCase()} signal (${signal.confidence}%)${signal.confidence >= 70 ? ' 🔥HIGH' : ''} - ${signal.reason}`);
+        console.log(`  📊 ${symbol}: ${signal.type.toUpperCase()} signal (${signal.confidence}%)${isHighConfidence ? ' 🔥HIGH' : ''} - ${signal.reason}`);
       } catch (err) {
         continue;
       }
