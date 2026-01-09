@@ -479,8 +479,8 @@ router.get('/history/:accountId', authenticate, async (req, res) => {
       await account.waitDeployed();
     }
     
-    // Get RPC connection
-    const connection = account.getRPCConnection();
+    // Get streaming connection for history access
+    const connection = account.getStreamingConnection();
     await connection.connect();
     await connection.waitSynchronized();
     
@@ -489,8 +489,9 @@ router.get('/history/:accountId', authenticate, async (req, res) => {
     const start = startTime ? new Date(startTime) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const end = endTime ? new Date(endTime) : now;
     
-    // Get history deals (closed trades)
-    const deals = await connection.getDeals(start, end);
+    // Get history deals from terminal state
+    const historyStorage = connection.historyStorage;
+    const deals = historyStorage.deals || [];
     console.log('Found', deals.length, 'deals in history');
     
     // Filter to only include entry/exit deals (not balance operations)

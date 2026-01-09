@@ -1,6 +1,6 @@
 import pool from '../config/database.js';
 import { mt5Connections, connectMT5Account, isMetaApiReady, waitForMetaApi } from './mt5Service.js';
-import { emitTradeSignal, emitTradeClosed } from './websocketService.js';
+import { emitTradeSignal, emitTradeClosed, emitPositionUpdate, emitBalanceUpdate } from './websocketService.js';
 import https from 'https';
 
 /**
@@ -757,12 +757,13 @@ async function getOpenTradesCount(accountId) {
 async function getOpenPositions(accountId) {
   try {
     const result = await pool.query(
-      `SELECT pair, type, order_id, id FROM trades 
+      `SELECT symbol as pair, type, ticket, id FROM trades 
        WHERE mt5_account_id = $1 AND status = 'open'`,
       [accountId]
     );
     return result.rows;
   } catch (error) {
+    console.error('Error getting open positions:', error.message);
     return [];
   }
 }
@@ -777,8 +778,8 @@ async function closeOpposingPositions(connection, accountId, userId, symbol, new
   try {
     // Get opposing positions from database
     const result = await pool.query(
-      `SELECT order_id, id, pair, type FROM trades 
-       WHERE mt5_account_id = $1 AND status = 'open' AND pair = $2 AND LOWER(type) = $3`,
+      `SELECT ticket, id, symbol, type FROM trades 
+       WHERE mt5_account_id = $1 AND status = 'open' AND symbol = $2 AND LOWER(type) = $3`,
       [accountId, symbol, oppositeDirection]
     );
     
@@ -791,7 +792,7 @@ async function closeOpposingPositions(connection, accountId, userId, symbol, new
     // Close each opposing position
     for (const trade of result.rows) {
       try {
-        const positionId = trade.order_id;
+        const positionId = trade.ticket;
         if (positionId && !positionId.startsWith('MOCK_')) {
           await connection.closePosition(positionId);
           console.log(`    ✅ Closed ${oppositeDirection.toUpperCase()} position ${positionId}`);
@@ -940,7 +941,60 @@ async function executeRobotTrade(robot) {
  * Main trading loop - runs continuously
  */
 let tradingInterval = null;
+let positionStreamInterval = null;
 let isRunning = false;
+
+/**
+ * Stream live positions to connected users every second
+ */
+async function streamPositions() {
+  try {
+    // Get all connected MT5 accounts with active robots
+    const result = await pool.query(`
+      SELECT DISTINCT m.id as account_id, m.metaapi_account_id, m.user_id
+      FROM mt5_accounts m
+      JOIN robots r ON r.mt5_account_id = m.id
+      WHERE r.is_enabled = true AND m.status = 'connected'
+    `);
+    
+    for (const account of result.rows) {
+      const connectionData = mt5Connections.get(account.metaapi_account_id);
+      if (!connectionData?.connection) continue;
+      
+      try {
+        // Get live positions
+        const positions = await connectionData.connection.getPositions();
+        const info = await connectionData.connection.getAccountInformation();
+        
+        // Format positions for frontend
+        const formattedPositions = positions.map(p => ({
+          id: p.id,
+          symbol: p.symbol,
+          type: p.type?.toUpperCase() || 'BUY',
+          volume: p.volume,
+          openPrice: p.openPrice,
+          currentPrice: p.currentPrice,
+          profit: p.profit || p.unrealizedProfit || 0,
+          swap: p.swap || 0,
+        }));
+        
+        // Emit to user
+        emitPositionUpdate(account.user_id, formattedPositions);
+        emitBalanceUpdate(account.user_id, {
+          balance: info.balance,
+          equity: info.equity,
+          margin: info.margin,
+          freeMargin: info.freeMargin,
+        });
+        
+      } catch (err) {
+        // Silent - connection might be temporarily unavailable
+      }
+    }
+  } catch (error) {
+    // Silent - don't spam logs
+  }
+}
 
 export async function startTradingScheduler() {
   if (isRunning) {
@@ -959,6 +1013,9 @@ export async function startTradingScheduler() {
   // Then run every 30 seconds for scalpers, 5 minutes for others
   tradingInterval = setInterval(runTradingCycle, 30 * 1000); // Base: 30 seconds
   
+  // Stream positions every 1 second for real-time price updates
+  positionStreamInterval = setInterval(streamPositions, 1000);
+  
   return { success: true, message: 'Trading scheduler started' };
 }
 
@@ -966,6 +1023,10 @@ export async function stopTradingScheduler() {
   if (tradingInterval) {
     clearInterval(tradingInterval);
     tradingInterval = null;
+  }
+  if (positionStreamInterval) {
+    clearInterval(positionStreamInterval);
+    positionStreamInterval = null;
   }
   isRunning = false;
   console.log('\n========================================');

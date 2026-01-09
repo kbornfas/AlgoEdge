@@ -30,6 +30,9 @@ export const initializeWebSocket = (server) => {
     }
   });
 
+  // Track active position subscriptions
+  const positionSubscriptions = new Map();
+
   // Connection handler
   io.on('connection', (socket) => {
     console.log(`User connected: ${socket.userId}`);
@@ -43,9 +46,25 @@ export const initializeWebSocket = (server) => {
       userId: socket.userId,
     });
 
+    // Handle position subscription request
+    socket.on('subscribe:positions', (data) => {
+      const { accountId } = data;
+      if (accountId) {
+        console.log(`User ${socket.userId} subscribed to positions for account ${accountId}`);
+        socket.accountId = accountId;
+        positionSubscriptions.set(socket.userId, accountId);
+      }
+    });
+
+    // Handle unsubscribe
+    socket.on('unsubscribe:positions', () => {
+      positionSubscriptions.delete(socket.userId);
+    });
+
     // Handle disconnection
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.userId}`);
+      positionSubscriptions.delete(socket.userId);
     });
 
     // Handle manual ping/pong for connection testing
@@ -83,6 +102,16 @@ export const emitTradeClosed = (userId, trade) => {
 export const emitPriceUpdate = (symbol, price) => {
   if (io) {
     io.emit('price:update', { symbol, price, timestamp: Date.now() });
+  }
+};
+
+// Emit position updates with real-time prices to specific user
+export const emitPositionUpdate = (userId, positions) => {
+  if (io) {
+    io.to(`user:${userId}`).emit('positions:update', { 
+      positions, 
+      timestamp: Date.now() 
+    });
   }
 };
 
@@ -131,6 +160,7 @@ export default {
   emitNewTrade,
   emitTradeClosed,
   emitPriceUpdate,
+  emitPositionUpdate,
   emitMT5Status,
   emitBalanceUpdate,
   emitRobotStatus,

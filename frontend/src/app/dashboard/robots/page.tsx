@@ -406,11 +406,11 @@ export default function RobotsPage() {
     loadData();
   }, [fetchRobots, fetchTrades]);
 
-  // Poll for real-time trade/P&L updates every 3 seconds
+  // Poll for real-time trade/P&L updates every 1 second
   useEffect(() => {
     const interval = setInterval(() => {
       fetchTrades(); // This fetches live positions with current prices and P/L
-    }, 3000);
+    }, 1000); // 1 second for real-time price updates
     return () => clearInterval(interval);
   }, [fetchTrades]);
 
