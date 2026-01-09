@@ -71,10 +71,11 @@ const RISK_CONFIG = {
   MAX_RISK_PER_TRADE: 0.02,      // 2% max risk per trade
   MAX_TOTAL_EXPOSURE: 0.10,      // 10% max total exposure
   MIN_SIGNAL_CONFIDENCE: 50,     // Only trade on 50%+ confidence signals
+  HIGH_CONFIDENCE_THRESHOLD: 70, // 70%+ = high confidence (unlimited positions)
   STRUCTURE_SHIFT_CANDLES: 5,    // Need 5 candles to confirm structure shift
   MIN_ACCOUNT_BALANCE: 100,      // Don't trade if balance below $100
-  MAX_POSITIONS_PER_PAIR: 2,     // Max 2 positions per pair
-  MAX_TOTAL_POSITIONS: 10,       // Max 10 total positions
+  MAX_POSITIONS_PER_PAIR: 2,     // Max 2 positions per pair (normal signals)
+  MAX_TOTAL_POSITIONS: 10,       // Max 10 total positions (normal signals)
   TRADE_COOLDOWN_MS: 60000,      // 1 minute cooldown between trades on same pair
 };
 
@@ -83,17 +84,24 @@ const marketStructure = new Map();
 
 /**
  * Calculate position size based on account balance and risk
+ * For HIGH CONFIDENCE trades (70%+): Use tighter SL with better risk/reward
  * @param {number} balance - Account balance
  * @param {number} stopLossPips - Stop loss in pips
  * @param {string} symbol - Trading symbol
+ * @param {number} confidence - Signal confidence
  * @returns {number} - Lot size
  */
-function calculatePositionSize(balance, stopLossPips, symbol) {
+function calculatePositionSize(balance, stopLossPips, symbol, confidence = 50) {
   if (!balance || balance < RISK_CONFIG.MIN_ACCOUNT_BALANCE) {
     return 0.01; // Minimum lot if no balance info
   }
   
-  const riskAmount = balance * RISK_CONFIG.MAX_RISK_PER_TRADE;
+  // For high confidence trades, use smaller risk per trade but allow more trades
+  const riskPercent = confidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD 
+    ? 0.01  // 1% risk for high confidence (allows more positions)
+    : RISK_CONFIG.MAX_RISK_PER_TRADE;
+  
+  const riskAmount = balance * riskPercent;
   
   // Pip value varies by pair - approximate values
   let pipValue = 10; // Default for standard pairs
@@ -108,21 +116,35 @@ function calculatePositionSize(balance, stopLossPips, symbol) {
   
   // Round to 2 decimal places and enforce limits
   lotSize = Math.round(lotSize * 100) / 100;
-  lotSize = Math.max(0.01, Math.min(1.0, lotSize)); // Min 0.01, Max 1.0
+  lotSize = Math.max(0.01, Math.min(0.5, lotSize)); // Min 0.01, Max 0.5 (conservative)
   
   return lotSize;
 }
 
 /**
  * Check if we can open more trades based on risk exposure
+ * HIGH CONFIDENCE (70%+) signals bypass position limits
  */
-function canOpenMoreTrades(balance, equity, openPositionsCount, currentProfitLoss) {
+function canOpenMoreTrades(balance, equity, openPositionsCount, currentProfitLoss, signalConfidence = 50) {
   // Don't trade if no balance info
   if (!balance || balance < RISK_CONFIG.MIN_ACCOUNT_BALANCE) {
     return { canTrade: false, reason: 'Account balance too low or unknown' };
   }
   
-  // Check max positions
+  // HIGH CONFIDENCE trades (70%+) - only check drawdown, not position limits
+  if (signalConfidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD) {
+    // Still protect against major drawdown
+    if (currentProfitLoss < -(balance * 0.10)) {
+      return { canTrade: false, reason: `Drawdown limit reached for high-confidence trades (${((currentProfitLoss / balance) * 100).toFixed(1)}%)` };
+    }
+    // Still protect against low equity
+    if (equity && equity < balance * 0.7) {
+      return { canTrade: false, reason: `Equity too low (${((equity / balance) * 100).toFixed(1)}% of balance)` };
+    }
+    return { canTrade: true, reason: 'HIGH CONFIDENCE - unlimited positions allowed' };
+  }
+  
+  // Normal signals - apply position limits
   if (openPositionsCount >= RISK_CONFIG.MAX_TOTAL_POSITIONS) {
     return { canTrade: false, reason: `Max positions reached (${RISK_CONFIG.MAX_TOTAL_POSITIONS})` };
   }
@@ -726,12 +748,27 @@ function analyzeMarket(candles, symbol, riskLevel = 'medium') {
   const risk = riskMultipliers[riskLevel] || riskMultipliers.medium;
   const isBuy = signal.type === 'buy';
   
+  // HIGH CONFIDENCE (70%+): Use tighter, strategic SL/TP
+  // Tighter SL means less risk per trade, better R:R ratio
+  let slMultiplier = risk.sl;
+  let tpMultiplier = risk.tp;
+  
+  if (signal.confidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD) {
+    // High confidence = tighter SL (1.5x ATR) with good TP (3x ATR) = 1:2 R:R
+    slMultiplier = 1.5;
+    tpMultiplier = 3.0;
+  } else if (signal.confidence >= 60) {
+    // Medium-high confidence = moderate SL/TP
+    slMultiplier = 2.0;
+    tpMultiplier = 3.5;
+  }
+  
   return {
     symbol,
     type: signal.type,
     entryPrice: currentPrice,
-    stopLoss: isBuy ? currentPrice - (atr * risk.sl) : currentPrice + (atr * risk.sl),
-    takeProfit: isBuy ? currentPrice + (atr * risk.tp) : currentPrice - (atr * risk.tp),
+    stopLoss: isBuy ? currentPrice - (atr * slMultiplier) : currentPrice + (atr * slMultiplier),
+    takeProfit: isBuy ? currentPrice + (atr * tpMultiplier) : currentPrice - (atr * tpMultiplier),
     volume: risk.volume, // Will be recalculated based on account balance
     confidence: signal.confidence,
     reason: signal.reason,
@@ -999,18 +1036,11 @@ async function executeRobotTrade(robot) {
     
     for (const symbol of TRADING_PAIRS) {
       try {
-        // Check cooldown
+        // Check cooldown (skip for this check - we'll apply cooldown after getting signal)
         const lastTrade = lastTradeTime.get(symbol) || 0;
-        if (Date.now() - lastTrade < RISK_CONFIG.TRADE_COOLDOWN_MS) {
-          continue; // Skip this symbol - recently traded
-        }
+        const onCooldown = Date.now() - lastTrade < RISK_CONFIG.TRADE_COOLDOWN_MS;
         
-        // Check max positions per pair
-        const positionsOnPair = livePositions.filter(p => p.symbol === symbol).length;
-        if (positionsOnPair >= RISK_CONFIG.MAX_POSITIONS_PER_PAIR) {
-          continue; // Already have max positions on this pair
-        }
-        
+        // Get signal first to check confidence level
         const candles = await fetchCandles(account, symbol, timeframe?.toLowerCase() || 'm15', 100);
         
         if (!candles || candles.length < 30) {
@@ -1018,31 +1048,48 @@ async function executeRobotTrade(robot) {
         }
         
         const signal = analyzeMarket(candles, symbol, riskLevel);
-        if (signal && signal.confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
-          // Check for opposing positions - only close on REAL structure shift
-          const oppositeDirection = signal.type.toLowerCase() === 'buy' ? 'sell' : 'buy';
-          const hasOpposing = livePositions.some(p => 
-            p.symbol === symbol && p.type?.toLowerCase() === oppositeDirection
-          );
-          
-          if (hasOpposing) {
-            // Check if this is a REAL structure shift (not just noise)
-            const prevStructure = marketStructure.get(symbol);
-            const newStructure = signal.type === 'buy' ? 'bullish' : 'bearish';
-            
-            if (prevStructure && prevStructure !== newStructure && signal.confidence >= 70) {
-              console.log(`  🔄 CONFIRMED STRUCTURE SHIFT on ${symbol}: ${prevStructure} → ${newStructure} (${signal.confidence}%)`);
-              await closeOpposingPositions(connection, accountId, userId, symbol, signal.type);
-              livePositions = await connection.getPositions();
-            } else {
-              console.log(`  ⏸️ ${symbol}: Signal against existing position, waiting for stronger confirmation`);
-              continue; // Don't trade against existing positions without strong confirmation
-            }
+        if (!signal || signal.confidence < RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
+          continue;
+        }
+        
+        // For HIGH CONFIDENCE signals (70%+) - skip cooldown and pair limits
+        const isHighConfidence = signal.confidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD;
+        
+        if (!isHighConfidence) {
+          // Normal signals: Apply cooldown and pair limits
+          if (onCooldown) {
+            continue; // Skip - recently traded
           }
           
-          signals.push({ symbol, signal, candles });
-          console.log(`  📊 ${symbol}: ${signal.type.toUpperCase()} signal (${signal.confidence}%) - ${signal.reason}`);
+          const positionsOnPair = livePositions.filter(p => p.symbol === symbol).length;
+          if (positionsOnPair >= RISK_CONFIG.MAX_POSITIONS_PER_PAIR) {
+            continue; // Already have max positions on this pair
+          }
         }
+        
+        // Check for opposing positions - only close on REAL structure shift
+        const oppositeDirection = signal.type.toLowerCase() === 'buy' ? 'sell' : 'buy';
+        const hasOpposing = livePositions.some(p => 
+          p.symbol === symbol && p.type?.toLowerCase() === oppositeDirection
+        );
+        
+        if (hasOpposing) {
+          // Check if this is a REAL structure shift (not just noise)
+          const prevStructure = marketStructure.get(symbol);
+          const newStructure = signal.type === 'buy' ? 'bullish' : 'bearish';
+          
+          if (prevStructure && prevStructure !== newStructure && signal.confidence >= 70) {
+            console.log(`  🔄 CONFIRMED STRUCTURE SHIFT on ${symbol}: ${prevStructure} → ${newStructure} (${signal.confidence}%)`);
+            await closeOpposingPositions(connection, accountId, userId, symbol, signal.type);
+            livePositions = await connection.getPositions();
+          } else {
+            console.log(`  ⏸️ ${symbol}: Signal against existing position, waiting for stronger confirmation`);
+            continue; // Don't trade against existing positions without strong confirmation
+          }
+        }
+        
+        signals.push({ symbol, signal, candles });
+        console.log(`  📊 ${symbol}: ${signal.type.toUpperCase()} signal (${signal.confidence}%)${signal.confidence >= 70 ? ' 🔥HIGH' : ''} - ${signal.reason}`);
       } catch (err) {
         continue;
       }
@@ -1055,55 +1102,98 @@ async function executeRobotTrade(robot) {
     
     // Sort signals by confidence (strongest first)
     signals.sort((a, b) => b.signal.confidence - a.signal.confidence);
-    console.log(`  🎯 Found ${signals.length} qualified signal(s) - Best: ${signals[0].symbol} (${signals[0].signal.confidence}%)`);
     
-    // Calculate how many new trades we can open
-    const slotsAvailable = Math.min(
-      RISK_CONFIG.MAX_TOTAL_POSITIONS - livePositions.length,
-      3 // Max 3 new trades per cycle
-    );
+    // Separate high-confidence (70%+) and normal signals
+    const highConfidenceSignals = signals.filter(s => s.signal.confidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD);
+    const normalSignals = signals.filter(s => s.signal.confidence < RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD);
     
-    if (slotsAvailable <= 0) {
-      console.log(`  📊 Position limit reached (${livePositions.length}/${RISK_CONFIG.MAX_TOTAL_POSITIONS})`);
-      return;
-    }
+    console.log(`  🎯 Found ${signals.length} signal(s): ${highConfidenceSignals.length} HIGH CONFIDENCE (70%+), ${normalSignals.length} normal`);
     
-    console.log(`  🎰 ${slotsAvailable} slot(s) available - opening positions...`);
-    
-    // Open trades (only strongest signals)
-    let tradesOpened = 0;
-    
-    for (const { symbol, signal } of signals) {
-      if (tradesOpened >= slotsAvailable) break;
+    // For HIGH CONFIDENCE signals - unlimited positions allowed
+    if (highConfidenceSignals.length > 0) {
+      console.log(`  🔥 HIGH CONFIDENCE MODE - Opening unlimited positions on ${highConfidenceSignals.length} strong signal(s)...`);
       
-      try {
-        // Calculate proper position size based on account balance
-        const stopLossPips = Math.abs(signal.entryPrice - signal.stopLoss) / (symbol.includes('JPY') ? 0.01 : 0.0001);
-        const lotSize = calculatePositionSize(accountInfo.balance, stopLossPips, symbol);
+      for (const { symbol, signal } of highConfidenceSignals) {
+        // Re-check risk for each high-confidence trade
+        const currentPL = livePositions.reduce((sum, p) => sum + (p.profit || 0), 0);
+        const riskCheck = canOpenMoreTrades(accountInfo.balance, accountInfo.equity, livePositions.length, currentPL, signal.confidence);
         
-        // Override signal volume with calculated size
-        signal.volume = lotSize;
-        
-        console.log(`    📐 Position sizing: Risk=${(RISK_CONFIG.MAX_RISK_PER_TRADE * 100).toFixed(0)}%, SL=${stopLossPips.toFixed(0)} pips → ${lotSize} lots`);
-        
-        // Execute trade
-        const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
-        if (trade) {
-          tradesOpened++;
-          lastTradeTime.set(symbol, Date.now()); // Set cooldown
-          console.log(`    ✅ Opened ${signal.type.toUpperCase()} on ${symbol} @ ${signal.entryPrice.toFixed(5)} (${lotSize} lots)`);
+        if (!riskCheck.canTrade) {
+          console.log(`    ⛔ ${symbol}: ${riskCheck.reason}`);
+          continue;
         }
-      } catch (err) {
-        console.error(`    ❌ Failed to open trade on ${symbol}:`, err.message);
+        
+        try {
+          // Calculate position size with high-confidence settings (1% risk, tighter SL)
+          const stopLossPips = Math.abs(signal.entryPrice - signal.stopLoss) / (symbol.includes('JPY') ? 0.01 : 0.0001);
+          const lotSize = calculatePositionSize(accountInfo.balance, stopLossPips, symbol, signal.confidence);
+          signal.volume = lotSize;
+          
+          console.log(`    🔥 ${symbol}: HIGH CONFIDENCE ${signal.confidence}% - SL=${stopLossPips.toFixed(0)}pips, TP=2x SL, Lots=${lotSize}`);
+          
+          // Execute trade
+          const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
+          if (trade) {
+            lastTradeTime.set(symbol, Date.now());
+            livePositions = await connection.getPositions(); // Refresh positions
+            console.log(`    ✅ HIGH CONFIDENCE trade opened on ${symbol}`);
+          }
+        } catch (err) {
+          console.error(`    ❌ Failed to open high-confidence trade on ${symbol}:`, err.message);
+        }
       }
     }
     
-    console.log(`  📈 Cycle complete: Opened ${tradesOpened} new trade(s), Total: ${livePositions.length + tradesOpened}/${RISK_CONFIG.MAX_TOTAL_POSITIONS}`);
+    // For NORMAL signals - apply position limits
+    if (normalSignals.length > 0) {
+      // Calculate how many new trades we can open for normal signals
+      const currentPositionCount = livePositions.length;
+      const slotsAvailable = Math.min(
+        RISK_CONFIG.MAX_TOTAL_POSITIONS - currentPositionCount,
+        3 // Max 3 normal trades per cycle
+      );
+      
+      if (slotsAvailable <= 0) {
+        console.log(`  📊 Position limit reached for normal signals (${currentPositionCount}/${RISK_CONFIG.MAX_TOTAL_POSITIONS})`);
+      } else {
+        console.log(`  🎰 ${slotsAvailable} slot(s) available for normal signals...`);
+        
+        let tradesOpened = 0;
+        
+        for (const { symbol, signal } of normalSignals) {
+          if (tradesOpened >= slotsAvailable) break;
+          
+          try {
+            // Calculate proper position size based on account balance
+            const stopLossPips = Math.abs(signal.entryPrice - signal.stopLoss) / (symbol.includes('JPY') ? 0.01 : 0.0001);
+            const lotSize = calculatePositionSize(accountInfo.balance, stopLossPips, symbol, signal.confidence);
+            signal.volume = lotSize;
+            
+            console.log(`    📐 ${symbol}: ${signal.confidence}% - SL=${stopLossPips.toFixed(0)}pips, Lots=${lotSize}`);
+            
+            // Execute trade
+            const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
+            if (trade) {
+              tradesOpened++;
+              lastTradeTime.set(symbol, Date.now());
+              console.log(`    ✅ Normal trade opened on ${symbol} (${tradesOpened}/${slotsAvailable})`);
+            }
+          } catch (err) {
+            console.error(`    ❌ Failed to open trade on ${symbol}:`, err.message);
+          }
+        }
+      }
+    }
+    
+    // Refresh final position count
+    livePositions = await connection.getPositions();
+    console.log(`  📈 Cycle complete. Total positions: ${livePositions.length}`);
     
   } catch (error) {
     console.error(`Error executing trade for robot ${robotName}:`, error);
   }
 }
+
 /**
  * Main trading loop - runs continuously
  */
