@@ -56,88 +56,12 @@ function httpsRequest(url, options = {}) {
   });
 }
 
-// Approximate current prices for major pairs (updated periodically)
-const SYMBOL_PRICES = {
-  'XAUUSD': 2640,
-  'EURUSD': 1.03,
-  'GBPUSD': 1.25,
-  'USDJPY': 157,
-  'AUDUSD': 0.62,
-  'USDCAD': 1.44,
-  'USDCHF': 0.91,
-  'NZDUSD': 0.56,
-  'EURJPY': 162,
-  'GBPJPY': 196,
-  'BTCUSD': 102000,
-  'ETHUSD': 3700,
-  'US30': 42800,
-  'US500': 5900,
-  'NAS100': 21500,
-};
-
-// Generate synthetic candles for analysis when real data unavailable
-// Creates TRENDING data to generate quality signals
-function generateSyntheticCandles(priceData, count = 50) {
-  const candles = [];
-  const basePrice = priceData.bid || priceData.ask || priceData;
-  const now = Date.now();
-  
-  // Randomly decide trend direction for this symbol
-  const trendDirection = Math.random() > 0.5 ? 1 : -1;
-  const trendStrength = basePrice * 0.0003; // 0.03% per candle trend
-  const volatility = basePrice * 0.0008; // 0.08% volatility
-  
-  let price = basePrice - (trendDirection * trendStrength * count * 0.7); // Start further back
-  
-  // Create trending candles
-  for (let i = count; i > 0; i--) {
-    const time = now - i * 60000 * 5; // 5-min intervals
-    
-    // Add trend + small noise
-    price += trendDirection * trendStrength;
-    const noise = (Math.random() - 0.5) * volatility * 0.5;
-    
-    const open = price + noise;
-    const close = price + (trendDirection * volatility * 0.3) + (Math.random() - 0.3) * volatility * 0.5;
-    const high = Math.max(open, close) + Math.random() * volatility * 0.3;
-    const low = Math.min(open, close) - Math.random() * volatility * 0.3;
-    
-    candles.push({
-      time: new Date(time).toISOString(),
-      open,
-      high,
-      low,
-      close,
-      tickVolume: Math.floor(Math.random() * 1000) + 100
-    });
-  }
-  
-  return candles;
-}
-
-// Generate fallback candles from known symbol prices
-function generateFallbackCandles(symbol, count = 50) {
-  // Find matching symbol
-  const symbolUpper = symbol.toUpperCase();
-  let basePrice = SYMBOL_PRICES[symbolUpper];
-  
-  if (!basePrice) {
-    // Try to find partial match
-    for (const [key, price] of Object.entries(SYMBOL_PRICES)) {
-      if (symbolUpper.includes(key) || key.includes(symbolUpper)) {
-        basePrice = price;
-        break;
-      }
-    }
-  }
-  
-  if (!basePrice) {
-    console.log(`    ⚠️ No fallback price for ${symbol}`);
-    return [];
-  }
-  
-  return generateSyntheticCandles({ bid: basePrice }, count);
-}
+// NO MOCK DATA - Only real prices from MetaAPI
+// These are just used for validation, NOT for generating fake candles
+const VALID_SYMBOLS = [
+  'XAUUSD', 'EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 
+  'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+];
 
 // Initialize MetaAPI
 let MetaApi;
@@ -458,12 +382,18 @@ function createForcedSignal(candles, symbol, riskLevel = 'medium') {
   };
 }
 
-// Premium trading pairs
+// Premium trading pairs - expanded list
 const TRADING_PAIRS = [
-  'XAUUSD',  // Gold - high volatility
-  'EURUSD',  // Major forex pair
+  'EURUSD',  // Major forex pair - most liquid
   'GBPUSD',  // British Pound
   'USDJPY',  // Japanese Yen
+  'XAUUSD',  // Gold
+  'AUDUSD',  // Australian Dollar
+  'USDCAD',  // Canadian Dollar
+  'NZDUSD',  // New Zealand Dollar
+  'USDCHF',  // Swiss Franc
+  'EURJPY',  // Euro/Yen cross
+  'GBPJPY',  // Pound/Yen cross
 ];
 
 // Trading interval by timeframe
@@ -541,12 +471,12 @@ function normalizeTimeframe(tf = 'm5') {
 }
 
 /**
- * Fetch candle data via MetaAPI with retry
+ * Fetch candle data via MetaAPI - NO FALLBACK, REAL DATA ONLY
  */
 async function fetchCandles(account, symbol, timeframe, count = 50) {
   if (!account) {
-    rateLimitLog(`candles-${symbol}`, `  ⚠️ No account for candle fetch (${symbol}), using fallback`);
-    return generateFallbackCandles(symbol, count);
+    console.log(`  ❌ No account for candle fetch (${symbol}) - skipping (no fake data)`);
+    return null;
   }
   
   try {
@@ -554,14 +484,15 @@ async function fetchCandles(account, symbol, timeframe, count = 50) {
     const candles = await account.getHistoricalCandles(symbol, sdkTimeframe, undefined, count);
     
     if (!candles || candles.length === 0) {
-      rateLimitLog(`candles-${symbol}`, `  ⚠️ No historical candles for ${symbol} (${sdkTimeframe}), using fallback`);
-      return generateFallbackCandles(symbol, count);
+      console.log(`  ❌ No historical candles for ${symbol} (${sdkTimeframe}) - skipping (no fake data)`);
+      return null;
     }
     
+    console.log(`  ✅ Got ${candles.length} real candles for ${symbol}`);
     return candles;
   } catch (error) {
-    rateLimitLog(`candles-${symbol}`, `  ⚠️ Failed to fetch candles for ${symbol}: ${error.message}, using fallback`);
-    return generateFallbackCandles(symbol, count);
+    console.log(`  ❌ Failed to fetch candles for ${symbol}: ${error.message} - skipping (no fake data)`);
+    return null;
   }
 }
 
