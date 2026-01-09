@@ -48,9 +48,14 @@ export async function POST(req: NextRequest) {
     let tradesClosed = 0;
     let closeErrors: string[] = [];
 
+    console.log('MT5 Account:', mt5Account?.id, 'ApiKey:', mt5Account?.apiKey ? 'present' : 'missing');
+    console.log('BACKEND_URL:', BACKEND_URL);
+
     // Close ALL open trades via backend
     if (mt5Account?.apiKey && BACKEND_URL) {
       try {
+        console.log('Calling close-all-trades with metaApiAccountId:', mt5Account.apiKey);
+        
         const closeResponse = await fetch(`${BACKEND_URL}/api/mt5/close-all-trades`, {
           method: 'POST',
           headers: {
@@ -62,15 +67,27 @@ export async function POST(req: NextRequest) {
           }),
         });
 
+        const responseText = await closeResponse.text();
+        console.log('Close trades response:', closeResponse.status, responseText);
+
         if (closeResponse.ok) {
-          const closeData = await closeResponse.json();
+          const closeData = JSON.parse(responseText);
           tradesClosed = closeData.closed || 0;
           closeErrors = closeData.errors || [];
+          console.log('Successfully closed', tradesClosed, 'trades');
+        } else {
+          console.error('Close trades failed:', closeResponse.status, responseText);
+          closeErrors.push(`Backend error: ${responseText}`);
         }
       } catch (err) {
         console.error('Error closing trades via backend:', err);
         closeErrors.push('Failed to communicate with trading server');
       }
+    } else {
+      console.warn('Cannot close trades - missing mt5Account.apiKey or BACKEND_URL');
+      if (!mt5Account?.apiKey) closeErrors.push('No MetaAPI account ID found');
+      if (!BACKEND_URL) closeErrors.push('Backend URL not configured');
+    }
 
       // Also mark all trades as closed in database
       await prisma.trade.updateMany({

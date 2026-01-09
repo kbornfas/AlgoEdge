@@ -66,9 +66,15 @@ export async function POST(
     let tradesClosed = 0;
     let closeErrors: string[] = [];
 
-    if (mt5Account?.apiKey) {
+    console.log('Stopping robot:', robotId, 'for user:', decoded.userId);
+    console.log('MT5 Account:', mt5Account?.id, 'ApiKey:', mt5Account?.apiKey ? 'present' : 'missing');
+    console.log('BACKEND_URL:', BACKEND_URL);
+
+    if (mt5Account?.apiKey && BACKEND_URL) {
       // Close all open trades for this robot via backend
       try {
+        console.log('Calling close-robot-trades with robotId:', robotId);
+        
         const closeResponse = await fetch(`${BACKEND_URL}/api/mt5/close-robot-trades`, {
           method: 'POST',
           headers: {
@@ -81,15 +87,27 @@ export async function POST(
           }),
         });
 
+        const responseText = await closeResponse.text();
+        console.log('Close robot trades response:', closeResponse.status, responseText);
+
         if (closeResponse.ok) {
-          const closeData = await closeResponse.json();
+          const closeData = JSON.parse(responseText);
           tradesClosed = closeData.closed || 0;
           closeErrors = closeData.errors || [];
+          console.log('Successfully closed', tradesClosed, 'trades for robot');
+        } else {
+          console.error('Close robot trades failed:', closeResponse.status, responseText);
+          closeErrors.push(`Backend error: ${responseText}`);
         }
       } catch (err) {
         console.error('Error closing trades via backend:', err);
         closeErrors.push('Failed to communicate with trading server');
       }
+    } else {
+      console.warn('Cannot close trades - missing mt5Account.apiKey or BACKEND_URL');
+    }
+    
+    if (mt5Account?.apiKey) {
 
       // Also mark trades as closed in database
       await prisma.trade.updateMany({
