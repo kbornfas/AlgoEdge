@@ -208,7 +208,7 @@ export default function TradesPage() {
   const winRate = closedTrades.length > 0 ? (winningTrades / closedTrades.length) * 100 : 0;
 
   return (
-    <Box>
+    <Box sx={{ width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box>
@@ -272,8 +272,17 @@ export default function TradesPage() {
       </Paper>
 
       {/* Summary Stats */}
-      <Box sx={{ display: 'flex', gap: 3, mb: 4, flexWrap: 'wrap' }}>
-        <Paper sx={{ p: 2, minWidth: 150 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        gap: { xs: 1, sm: 3 }, 
+        mb: 4, 
+        flexWrap: 'wrap',
+        overflowX: 'auto',
+        pb: 1,
+        '&::-webkit-scrollbar': { height: 4 },
+        '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.3)', borderRadius: 2 },
+      }}>
+        <Paper sx={{ p: { xs: 1.5, sm: 2 }, minWidth: { xs: 100, sm: 150 }, flex: '1 1 auto' }}>
           <Typography variant="body2" color="text.secondary">Open Positions</Typography>
           <Typography variant="h5" sx={{ fontWeight: 600, color: 'primary.main' }}>
             {openPositions.length}
@@ -308,16 +317,23 @@ export default function TradesPage() {
       </Box>
 
       {/* ==================== OPEN POSITIONS SECTION ==================== */}
-      <Paper sx={{ mb: 4, overflow: 'hidden' }}>
+      <Paper sx={{ mb: 4, overflow: 'hidden', maxWidth: '100%' }}>
         <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'white', display: 'flex', alignItems: 'center', gap: 1 }}>
           <Clock size={20} />
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
             Open Positions ({openPositions.length})
           </Typography>
         </Box>
         
-        <TableContainer>
-          <Table size="small">
+        <TableContainer sx={{ 
+          maxWidth: '100%',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          '&::-webkit-scrollbar': { height: 6 },
+          '&::-webkit-scrollbar-track': { bgcolor: 'background.paper' },
+          '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 3 },
+        }}>
+          <Table size="small" sx={{ minWidth: 800 }}>
             <TableHead>
               <TableRow sx={{ bgcolor: 'action.hover' }}>
                 <TableCell>Symbol</TableCell>
@@ -451,18 +467,18 @@ export default function TradesPage() {
           </FormControl>
         </Box>
 
-        <TableContainer>
-          <Table size="small">
+        <TableContainer sx={{ overflowX: 'auto', maxWidth: '100%' }}>
+          <Table size="small" sx={{ minWidth: 700 }}>
             <TableHead>
               <TableRow sx={{ bgcolor: 'action.hover' }}>
-                <TableCell>Symbol</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Volume</TableCell>
-                <TableCell>Open Price</TableCell>
-                <TableCell>Close Price</TableCell>
-                <TableCell>P/L</TableCell>
-                <TableCell>Open Time</TableCell>
-                <TableCell>Close Time</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>Symbol</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>Type</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>Volume</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>Open Price</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>Close Price</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>P/L</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>Open Time</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>Close Time</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
