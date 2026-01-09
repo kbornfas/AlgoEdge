@@ -953,8 +953,8 @@ async function streamPositions() {
     const result = await pool.query(`
       SELECT DISTINCT m.id as account_id, m.metaapi_account_id, m.user_id
       FROM mt5_accounts m
-      JOIN robots r ON r.mt5_account_id = m.id
-      WHERE r.is_enabled = true AND m.status = 'connected'
+      JOIN user_robot_configs urc ON urc.mt5_account_id = m.id
+      WHERE urc.is_enabled = true AND m.status = 'connected'
     `);
     
     for (const account of result.rows) {
