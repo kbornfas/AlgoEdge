@@ -5,6 +5,9 @@ const router = express.Router();
 
 const META_API_TOKEN = process.env.METAAPI_TOKEN;
 
+// Cache for MetaAPI connections to avoid reconnecting every request
+const mt5Connections = new Map();
+
 // Import MetaAPI SDK
 let MetaApi;
 let api;
