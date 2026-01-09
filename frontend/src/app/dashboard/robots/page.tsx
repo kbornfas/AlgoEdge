@@ -341,7 +341,7 @@ export default function RobotsPage() {
           setAccountBalance(posData.account.balance || 0);
           setAccountEquity(posData.account.equity || 0);
           // Use account.profit (equity - balance) for live P/L, fallback to calculated
-          const liveProfit = posData.account.profit ?? (posData.account.equity - posData.account.balance) ?? 0;
+          const liveProfit = posData.account.profit ?? ((posData.account.equity || 0) - (posData.account.balance || 0));
           setAccountProfit(liveProfit);
         }
         
