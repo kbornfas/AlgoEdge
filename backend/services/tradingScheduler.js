@@ -483,11 +483,18 @@ async function executeTradeViaMetaApi(connection, accountId, robotId, userId, si
 
     // Place order via MetaAPI RPC connection
     console.log(`  📤 Executing ${signal.type} ${signal.symbol} @ ${signal.volume} lots`);
+    
+    // Debug: Log available methods on connection
+    const connectionMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(connection))
+      .filter(m => typeof connection[m] === 'function' && m.includes('Order'));
+    console.log(`  📋 Available order methods: ${connectionMethods.join(', ') || 'NONE'}`);
+    
     let result;
     const type = signal.type.toLowerCase();
     
     try {
       if (type === 'buy' && typeof connection.createMarketBuyOrder === 'function') {
+        console.log(`  🔄 Calling createMarketBuyOrder(${signal.symbol}, ${signal.volume}, ${signal.stopLoss}, ${signal.takeProfit})...`);
         result = await connection.createMarketBuyOrder(
           signal.symbol,
           signal.volume,
@@ -496,6 +503,7 @@ async function executeTradeViaMetaApi(connection, accountId, robotId, userId, si
           { comment: `AlgoEdge-${robotId}` }
         );
       } else if (type === 'sell' && typeof connection.createMarketSellOrder === 'function') {
+        console.log(`  🔄 Calling createMarketSellOrder(${signal.symbol}, ${signal.volume}, ${signal.stopLoss}, ${signal.takeProfit})...`);
         result = await connection.createMarketSellOrder(
           signal.symbol,
           signal.volume,
@@ -504,6 +512,7 @@ async function executeTradeViaMetaApi(connection, accountId, robotId, userId, si
           { comment: `AlgoEdge-${robotId}` }
         );
       } else if (typeof connection.createMarketOrder === 'function') {
+        console.log(`  🔄 Calling createMarketOrder(${signal.symbol}, ${type}, ${signal.volume})...`);
         result = await connection.createMarketOrder(
           signal.symbol,
           type,
@@ -513,9 +522,17 @@ async function executeTradeViaMetaApi(connection, accountId, robotId, userId, si
           { comment: `AlgoEdge-${robotId}` }
         );
       } else {
+        console.log(`  ❌ No trading methods found! Available: ${connectionMethods.join(', ')}`);
         throw new Error('No trading methods available on connection');
       }
+      
+      console.log(`  ✅ Order method returned:`, JSON.stringify(result, null, 2));
+      
     } catch (orderErr) {
+      // Log ALL errors with full details
+      console.log(`  ❌ ORDER FAILED: ${orderErr.message}`);
+      console.log(`  ❌ Full error:`, orderErr);
+      
       // Handle specific errors
       if (orderErr.message?.includes('Trade is disabled')) {
         console.log(`  ⚠️ Trading disabled on this account - check MetaAPI account settings`);
@@ -524,13 +541,11 @@ async function executeTradeViaMetaApi(connection, accountId, robotId, userId, si
         console.log(`  ⚠️ Market is closed for ${signal.symbol}`);
       } else if (orderErr.message?.includes('not enough money')) {
         console.log(`  ⚠️ Insufficient margin for trade`);
-      } else {
-        console.log(`  ⚠️ Order error: ${orderErr.message}`);
+      } else if (orderErr.message?.includes('Invalid symbol')) {
+        console.log(`  ⚠️ Symbol ${signal.symbol} not available on this broker`);
       }
       return null;
     }
-    
-    console.log(`  📊 MetaAPI order result:`, result);
     
     // Validate result is real (not mock)
     if (!result || !result.orderId) {
