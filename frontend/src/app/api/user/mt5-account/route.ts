@@ -4,9 +4,11 @@ import { verifyToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL;
+
 /**
  * GET /api/user/mt5-account
- * Get user's connected MT5 account with real-time balance
+ * Get user's connected MT5 account with REAL-TIME balance from MetaAPI
  */
 export async function GET(req: NextRequest) {
   try {
@@ -34,9 +36,32 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ account: null });
     }
 
-    // TODO: Fetch real-time balance from MetaAPI
-    // For now, return the stored account info
-    // In production, you would call MetaAPI here to get live balance/equity
+    // Fetch REAL-TIME balance from backend (MetaAPI)
+    let balance = Number(mt5Account.balance) || 0;
+    let equity = Number(mt5Account.equity) || 0;
+
+    if (mt5Account.apiKey && BACKEND_URL) {
+      try {
+        const backendResponse = await fetch(
+          `${BACKEND_URL}/api/mt5/account-info/${mt5Account.apiKey}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (backendResponse.ok) {
+          const liveData = await backendResponse.json();
+          balance = liveData.balance || balance;
+          equity = liveData.equity || equity;
+        }
+      } catch (err) {
+        console.error('Failed to fetch live balance:', err);
+      }
+    }
 
     return NextResponse.json({
       account: {
@@ -44,8 +69,8 @@ export async function GET(req: NextRequest) {
         accountId: mt5Account.accountId,
         server: mt5Account.server,
         status: mt5Account.status,
-        balance: mt5Account.balance,
-        equity: mt5Account.equity,
+        balance: balance,
+        equity: equity,
         connectedAt: mt5Account.updatedAt,
       },
     });

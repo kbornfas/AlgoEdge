@@ -89,25 +89,13 @@ class MetaAPIService {
   }
 
   /**
-   * Get account information
+   * Get account information - MUST fetch from backend API
+   * NO MOCK DATA - throws error if unable to get real data
    */
   async getAccountInfo(): Promise<MT5Account> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
-
-    // TODO: Replace with actual MetaAPI call
-    // const account = await this.getAccount();
-    // const accountInfo = await account.getAccountInformation();
-
-    // Simulated data for now
-    return {
-      balance: 10000,
-      equity: 10250,
-      margin: 500,
-      freeMargin: 9750,
-      currency: 'USD',
-    };
+    // This should be called via the backend API, not directly
+    // Frontend should use /api/user/mt5-account which fetches from backend
+    throw new Error('Use /api/user/mt5-account endpoint instead - no mock data allowed');
   }
 
   /**
