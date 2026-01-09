@@ -464,23 +464,12 @@ export default function RobotsPage() {
           },
         }));
 
-        // Show success message with trade info
-        const tradesOpened = data.tradingResult?.tradesExecuted || 0;
-        const signals = data.tradingResult?.signals?.length || 0;
-        if (tradesOpened > 0) {
-          setSuccess(`✅ ${robot.name} started! Opened ${tradesOpened} trade(s) from ${signals} signal(s).`);
-        } else if (signals > 0) {
-          setSuccess(`⚠️ ${robot.name} started! Found ${signals} signal(s) but conditions not met for entry.`);
-        } else {
-          setSuccess(`🔍 ${robot.name} started! Analyzing markets for opportunities...`);
-        }
+        // Show success message - trading is handled by backend
+        setSuccess(`✅ ${robot.name} is now running! Trading will continue in the background even if you close the browser.`);
 
-        // Show dialog with details
-        setSelectedRobot(robot);
-        setTradeDialogOpen(true);
-
-        // Refresh trades
+        // Refresh data
         fetchTrades();
+        fetchRobots();
       } else {
         setError(data.error || 'Failed to start robot');
       }
@@ -496,13 +485,16 @@ export default function RobotsPage() {
     }
   };
 
-  // Stop a robot
+  // Stop a robot - this also closes all open trades for this robot
   const stopRobot = async (robot: Robot) => {
     try {
+      setError(null);
       const response = await fetch(`/api/user/robots/${robot.id}/stop`, {
         method: 'POST',
         headers: getAuthHeaders(),
       });
+
+      const data = await response.json();
 
       if (response.ok) {
         // Remove from running robots
@@ -518,10 +510,23 @@ export default function RobotsPage() {
             isRunning: false,
           },
         }));
-        setSuccess(`${robot.name} stopped.`);
+        
+        const tradesClosed = data.tradesClosed || 0;
+        if (tradesClosed > 0) {
+          setSuccess(`${robot.name} stopped. ${tradesClosed} trade(s) closed.`);
+        } else {
+          setSuccess(`${robot.name} stopped.`);
+        }
+        
+        // Refresh data
+        fetchTrades();
+        fetchRobots();
+      } else {
+        setError(data.error || 'Failed to stop robot');
       }
     } catch (err) {
       console.error('Error stopping robot:', err);
+      setError('Failed to stop robot. Please try again.');
     }
   };
 
@@ -599,29 +604,43 @@ export default function RobotsPage() {
               size="small"
               onClick={async () => {
                 try {
+                  setError(null);
                   const response = await fetch('/api/user/robots/stop-all', {
                     method: 'POST',
                     headers: getAuthHeaders(),
                   });
+                  const data = await response.json();
                   if (response.ok) {
                     setRunningRobots(new Set());
-                    setSuccess('All robots stopped successfully');
-                    fetchRobots(); // Refresh state from database
+                    const tradesClosed = data.tradesClosed || 0;
+                    if (tradesClosed > 0) {
+                      setSuccess(`All robots stopped. ${tradesClosed} trade(s) closed.`);
+                    } else {
+                      setSuccess('All robots stopped successfully');
+                    }
+                    fetchRobots();
+                    fetchTrades();
+                  } else {
+                    setError(data.error || 'Failed to stop robots');
                   }
                 } catch (err) {
                   setError('Failed to stop robots');
                 }
               }}
             >
-              Stop All
+              Stop All & Close Trades
             </Button>
           }
         >
-          <strong>{runningRobots.size} robot(s) running:</strong>{' '}
+          <strong>{runningRobots.size} robot(s) running in background:</strong>{' '}
           {Array.from(runningRobots).map(id => {
             const robot = robots.find(r => r.id === id);
             return robot?.name || id;
           }).join(', ')}
+          <br />
+          <Typography variant="caption" sx={{ mt: 0.5, display: 'block' }}>
+            Trading continues even when you close the browser. Click &quot;Stop All&quot; to stop trading and close all positions.
+          </Typography>
         </Alert>
       )}
 

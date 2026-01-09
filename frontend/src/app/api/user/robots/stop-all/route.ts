@@ -4,9 +4,11 @@ import { verifyToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL;
+
 /**
  * POST /api/user/robots/stop-all
- * Stop ALL trading robots for the user
+ * Stop ALL trading robots for the user AND close all open trades
  * This disables isEnabled in the database for all user robot configs
  */
 export async function POST(req: NextRequest) {
@@ -23,7 +25,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Disable all robots for this user
+    // Disable all robots for this user FIRST
     const result = await prisma.userRobotConfig.updateMany({
       where: { 
         userId: decoded.userId,
@@ -35,6 +37,54 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Get user's MT5 account
+    const mt5Account = await prisma.mt5Account.findFirst({
+      where: {
+        userId: decoded.userId,
+        status: 'connected',
+      },
+    });
+
+    let tradesClosed = 0;
+    let closeErrors: string[] = [];
+
+    // Close ALL open trades via backend
+    if (mt5Account?.apiKey && BACKEND_URL) {
+      try {
+        const closeResponse = await fetch(`${BACKEND_URL}/api/mt5/close-all-trades`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            metaApiAccountId: mt5Account.apiKey,
+          }),
+        });
+
+        if (closeResponse.ok) {
+          const closeData = await closeResponse.json();
+          tradesClosed = closeData.closed || 0;
+          closeErrors = closeData.errors || [];
+        }
+      } catch (err) {
+        console.error('Error closing trades via backend:', err);
+        closeErrors.push('Failed to communicate with trading server');
+      }
+
+      // Also mark all trades as closed in database
+      await prisma.trade.updateMany({
+        where: {
+          userId: decoded.userId,
+          status: 'open',
+        },
+        data: {
+          status: 'closed',
+          closeTime: new Date(),
+        },
+      });
+    }
+
     // Log the action
     await prisma.auditLog.create({
       data: {
@@ -42,16 +92,20 @@ export async function POST(req: NextRequest) {
         action: 'ALL_ROBOTS_STOPPED',
         details: {
           robotsDisabled: result.count,
+          tradesClosed,
+          closeErrors,
         },
         ipAddress: req.headers.get('x-forwarded-for') || '',
       },
     });
 
-    console.log(`Stopped ${result.count} robots for user ${decoded.userId}`);
+    console.log(`Stopped ${result.count} robots, closed ${tradesClosed} trades for user ${decoded.userId}`);
 
     return NextResponse.json({
-      message: `Stopped ${result.count} robot(s)`,
+      message: `Stopped ${result.count} robot(s), closed ${tradesClosed} trade(s)`,
       stoppedCount: result.count,
+      tradesClosed,
+      closeErrors: closeErrors.length > 0 ? closeErrors : undefined,
     });
   } catch (error) {
     console.error('Stop all robots error:', error);

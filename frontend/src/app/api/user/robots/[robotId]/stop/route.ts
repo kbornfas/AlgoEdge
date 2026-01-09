@@ -4,9 +4,11 @@ import { verifyToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL;
+
 /**
  * POST /api/user/robots/[robotId]/stop
- * Stop a trading robot
+ * Stop a trading robot and close all its open trades
  */
 export async function POST(
   req: NextRequest,
@@ -47,11 +49,61 @@ export async function POST(
       );
     }
 
-    // Disable the robot
+    // Disable the robot FIRST to prevent new trades
     await prisma.userRobotConfig.update({
       where: { id: userRobotConfig.id },
       data: { isEnabled: false },
     });
+
+    // Get user's MT5 account to close trades
+    const mt5Account = await prisma.mt5Account.findFirst({
+      where: {
+        userId: decoded.userId,
+        status: 'connected',
+      },
+    });
+
+    let tradesClosed = 0;
+    let closeErrors: string[] = [];
+
+    if (mt5Account?.apiKey) {
+      // Close all open trades for this robot via backend
+      try {
+        const closeResponse = await fetch(`${BACKEND_URL}/api/mt5/close-robot-trades`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            metaApiAccountId: mt5Account.apiKey,
+            robotId: robotId,
+          }),
+        });
+
+        if (closeResponse.ok) {
+          const closeData = await closeResponse.json();
+          tradesClosed = closeData.closed || 0;
+          closeErrors = closeData.errors || [];
+        }
+      } catch (err) {
+        console.error('Error closing trades via backend:', err);
+        closeErrors.push('Failed to communicate with trading server');
+      }
+
+      // Also mark trades as closed in database
+      await prisma.trade.updateMany({
+        where: {
+          robotId: robotId,
+          userId: decoded.userId,
+          status: 'open',
+        },
+        data: {
+          status: 'closed',
+          closeTime: new Date(),
+        },
+      });
+    }
 
     // Log the action
     await prisma.auditLog.create({
@@ -61,18 +113,22 @@ export async function POST(
         details: {
           robotId,
           robotName: userRobotConfig.robot.name,
+          tradesClosed,
+          closeErrors,
         },
         ipAddress: req.headers.get('x-forwarded-for') || '',
       },
     });
 
     return NextResponse.json({
-      message: 'Robot stopped successfully',
+      message: `Robot stopped successfully. ${tradesClosed} trade(s) closed.`,
       robot: {
         id: userRobotConfig.robot.id,
         name: userRobotConfig.robot.name,
         status: 'stopped',
       },
+      tradesClosed,
+      closeErrors: closeErrors.length > 0 ? closeErrors : undefined,
     });
   } catch (error) {
     console.error('Stop robot error:', error);

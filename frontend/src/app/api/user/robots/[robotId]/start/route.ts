@@ -1,25 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
-import { runRobotTrading } from '@/lib/services/metaApiTrading';
 
 export const dynamic = 'force-dynamic';
 
-// Timeframe mapping for MetaAPI
-const TIMEFRAME_MAP: Record<string, string> = {
-  'M1': '1m',
-  'M5': '5m',
-  'M15': '15m',
-  'M30': '30m',
-  'H1': '1h',
-  'H4': '4h',
-  'D1': '1d',
-  'W1': '1w',
-};
-
 /**
  * POST /api/user/robots/[robotId]/start
- * Start a trading robot with intelligent position management
+ * Enable a trading robot - backend scheduler handles actual trading
+ * 
+ * Trading is handled by the backend tradingScheduler service which:
+ * - Runs continuously in the background
+ * - Only trades for robots where isEnabled = true
+ * - Continues even when user closes browser
+ * - Manages TP/SL and position management
  */
 export async function POST(
   req: NextRequest,
@@ -50,7 +43,6 @@ export async function POST(
 
     const selectedTimeframe = body.timeframe || 'H1';
     const riskPercent = body.riskPercent || 1;
-    const metaApiTimeframe = TIMEFRAME_MAP[selectedTimeframe] || '1h';
 
     // Verify robot exists
     const robot = await prisma.tradingRobot.findUnique({
@@ -88,9 +80,19 @@ export async function POST(
       );
     }
 
-    console.log(`🔑 Using MetaAPI account ID: ${metaApiAccountId} (MT5 login: ${mt5Account.accountId})`);
+    console.log(`🤖 Enabling ${robot.name} for user ${decoded.userId}`);
+    console.log(`   Timeframe: ${selectedTimeframe}, Risk: ${riskPercent}%`);
+    console.log(`   MetaAPI Account: ${metaApiAccountId}`);
 
-    // Get or create user robot config
+    // Configuration settings for the robot
+    const configSettings = {
+      riskPercent,
+      timeframe: selectedTimeframe,
+      maxTrades: 5,
+      tradingPairs: body.pairs || 'all',
+    };
+
+    // Get or create user robot config and ENABLE it
     let userRobotConfig = await prisma.userRobotConfig.findUnique({
       where: {
         userId_robotId: {
@@ -99,13 +101,6 @@ export async function POST(
         },
       },
     });
-
-    const configSettings = {
-      riskPercent,
-      timeframe: selectedTimeframe,
-      maxTrades: 5,
-      tradingPairs: body.pairs || 'all',
-    };
 
     if (!userRobotConfig) {
       userRobotConfig = await prisma.userRobotConfig.create({
@@ -122,22 +117,10 @@ export async function POST(
         data: { 
           isEnabled: true,
           settings: configSettings,
+          updatedAt: new Date(),
         },
       });
     }
-
-    console.log(`🤖 Starting ${robot.name} on ${selectedTimeframe} timeframe with ${riskPercent}% risk`);
-
-    // Run the robot trading logic with intelligent position management
-    // Use metaApiAccountId (from apiKey field) instead of accountId
-    const result = await runRobotTrading(
-      decoded.userId,
-      robotId,
-      mt5Account.id,
-      metaApiAccountId,  // Use the MetaAPI account ID, not MT5 login
-      riskPercent,
-      metaApiTimeframe
-    );
 
     // Log the action
     await prisma.auditLog.create({
@@ -149,36 +132,24 @@ export async function POST(
           robotName: robot.name,
           timeframe: selectedTimeframe,
           riskPercent,
-          tradesExecuted: result.tradesExecuted,
-          tradesClosed: result.tradesClosed,
-          signals: result.signals.length,
+          metaApiAccountId,
         },
         ipAddress: req.headers.get('x-forwarded-for') || '',
       },
     });
 
     return NextResponse.json({
-      message: 'Robot started successfully',
+      message: `${robot.name} is now running. Trading will continue in the background.`,
       robot: {
         id: robot.id,
         name: robot.name,
         status: 'running',
         timeframe: selectedTimeframe,
+        riskPercent,
       },
-      tradingResult: {
-        tradesExecuted: result.tradesExecuted,
-        tradesClosed: result.tradesClosed,
-        signals: result.signals.map(s => ({
-          symbol: s.symbol,
-          type: s.type,
-          confidence: s.confidence,
-          priority: s.priority,
-          riskRewardRatio: s.riskRewardRatio?.toFixed(2),
-          expectedProfit: s.expectedProfit?.toFixed(2),
-          reason: s.reason,
-        })),
-        errors: result.errors,
-      },
+      info: 'The backend trading scheduler will open and manage trades automatically. ' +
+            'Trading continues even if you close your browser. ' +
+            'Click "Stop Robot" to disable trading and close all positions.',
     });
   } catch (error) {
     console.error('Start robot error:', error);

@@ -263,4 +263,161 @@ router.get('/positions/:accountId', authenticate, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/mt5/close-robot-trades
+ * Close all open trades for a specific robot
+ */
+router.post('/close-robot-trades', authenticate, async (req, res) => {
+  if (!api) {
+    await initMetaApi();
+    if (!api) {
+      return res.status(500).json({ error: 'MetaAPI SDK not initialized' });
+    }
+  }
+
+  const { metaApiAccountId, robotId } = req.body;
+
+  if (!metaApiAccountId) {
+    return res.status(400).json({ error: 'Missing metaApiAccountId' });
+  }
+
+  try {
+    console.log(`Closing all trades for robot: ${robotId || 'ALL'}`);
+    
+    // Get account from SDK
+    const account = await api.metatraderAccountApi.getAccount(metaApiAccountId);
+    
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+    
+    // Ensure deployed
+    if (account.state !== 'DEPLOYED') {
+      await account.deploy();
+      await account.waitDeployed();
+    }
+    
+    // Get RPC connection
+    const connection = account.getRPCConnection();
+    await connection.connect();
+    await connection.waitSynchronized();
+    
+    // Get open positions
+    const positions = await connection.getPositions();
+    console.log('Found', positions.length, 'open positions');
+
+    // Filter positions by robot if specified (using magic number or comment)
+    let positionsToClose = positions;
+    if (robotId) {
+      positionsToClose = positions.filter(p => 
+        p.comment?.includes(robotId) || 
+        p.clientId?.includes(robotId)
+      );
+      console.log(`Filtered to ${positionsToClose.length} positions for robot ${robotId}`);
+    }
+
+    let closed = 0;
+    const errors = [];
+
+    // Close each position
+    for (const position of positionsToClose) {
+      try {
+        console.log(`Closing position ${position.id}: ${position.symbol} ${position.type}`);
+        
+        // Close the position
+        const closeResult = await connection.closePosition(position.id);
+        
+        if (closeResult) {
+          closed++;
+          console.log(`✅ Closed position ${position.id}`);
+        }
+      } catch (err) {
+        console.error(`❌ Failed to close position ${position.id}:`, err.message);
+        errors.push(`${position.symbol}: ${err.message}`);
+      }
+    }
+
+    return res.json({
+      message: `Closed ${closed} of ${positionsToClose.length} positions`,
+      closed,
+      total: positionsToClose.length,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  } catch (error) {
+    console.error('Close trades error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/mt5/close-all-trades
+ * Close ALL open trades for an account (used by Stop All)
+ */
+router.post('/close-all-trades', authenticate, async (req, res) => {
+  if (!api) {
+    await initMetaApi();
+    if (!api) {
+      return res.status(500).json({ error: 'MetaAPI SDK not initialized' });
+    }
+  }
+
+  const { metaApiAccountId } = req.body;
+
+  if (!metaApiAccountId) {
+    return res.status(400).json({ error: 'Missing metaApiAccountId' });
+  }
+
+  try {
+    console.log('Closing ALL trades for account:', metaApiAccountId);
+    
+    // Get account from SDK
+    const account = await api.metatraderAccountApi.getAccount(metaApiAccountId);
+    
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+    
+    // Ensure deployed
+    if (account.state !== 'DEPLOYED') {
+      await account.deploy();
+      await account.waitDeployed();
+    }
+    
+    // Get RPC connection
+    const connection = account.getRPCConnection();
+    await connection.connect();
+    await connection.waitSynchronized();
+    
+    // Get open positions
+    const positions = await connection.getPositions();
+    console.log('Found', positions.length, 'positions to close');
+
+    let closed = 0;
+    const errors = [];
+
+    // Close ALL positions
+    for (const position of positions) {
+      try {
+        console.log(`Closing position ${position.id}: ${position.symbol} ${position.type}`);
+        await connection.closePosition(position.id);
+        closed++;
+        console.log(`✅ Closed position ${position.id}`);
+      } catch (err) {
+        console.error(`❌ Failed to close position ${position.id}:`, err.message);
+        errors.push(`${position.symbol}: ${err.message}`);
+      }
+    }
+
+    return res.json({
+      message: `Closed ${closed} of ${positions.length} positions`,
+      closed,
+      total: positions.length,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  } catch (error) {
+    console.error('Close all trades error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
