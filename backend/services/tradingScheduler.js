@@ -1,5 +1,5 @@
 import pool from '../config/database.js';
-import { mt5Connections, connectMT5Account } from './mt5Service.js';
+import { mt5Connections, connectMT5Account, isMetaApiReady, waitForMetaApi } from './mt5Service.js';
 import { emitTradeSignal, emitTradeClosed } from './websocketService.js';
 import https from 'https';
 
@@ -9,6 +9,7 @@ import https from 'https';
  * =========================================================================
  * Runs continuously on the backend server to execute trades for ALL robots.
  * This is server-side - it runs 24/7 regardless of browser/client state.
+ * NO MOCK DATA - Only executes real trades when MetaAPI SDK is loaded.
  * =========================================================================
  */
 
@@ -302,9 +303,16 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
 
 /**
  * Execute trade directly via MetaAPI connection
+ * ONLY executes when real MetaAPI SDK is loaded - NO MOCK DATA
  */
 async function executeTradeViaMetaApi(connection, accountId, robotId, userId, signal) {
   try {
+    // Ensure MetaAPI SDK is ready - NO MOCK TRADES
+    if (!isMetaApiReady()) {
+      console.log(`  ❌ MetaAPI SDK not ready - skipping trade (no mock data)`);
+      return null;
+    }
+    
     // Validate symbol is tradable on this account before sending order
     try {
       if (typeof connection.getSymbolPrice === 'function') {
@@ -352,7 +360,25 @@ async function executeTradeViaMetaApi(connection, accountId, robotId, userId, si
     
     console.log(`  📊 MetaAPI order result:`, result);
     
-    // Save to database
+    // Validate result is real (not mock)
+    if (!result || !result.orderId) {
+      console.log(`  ❌ Invalid order result - missing orderId`);
+      return null;
+    }
+    
+    // Check for mock data indicators
+    if (result.orderId && String(result.orderId).startsWith('MOCK_')) {
+      console.log(`  ❌ REJECTED: Mock order detected - not saving to database`);
+      return null;
+    }
+    
+    // Validate price is realistic (not 1.2345)
+    if (result.price === 1.2345) {
+      console.log(`  ❌ REJECTED: Mock price detected (1.2345) - not saving to database`);
+      return null;
+    }
+    
+    // Save to database only if we have a real order
     const tradeResult = await pool.query(
       `INSERT INTO trades (user_id, mt5_account_id, robot_id, pair, type, volume, 
        open_price, stop_loss, take_profit, status, open_time)
