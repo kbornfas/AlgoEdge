@@ -209,6 +209,7 @@ router.get('/account-info/:accountId', authenticate, async (req, res) => {
  * GET /api/mt5/positions/:accountId
  * Get live open positions with current prices from MetaAPI
  * OPTIMIZED: Uses cached connection for faster response
+ * @param accountId - Can be either MetaAPI account ID or database account ID
  */
 router.get('/positions/:accountId', authenticate, async (req, res) => {
   if (!api) {
@@ -221,12 +222,34 @@ router.get('/positions/:accountId', authenticate, async (req, res) => {
   const { accountId } = req.params;
 
   try {
-    // First try to use cached connection from mt5Connections (fastest)
-    const cachedConnection = mt5Connections.get(accountId);
-    if (cachedConnection?.connection) {
+    // Try to find cached connection by checking both metaApiAccountId and database accountId
+    let connection = null;
+    let cachedInfo = null;
+    
+    // Method 1: Direct lookup by accountId (could be metaApiAccountId)
+    if (mt5Connections.has(accountId)) {
+      cachedInfo = mt5Connections.get(accountId);
+      connection = cachedInfo?.connection;
+    }
+    
+    // Method 2: Search through all connections to find by metaApiId
+    if (!connection) {
+      for (const [key, data] of mt5Connections.entries()) {
+        if (data.metaApiId === accountId) {
+          connection = data.connection;
+          cachedInfo = data;
+          break;
+        }
+      }
+    }
+    
+    // Use cached connection if available
+    if (connection) {
       try {
-        const positions = await cachedConnection.connection.getPositions();
-        const info = await cachedConnection.connection.getAccountInformation();
+        const positions = await connection.getPositions();
+        const info = await connection.getAccountInformation();
+        
+        console.log(`Positions for ${accountId}: ${positions.length} positions, Balance: $${info.balance}`);
         
         return res.json({
           positions: positions.map(p => ({
@@ -249,15 +272,16 @@ router.get('/positions/:accountId', authenticate, async (req, res) => {
             equity: info.equity || 0,
             margin: info.margin || 0,
             freeMargin: info.freeMargin || 0,
-            profit: info.profit || 0,
+            profit: info.profit || (info.equity - info.balance) || 0,
           },
         });
       } catch (cacheErr) {
-        console.log('Cached connection failed, trying fresh connection...');
+        console.log('Cached connection failed:', cacheErr.message);
       }
     }
     
-    // Fallback: Get fresh connection (slower)
+    // Fallback: Get fresh connection via MetaAPI SDK
+    console.log('Creating fresh connection for:', accountId);
     const account = await api.metatraderAccountApi.getAccount(accountId);
     
     if (!account) {
@@ -271,21 +295,28 @@ router.get('/positions/:accountId', authenticate, async (req, res) => {
     await account.waitDeployed();
     
     // Get RPC connection
-    const connection = account.getRPCConnection();
-    await connection.connect();
+    const newConnection = account.getRPCConnection();
+    await newConnection.connect();
     
     // Quick sync with short timeout
     try {
-      await connection.waitSynchronized({ timeoutInSeconds: 5 });
+      await newConnection.waitSynchronized({ timeoutInSeconds: 5 });
     } catch (syncError) {
-      // Continue anyway
+      console.log('Sync timeout, continuing...');
     }
     
     // Cache this connection for future use
-    mt5Connections.set(accountId, { connection, account, lastUsed: Date.now() });
+    mt5Connections.set(accountId, { 
+      connection: newConnection, 
+      account, 
+      metaApiId: accountId,
+      lastUsed: Date.now() 
+    });
     
-    const info = await connection.getAccountInformation();
-    const positions = await connection.getPositions();
+    const info = await newConnection.getAccountInformation();
+    const positions = await newConnection.getPositions();
+    
+    console.log(`Fresh positions for ${accountId}: ${positions.length} positions, Balance: $${info.balance}`);
 
     return res.json({
       positions: positions.map(p => ({
