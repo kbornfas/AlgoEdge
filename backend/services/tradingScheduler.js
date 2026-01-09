@@ -85,6 +85,66 @@ const RISK_CONFIG = {
 const candleCache = new Map();
 const CANDLE_CACHE_TTL = 30000; // 30 seconds cache
 
+// =========================================================================
+// ACCOUNT DATA CACHE - Prevents rate limiting on getPositions/getAccountInfo
+// =========================================================================
+const accountInfoCache = new Map();
+const positionsCache = new Map();
+const ACCOUNT_CACHE_TTL = 60000; // 60 seconds cache for account info
+const POSITIONS_CACHE_TTL = 30000; // 30 seconds cache for positions
+
+/**
+ * Get cached account information (reduces API calls)
+ */
+async function getCachedAccountInfo(connection, accountId) {
+  const cacheKey = `account_${accountId}`;
+  const cached = accountInfoCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < ACCOUNT_CACHE_TTL) {
+    return cached.data;
+  }
+  
+  try {
+    const accountInfo = await connection.getAccountInformation();
+    accountInfoCache.set(cacheKey, { data: accountInfo, timestamp: Date.now() });
+    return accountInfo;
+  } catch (error) {
+    // Return cached data if available, even if stale
+    if (cached) {
+      console.log(`  ⚠️ Using stale account cache: ${error.message}`);
+      return cached.data;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Get cached positions (reduces API calls)
+ */
+async function getCachedPositions(connection, accountId) {
+  const cacheKey = `positions_${accountId}`;
+  const cached = positionsCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < POSITIONS_CACHE_TTL) {
+    return cached.data;
+  }
+  
+  try {
+    const positions = await connection.getPositions() || [];
+    positionsCache.set(cacheKey, { data: positions, timestamp: Date.now() });
+    return positions;
+  } catch (error) {
+    // Return cached data if available, even if stale
+    if (cached) {
+      console.log(`  ⚠️ Using stale positions cache: ${error.message}`);
+      return cached.data;
+    }
+    // Return empty array rather than throwing
+    console.log(`  ⚠️ Could not get positions: ${error.message}`);
+    return [];
+  }
+}
+
 /**
  * Get max positions based on account balance
  * Bigger accounts can handle more positions
@@ -1188,20 +1248,20 @@ async function executeRobotTrade(robot) {
       return;
     }
     
-    // Get account info for risk management
+    // Get account info for risk management (CACHED to avoid rate limits)
     let accountInfo;
     try {
-      accountInfo = await connection.getAccountInformation();
+      accountInfo = await getCachedAccountInfo(connection, accountId);
       console.log(`  💰 Account: Balance=$${accountInfo.balance?.toFixed(2)}, Equity=$${accountInfo.equity?.toFixed(2)}, P/L=$${(accountInfo.equity - accountInfo.balance)?.toFixed(2)}`);
     } catch (e) {
       console.log(`  ⚠️ Could not get account info: ${e.message}`);
       accountInfo = { balance: 0, equity: 0 };
     }
     
-    // Get existing open positions from MT5
+    // Get existing open positions from MT5 (CACHED to avoid rate limits)
     let livePositions = [];
     try {
-      livePositions = await connection.getPositions();
+      livePositions = await getCachedPositions(connection, accountId);
       console.log(`  📋 Live positions from MT5: ${livePositions.length}`);
     } catch (e) {
       console.log(`  ⚠️ Could not get live positions: ${e.message}`);
@@ -1392,7 +1452,8 @@ async function executeRobotTrade(robot) {
           const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
           if (trade) {
             lastTradeTime.set(symbol, Date.now());
-            livePositions = await connection.getPositions();
+            // Invalidate cache so next check gets fresh data
+            positionsCache.delete(`positions_${accountId}`);
             console.log(`    ✅ NEWS trade opened on ${symbol}`);
           }
         } catch (err) {
@@ -1428,7 +1489,8 @@ async function executeRobotTrade(robot) {
           const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
           if (trade) {
             lastTradeTime.set(symbol, Date.now());
-            livePositions = await connection.getPositions(); // Refresh positions
+            positionsCache.delete(`positions_${accountId}`); // Invalidate cache
+            livePositions = await getCachedPositions(connection, accountId); // Use cache
             console.log(`    ✅ HIGH CONFIDENCE trade opened on ${symbol}`);
           }
         } catch (err) {
@@ -1479,7 +1541,8 @@ async function executeRobotTrade(robot) {
             if (trade) {
               tradesOpened++;
               lastTradeTime.set(symbol, Date.now());
-              livePositions = await connection.getPositions(); // Refresh count
+              positionsCache.delete(`positions_${accountId}`); // Invalidate cache
+              livePositions = await getCachedPositions(connection, accountId); // Use cache
               console.log(`    ✅ Trade opened on ${symbol} (${livePositions.length}/${posLimits.target} positions)`);
             }
           } catch (err) {
@@ -1489,8 +1552,8 @@ async function executeRobotTrade(robot) {
       }
     }
     
-    // Refresh final position count
-    livePositions = await connection.getPositions();
+    // Refresh final position count (use cache)
+    livePositions = await getCachedPositions(connection, accountId);
     const finalLimits = getPositionLimits(accountInfo.balance);
     console.log(`  📈 Cycle complete. Total positions: ${livePositions.length}/${finalLimits.target} target`);
     
@@ -1536,9 +1599,9 @@ async function streamPositions() {
       if (!connection) continue;
       
       try {
-        // Get live positions
-        const positions = await connection.getPositions();
-        const info = await connection.getAccountInformation();
+        // Get live positions (CACHED to avoid rate limits)
+        const positions = await getCachedPositions(connection, account.account_id);
+        const info = await getCachedAccountInfo(connection, account.account_id);
         
         // Format positions for frontend
         const formattedPositions = positions.map(p => ({
@@ -1583,17 +1646,18 @@ export async function startTradingScheduler() {
   console.log(`   Max Risk/Trade: ${RISK_CONFIG.MAX_RISK_PER_TRADE * 100}%`);
   console.log(`   Max Positions: ${RISK_CONFIG.MAX_TOTAL_POSITIONS}`);
   console.log(`   Min Signal: ${RISK_CONFIG.MIN_SIGNAL_CONFIDENCE}%`);
-  console.log('   Cycle: 30 seconds');
+  console.log('   Cycle: 60 seconds (rate limit safe)');
+  console.log('   Position streaming: every 5 seconds');
   console.log('========================================\n');
   
   // Run immediately on start
   await runTradingCycle();
   
-  // Run every 30 seconds (more conservative)
-  tradingInterval = setInterval(runTradingCycle, 30 * 1000);
+  // Run every 60 seconds to stay under rate limits
+  tradingInterval = setInterval(runTradingCycle, 60 * 1000);
   
-  // Stream positions every 1 second for real-time price updates
-  positionStreamInterval = setInterval(streamPositions, 1000);
+  // Stream positions every 5 seconds (uses cache, so rate-limit safe)
+  positionStreamInterval = setInterval(streamPositions, 5000);
   
   return { success: true, message: 'Trading scheduler started' };
 }
@@ -1672,10 +1736,10 @@ async function runTradingCycle() {
  */
 async function manageOpenPositions(connection, account, accountId, userId) {
   try {
-    // Get open positions from MT5
+    // Get open positions from MT5 (CACHED to avoid rate limits)
     let positions = [];
     try {
-      positions = await connection.getPositions() || [];
+      positions = await getCachedPositions(connection, accountId);
     } catch (posError) {
       console.log(`  ⚠️ Could not fetch positions: ${posError.message}`);
       return; // Skip position management this cycle
@@ -1878,7 +1942,8 @@ async function manageOpenPositions(connection, account, accountId, userId) {
  */
 async function syncTradesWithMT5(connection, accountId) {
   try {
-    const positions = await connection.getPositions();
+    // Use cached positions to avoid rate limits
+    const positions = await getCachedPositions(connection, accountId);
     const openPositionIds = new Set((positions || []).map(p => p.symbol));
     
     // Get open trades from database
