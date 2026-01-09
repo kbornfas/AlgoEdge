@@ -1217,9 +1217,12 @@ async function executeRobotTrade(robot) {
     
     // Collect signals from trading pairs
     const signals = [];
+    const skippedSymbols = [];
     
     // Check if this is a News Trader bot
     const isNewsTrader = robotName.toLowerCase().includes('news');
+    
+    console.log(`  📋 Scanning ${TRADING_PAIRS.length} pairs: ${TRADING_PAIRS.join(', ')}`);
     
     for (const symbol of TRADING_PAIRS) {
       try {
@@ -1231,6 +1234,7 @@ async function executeRobotTrade(robot) {
         const candles = await fetchCandles(account, symbol, timeframe?.toLowerCase() || 'm15', 100);
         
         if (!candles || candles.length < 30) {
+          skippedSymbols.push(`${symbol}(no candles)`);
           continue;
         }
         
@@ -1304,6 +1308,7 @@ async function executeRobotTrade(robot) {
         // If we already have same-direction position, only add for high confidence
         if (hasSameDirectionPosition && !isHighConfidence) {
           console.log(`  ⏸️ ${symbol}: Already have ${signalDirection.toUpperCase()} position, need 70%+ to add more`);
+          skippedSymbols.push(`${symbol}(has position)`);
           continue;
         }
         
@@ -1312,6 +1317,7 @@ async function executeRobotTrade(robot) {
         if (!underTarget && !isHighConfidence) {
           // Only apply cooldown restriction when AT or ABOVE target
           if (onCooldown) {
+            skippedSymbols.push(`${symbol}(cooldown)`);
             continue; // Skip - recently traded
           }
         }
@@ -1319,8 +1325,14 @@ async function executeRobotTrade(robot) {
         signals.push({ symbol, signal, candles });
         console.log(`  📊 ${symbol}: ${signal.type.toUpperCase()} signal (${signal.confidence}%)${isHighConfidence ? ' 🔥HIGH' : ''} - ${signal.reason}`);
       } catch (err) {
+        skippedSymbols.push(`${symbol}(error: ${err.message?.substring(0, 30)})`);
         continue;
       }
+    }
+    
+    // Log skipped symbols for debugging
+    if (skippedSymbols.length > 0) {
+      console.log(`  ⏭️ Skipped: ${skippedSymbols.join(', ')}`);
     }
     
     if (signals.length === 0) {
@@ -1701,63 +1713,70 @@ async function manageOpenPositions(connection, account, accountId, userId) {
           const profitInATR = atr > 0 ? priceDiff / atr : 0;
           
           // =========================================================================
-          // EXIT CONDITIONS
+          // EXIT CONDITIONS - CONSERVATIVE APPROACH
+          // Only exit when there's strong evidence, let winners run
           // =========================================================================
           
-          // 1. SECURE PROFITS: Close when profit >= 1.5 ATR (good move captured)
-          if (profitInATR >= 1.5) {
+          // 1. SECURE PROFITS: Close when profit >= 2 ATR (let winners run more)
+          if (profitInATR >= 2.0) {
             shouldClose = true;
             closeReason = `PROFIT SECURED: ${profitInATR.toFixed(1)} ATR move captured ($${profit.toFixed(2)})`;
           }
           
-          // 2. MARKET STRUCTURE CHANGE: Trend reversal against position
-          else if (positionType === 'buy' && ema8Val < ema20Val && currentRsi > 65) {
+          // 2. STRONG PROFIT: Take profit at $25+ regardless of ATR
+          else if (profit >= 25) {
             shouldClose = true;
-            closeReason = `STRUCTURE CHANGE: EMA bearish cross + RSI high (${currentRsi.toFixed(0)})`;
-          }
-          else if (positionType === 'sell' && ema8Val > ema20Val && currentRsi < 35) {
-            shouldClose = true;
-            closeReason = `STRUCTURE CHANGE: EMA bullish cross + RSI low (${currentRsi.toFixed(0)})`;
+            closeReason = `PROFIT TARGET: $${profit.toFixed(2)} reached`;
           }
           
-          // 3. TRAILING STOP: Lock in profits after 1 ATR move
-          else if (profitInATR >= 1.0 && profit > 0) {
-            // Check if momentum is fading
-            const recentCandles = candles.slice(-3);
-            const momentum = positionType === 'buy'
+          // 3. MARKET STRUCTURE CHANGE: STRONG reversal against position
+          // Require EMA cross + RSI extreme + momentum confirmation
+          else if (positionType === 'buy' && ema8Val < ema20Val && currentRsi > 70) {
+            // Need 3+ bearish candles to confirm
+            const recentCandles = candles.slice(-5);
+            const bearishCount = recentCandles.filter(c => c.close < c.open).length;
+            if (bearishCount >= 3) {
+              shouldClose = true;
+              closeReason = `STRUCTURE CHANGE: EMA bearish + RSI ${currentRsi.toFixed(0)} + ${bearishCount}/5 bearish candles`;
+            }
+          }
+          else if (positionType === 'sell' && ema8Val > ema20Val && currentRsi < 30) {
+            // Need 3+ bullish candles to confirm
+            const recentCandles = candles.slice(-5);
+            const bullishCount = recentCandles.filter(c => c.close > c.open).length;
+            if (bullishCount >= 3) {
+              shouldClose = true;
+              closeReason = `STRUCTURE CHANGE: EMA bullish + RSI ${currentRsi.toFixed(0)} + ${bullishCount}/5 bullish candles`;
+            }
+          }
+          
+          // 4. TRAILING STOP: Lock in profits after 1.5 ATR move with strong reversal
+          else if (profitInATR >= 1.5 && profit > 5) {
+            // Check if momentum is strongly fading (3+ candles against)
+            const recentCandles = candles.slice(-4);
+            const againstCount = positionType === 'buy'
               ? recentCandles.filter(c => c.close < c.open).length
               : recentCandles.filter(c => c.close > c.open).length;
             
-            if (momentum >= 2) {
+            if (againstCount >= 3) {
               shouldClose = true;
-              closeReason = `TRAILING STOP: Momentum fading after ${profitInATR.toFixed(1)} ATR profit`;
+              closeReason = `TRAILING STOP: Momentum reversed after ${profitInATR.toFixed(1)} ATR profit`;
             }
           }
           
-          // 4. CUT LOSSES: Close if loss exceeds 2 ATR or $15
-          else if (profitInATR <= -2.0 || profit <= -15) {
+          // 5. CUT LOSSES: Close if loss exceeds 3 ATR or $30 (wider stop)
+          else if (profitInATR <= -3.0 || profit <= -30) {
             shouldClose = true;
             closeReason = `STOP LOSS: ${profitInATR.toFixed(1)} ATR loss ($${profit.toFixed(2)})`;
-          }
-          
-          // 5. TIME-BASED: Close very small profits/losses after extended time
-          // (positions that aren't moving - free up capital)
-          else if (Math.abs(profit) < 2 && Math.abs(profitInATR) < 0.3) {
-            // Check if trade is stuck (sideways for 10+ candles)
-            const priceRange = Math.max(...closes.slice(-10)) - Math.min(...closes.slice(-10));
-            if (priceRange < atr * 0.5) {
-              shouldClose = true;
-              closeReason = `STAGNANT: Market ranging, freeing capital`;
-            }
           }
         }
       } catch (analysisError) {
         console.log(`    ⚠️ Could not analyze ${symbol}: ${analysisError.message}`);
-        // Fallback to simple profit/loss rules
-        if (profit >= 10) {
+        // Fallback to simple profit/loss rules with wider thresholds
+        if (profit >= 25) {
           shouldClose = true;
           closeReason = `PROFIT TARGET: $${profit.toFixed(2)}`;
-        } else if (profit <= -20) {
+        } else if (profit <= -30) {
           shouldClose = true;
           closeReason = `MAX LOSS: $${profit.toFixed(2)}`;
         }

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { io, Socket } from 'socket.io-client';
 import {
   Box,
   Typography,
@@ -182,6 +183,57 @@ export default function TradesPage() {
     
     return () => clearInterval(interval);
   }, [fetchOpenPositions]);
+
+  // Poll closed trades every 10 seconds for near real-time history updates
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const interval = setInterval(() => {
+      fetchClosedTrades();
+    }, 10000); // Every 10 seconds
+    
+    return () => clearInterval(interval);
+  }, [fetchClosedTrades]);
+
+  // WebSocket connection for real-time trade updates
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const socket: Socket = io(backendUrl, {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+    });
+
+    socket.on('connect', () => {
+      console.log('WebSocket connected for trade updates');
+    });
+
+    // When a trade is closed, immediately refresh the closed trades list
+    socket.on('trade:closed', (data) => {
+      console.log('Trade closed event:', data);
+      fetchClosedTrades();
+      fetchOpenPositions();
+      setLastUpdated(new Date());
+    });
+
+    // When a new trade is opened
+    socket.on('trade:new', (data) => {
+      console.log('New trade event:', data);
+      fetchOpenPositions();
+      setLastUpdated(new Date());
+    });
+
+    socket.on('disconnect', () => {
+      console.log('WebSocket disconnected');
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [fetchClosedTrades, fetchOpenPositions]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
