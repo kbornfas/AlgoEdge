@@ -582,7 +582,7 @@ export default function RobotsPage() {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ py: 4, px: { xs: 1, sm: 2, md: 3 }, overflow: 'hidden' }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -609,11 +609,12 @@ export default function RobotsPage() {
       {runningRobots.size > 0 && (
         <Alert 
           severity="info" 
-          sx={{ mb: 3 }}
+          sx={{ mb: 3, overflow: 'hidden', '& .MuiAlert-message': { overflow: 'hidden', width: '100%' } }}
           action={
             <Button 
               color="inherit" 
               size="small"
+              sx={{ whiteSpace: 'nowrap', minWidth: 'auto', fontSize: { xs: '0.7rem', sm: '0.875rem' } }}
               onClick={async () => {
                 try {
                   setError(null);
@@ -657,34 +658,35 @@ export default function RobotsPage() {
       )}
 
       {/* Account Summary */}
-      <Card sx={{ mb: 4, background: 'linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)' }}>
-        <CardContent>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={4}>
+      <Card sx={{ mb: 4, background: 'linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)', overflow: 'hidden' }}>
+        <CardContent sx={{ px: { xs: 2, sm: 3 } }}>
+          <Grid container spacing={{ xs: 2, sm: 3 }}>
+            <Grid item xs={12} sm={4}>
               <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
                 Account Balance
               </Typography>
-              <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+              <Typography variant="h5" sx={{ color: 'white', fontWeight: 'bold', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
                 ${accountBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </Typography>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={4}>
               <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
                 Account Equity
               </Typography>
-              <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+              <Typography variant="h5" sx={{ color: 'white', fontWeight: 'bold', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
                 ${accountEquity.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </Typography>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={4}>
               <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
                 Open P/L
               </Typography>
               <Typography 
-                variant="h4" 
+                variant="h5" 
                 sx={{ 
                   color: totalPL >= 0 ? '#4caf50' : '#f44336', 
-                  fontWeight: 'bold' 
+                  fontWeight: 'bold',
+                  fontSize: { xs: '1.5rem', sm: '2rem' }
                 }}
               >
                 {totalPL >= 0 ? '+' : ''}${totalPL.toFixed(2)}
@@ -696,10 +698,10 @@ export default function RobotsPage() {
 
       {/* Open Trades Section */}
       {trades.length > 0 && (
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
+        <Card sx={{ mb: 4, overflow: 'hidden' }}>
+          <CardContent sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 <TrendingUp size={20} />
                 Open Positions ({trades.length})
               </Typography>
@@ -707,17 +709,17 @@ export default function RobotsPage() {
                 <RefreshCw size={18} />
               </IconButton>
             </Box>
-            <TableContainer>
-              <Table size="small">
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table size="small" sx={{ minWidth: 600 }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Robot</TableCell>
-                    <TableCell>Pair</TableCell>
-                    <TableCell>Type</TableCell>
-                    <TableCell align="right">Volume</TableCell>
-                    <TableCell align="right">Open Price</TableCell>
-                    <TableCell align="right">Current</TableCell>
-                    <TableCell align="right">P/L</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>Robot</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>Pair</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>Type</TableCell>
+                    <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Volume</TableCell>
+                    <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Open Price</TableCell>
+                    <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Current</TableCell>
+                    <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>P/L</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
