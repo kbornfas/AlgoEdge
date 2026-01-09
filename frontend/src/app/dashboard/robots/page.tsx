@@ -722,9 +722,9 @@ export default function RobotsPage() {
                       <TableCell sx={{ fontWeight: 'bold' }}>{trade.pair}</TableCell>
                       <TableCell>
                         <Chip 
-                          label={trade.type} 
+                          label={trade.type?.includes('BUY') ? 'BUY' : 'SELL'} 
                           size="small" 
-                          color={trade.type === 'BUY' ? 'success' : 'error'}
+                          color={trade.type?.includes('BUY') ? 'success' : 'error'}
                         />
                       </TableCell>
                       <TableCell align="right">{trade.volume}</TableCell>
