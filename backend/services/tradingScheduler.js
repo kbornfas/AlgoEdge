@@ -70,7 +70,7 @@ function httpsRequest(url, options = {}) {
 const RISK_CONFIG = {
   MAX_RISK_PER_TRADE: 0.02,      // 2% max risk per trade
   MAX_TOTAL_EXPOSURE: 0.10,      // 10% max total exposure
-  MIN_SIGNAL_CONFIDENCE: 60,     // Only trade on 60%+ confidence signals
+  MIN_SIGNAL_CONFIDENCE: 50,     // Only trade on 50%+ confidence signals
   STRUCTURE_SHIFT_CANDLES: 5,    // Need 5 candles to confirm structure shift
   MIN_ACCOUNT_BALANCE: 100,      // Don't trade if balance below $100
   MAX_POSITIONS_PER_PAIR: 2,     // Max 2 positions per pair
