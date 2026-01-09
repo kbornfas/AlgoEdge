@@ -156,9 +156,27 @@ export const connectMT5Account = async (accountId, login, password, server) => {
     const metaApi = await getMetaApi();
     
     // Check if account already exists in MetaAPI
+    // Handle both old and new SDK versions
     let metaApiAccount;
-    const accounts = await metaApi.metatraderAccountApi.getAccounts();
-    const existingAccount = accounts.find(acc => acc.login === login && acc.server === server);
+    let accounts = [];
+    
+    try {
+      if (typeof metaApi.metatraderAccountApi.getAccounts === 'function') {
+        accounts = await metaApi.metatraderAccountApi.getAccounts();
+      } else if (typeof metaApi.metatraderAccountApi.getAccountsWithInfiniteScrollPagination === 'function') {
+        const result = await metaApi.metatraderAccountApi.getAccountsWithInfiniteScrollPagination();
+        accounts = result.items || [];
+      } else {
+        // Log available methods and continue without listing
+        console.log('Available metatraderAccountApi methods:', Object.keys(metaApi.metatraderAccountApi));
+        accounts = [];
+      }
+    } catch (listErr) {
+      console.log('Error listing accounts, will try to create/get directly:', listErr.message);
+      accounts = [];
+    }
+    
+    const existingAccount = accounts.find(acc => String(acc.login) === String(login) && acc.server === server);
     
     if (existingAccount) {
       console.log(`Found existing MetaAPI account: ${existingAccount.id}`);
