@@ -420,4 +420,83 @@ router.post('/close-all-trades', authenticate, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/mt5/history/:accountId
+ * Get trade history (closed deals) from MetaAPI
+ */
+router.get('/history/:accountId', authenticate, async (req, res) => {
+  if (!api) {
+    await initMetaApi();
+    if (!api) {
+      return res.status(500).json({ error: 'MetaAPI SDK not initialized' });
+    }
+  }
+
+  const { accountId } = req.params;
+  const { startTime, endTime } = req.query;
+
+  try {
+    console.log('Fetching trade history for:', accountId);
+    
+    // Get account from SDK
+    const account = await api.metatraderAccountApi.getAccount(accountId);
+    
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+    
+    // Ensure deployed
+    if (account.state !== 'DEPLOYED') {
+      await account.deploy();
+      await account.waitDeployed();
+    }
+    
+    // Get RPC connection
+    const connection = account.getRPCConnection();
+    await connection.connect();
+    await connection.waitSynchronized();
+    
+    // Calculate time range (default: last 30 days)
+    const now = new Date();
+    const start = startTime ? new Date(startTime) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const end = endTime ? new Date(endTime) : now;
+    
+    // Get history deals (closed trades)
+    const deals = await connection.getDeals(start, end);
+    console.log('Found', deals.length, 'deals in history');
+    
+    // Filter to only include entry/exit deals (not balance operations)
+    const tradeDeals = deals.filter(d => 
+      d.type === 'DEAL_TYPE_BUY' || 
+      d.type === 'DEAL_TYPE_SELL'
+    );
+    
+    // Map to trade format
+    const trades = tradeDeals.map(deal => ({
+      id: deal.id,
+      symbol: deal.symbol,
+      type: deal.type?.includes('BUY') ? 'BUY' : 'SELL',
+      volume: deal.volume,
+      price: deal.price,
+      profit: deal.profit || 0,
+      commission: deal.commission || 0,
+      swap: deal.swap || 0,
+      time: deal.time,
+      positionId: deal.positionId,
+      comment: deal.comment,
+      entryType: deal.entryType, // DEAL_ENTRY_IN or DEAL_ENTRY_OUT
+    }));
+
+    return res.json({
+      trades,
+      count: trades.length,
+      startTime: start.toISOString(),
+      endTime: end.toISOString(),
+    });
+  } catch (error) {
+    console.error('Trade history error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
