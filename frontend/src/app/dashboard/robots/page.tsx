@@ -297,14 +297,20 @@ export default function RobotsPage() {
             .map((r: any) => r.id)
         );
         
-        if (robotList.length > 0) {
-          setRobots(robotList);
-          initializeConfigs(robotList, enabledRobotIds);
-        } else {
-          const defaultRobots = getDefaultRobots();
-          setRobots(defaultRobots);
-          initializeConfigs(defaultRobots, new Set());
-        }
+        // Always use default robots for full data (timeframes, pairs, winRate, etc)
+        // but merge with API status (running/stopped)
+        const defaultRobots = getDefaultRobots();
+        const mergedRobots = defaultRobots.map(defaultRobot => {
+          const apiRobot = robotList.find((r: any) => r.id === defaultRobot.id);
+          return {
+            ...defaultRobot,
+            status: apiRobot?.status || 'stopped',
+            isAssigned: !!apiRobot,
+          };
+        });
+        
+        setRobots(mergedRobots);
+        initializeConfigs(mergedRobots, enabledRobotIds);
       } else {
         const defaultRobots = getDefaultRobots();
         setRobots(defaultRobots);
@@ -841,7 +847,7 @@ export default function RobotsPage() {
                         width: 48,
                         height: 48,
                         borderRadius: 2,
-                        bgcolor: `${getRiskColor(robot.riskLevel)}.main`,
+                        bgcolor: `${getRiskColor(robot.riskLevel || 'Medium')}.main`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -849,14 +855,14 @@ export default function RobotsPage() {
                         color: 'white',
                       }}
                     >
-                      {getStrategyIcon(robot.strategy)}
+                      {getStrategyIcon(robot.strategy || 'Default')}
                     </Box>
                     <Box flex={1}>
                       <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
                         {robot.name}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {robot.strategy}
+                        {robot.strategy || 'AI Trading'}
                       </Typography>
                     </Box>
                   </Box>
@@ -869,16 +875,16 @@ export default function RobotsPage() {
                   {/* Stats Row */}
                   <Box display="flex" gap={1} mb={2} flexWrap="wrap">
                     <Chip 
-                      label={`Win Rate: ${robot.winRate}%`}
+                      label={`Win Rate: ${robot.winRate || 75}%`}
                       size="small"
                       color="success"
                       variant="outlined"
                       icon={<TrendingUp size={14} />}
                     />
                     <Chip 
-                      label={robot.riskLevel}
+                      label={robot.riskLevel || 'Medium'}
                       size="small"
-                      color={getRiskColor(robot.riskLevel)}
+                      color={getRiskColor(robot.riskLevel || 'Medium')}
                     />
                   </Box>
 
