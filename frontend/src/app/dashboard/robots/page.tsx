@@ -414,34 +414,32 @@ export default function RobotsPage() {
     loadData();
   }, [fetchRobots, fetchTrades]);
 
-  // Poll for real-time trade/P&L updates - smart polling that waits for response
+  // Poll for real-time trade/P&L updates - fast polling for live data
   useEffect(() => {
     let isMounted = true;
-    let isPolling = false;
+    let pollTimeout: NodeJS.Timeout | null = null;
     
     const pollTrades = async () => {
-      if (!isMounted || isPolling) return;
-      isPolling = true;
+      if (!isMounted) return;
       
       try {
         await fetchTrades();
       } catch (err) {
-        // Silent
+        console.error('Poll error:', err);
       }
       
-      isPolling = false;
-      
-      // Schedule next poll after this one completes
+      // Schedule next poll - use 2 seconds to reduce load while still being responsive
       if (isMounted) {
-        setTimeout(pollTrades, 1000);
+        pollTimeout = setTimeout(pollTrades, 2000);
       }
     };
     
-    // Start polling
+    // Start polling immediately
     pollTrades();
     
     return () => {
       isMounted = false;
+      if (pollTimeout) clearTimeout(pollTimeout);
     };
   }, [fetchTrades]);
 
