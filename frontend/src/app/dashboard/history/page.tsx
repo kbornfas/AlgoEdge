@@ -29,11 +29,12 @@ interface Trade {
   symbol: string;
   type: 'BUY' | 'SELL';
   openPrice: number;
-  closePrice: number;
+  closePrice: number | null;
   profit: number;
-  lotSize: number;
+  lotSize?: number;
+  volume?: number;
   openTime: string;
-  closeTime: string;
+  closeTime: string | null;
   status: 'open' | 'closed';
 }
 
@@ -65,7 +66,16 @@ export default function TradeHistoryPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setTrades(data.trades || []);
+        // Map API response to expected format
+        const mappedTrades = (data.trades || []).map((trade: any) => ({
+          ...trade,
+          lotSize: trade.volume || trade.lotSize || 0,
+          openPrice: Number(trade.openPrice) || 0,
+          closePrice: trade.closePrice ? Number(trade.closePrice) : null,
+          profit: Number(trade.profit) || 0,
+          status: (trade.status || 'open').toLowerCase() as 'open' | 'closed',
+        }));
+        setTrades(mappedTrades);
       } else {
         // Use mock data for demo
         setTrades(getMockTrades());
@@ -153,9 +163,9 @@ export default function TradeHistoryPage() {
     page * rowsPerPage
   );
 
-  const totalProfit = trades.reduce((sum, trade) => sum + trade.profit, 0);
+  const totalProfit = trades.reduce((sum, trade) => sum + (Number(trade.profit) || 0), 0);
   const winRate = trades.length > 0
-    ? (trades.filter((t) => t.profit > 0).length / trades.length) * 100
+    ? (trades.filter((t) => (t.profit || 0) > 0).length / trades.length) * 100
     : 0;
 
   return (
@@ -266,21 +276,21 @@ export default function TradeHistoryPage() {
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>{trade.lotSize}</TableCell>
-                  <TableCell>{trade.openPrice.toFixed(5)}</TableCell>
-                  <TableCell>{trade.closePrice.toFixed(5)}</TableCell>
+                  <TableCell>{trade.lotSize ?? trade.volume ?? '-'}</TableCell>
+                  <TableCell>{trade.openPrice?.toFixed(5) ?? '-'}</TableCell>
+                  <TableCell>{trade.closePrice?.toFixed(5) ?? '-'}</TableCell>
                   <TableCell>
                     <Typography
                       sx={{
-                        color: trade.profit >= 0 ? 'success.main' : 'error.main',
+                        color: (trade.profit || 0) >= 0 ? 'success.main' : 'error.main',
                         fontWeight: 500,
                       }}
                     >
-                      {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
+                      {(trade.profit || 0) >= 0 ? '+' : ''}${(trade.profit || 0).toFixed(2)}
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    {new Date(trade.openTime).toLocaleString()}
+                    {trade.openTime ? new Date(trade.openTime).toLocaleString() : '-'}
                   </TableCell>
                   <TableCell>
                     <Chip

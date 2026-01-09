@@ -9,10 +9,6 @@ import {
 
 // Safe MetaAPI SDK import for Node.js (ESM compatible)
 let MetaApi;
-let api = null; // Will be initialized after SDK loads
-
-// Promise that resolves when MetaAPI is ready
-let metaApiReadyPromise;
 
 async function initializeMetaApi() {
   try {
@@ -22,50 +18,44 @@ async function initializeMetaApi() {
     if (!MetaApi || typeof MetaApi !== 'function') {
       throw new Error('MetaApi constructor not found in module');
     }
-    
-    // Now create the api instance with the real SDK
-    const token = process.env.METAAPI_TOKEN;
-    if (!token) {
-      console.error('⚠️  METAAPI_TOKEN not set, using mock implementation');
-      throw new Error('No MetaAPI token');
-    }
-    
-    api = new MetaApi(token);
-    console.log('✅ MetaAPI SDK loaded and initialized successfully');
+    console.log('✅ MetaAPI SDK loaded successfully');
     return true;
   } catch (error) {
     console.error('❌ Failed to load MetaAPI SDK:', error.message);
     console.log('⚠️  Using mock MetaAPI implementation');
-    
-    // Create mock implementation
-    api = {
-      metatraderAccountApi: {
-        getAccounts: async () => {
-          console.log('Mock: getAccounts called');
-          return [];
-        },
+    return false;
+  }
+}
+
+// Initialize on module load
+let metaApiReady = false;
+initializeMetaApi().then(success => { metaApiReady = success; });
+
+if (!metaApiReady) {
+  // Fallback mock implementation if SDK fails to load
+  MetaApi = class {
+    constructor(token) {
+      this.token = token;
+      this.metatraderAccountApi = {
+        getAccounts: async () => [],
         getAccount: async (accountId) => ({
-          id: accountId,
           deploy: async () => console.log(`Mock: Deploying MT5 account ${accountId}`),
           waitDeployed: async () => console.log('Mock: Account deployed'),
-          getRPCConnection: () => ({
-            connect: async () => console.log('Mock: Connected'),
-            waitSynchronized: async () => console.log('Mock: Synchronized'),
-            getAccountInformation: async () => ({
-              balance: 10000,
-              equity: 10000,
-              margin: 0,
-              freeMargin: 10000,
-              leverage: 100,
-              profit: 0
-            }),
-            createMarketOrder: async (symbol, volume, orderType, sl, tp) => ({
-              price: 1.2345,
-              orderId: `MOCK_${Date.now()}`
-            }),
-            getPositions: async () => [],
-            closePosition: async (ticket) => ({ price: 1.2345 }),
-          })
+          connect: async () => console.log('Mock: Connected to MT5'),
+          getAccountInformation: async () => ({
+            balance: 10000,
+            equity: 10000,
+            margin: 0,
+            freeMargin: 10000,
+            leverage: 100,
+            profit: 0
+          }),
+          createMarketOrder: async (symbol, volume, orderType, sl, tp) => ({
+            price: 1.2345,
+            orderId: `MOCK_${Date.now()}`
+          }),
+          getPositions: async () => [],
+          closePosition: async (ticket) => ({ price: 1.2345 }),
         }),
         createAccount: async (params) => ({
           id: `MOCK_ACC_${Date.now()}`,
@@ -91,19 +81,9 @@ async function initializeMetaApi() {
             closePosition: async (ticket) => ({ price: 1.2345 }),
           })
         })
-      }
-    };
-    return false;
-  }
-}
-
-// Initialize on module load and store the promise
-metaApiReadyPromise = initializeMetaApi();
-
-// Helper function to ensure API is ready before use
-async function getApi() {
-  await metaApiReadyPromise;
-  return api;
+      };
+    }
+  };
 }
 
 /**
@@ -117,6 +97,10 @@ async function getApi() {
  * - Position management
  * - Historical data access
  */
+
+// Initialize MetaAPI
+const token = process.env.METAAPI_TOKEN;
+const api = new MetaApi(token);
 
 // Store active MT5 connections - exported for trading scheduler
 export const mt5Connections = new Map();
@@ -196,14 +180,9 @@ export const connectMT5Account = async (accountId, login, password, server) => {
   try {
     console.log(`Connecting to MT5 account ${login} on ${server}...`);
     
-    // Ensure MetaAPI is initialized
-    const api = await getApi();
-    
     // Check if account already exists in MetaAPI
     let metaApiAccount;
-    console.log('Getting existing MetaAPI accounts...');
     const accounts = await api.metatraderAccountApi.getAccounts();
-    console.log(`Found ${accounts.length} existing accounts`);
     const existingAccount = accounts.find(acc => acc.login === login && acc.server === server);
     
     if (existingAccount) {
