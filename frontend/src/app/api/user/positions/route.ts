@@ -61,18 +61,23 @@ export async function GET(req: NextRequest) {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
           },
           signal: controller.signal,
+          cache: 'no-store',
         });
         
         clearTimeout(timeoutId);
 
         if (backendResponse.ok) {
           const data = await backendResponse.json();
-          return NextResponse.json({
+          const response = NextResponse.json({
             positions: data.positions || [],
             account: data.account,
           });
+          response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+          response.headers.set('Pragma', 'no-cache');
+          return response;
         }
       } catch (err: any) {
         if (err.name === 'AbortError') {

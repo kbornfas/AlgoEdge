@@ -211,10 +211,17 @@ router.get('/account-info/:accountId', authenticate, async (req, res) => {
 /**
  * GET /api/mt5/positions/:accountId
  * Get live open positions with current prices from MetaAPI
- * OPTIMIZED: Uses cached connection for faster response
+ * ALWAYS fetches fresh data from MetaAPI connection
  * @param accountId - Can be either MetaAPI account ID or database account ID
  */
 router.get('/positions/:accountId', authenticate, async (req, res) => {
+  // Set no-cache headers
+  res.set({
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  });
+
   if (!api) {
     await initMetaApi();
     if (!api) {
@@ -249,10 +256,11 @@ router.get('/positions/:accountId', authenticate, async (req, res) => {
     // Use cached connection if available
     if (connection) {
       try {
+        // Always get fresh positions and account info
         const positions = await connection.getPositions();
         const info = await connection.getAccountInformation();
         
-        console.log(`Positions for ${accountId}: ${positions.length} positions, Balance: $${info.balance}`);
+        console.log(`[${new Date().toISOString()}] Positions for ${accountId}: ${positions.length} positions, Balance: $${info.balance}, Equity: $${info.equity}`);
         
         return res.json({
           positions: positions.map(p => ({
@@ -277,6 +285,7 @@ router.get('/positions/:accountId', authenticate, async (req, res) => {
             freeMargin: info.freeMargin || 0,
             profit: info.profit || (info.equity - info.balance) || 0,
           },
+          timestamp: Date.now(),
         });
       } catch (cacheErr) {
         console.log('Cached connection failed:', cacheErr.message);
