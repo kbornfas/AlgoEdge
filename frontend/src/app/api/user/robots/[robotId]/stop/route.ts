@@ -106,22 +106,19 @@ export async function POST(
     } else {
       console.warn('Cannot close trades - missing mt5Account.apiKey or BACKEND_URL');
     }
-    
-    if (mt5Account?.apiKey) {
 
-      // Also mark trades as closed in database
-      await prisma.trade.updateMany({
-        where: {
-          robotId: robotId,
-          userId: decoded.userId,
-          status: 'open',
-        },
-        data: {
-          status: 'closed',
-          closeTime: new Date(),
-        },
-      });
-    }
+    // Also mark trades as closed in database
+    await prisma.trade.updateMany({
+      where: {
+        robotId: robotId,
+        userId: decoded.userId,
+        status: 'open',
+      },
+      data: {
+        status: 'closed',
+        closeTime: new Date(),
+      },
+    });
 
     // Log the action
     await prisma.auditLog.create({

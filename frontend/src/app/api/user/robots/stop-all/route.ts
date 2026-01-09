@@ -89,18 +89,17 @@ export async function POST(req: NextRequest) {
       if (!BACKEND_URL) closeErrors.push('Backend URL not configured');
     }
 
-      // Also mark all trades as closed in database
-      await prisma.trade.updateMany({
-        where: {
-          userId: decoded.userId,
-          status: 'open',
-        },
-        data: {
-          status: 'closed',
-          closeTime: new Date(),
-        },
-      });
-    }
+    // Also mark all trades as closed in database
+    await prisma.trade.updateMany({
+      where: {
+        userId: decoded.userId,
+        status: 'open',
+      },
+      data: {
+        status: 'closed',
+        closeTime: new Date(),
+      },
+    });
 
     // Log the action
     await prisma.auditLog.create({
