@@ -70,15 +70,15 @@ function httpsRequest(url, options = {}) {
 // =========================================================================
 const RISK_CONFIG = {
   MAX_RISK_PER_TRADE: 0.02,      // 2% max risk per trade
-  MAX_TOTAL_EXPOSURE: 0.15,      // 15% max total exposure (increased for 10 positions)
+  MAX_TOTAL_EXPOSURE: 0.15,      // 15% max total exposure
   MIN_SIGNAL_CONFIDENCE: 50,     // Trade on 50%+ confidence signals
-  HIGH_CONFIDENCE_THRESHOLD: 70, // 70%+ = high confidence (priority positions)
+  HIGH_CONFIDENCE_THRESHOLD: 70, // 70%+ = high confidence (no restrictions)
   STRUCTURE_SHIFT_CANDLES: 5,    // Need 5 candles to confirm structure shift
   MIN_ACCOUNT_BALANCE: 100,      // Don't trade if balance below $100
-  MAX_POSITIONS_PER_PAIR: 3,     // Max 3 positions per pair
   TARGET_POSITIONS: 10,          // Target to always maintain 10 positions
   MAX_TOTAL_POSITIONS: 15,       // Hard limit of 15 total positions
-  TRADE_COOLDOWN_MS: 30000,      // 30 seconds cooldown (reduced from 60s)
+  TRADE_COOLDOWN_MS: 30000,      // 30 seconds cooldown
+  PREVENT_HEDGING: true,         // Never open opposite positions on same pair
 };
 
 // Track structure direction per symbol (for detecting real structure shifts)
@@ -86,7 +86,7 @@ const marketStructure = new Map();
 
 /**
  * Calculate position size based on account balance and risk
- * For HIGH CONFIDENCE trades (70%+): Use tighter SL with better risk/reward
+ * Proper lot sizing for account size
  * @param {number} balance - Account balance
  * @param {number} stopLossPips - Stop loss in pips
  * @param {string} symbol - Trading symbol
@@ -98,27 +98,54 @@ function calculatePositionSize(balance, stopLossPips, symbol, confidence = 50) {
     return 0.01; // Minimum lot if no balance info
   }
   
-  // For high confidence trades, use smaller risk per trade but allow more trades
+  // Risk percentage based on confidence
+  // High confidence (70%+): 1.5% risk per trade
+  // Normal (50-69%): 1% risk per trade
   const riskPercent = confidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD 
-    ? 0.01  // 1% risk for high confidence (allows more positions)
-    : RISK_CONFIG.MAX_RISK_PER_TRADE;
+    ? 0.015  // 1.5% risk for high confidence
+    : 0.01;  // 1% risk for normal
   
   const riskAmount = balance * riskPercent;
   
-  // Pip value varies by pair - approximate values
-  let pipValue = 10; // Default for standard pairs
-  if (symbol.includes('JPY')) {
-    pipValue = 7;
-  } else if (symbol.includes('XAU') || symbol.includes('GOLD')) {
-    pipValue = 1; // Gold has different pip structure
+  // Calculate proper pip value based on pair
+  // For 1 standard lot (100,000 units):
+  // - EURUSD, GBPUSD, etc: $10 per pip
+  // - USDJPY: ~$9 per pip (depends on rate)
+  // - XAUUSD: $1 per 0.1 move (10 pips = $10)
+  let pipValue;
+  if (symbol.includes('XAU') || symbol.includes('GOLD')) {
+    // Gold: 1 pip = $0.10 per 0.01 lot, so $10 per 1 lot
+    pipValue = 10;
+  } else if (symbol.includes('JPY')) {
+    pipValue = 9; // Approximate for JPY pairs
+  } else {
+    pipValue = 10; // Standard pairs
   }
   
-  // Calculate lot size: Risk Amount / (Stop Loss Pips * Pip Value)
-  let lotSize = riskAmount / (stopLossPips * pipValue);
+  // Calculate lot size: Risk Amount / (Stop Loss Pips * Pip Value per lot)
+  // If SL is 0 or very small, use a default of 30 pips
+  const effectiveSL = Math.max(stopLossPips, 20);
+  let lotSize = riskAmount / (effectiveSL * pipValue);
   
-  // Round to 2 decimal places and enforce limits
+  // Round to 2 decimal places
   lotSize = Math.round(lotSize * 100) / 100;
-  lotSize = Math.max(0.01, Math.min(0.5, lotSize)); // Min 0.01, Max 0.5 (conservative)
+  
+  // Enforce limits based on account size
+  // Small accounts ($100-$1000): 0.01-0.1 lots
+  // Medium accounts ($1000-$10000): 0.01-0.5 lots  
+  // Large accounts ($10000+): 0.01-1.0 lots
+  let maxLot;
+  if (balance < 1000) {
+    maxLot = 0.1;
+  } else if (balance < 10000) {
+    maxLot = 0.5;
+  } else {
+    maxLot = 1.0;
+  }
+  
+  lotSize = Math.max(0.01, Math.min(maxLot, lotSize));
+  
+  console.log(`    💰 Lot calc: Balance=$${balance.toFixed(0)}, Risk=${(riskPercent*100).toFixed(1)}%=$${riskAmount.toFixed(2)}, SL=${effectiveSL.toFixed(0)}pips → ${lotSize} lots`);
   
   return lotSize;
 }
@@ -1167,40 +1194,38 @@ async function executeRobotTrade(robot) {
         const underTarget = livePositions.length < RISK_CONFIG.TARGET_POSITIONS;
         const isHighConfidence = signal.confidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD;
         
-        // When under target: Skip cooldown and per-pair limits for 50%+ signals
-        // We want to fill up to 10 positions ASAP
-        if (!underTarget && !isHighConfidence) {
-          // Only apply restrictions when AT or ABOVE target
-          if (onCooldown) {
-            continue; // Skip - recently traded
-          }
-          
-          const positionsOnPair = livePositions.filter(p => p.symbol === symbol).length;
-          if (positionsOnPair >= RISK_CONFIG.MAX_POSITIONS_PER_PAIR) {
-            continue; // Already have max positions on this pair
-          }
-        }
-        
-        // Check for opposing positions - allow hedging but prefer same direction
-        const oppositeDirection = signal.type.toLowerCase() === 'buy' ? 'sell' : 'buy';
-        const hasOpposing = livePositions.some(p => 
-          p.symbol === symbol && p.type?.toLowerCase() === oppositeDirection
+        // ================================================================
+        // HEDGING PREVENTION - NEVER open opposite positions on same pair
+        // This is critical to prevent BUY+SELL on same symbol
+        // ================================================================
+        const signalDirection = signal.type.toLowerCase();
+        const oppositeDirection = signalDirection === 'buy' ? 'sell' : 'buy';
+        const existingPositionsOnPair = livePositions.filter(p => p.symbol === symbol);
+        const hasOpposingPosition = existingPositionsOnPair.some(p => 
+          p.type?.toLowerCase() === oppositeDirection
+        );
+        const hasSameDirectionPosition = existingPositionsOnPair.some(p => 
+          p.type?.toLowerCase() === signalDirection
         );
         
-        if (hasOpposing) {
-          // If we're under target and have strong signal, just skip this pair (don't close)
-          if (underTarget && signal.confidence < 70) {
-            continue; // Find another pair instead
-          }
-          // Only close opposing on STRONG structure shift (70%+)
-          if (signal.confidence >= 70) {
-            const prevStructure = marketStructure.get(symbol);
-            const newStructure = signal.type === 'buy' ? 'bullish' : 'bearish';
-            console.log(`  🔄 STRUCTURE SHIFT on ${symbol}: ${prevStructure || 'unknown'} → ${newStructure} (${signal.confidence}%)`);
-            await closeOpposingPositions(connection, accountId, userId, symbol, signal.type);
-            livePositions = await connection.getPositions();
-          } else {
-            continue; // Skip this pair, find another
+        if (RISK_CONFIG.PREVENT_HEDGING && hasOpposingPosition) {
+          // NEVER open opposite position - skip this pair entirely
+          console.log(`  🚫 ${symbol}: Skipping ${signal.type.toUpperCase()} - already have ${oppositeDirection.toUpperCase()} position (no hedging)`);
+          continue;
+        }
+        
+        // If we already have same-direction position, only add for high confidence
+        if (hasSameDirectionPosition && !isHighConfidence) {
+          console.log(`  ⏸️ ${symbol}: Already have ${signalDirection.toUpperCase()} position, need 70%+ to add more`);
+          continue;
+        }
+        
+        // When under target: Skip cooldown for all 50%+ signals
+        // We want to fill up to 10 positions ASAP
+        if (!underTarget && !isHighConfidence) {
+          // Only apply cooldown restriction when AT or ABOVE target
+          if (onCooldown) {
+            continue; // Skip - recently traded
           }
         }
         
