@@ -349,16 +349,19 @@ export default function TradesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                openPositions.map((position) => (
+                openPositions.map((position) => {
+                  // Normalize type: POSITION_TYPE_BUY -> BUY, POSITION_TYPE_SELL -> SELL
+                  const displayType = position.type?.includes('BUY') ? 'BUY' : 'SELL';
+                  return (
                   <TableRow key={position.id} hover>
                     <TableCell>
                       <Typography sx={{ fontWeight: 600 }}>{position.symbol}</Typography>
                     </TableCell>
                     <TableCell>
                       <Chip
-                        icon={position.type === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                        label={position.type}
-                        color={position.type === 'BUY' ? 'success' : 'error'}
+                        icon={displayType === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                        label={displayType}
+                        color={displayType === 'BUY' ? 'success' : 'error'}
                         size="small"
                       />
                     </TableCell>
@@ -391,7 +394,8 @@ export default function TradesPage() {
                       </Typography>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
