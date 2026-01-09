@@ -52,13 +52,20 @@ export async function GET(req: NextRequest) {
     // Fetch positions from backend (which connects to MetaAPI)
     if (BACKEND_URL) {
       try {
+        // Use AbortController for 5 second timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
         const backendResponse = await fetch(`${BACKEND_URL}/api/mt5/positions/${metaApiAccountId}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
+          signal: controller.signal,
         });
+        
+        clearTimeout(timeoutId);
 
         if (backendResponse.ok) {
           const data = await backendResponse.json();
@@ -67,8 +74,12 @@ export async function GET(req: NextRequest) {
             account: data.account,
           });
         }
-      } catch (err) {
-        console.error('Backend positions fetch error:', err);
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          console.log('Positions fetch timed out');
+        } else {
+          console.error('Backend positions fetch error:', err);
+        }
       }
     }
 
