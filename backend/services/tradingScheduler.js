@@ -757,7 +757,7 @@ async function getOpenTradesCount(accountId) {
 async function getOpenPositions(accountId) {
   try {
     const result = await pool.query(
-      `SELECT pair, type FROM trades 
+      `SELECT pair, type, order_id, id FROM trades 
        WHERE mt5_account_id = $1 AND status = 'open'`,
       [accountId]
     );
@@ -768,24 +768,59 @@ async function getOpenPositions(accountId) {
 }
 
 /**
- * Check if we can open a trade (prevents opposing positions only)
- * Multiple positions in SAME direction are allowed
+ * Close opposing positions when market structure shifts
+ * Returns true if positions were closed (allowing new trade to open)
  */
-function canOpenTrade(existingPositions, symbol, newDirection) {
+async function closeOpposingPositions(connection, accountId, userId, symbol, newDirection) {
   const oppositeDirection = newDirection.toLowerCase() === 'buy' ? 'sell' : 'buy';
   
-  // Check if there's an existing position on this symbol in the opposite direction
-  const hasOpposite = existingPositions.some(pos => 
-    pos.pair === symbol && pos.type.toLowerCase() === oppositeDirection
-  );
-  
-  if (hasOpposite) {
-    console.log(`    ⛔ Cannot open ${newDirection} on ${symbol} - already have ${oppositeDirection} position`);
+  try {
+    // Get opposing positions from database
+    const result = await pool.query(
+      `SELECT order_id, id, pair, type FROM trades 
+       WHERE mt5_account_id = $1 AND status = 'open' AND pair = $2 AND LOWER(type) = $3`,
+      [accountId, symbol, oppositeDirection]
+    );
+    
+    if (result.rows.length === 0) {
+      return true; // No opposing positions, can proceed
+    }
+    
+    console.log(`    🔄 STRUCTURE SHIFT: Closing ${result.rows.length} ${oppositeDirection.toUpperCase()} position(s) on ${symbol}`);
+    
+    // Close each opposing position
+    for (const trade of result.rows) {
+      try {
+        const positionId = trade.order_id;
+        if (positionId && !positionId.startsWith('MOCK_')) {
+          await connection.closePosition(positionId);
+          console.log(`    ✅ Closed ${oppositeDirection.toUpperCase()} position ${positionId}`);
+        }
+        
+        // Update database
+        await pool.query(
+          `UPDATE trades SET status = 'closed', close_time = NOW() WHERE id = $1`,
+          [trade.id]
+        );
+        
+        // Emit event
+        emitTradeClosed(userId, { 
+          symbol, 
+          positionId,
+          reason: `STRUCTURE SHIFT: Market changed to ${newDirection.toUpperCase()}`
+        });
+        
+      } catch (closeError) {
+        console.error(`    ⚠️ Failed to close position ${trade.order_id}:`, closeError.message);
+      }
+    }
+    
+    return true; // Positions closed, can open new trade
+    
+  } catch (error) {
+    console.error(`Error closing opposing positions:`, error.message);
     return false;
   }
-  
-  // Multiple positions in same direction are OK - good signals should stack
-  return true;
 }
 
 // Track last trade time per symbol to add cooldown
@@ -863,9 +898,23 @@ async function executeRobotTrade(robot) {
           continue;
         }
         
-        // Check if we can open this trade (no opposing positions)
-        if (!canOpenTrade(existingPositions, symbol, signal.type)) {
-          continue;
+        // Check for opposing positions - close them if structure has shifted
+        const oppositeDirection = signal.type.toLowerCase() === 'buy' ? 'sell' : 'buy';
+        const hasOpposing = existingPositions.some(pos => 
+          pos.pair === symbol && pos.type.toLowerCase() === oppositeDirection
+        );
+        
+        if (hasOpposing) {
+          console.log(`    🔄 Market structure shift detected on ${symbol}!`);
+          const closed = await closeOpposingPositions(connection, accountId, userId, symbol, signal.type);
+          if (!closed) {
+            console.log(`    ⚠️ Could not close opposing positions - skipping new trade`);
+            continue;
+          }
+          // Refresh existing positions after closing
+          const updatedPositions = await getOpenPositions(accountId);
+          existingPositions.length = 0;
+          existingPositions.push(...updatedPositions);
         }
         
         // Execute trade
