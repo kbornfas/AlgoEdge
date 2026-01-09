@@ -73,10 +73,17 @@ export async function GET(req: NextRequest) {
     }
 
     // Fallback: Get positions from database with last known state
+    // Filter out mock trades with price 1.2345
     const trades = await prisma.trade.findMany({
       where: {
         mt5AccountId: mt5Account.id,
         status: 'open',
+        NOT: {
+          OR: [
+            { openPrice: 1.2345 },
+            { openPrice: 1.23450 },
+          ],
+        },
       },
       include: {
         robot: {

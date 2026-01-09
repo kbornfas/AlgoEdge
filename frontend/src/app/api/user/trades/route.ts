@@ -126,8 +126,17 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Fallback: Get trades from database
-    const whereClause: any = { mt5AccountId: mt5Account.id };
+    // Fallback: Get trades from database (filter out mock data)
+    const whereClause: any = { 
+      mt5AccountId: mt5Account.id,
+      // Filter out mock trades with price 1.2345 or 1.23450
+      NOT: {
+        OR: [
+          { openPrice: 1.2345 },
+          { openPrice: 1.23450 },
+        ],
+      },
+    };
     if (status) {
       whereClause.status = status.toLowerCase();
     }
