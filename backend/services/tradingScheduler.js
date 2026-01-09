@@ -582,8 +582,9 @@ function analyzeMarket(candles, symbol, riskLevel = 'medium') {
     if (currentRsi < 30) { confidence += 20; reason += 'RSI-Oversold '; }
     if (nearSupport) { confidence += 15; reason += 'Near-Support '; }
     if (bullishCount >= 4) { confidence += 10; reason += `Momentum(${bullishCount}B) `; }
+    if (bullishCount >= 3) { confidence += 5; reason += 'Bullish-Momentum '; }
     
-    if (confidence >= 50) {
+    if (confidence >= 40) {
       signal = { type: 'buy', confidence, reason: `BUY: ${reason.trim()}` };
     }
   }
@@ -604,8 +605,9 @@ function analyzeMarket(candles, symbol, riskLevel = 'medium') {
     if (currentRsi > 70) { confidence += 20; reason += 'RSI-Overbought '; }
     if (nearResistance) { confidence += 15; reason += 'Near-Resistance '; }
     if (bearishCount >= 4) { confidence += 10; reason += `Momentum(${bearishCount}S) `; }
+    if (bearishCount >= 3) { confidence += 5; reason += 'Bearish-Momentum '; }
     
-    if (confidence >= 50) {
+    if (confidence >= 40) {
       signal = { type: 'sell', confidence, reason: `SELL: ${reason.trim()}` };
     }
   }
@@ -859,12 +861,15 @@ async function executeRobotTrade(robot) {
       return;
     }
     
-    // Check open trades limit (max 5 per account)
+    // Check open trades limit (max 10 per account)
     const openTrades = await getOpenTradesCount(accountId);
-    if (openTrades >= 5) {
-      console.log(`  ⚠️ Max trades reached (${openTrades}/5) - skipping`);
+    if (openTrades >= 10) {
+      console.log(`  ⚠️ Max trades reached (${openTrades}/10) - skipping`);
       return;
     }
+    
+    let tradesOpenedThisCycle = 0;
+    const maxTradesPerCycle = 3; // Open up to 3 trades per cycle
     
     // Get existing open positions to prevent opposing trades
     const existingPositions = await getOpenPositions(accountId);
@@ -873,12 +878,11 @@ async function executeRobotTrade(robot) {
     // Try each trading pair
     for (const symbol of TRADING_PAIRS) {
       try {
-        // Check cooldown (5 minutes between trades on same symbol)
+        // Check cooldown (2 minutes between trades on same symbol)
         const lastTrade = lastTradeTime.get(`${accountId}-${symbol}`);
-        const cooldownMs = 5 * 60 * 1000; // 5 minutes
+        const cooldownMs = 2 * 60 * 1000; // 2 minutes
         if (lastTrade && Date.now() - lastTrade < cooldownMs) {
-          console.log(`  ⏳ ${symbol} on cooldown - ${Math.round((cooldownMs - (Date.now() - lastTrade)) / 1000)}s remaining`);
-          continue;
+          continue; // Silent skip for cooldown
         }
         
         // Fetch candles
@@ -923,7 +927,14 @@ async function executeRobotTrade(robot) {
         if (trade) {
           // Record trade time for cooldown
           lastTradeTime.set(`${accountId}-${symbol}`, Date.now());
-          break; // One trade per robot per cycle
+          tradesOpenedThisCycle++;
+          console.log(`    ✅ Trade opened! (${tradesOpenedThisCycle}/${maxTradesPerCycle} this cycle)`);
+          
+          // Continue looking for more opportunities, but limit per cycle
+          if (tradesOpenedThisCycle >= maxTradesPerCycle) {
+            console.log(`  📊 Max trades per cycle reached (${maxTradesPerCycle})`);
+            break;
+          }
         }
         
       } catch (symbolError) {
@@ -958,13 +969,25 @@ async function streamPositions() {
     `);
     
     for (const account of result.rows) {
-      const connectionData = mt5Connections.get(account.metaapi_account_id);
-      if (!connectionData?.connection) continue;
+      // Try scheduler's cached connection first
+      let connection = null;
+      const schedulerCache = schedulerConnections.get(account.account_id);
+      if (schedulerCache?.rpcConnection) {
+        connection = schedulerCache.rpcConnection;
+      } else {
+        // Fallback to mt5Connections
+        const connectionData = mt5Connections.get(account.metaapi_account_id);
+        if (connectionData?.connection) {
+          connection = connectionData.connection;
+        }
+      }
+      
+      if (!connection) continue;
       
       try {
         // Get live positions
-        const positions = await connectionData.connection.getPositions();
-        const info = await connectionData.connection.getAccountInformation();
+        const positions = await connection.getPositions();
+        const info = await connection.getAccountInformation();
         
         // Format positions for frontend
         const formattedPositions = positions.map(p => ({
