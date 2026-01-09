@@ -11,16 +11,20 @@ dotenv.config();
 
 const { Pool } = pg;
 
-// Create PostgreSQL connection pool
+// Create PostgreSQL connection pool with better settings for Railway
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  max: 10, // Reduced from 20 to prevent connection exhaustion
+  idleTimeoutMillis: 10000, // Close idle connections faster (10s instead of 30s)
+  connectionTimeoutMillis: 5000, // Increased timeout for connection
+  allowExitOnIdle: false, // Keep pool alive
 });
-console.log('process.env.DATABASE_URL:', process.env.DATABASE_URL);
 
+// Don't log DATABASE_URL in production (security)
+if (process.env.NODE_ENV !== 'production') {
+  console.log('Database URL configured:', process.env.DATABASE_URL ? 'Yes' : 'No');
+}
 
 // Test database connection
 pool.on('connect', () => {
@@ -28,8 +32,9 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err) => {
-  console.error('❌ Unexpected database error:', err);
-  process.exit(-1);
+  console.error('❌ Database pool error:', err.message);
+  // Don't exit on error - let the pool recover
+  // process.exit(-1);
 });
 
 // Database initialization function
