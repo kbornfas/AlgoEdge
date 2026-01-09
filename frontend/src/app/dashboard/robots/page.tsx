@@ -20,7 +20,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   IconButton,
@@ -726,8 +725,8 @@ export default function RobotsPage() {
 
       {/* Open Trades Section */}
       {trades.length > 0 && (
-        <Card sx={{ mb: 4, overflow: 'hidden' }}>
-          <CardContent sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
+        <Card sx={{ mb: 4 }}>
+          <CardContent sx={{ px: { xs: 1, sm: 2, md: 3 }, overflow: 'visible' }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
               <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 <TrendingUp size={20} />
@@ -758,8 +757,8 @@ export default function RobotsPage() {
                 </IconButton>
               </Box>
             </Box>
-            <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small" sx={{ minWidth: 600 }}>
+            <Box sx={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', mx: { xs: -1, sm: 0 } }}>
+              <Table size="small" sx={{ minWidth: 650 }}>
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>Robot</TableCell>
@@ -807,7 +806,7 @@ export default function RobotsPage() {
                   ))}
                 </TableBody>
               </Table>
-            </TableContainer>
+            </Box>
           </CardContent>
         </Card>
       )}
