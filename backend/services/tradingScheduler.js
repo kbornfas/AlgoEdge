@@ -562,59 +562,72 @@ function analyzeMarket(candles, symbol, riskLevel = 'medium') {
   const nearResistance = currentPrice > resistance - (atr * 0.5);
   
   // =========================================================================
-  // QUALITY SIGNAL DETECTION - Only trade on high probability setups
+  // AGGRESSIVE SIGNAL DETECTION - Trade when conditions are favorable
   // =========================================================================
   let signal = null;
   let confidence = 0;
   let reason = '';
   
-  // BUY CONDITIONS: Strong bullish setup
+  // BUY CONDITIONS: Bullish setup
   if (
-    (isUptrend && currentRsi < 40 && nearSupport) ||  // Pullback in uptrend
-    (emaCrossUp && bullishCount >= 3) ||              // Fresh crossover with momentum
-    (currentRsi < 25 && bullishCount >= 3)            // Oversold reversal
+    (isUptrend) ||                                    // Any uptrend
+    (emaCrossUp) ||                                   // Fresh crossover
+    (currentRsi < 35 && bullishCount >= 2) ||        // Oversold with momentum
+    (bullishCount >= 4) ||                           // Strong momentum
+    (nearSupport && bullishCount >= 2)               // Bounce from support
   ) {
     confidence = 0;
     reason = '';
     
-    if (isUptrend) { confidence += 25; reason += 'Uptrend '; }
-    if (emaCrossUp) { confidence += 30; reason += 'EMA-Cross-Up '; }
-    if (currentRsi < 30) { confidence += 20; reason += 'RSI-Oversold '; }
+    if (isUptrend) { confidence += 30; reason += 'Uptrend '; }
+    if (emaCrossUp) { confidence += 35; reason += 'EMA-Cross-Up '; }
+    if (currentRsi < 35) { confidence += 20; reason += 'RSI-Low '; }
     if (nearSupport) { confidence += 15; reason += 'Near-Support '; }
-    if (bullishCount >= 4) { confidence += 10; reason += `Momentum(${bullishCount}B) `; }
-    if (bullishCount >= 3) { confidence += 5; reason += 'Bullish-Momentum '; }
+    if (bullishCount >= 4) { confidence += 15; reason += `Strong-Mom(${bullishCount}B) `; }
+    if (bullishCount >= 3) { confidence += 10; reason += 'Bullish '; }
+    if (ema8Val > ema20Val) { confidence += 10; reason += 'EMA-Bullish '; }
     
-    if (confidence >= 40) {
+    if (confidence >= 30) {
       signal = { type: 'buy', confidence, reason: `BUY: ${reason.trim()}` };
     }
   }
   
-  // SELL CONDITIONS: Strong bearish setup
+  // SELL CONDITIONS: Bearish setup
   if (
     !signal && (
-      (isDowntrend && currentRsi > 60 && nearResistance) ||  // Pullback in downtrend
-      (emaCrossDown && bearishCount >= 3) ||                  // Fresh crossover with momentum
-      (currentRsi > 75 && bearishCount >= 3)                  // Overbought reversal
+      (isDowntrend) ||                               // Any downtrend
+      (emaCrossDown) ||                              // Fresh crossover
+      (currentRsi > 65 && bearishCount >= 2) ||     // Overbought with momentum
+      (bearishCount >= 4) ||                         // Strong momentum
+      (nearResistance && bearishCount >= 2)          // Rejection from resistance
     )
   ) {
     confidence = 0;
     reason = '';
     
-    if (isDowntrend) { confidence += 25; reason += 'Downtrend '; }
-    if (emaCrossDown) { confidence += 30; reason += 'EMA-Cross-Down '; }
-    if (currentRsi > 70) { confidence += 20; reason += 'RSI-Overbought '; }
+    if (isDowntrend) { confidence += 30; reason += 'Downtrend '; }
+    if (emaCrossDown) { confidence += 35; reason += 'EMA-Cross-Down '; }
+    if (currentRsi > 65) { confidence += 20; reason += 'RSI-High '; }
     if (nearResistance) { confidence += 15; reason += 'Near-Resistance '; }
-    if (bearishCount >= 4) { confidence += 10; reason += `Momentum(${bearishCount}S) `; }
-    if (bearishCount >= 3) { confidence += 5; reason += 'Bearish-Momentum '; }
+    if (bearishCount >= 4) { confidence += 15; reason += `Strong-Mom(${bearishCount}S) `; }
+    if (bearishCount >= 3) { confidence += 10; reason += 'Bearish '; }
+    if (ema8Val < ema20Val) { confidence += 10; reason += 'EMA-Bearish '; }
     
-    if (confidence >= 40) {
+    if (confidence >= 30) {
       signal = { type: 'sell', confidence, reason: `SELL: ${reason.trim()}` };
     }
   }
   
-  // No quality signal found
+  // FALLBACK: If no clear signal but market is moving, trade with momentum
+  if (!signal && (bullishCount >= 3 || bearishCount >= 3)) {
+    const isBullish = bullishCount > bearishCount;
+    confidence = 25 + (Math.abs(bullishCount - bearishCount) * 5);
+    reason = isBullish ? `MOMENTUM: ${bullishCount}B candles` : `MOMENTUM: ${bearishCount}S candles`;
+    signal = { type: isBullish ? 'buy' : 'sell', confidence, reason };
+  }
+  
+  // No signal at all
   if (!signal) {
-    console.log(`    📊 No quality signal: Trend=${isUptrend ? 'UP' : isDowntrend ? 'DOWN' : 'RANGE'}, RSI=${currentRsi.toFixed(0)}, Mom=${bullishCount}B/${bearishCount}S`);
     return null;
   }
   
@@ -861,93 +874,105 @@ async function executeRobotTrade(robot) {
       return;
     }
     
-    // Check open trades limit (max 10 per account)
-    const openTrades = await getOpenTradesCount(accountId);
-    if (openTrades >= 10) {
-      console.log(`  ⚠️ Max trades reached (${openTrades}/10) - skipping`);
-      return;
-    }
+    const MAX_TRADES = 5; // Always aim for 5 trades
     
-    let tradesOpenedThisCycle = 0;
-    const maxTradesPerCycle = 3; // Open up to 3 trades per cycle
+    // Get existing open positions
+    let existingPositions = await getOpenPositions(accountId);
+    console.log(`  📋 Current open positions: ${existingPositions.length}/${MAX_TRADES}`);
     
-    // Get existing open positions to prevent opposing trades
-    const existingPositions = await getOpenPositions(accountId);
-    console.log(`  📋 Existing positions: ${existingPositions.length}`);
+    // Collect all signals from all pairs first
+    const signals = [];
     
-    // Try each trading pair
     for (const symbol of TRADING_PAIRS) {
       try {
-        // Check cooldown (2 minutes between trades on same symbol)
-        const lastTrade = lastTradeTime.get(`${accountId}-${symbol}`);
-        const cooldownMs = 2 * 60 * 1000; // 2 minutes
-        if (lastTrade && Date.now() - lastTrade < cooldownMs) {
-          continue; // Silent skip for cooldown
-        }
-        
-        // Fetch candles
-        console.log(`  📊 Analyzing ${symbol}...`);
         const candles = await fetchCandles(account, symbol, timeframe?.toLowerCase() || 'm5', 100);
         
         if (!candles || candles.length < 30) {
-          console.log(`  ⚠️ Insufficient data for ${symbol} (got ${candles?.length || 0} candles)`);
           continue;
         }
         
-        // Analyze market - only returns signal if quality conditions met
-        let signal = analyzeMarket(candles, symbol, riskLevel);
-        
-        if (!signal) {
-          // No quality signal - skip this symbol entirely (don't force trades)
-          console.log(`    ⏸️ No quality signal for ${symbol} - skipping`);
-          continue;
+        const signal = analyzeMarket(candles, symbol, riskLevel);
+        if (signal) {
+          signals.push({ symbol, signal, candles });
+          console.log(`  📊 ${symbol}: ${signal.type.toUpperCase()} signal (${signal.confidence}%)`);
         }
-        
-        // Check for opposing positions - close them if structure has shifted
-        const oppositeDirection = signal.type.toLowerCase() === 'buy' ? 'sell' : 'buy';
-        const hasOpposing = existingPositions.some(pos => 
-          pos.pair === symbol && pos.type.toLowerCase() === oppositeDirection
-        );
-        
-        if (hasOpposing) {
-          console.log(`    🔄 Market structure shift detected on ${symbol}!`);
-          const closed = await closeOpposingPositions(connection, accountId, userId, symbol, signal.type);
-          if (!closed) {
-            console.log(`    ⚠️ Could not close opposing positions - skipping new trade`);
-            continue;
-          }
-          // Refresh existing positions after closing
-          const updatedPositions = await getOpenPositions(accountId);
-          existingPositions.length = 0;
-          existingPositions.push(...updatedPositions);
-        }
-        
-        // Execute trade
-        const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
-        if (trade) {
-          // Record trade time for cooldown
-          lastTradeTime.set(`${accountId}-${symbol}`, Date.now());
-          tradesOpenedThisCycle++;
-          console.log(`    ✅ Trade opened! (${tradesOpenedThisCycle}/${maxTradesPerCycle} this cycle)`);
-          
-          // Continue looking for more opportunities, but limit per cycle
-          if (tradesOpenedThisCycle >= maxTradesPerCycle) {
-            console.log(`  📊 Max trades per cycle reached (${maxTradesPerCycle})`);
-            break;
-          }
-        }
-        
-      } catch (symbolError) {
-        console.error(`  ❌ Error processing ${symbol}:`, symbolError.message);
+      } catch (err) {
         continue;
       }
     }
+    
+    if (signals.length === 0) {
+      console.log(`  ⏸️ No trading signals found across all pairs`);
+      return;
+    }
+    
+    // Sort signals by confidence (strongest first)
+    signals.sort((a, b) => b.signal.confidence - a.signal.confidence);
+    console.log(`  🎯 Found ${signals.length} signal(s) - Best: ${signals[0].symbol} (${signals[0].signal.confidence}%)`);
+    
+    // First: Close any positions that are against the current structure
+    for (const { symbol, signal } of signals) {
+      const oppositeDirection = signal.type.toLowerCase() === 'buy' ? 'sell' : 'buy';
+      const opposingPositions = existingPositions.filter(pos => 
+        pos.pair === symbol && pos.type.toLowerCase() === oppositeDirection
+      );
+      
+      if (opposingPositions.length > 0) {
+        console.log(`  🔄 STRUCTURE SHIFT on ${symbol}! Closing ${opposingPositions.length} ${oppositeDirection.toUpperCase()} position(s)`);
+        await closeOpposingPositions(connection, accountId, userId, symbol, signal.type);
+        // Refresh positions after closing
+        existingPositions = await getOpenPositions(accountId);
+      }
+    }
+    
+    // Calculate how many new trades we can open
+    const currentOpenCount = existingPositions.length;
+    const slotsAvailable = MAX_TRADES - currentOpenCount;
+    
+    if (slotsAvailable <= 0) {
+      console.log(`  📊 All ${MAX_TRADES} slots filled - monitoring for structure shifts`);
+      return;
+    }
+    
+    console.log(`  🎰 ${slotsAvailable} trade slot(s) available - opening positions...`);
+    
+    // Open trades to fill all available slots
+    let tradesOpened = 0;
+    let signalIndex = 0;
+    
+    while (tradesOpened < slotsAvailable && signalIndex < signals.length) {
+      const { symbol, signal } = signals[signalIndex];
+      
+      try {
+        // Execute trade
+        const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
+        if (trade) {
+          tradesOpened++;
+          console.log(`    ✅ Opened ${signal.type.toUpperCase()} on ${symbol} (${tradesOpened}/${slotsAvailable})`);
+          
+          // If strong signal (>60%), open multiple on same pair
+          if (signal.confidence >= 60 && tradesOpened < slotsAvailable) {
+            // Open another on same pair
+            const trade2 = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
+            if (trade2) {
+              tradesOpened++;
+              console.log(`    ✅ Opened another ${signal.type.toUpperCase()} on ${symbol} (STRONG SIGNAL)`);
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`    ❌ Failed to open trade on ${symbol}:`, err.message);
+      }
+      
+      signalIndex++;
+    }
+    
+    console.log(`  📈 Cycle complete: Opened ${tradesOpened} new trade(s), Total positions: ${currentOpenCount + tradesOpened}`);
     
   } catch (error) {
     console.error(`Error executing trade for robot ${robotName}:`, error);
   }
 }
-
 /**
  * Main trading loop - runs continuously
  */
@@ -1028,13 +1053,14 @@ export async function startTradingScheduler() {
   isRunning = true;
   console.log('\n========================================');
   console.log('🚀 TRADING SCHEDULER STARTED');
+  console.log('   Max trades: 5 | Cycle: 15 seconds');
   console.log('========================================\n');
   
   // Run immediately on start
   await runTradingCycle();
   
-  // Then run every 30 seconds for scalpers, 5 minutes for others
-  tradingInterval = setInterval(runTradingCycle, 30 * 1000); // Base: 30 seconds
+  // Run every 15 seconds for aggressive trading
+  tradingInterval = setInterval(runTradingCycle, 15 * 1000);
   
   // Stream positions every 1 second for real-time price updates
   positionStreamInterval = setInterval(streamPositions, 1000);
