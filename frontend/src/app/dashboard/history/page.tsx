@@ -9,7 +9,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Chip,
@@ -161,25 +160,16 @@ export default function TradesPage() {
     loadData();
   }, [router, fetchOpenPositions, fetchClosedTrades]);
 
-  // Poll for real-time position updates
+  // Poll for real-time position updates using stable interval
   useEffect(() => {
-    let isMounted = true;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const interval = setInterval(() => {
+      fetchOpenPositions();
+    }, 2000);
     
-    const pollPositions = async () => {
-      if (!isMounted) return;
-      await fetchOpenPositions();
-      if (isMounted) {
-        setTimeout(pollPositions, 2000); // Poll every 2 seconds
-      }
-    };
-    
-    // Start polling after initial load
-    const timer = setTimeout(pollPositions, 2000);
-    
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
+    return () => clearInterval(interval);
   }, [fetchOpenPositions]);
 
   const handleRefresh = async () => {
@@ -208,7 +198,13 @@ export default function TradesPage() {
   const winRate = closedTrades.length > 0 ? (winningTrades / closedTrades.length) * 100 : 0;
 
   return (
-    <Box sx={{ width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
+    <Box sx={{ 
+      width: '100%', 
+      maxWidth: '100vw', 
+      overflowX: 'hidden',
+      px: { xs: 0, sm: 0 },
+      boxSizing: 'border-box',
+    }}>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box>
@@ -317,7 +313,7 @@ export default function TradesPage() {
       </Box>
 
       {/* ==================== OPEN POSITIONS SECTION ==================== */}
-      <Paper sx={{ mb: 4, overflow: 'hidden', maxWidth: '100%' }}>
+      <Paper sx={{ mb: 4, overflow: 'hidden', width: '100%' }}>
         <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'white', display: 'flex', alignItems: 'center', gap: 1 }}>
           <Clock size={20} />
           <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
@@ -325,15 +321,8 @@ export default function TradesPage() {
           </Typography>
         </Box>
         
-        <TableContainer sx={{ 
-          maxWidth: '100%',
-          overflowX: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          '&::-webkit-scrollbar': { height: 6 },
-          '&::-webkit-scrollbar-track': { bgcolor: 'background.paper' },
-          '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 3 },
-        }}>
-          <Table size="small" sx={{ minWidth: 800 }}>
+        <Box sx={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <Table size="small" sx={{ minWidth: 700 }}>
             <TableHead>
               <TableRow sx={{ bgcolor: 'action.hover' }}>
                 <TableCell>Symbol</TableCell>
@@ -425,7 +414,7 @@ export default function TradesPage() {
               )}
             </TableBody>
           </Table>
-        </TableContainer>
+        </Box>
       </Paper>
 
       {/* ==================== CLOSED TRADES SECTION ==================== */}
@@ -467,18 +456,18 @@ export default function TradesPage() {
           </FormControl>
         </Box>
 
-        <TableContainer sx={{ overflowX: 'auto', maxWidth: '100%' }}>
+        <Box sx={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           <Table size="small" sx={{ minWidth: 700 }}>
             <TableHead>
               <TableRow sx={{ bgcolor: 'action.hover' }}>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>Symbol</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>Type</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>Volume</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>Open Price</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>Close Price</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>P/L</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>Open Time</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>Close Time</TableCell>
+                <TableCell>Symbol</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Volume</TableCell>
+                <TableCell>Open Price</TableCell>
+                <TableCell>Close Price</TableCell>
+                <TableCell>P/L</TableCell>
+                <TableCell>Open Time</TableCell>
+                <TableCell>Close Time</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -540,7 +529,7 @@ export default function TradesPage() {
               )}
             </TableBody>
           </Table>
-        </TableContainer>
+        </Box>
 
         {/* Pagination */}
         {filteredClosedTrades.length > rowsPerPage && (
