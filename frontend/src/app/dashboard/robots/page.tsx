@@ -253,30 +253,18 @@ export default function RobotsPage() {
     };
   }, []);
 
-  // Load running robots from localStorage
+  // Load running robots from database (not localStorage)
+  // The database is the source of truth for which robots are enabled
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedRunning = localStorage.getItem('runningRobots');
-      if (savedRunning) {
-        try {
-          const parsed = JSON.parse(savedRunning);
-          setRunningRobots(new Set(parsed));
-        } catch (e) {
-          console.error('Error parsing running robots:', e);
-        }
-      }
-    }
+    // Running robots are now synced from the database via fetchRobots
+    // Don't use localStorage as it can get out of sync
   }, []);
 
-  // Save running robots to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('runningRobots', JSON.stringify(Array.from(runningRobots)));
-    }
-  }, [runningRobots]);
+  // Running robots are synced from database, no need for localStorage persistence
+  // This prevents state inconsistency between frontend and backend
 
-  // Initialize configs for robots
-  const initializeConfigs = useCallback((robotList: Robot[], savedRunning: Set<string>) => {
+  // Initialize configs for robots - sync running state from database
+  const initializeConfigs = useCallback((robotList: Robot[], enabledRobotIds: Set<string>) => {
     const configs: Record<string, RobotConfig> = {};
     robotList.forEach((robot) => {
       configs[robot.id] = {
@@ -284,46 +272,44 @@ export default function RobotsPage() {
         selectedTimeframe: robot.timeframe,
         selectedPairs: robot.pairs || [],
         riskPercent: 1,
-        isRunning: savedRunning.has(robot.id),
+        isRunning: enabledRobotIds.has(robot.id),
       };
     });
     setRobotConfigs(configs);
+    // Sync runningRobots with database state
+    setRunningRobots(enabledRobotIds);
   }, []);
 
-  // Fetch robots from API
+  // Fetch robots from API - sync running state from database
   const fetchRobots = useCallback(async () => {
     try {
-      // Load saved running robots from localStorage
-      let savedRunning = new Set<string>();
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('runningRobots');
-        if (saved) {
-          try {
-            savedRunning = new Set(JSON.parse(saved));
-          } catch (e) { /* ignore */ }
-        }
-      }
-
-      const response = await fetch('/api/robots', {
+      const response = await fetch('/api/user/robots', {
         headers: getAuthHeaders(),
       });
       if (response.ok) {
         const data = await response.json();
         const robotList = data.robots || [];
+        
+        // Get enabled robots from database response
+        const enabledRobotIds = new Set<string>(
+          robotList
+            .filter((r: any) => r.status === 'running')
+            .map((r: any) => r.id)
+        );
+        
         if (robotList.length > 0) {
           setRobots(robotList);
-          initializeConfigs(robotList, savedRunning);
+          initializeConfigs(robotList, enabledRobotIds);
         } else {
           const defaultRobots = getDefaultRobots();
           setRobots(defaultRobots);
-          initializeConfigs(defaultRobots, savedRunning);
+          initializeConfigs(defaultRobots, new Set());
         }
       } else {
         const defaultRobots = getDefaultRobots();
         setRobots(defaultRobots);
-        initializeConfigs(defaultRobots, savedRunning);
+        initializeConfigs(defaultRobots, new Set());
       }
-      setRunningRobots(savedRunning);
     } catch (err) {
       console.error('Error fetching robots:', err);
       const defaultRobots = getDefaultRobots();
@@ -332,9 +318,39 @@ export default function RobotsPage() {
     }
   }, [initializeConfigs, getAuthHeaders]);
 
-  // Fetch open trades
+  // Fetch open trades/positions with real-time prices
   const fetchTrades = useCallback(async () => {
     try {
+      // Try to get live positions first (includes current prices)
+      const posResponse = await fetch('/api/user/positions', {
+        headers: getAuthHeaders(),
+      });
+      
+      if (posResponse.ok) {
+        const posData = await posResponse.json();
+        if (posData.positions && posData.positions.length > 0) {
+          // Map positions to trade format for display
+          setTrades(posData.positions.map((p: any) => ({
+            id: p.id,
+            pair: p.symbol,
+            type: p.type,
+            volume: p.volume,
+            openPrice: p.openPrice,
+            currentPrice: p.currentPrice,
+            profit: p.profit,
+            robotName: p.robotName || p.comment || 'Unknown',
+          })));
+          
+          // Update account info if available
+          if (posData.account) {
+            setAccountBalance(posData.account.balance || 0);
+            setAccountEquity(posData.account.equity || 0);
+          }
+          return;
+        }
+      }
+      
+      // Fallback to database trades
       const response = await fetch('/api/user/trades?status=OPEN', {
         headers: getAuthHeaders(),
       });
@@ -386,58 +402,12 @@ export default function RobotsPage() {
     return () => clearInterval(interval);
   }, [fetchTrades, fetchAccountInfo]);
 
-  // CONTINUOUS TRADING LOOP - Run trading for all running robots
-  useEffect(() => {
-    if (runningRobots.size === 0) return;
-
-    const runTradingCycle = async () => {
-      for (const robotId of Array.from(runningRobots)) {
-        const config = robotConfigs[robotId];
-        const robot = robots.find(r => r.id === robotId);
-        if (!config || !robot) continue;
-
-        try {
-          console.log(`🔄 Running trading cycle for ${robot.name}...`);
-          const response = await fetch(`/api/user/robots/${robotId}/start`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({
-              timeframe: config.selectedTimeframe,
-              pairs: config.selectedPairs,
-              riskPercent: config.riskPercent,
-            }),
-          });
-
-          const data = await response.json();
-          if (response.ok) {
-            const tradesOpened = data.tradingResult?.tradesExecuted || 0;
-            if (tradesOpened > 0) {
-              setSuccess(`🎯 ${robot.name}: Opened ${tradesOpened} new trade(s)!`);
-              fetchTrades();
-            }
-          }
-        } catch (err) {
-          console.error(`Trading cycle error for ${robot.name}:`, err);
-        }
-      }
-    };
-
-    // Run immediately on first load
-    runTradingCycle();
-
-    // Then run every 30 seconds for M1, 60 seconds for others
-    const hasScalper = Array.from(runningRobots).some(id => {
-      const config = robotConfigs[id];
-      return config?.selectedTimeframe === 'M1' || config?.selectedTimeframe === 'M5';
-    });
-    
-    const intervalMs = hasScalper ? 30000 : 60000; // 30s for scalpers, 60s for others
-    console.log(`⏰ Trading loop interval: ${intervalMs / 1000}s`);
-    
-    const tradingInterval = setInterval(runTradingCycle, intervalMs);
-    return () => clearInterval(tradingInterval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runningRobots, robotConfigs, robots, getAuthHeaders]);
+  // REMOVED: Frontend trading loop
+  // Trading is now handled ONLY by the backend tradingScheduler
+  // The frontend only:
+  // 1. Starts/stops robots (sets isEnabled in database)
+  // 2. Displays open positions and P/L
+  // This prevents duplicate trading and ensures user control
 
   // Handle timeframe change for a robot
   const handleTimeframeChange = (robotId: string, timeframe: string) => {
@@ -620,7 +590,33 @@ export default function RobotsPage() {
       )}
 
       {runningRobots.size > 0 && (
-        <Alert severity="info" sx={{ mb: 3 }}>
+        <Alert 
+          severity="info" 
+          sx={{ mb: 3 }}
+          action={
+            <Button 
+              color="inherit" 
+              size="small"
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/user/robots/stop-all', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                  });
+                  if (response.ok) {
+                    setRunningRobots(new Set());
+                    setSuccess('All robots stopped successfully');
+                    fetchRobots(); // Refresh state from database
+                  }
+                } catch (err) {
+                  setError('Failed to stop robots');
+                }
+              }}
+            >
+              Stop All
+            </Button>
+          }
+        >
           <strong>{runningRobots.size} robot(s) running:</strong>{' '}
           {Array.from(runningRobots).map(id => {
             const robot = robots.find(r => r.id === id);

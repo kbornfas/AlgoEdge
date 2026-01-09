@@ -189,4 +189,78 @@ router.get('/account-info/:accountId', authenticate, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/mt5/positions/:accountId
+ * Get live open positions with current prices from MetaAPI
+ */
+router.get('/positions/:accountId', authenticate, async (req, res) => {
+  if (!api) {
+    await initMetaApi();
+    if (!api) {
+      return res.status(500).json({ error: 'MetaAPI SDK not initialized' });
+    }
+  }
+
+  const { accountId } = req.params;
+
+  try {
+    console.log('Fetching positions for:', accountId);
+    
+    // Get account from SDK
+    const account = await api.metatraderAccountApi.getAccount(accountId);
+    
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+    
+    // Ensure deployed
+    if (account.state !== 'DEPLOYED') {
+      console.log('Account not deployed, deploying...');
+      await account.deploy();
+      await account.waitDeployed();
+    }
+    
+    // Get RPC connection
+    const connection = account.getRPCConnection();
+    await connection.connect();
+    await connection.waitSynchronized();
+    
+    // Get account info
+    const info = await connection.getAccountInformation();
+    
+    // Get open positions
+    const positions = await connection.getPositions();
+    console.log('Found', positions.length, 'open positions');
+
+    return res.json({
+      positions: positions.map(p => ({
+        id: p.id,
+        symbol: p.symbol,
+        type: p.type?.toUpperCase() || 'BUY',
+        volume: p.volume,
+        openPrice: p.openPrice,
+        currentPrice: p.currentPrice,
+        profit: p.profit || p.unrealizedProfit || 0,
+        swap: p.swap || 0,
+        commission: p.commission || 0,
+        openTime: p.time,
+        stopLoss: p.stopLoss,
+        takeProfit: p.takeProfit,
+        magic: p.magic,
+        comment: p.comment,
+      })),
+      account: {
+        balance: info.balance || 0,
+        equity: info.equity || 0,
+        margin: info.margin || 0,
+        freeMargin: info.freeMargin || 0,
+        profit: info.profit || 0,
+      },
+    });
+  } catch (error) {
+    console.error('Positions error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
