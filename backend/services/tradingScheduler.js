@@ -70,14 +70,15 @@ function httpsRequest(url, options = {}) {
 // =========================================================================
 const RISK_CONFIG = {
   MAX_RISK_PER_TRADE: 0.02,      // 2% max risk per trade
-  MAX_TOTAL_EXPOSURE: 0.10,      // 10% max total exposure
-  MIN_SIGNAL_CONFIDENCE: 50,     // Only trade on 50%+ confidence signals
-  HIGH_CONFIDENCE_THRESHOLD: 70, // 70%+ = high confidence (unlimited positions)
+  MAX_TOTAL_EXPOSURE: 0.15,      // 15% max total exposure (increased for 10 positions)
+  MIN_SIGNAL_CONFIDENCE: 50,     // Trade on 50%+ confidence signals
+  HIGH_CONFIDENCE_THRESHOLD: 70, // 70%+ = high confidence (priority positions)
   STRUCTURE_SHIFT_CANDLES: 5,    // Need 5 candles to confirm structure shift
   MIN_ACCOUNT_BALANCE: 100,      // Don't trade if balance below $100
-  MAX_POSITIONS_PER_PAIR: 2,     // Max 2 positions per pair (normal signals)
-  MAX_TOTAL_POSITIONS: 10,       // Max 10 total positions (normal signals)
-  TRADE_COOLDOWN_MS: 60000,      // 1 minute cooldown between trades on same pair
+  MAX_POSITIONS_PER_PAIR: 3,     // Max 3 positions per pair
+  TARGET_POSITIONS: 10,          // Target to always maintain 10 positions
+  MAX_TOTAL_POSITIONS: 15,       // Hard limit of 15 total positions
+  TRADE_COOLDOWN_MS: 30000,      // 30 seconds cooldown (reduced from 60s)
 };
 
 // Track structure direction per symbol (for detecting real structure shifts)
@@ -124,7 +125,8 @@ function calculatePositionSize(balance, stopLossPips, symbol, confidence = 50) {
 
 /**
  * Check if we can open more trades based on risk exposure
- * HIGH CONFIDENCE (70%+) signals bypass position limits
+ * AGGRESSIVE MODE: Always try to maintain TARGET_POSITIONS (10) open positions
+ * HIGH CONFIDENCE (70%+) signals get priority
  */
 function canOpenMoreTrades(balance, equity, openPositionsCount, currentProfitLoss, signalConfidence = 50) {
   // Don't trade if no balance info
@@ -132,35 +134,34 @@ function canOpenMoreTrades(balance, equity, openPositionsCount, currentProfitLos
     return { canTrade: false, reason: 'Account balance too low or unknown' };
   }
   
-  // HIGH CONFIDENCE trades (70%+) - only check drawdown, not position limits
-  if (signalConfidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD) {
-    // Still protect against major drawdown
-    if (currentProfitLoss < -(balance * 0.10)) {
-      return { canTrade: false, reason: `Drawdown limit reached for high-confidence trades (${((currentProfitLoss / balance) * 100).toFixed(1)}%)` };
-    }
-    // Still protect against low equity
-    if (equity && equity < balance * 0.7) {
-      return { canTrade: false, reason: `Equity too low (${((equity / balance) * 100).toFixed(1)}% of balance)` };
-    }
-    return { canTrade: true, reason: 'HIGH CONFIDENCE - unlimited positions allowed' };
+  // Check if equity is critically low (stop out protection)
+  if (equity && equity < balance * 0.7) {
+    return { canTrade: false, reason: `Equity critically low (${((equity / balance) * 100).toFixed(1)}% of balance)` };
   }
   
-  // Normal signals - apply position limits
-  if (openPositionsCount >= RISK_CONFIG.MAX_TOTAL_POSITIONS) {
-    return { canTrade: false, reason: `Max positions reached (${RISK_CONFIG.MAX_TOTAL_POSITIONS})` };
-  }
-  
-  // Check drawdown - don't trade if losing more than 5%
-  if (currentProfitLoss < -(balance * 0.05)) {
+  // Check drawdown - don't trade if losing more than 10%
+  if (currentProfitLoss < -(balance * 0.10)) {
     return { canTrade: false, reason: `Drawdown limit reached (${((currentProfitLoss / balance) * 100).toFixed(1)}%)` };
   }
   
-  // Check if equity is too low compared to balance (stop out protection)
-  if (equity && equity < balance * 0.8) {
-    return { canTrade: false, reason: `Equity too low (${((equity / balance) * 100).toFixed(1)}% of balance)` };
+  // Hard limit - never exceed MAX_TOTAL_POSITIONS
+  if (openPositionsCount >= RISK_CONFIG.MAX_TOTAL_POSITIONS) {
+    return { canTrade: false, reason: `Hard limit reached (${RISK_CONFIG.MAX_TOTAL_POSITIONS})` };
   }
   
-  return { canTrade: true, reason: 'OK' };
+  // HIGH CONFIDENCE trades (70%+) - always allowed if under hard limit
+  if (signalConfidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD) {
+    return { canTrade: true, reason: 'HIGH CONFIDENCE - priority trade' };
+  }
+  
+  // AGGRESSIVE MODE: If under target, be more willing to trade
+  if (openPositionsCount < RISK_CONFIG.TARGET_POSITIONS) {
+    const slotsNeeded = RISK_CONFIG.TARGET_POSITIONS - openPositionsCount;
+    return { canTrade: true, reason: `Under target (need ${slotsNeeded} more positions)` };
+  }
+  
+  // At or above target, only trade high confidence signals
+  return { canTrade: false, reason: `At target positions (${openPositionsCount}/${RISK_CONFIG.TARGET_POSITIONS})` };
 }
 
 // NO MOCK DATA - Only real prices from MetaAPI
@@ -1260,24 +1261,31 @@ async function executeRobotTrade(robot) {
       }
     }
     
-    // For NORMAL signals - apply position limits
+    // For NORMAL signals - AGGRESSIVE MODE: Always try to maintain TARGET_POSITIONS
     if (normalSignals.length > 0) {
-      // Calculate how many new trades we can open for normal signals
       const currentPositionCount = livePositions.length;
-      const slotsAvailable = Math.min(
-        RISK_CONFIG.MAX_TOTAL_POSITIONS - currentPositionCount,
-        3 // Max 3 normal trades per cycle
-      );
+      const slotsToFill = RISK_CONFIG.TARGET_POSITIONS - currentPositionCount;
       
-      if (slotsAvailable <= 0) {
-        console.log(`  📊 Position limit reached for normal signals (${currentPositionCount}/${RISK_CONFIG.MAX_TOTAL_POSITIONS})`);
+      if (slotsToFill <= 0) {
+        console.log(`  📊 At target positions (${currentPositionCount}/${RISK_CONFIG.TARGET_POSITIONS})`);
       } else {
-        console.log(`  🎰 ${slotsAvailable} slot(s) available for normal signals...`);
+        // Allow up to 5 trades per cycle to fill up faster
+        const slotsAvailable = Math.min(slotsToFill, 5);
+        console.log(`  🎯 FILLING POSITIONS: Need ${slotsToFill} more to reach target ${RISK_CONFIG.TARGET_POSITIONS}`);
+        console.log(`  🎰 Opening up to ${slotsAvailable} trade(s) this cycle...`);
         
         let tradesOpened = 0;
         
         for (const { symbol, signal } of normalSignals) {
           if (tradesOpened >= slotsAvailable) break;
+          
+          // Re-check we can still trade
+          const currentPL = livePositions.reduce((sum, p) => sum + (p.profit || 0), 0);
+          const riskCheck = canOpenMoreTrades(accountInfo.balance, accountInfo.equity, livePositions.length, currentPL, signal.confidence);
+          if (!riskCheck.canTrade) {
+            console.log(`    ⛔ ${riskCheck.reason}`);
+            break;
+          }
           
           try {
             // Calculate proper position size based on account balance
@@ -1292,7 +1300,8 @@ async function executeRobotTrade(robot) {
             if (trade) {
               tradesOpened++;
               lastTradeTime.set(symbol, Date.now());
-              console.log(`    ✅ Normal trade opened on ${symbol} (${tradesOpened}/${slotsAvailable})`);
+              livePositions = await connection.getPositions(); // Refresh count
+              console.log(`    ✅ Trade opened on ${symbol} (${livePositions.length}/${RISK_CONFIG.TARGET_POSITIONS} positions)`);
             }
           } catch (err) {
             console.error(`    ❌ Failed to open trade on ${symbol}:`, err.message);
@@ -1303,7 +1312,7 @@ async function executeRobotTrade(robot) {
     
     // Refresh final position count
     livePositions = await connection.getPositions();
-    console.log(`  📈 Cycle complete. Total positions: ${livePositions.length}`);
+    console.log(`  📈 Cycle complete. Total positions: ${livePositions.length}/${RISK_CONFIG.TARGET_POSITIONS} target`);
     
   } catch (error) {
     console.error(`Error executing trade for robot ${robotName}:`, error);
