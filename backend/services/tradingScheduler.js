@@ -768,7 +768,8 @@ async function getOpenPositions(accountId) {
 }
 
 /**
- * Check if we can open a trade (prevents opposing positions)
+ * Check if we can open a trade (prevents opposing positions only)
+ * Multiple positions in SAME direction are allowed
  */
 function canOpenTrade(existingPositions, symbol, newDirection) {
   const oppositeDirection = newDirection.toLowerCase() === 'buy' ? 'sell' : 'buy';
@@ -783,16 +784,7 @@ function canOpenTrade(existingPositions, symbol, newDirection) {
     return false;
   }
   
-  // Check if there's already a position on this symbol in the same direction
-  const hasSame = existingPositions.some(pos => 
-    pos.pair === symbol && pos.type.toLowerCase() === newDirection.toLowerCase()
-  );
-  
-  if (hasSame) {
-    console.log(`    ⛔ Already have ${newDirection} position on ${symbol} - skipping duplicate`);
-    return false;
-  }
-  
+  // Multiple positions in same direction are OK - good signals should stack
   return true;
 }
 
