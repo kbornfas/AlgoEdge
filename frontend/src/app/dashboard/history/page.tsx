@@ -322,6 +322,7 @@ export default function TradesPage() {
               <TableRow sx={{ bgcolor: 'action.hover' }}>
                 <TableCell>Symbol</TableCell>
                 <TableCell>Type</TableCell>
+                <TableCell>Robot</TableCell>
                 <TableCell>Volume</TableCell>
                 <TableCell>Open Price</TableCell>
                 <TableCell>Current Price</TableCell>
@@ -335,14 +336,14 @@ export default function TradesPage() {
               {loading ? (
                 [...Array(3)].map((_, i) => (
                   <TableRow key={i}>
-                    {[...Array(9)].map((_, j) => (
+                    {[...Array(10)].map((_, j) => (
                       <TableCell key={j}><Skeleton /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : openPositions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center">
+                  <TableCell colSpan={10} align="center">
                     <Typography color="text.secondary" sx={{ py: 3 }}>
                       No open positions
                     </Typography>
@@ -363,6 +364,15 @@ export default function TradesPage() {
                         label={displayType}
                         color={displayType === 'BUY' ? 'success' : 'error'}
                         size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={position.comment?.replace('AlgoEdge-', '') || 'Manual'}
+                        size="small"
+                        variant="outlined"
+                        color="info"
+                        sx={{ fontSize: '0.7rem' }}
                       />
                     </TableCell>
                     <TableCell>{position.volume}</TableCell>
