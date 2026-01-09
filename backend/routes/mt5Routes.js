@@ -73,43 +73,88 @@ router.post('/provision', authenticate, async (req, res) => {
     // Check for existing account using SDK
     console.log('Checking for existing MetaAPI account...');
     
-    // The SDK method is getAccounts() on metatraderAccountApi
-    // But we need to handle both old and new SDK versions
+    // Use multiple methods to find existing accounts
     let accounts = [];
+    
+    // Method 1: Try getAccountsWithInfiniteScrollPagination (SDK v29+)
     try {
-      if (typeof api.metatraderAccountApi.getAccounts === 'function') {
-        accounts = await api.metatraderAccountApi.getAccounts();
-      } else if (typeof api.metatraderAccountApi.getAccountsWithInfiniteScrollPagination === 'function') {
-        const result = await api.metatraderAccountApi.getAccountsWithInfiniteScrollPagination();
-        accounts = result.items || [];
-      } else {
-        // Try to list accounts differently
-        console.log('Available methods:', Object.keys(api.metatraderAccountApi));
-        throw new Error('Cannot find method to list accounts');
+      if (typeof api.metatraderAccountApi.getAccountsWithInfiniteScrollPagination === 'function') {
+        console.log('Using getAccountsWithInfiniteScrollPagination...');
+        const paginator = api.metatraderAccountApi.getAccountsWithInfiniteScrollPagination();
+        
+        // Get all pages
+        let hasMore = true;
+        while (hasMore) {
+          const page = await paginator.next();
+          if (page && page.length > 0) {
+            accounts.push(...page);
+          } else {
+            hasMore = false;
+          }
+          // Safety limit
+          if (accounts.length > 1000) break;
+        }
+        console.log(`Pagination returned ${accounts.length} accounts`);
       }
-    } catch (listErr) {
-      console.log('Error listing accounts, trying to create directly:', listErr.message);
-      accounts = [];
+    } catch (paginationErr) {
+      console.log('Pagination method failed:', paginationErr.message);
     }
     
-    console.log(`Found ${accounts.length} existing MetaAPI accounts`);
+    // Method 2: Try getAccounts() if pagination didn't work
+    if (accounts.length === 0) {
+      try {
+        if (typeof api.metatraderAccountApi.getAccounts === 'function') {
+          console.log('Using getAccounts...');
+          const result = await api.metatraderAccountApi.getAccounts();
+          accounts = Array.isArray(result) ? result : (result?.items || []);
+          console.log(`getAccounts returned ${accounts.length} accounts`);
+        }
+      } catch (getErr) {
+        console.log('getAccounts failed:', getErr.message);
+      }
+    }
+    
+    // Method 3: Try to get account directly by known name pattern
+    if (accounts.length === 0) {
+      try {
+        console.log('Trying to find account by name pattern...');
+        const accountName = `AlgoEdge_${accountId}`;
+        // Some SDK versions have getAccountByName
+        if (typeof api.metatraderAccountApi.getAccountByName === 'function') {
+          const found = await api.metatraderAccountApi.getAccountByName(accountName);
+          if (found) {
+            accounts = [found];
+            console.log(`Found account by name: ${found.id}`);
+          }
+        }
+      } catch (nameErr) {
+        console.log('getAccountByName failed:', nameErr.message);
+      }
+    }
+    
+    console.log(`Total accounts found: ${accounts.length}`);
     
     // Log all accounts for debugging
     if (accounts.length > 0) {
+      console.log('All MetaAPI accounts:');
       accounts.forEach(acc => {
-        console.log(`  - Account: ${acc.login}@${acc.server} (id: ${acc.id}, state: ${acc.state})`);
+        console.log(`  - ${acc.name || 'unnamed'}: login=${acc.login}, server=${acc.server}, id=${acc.id}, state=${acc.state}`);
       });
     }
 
-    // Look for matching account (case-insensitive server comparison)
-    const existingAccount = accounts.find((acc) =>
-      String(acc.login) === String(accountId) && 
-      acc.server?.toLowerCase() === server?.toLowerCase()
-    );
+    // Look for matching account - check BOTH login+server AND name pattern
+    const existingAccount = accounts.find((acc) => {
+      const loginMatch = String(acc.login) === String(accountId);
+      const serverMatch = acc.server?.toLowerCase() === server?.toLowerCase();
+      const nameMatch = acc.name === `AlgoEdge_${accountId}`;
+      
+      // Match by login+server OR by name (in case server name varies slightly)
+      return (loginMatch && serverMatch) || (loginMatch && nameMatch);
+    });
 
     if (existingAccount) {
       console.log(`✅ REUSING existing MetaAPI account: ${existingAccount.id} (state: ${existingAccount.state})`);
-      console.log(`   Login: ${existingAccount.login}, Server: ${existingAccount.server}`);
+      console.log(`   Login: ${existingAccount.login}, Server: ${existingAccount.server}, Name: ${existingAccount.name}`);
       
       // Update password if the account exists (in case user changed it)
       try {
@@ -632,6 +677,119 @@ router.get('/history/:accountId', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('Trade history error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/mt5/admin/accounts
+ * List all MetaAPI accounts (admin only)
+ */
+router.get('/admin/accounts', authenticate, async (req, res) => {
+  if (!api) {
+    await initMetaApi();
+    if (!api) {
+      return res.status(500).json({ error: 'MetaAPI SDK not initialized' });
+    }
+  }
+
+  try {
+    let accounts = [];
+    
+    // Get all accounts using pagination
+    if (typeof api.metatraderAccountApi.getAccountsWithInfiniteScrollPagination === 'function') {
+      const paginator = api.metatraderAccountApi.getAccountsWithInfiniteScrollPagination();
+      let hasMore = true;
+      while (hasMore) {
+        const page = await paginator.next();
+        if (page && page.length > 0) {
+          accounts.push(...page);
+        } else {
+          hasMore = false;
+        }
+        if (accounts.length > 1000) break;
+      }
+    } else if (typeof api.metatraderAccountApi.getAccounts === 'function') {
+      const result = await api.metatraderAccountApi.getAccounts();
+      accounts = Array.isArray(result) ? result : (result?.items || []);
+    }
+
+    // Group by login to find duplicates
+    const accountsByLogin = {};
+    accounts.forEach(acc => {
+      const key = `${acc.login}_${acc.server}`;
+      if (!accountsByLogin[key]) {
+        accountsByLogin[key] = [];
+      }
+      accountsByLogin[key].push({
+        id: acc.id,
+        name: acc.name,
+        login: acc.login,
+        server: acc.server,
+        state: acc.state,
+        connectionStatus: acc.connectionStatus,
+      });
+    });
+
+    // Find duplicates
+    const duplicates = Object.entries(accountsByLogin)
+      .filter(([_, accs]) => accs.length > 1)
+      .map(([key, accs]) => ({ key, accounts: accs, count: accs.length }));
+
+    return res.json({
+      total: accounts.length,
+      duplicateGroups: duplicates.length,
+      duplicates,
+      allAccounts: accounts.map(acc => ({
+        id: acc.id,
+        name: acc.name,
+        login: acc.login,
+        server: acc.server,
+        state: acc.state,
+      })),
+    });
+  } catch (error) {
+    console.error('List accounts error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/mt5/admin/account/:accountId
+ * Delete a MetaAPI account (to clean up duplicates)
+ */
+router.delete('/admin/account/:accountId', authenticate, async (req, res) => {
+  if (!api) {
+    await initMetaApi();
+    if (!api) {
+      return res.status(500).json({ error: 'MetaAPI SDK not initialized' });
+    }
+  }
+
+  const { accountId } = req.params;
+
+  try {
+    console.log('Deleting MetaAPI account:', accountId);
+    const account = await api.metatraderAccountApi.getAccount(accountId);
+    
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    // Undeploy first if deployed
+    if (account.state === 'DEPLOYED') {
+      console.log('Undeploying account first...');
+      await account.undeploy();
+      await account.waitUndeployed();
+    }
+
+    // Remove the account
+    await account.remove();
+    console.log('Account deleted successfully');
+
+    return res.json({ success: true, message: `Account ${accountId} deleted` });
+  } catch (error) {
+    console.error('Delete account error:', error.message);
     return res.status(500).json({ error: error.message });
   }
 });

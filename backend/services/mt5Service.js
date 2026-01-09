@@ -161,37 +161,64 @@ export const connectMT5Account = async (accountId, login, password, server) => {
     const metaApi = await getMetaApi();
     
     // Check if account already exists in MetaAPI
-    // Handle both old and new SDK versions
+    // Use multiple methods to ensure we find existing accounts
     let metaApiAccount;
     let accounts = [];
     
+    // Method 1: Try getAccountsWithInfiniteScrollPagination (SDK v29+)
     try {
-      if (typeof metaApi.metatraderAccountApi.getAccounts === 'function') {
-        accounts = await metaApi.metatraderAccountApi.getAccounts();
-      } else if (typeof metaApi.metatraderAccountApi.getAccountsWithInfiniteScrollPagination === 'function') {
-        const result = await metaApi.metatraderAccountApi.getAccountsWithInfiniteScrollPagination();
-        accounts = result.items || [];
-      } else {
-        // Log available methods and continue without listing
-        console.log('Available metatraderAccountApi methods:', Object.keys(metaApi.metatraderAccountApi));
-        accounts = [];
+      if (typeof metaApi.metatraderAccountApi.getAccountsWithInfiniteScrollPagination === 'function') {
+        console.log('Using pagination to list accounts...');
+        const paginator = metaApi.metatraderAccountApi.getAccountsWithInfiniteScrollPagination();
+        let hasMore = true;
+        while (hasMore) {
+          const page = await paginator.next();
+          if (page && page.length > 0) {
+            accounts.push(...page);
+          } else {
+            hasMore = false;
+          }
+          if (accounts.length > 1000) break; // Safety limit
+        }
+        console.log(`Pagination returned ${accounts.length} accounts`);
       }
-    } catch (listErr) {
-      console.log('Error listing accounts, will try to create/get directly:', listErr.message);
-      accounts = [];
+    } catch (paginationErr) {
+      console.log('Pagination failed:', paginationErr.message);
     }
     
-    console.log(`Found ${accounts.length} existing MetaAPI accounts`);
+    // Method 2: Fallback to getAccounts
+    if (accounts.length === 0) {
+      try {
+        if (typeof metaApi.metatraderAccountApi.getAccounts === 'function') {
+          const result = await metaApi.metatraderAccountApi.getAccounts();
+          accounts = Array.isArray(result) ? result : (result?.items || []);
+          console.log(`getAccounts returned ${accounts.length} accounts`);
+        }
+      } catch (getErr) {
+        console.log('getAccounts failed:', getErr.message);
+      }
+    }
     
-    // Case-insensitive server comparison to catch matches
-    const existingAccount = accounts.find(acc => 
-      String(acc.login) === String(login) && 
-      acc.server?.toLowerCase() === server?.toLowerCase()
-    );
+    console.log(`Total MetaAPI accounts found: ${accounts.length}`);
+    
+    // Log accounts for debugging
+    if (accounts.length > 0) {
+      accounts.forEach(acc => {
+        console.log(`  - ${acc.name}: login=${acc.login}, server=${acc.server}, id=${acc.id}`);
+      });
+    }
+    
+    // Find existing account by login+server OR by name pattern
+    const existingAccount = accounts.find(acc => {
+      const loginMatch = String(acc.login) === String(login);
+      const serverMatch = acc.server?.toLowerCase() === server?.toLowerCase();
+      const nameMatch = acc.name === `AlgoEdge_${login}`;
+      return (loginMatch && serverMatch) || (loginMatch && nameMatch);
+    });
     
     if (existingAccount) {
       console.log(`✅ REUSING existing MetaAPI account: ${existingAccount.id}`);
-      console.log(`   Login: ${existingAccount.login}, Server: ${existingAccount.server}, State: ${existingAccount.state}`);
+      console.log(`   Login: ${existingAccount.login}, Server: ${existingAccount.server}, Name: ${existingAccount.name}`);
       metaApiAccount = existingAccount;
       
       // Try to update password in case it changed
@@ -205,7 +232,7 @@ export const connectMT5Account = async (accountId, login, password, server) => {
       }
     } else {
       // Create new MetaAPI account
-      console.log('📝 Creating NEW MetaAPI account...');
+      console.log('📝 Creating NEW MetaAPI account (no existing match found)...');
       metaApiAccount = await metaApi.metatraderAccountApi.createAccount({
         name: `AlgoEdge_${login}`,
         type: 'cloud',
