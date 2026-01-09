@@ -208,6 +208,7 @@ router.get('/account-info/:accountId', authenticate, async (req, res) => {
 /**
  * GET /api/mt5/positions/:accountId
  * Get live open positions with current prices from MetaAPI
+ * OPTIMIZED: Uses cached connection for faster response
  */
 router.get('/positions/:accountId', authenticate, async (req, res) => {
   if (!api) {
@@ -220,45 +221,71 @@ router.get('/positions/:accountId', authenticate, async (req, res) => {
   const { accountId } = req.params;
 
   try {
-    console.log('Fetching positions for:', accountId);
+    // First try to use cached connection from mt5Connections (fastest)
+    const cachedConnection = mt5Connections.get(accountId);
+    if (cachedConnection?.connection) {
+      try {
+        const positions = await cachedConnection.connection.getPositions();
+        const info = await cachedConnection.connection.getAccountInformation();
+        
+        return res.json({
+          positions: positions.map(p => ({
+            id: p.id,
+            symbol: p.symbol,
+            type: p.type?.toUpperCase() || 'BUY',
+            volume: p.volume,
+            openPrice: p.openPrice,
+            currentPrice: p.currentPrice,
+            profit: p.profit || p.unrealizedProfit || 0,
+            swap: p.swap || 0,
+            commission: p.commission || 0,
+            openTime: p.time,
+            stopLoss: p.stopLoss,
+            takeProfit: p.takeProfit,
+            comment: p.comment,
+          })),
+          account: {
+            balance: info.balance || 0,
+            equity: info.equity || 0,
+            margin: info.margin || 0,
+            freeMargin: info.freeMargin || 0,
+            profit: info.profit || 0,
+          },
+        });
+      } catch (cacheErr) {
+        console.log('Cached connection failed, trying fresh connection...');
+      }
+    }
     
-    // Get account from SDK
+    // Fallback: Get fresh connection (slower)
     const account = await api.metatraderAccountApi.getAccount(accountId);
     
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
     
-    // Ensure deployed and wait for broker connection
+    // Ensure deployed
     if (account.state !== 'DEPLOYED') {
-      console.log('Account not deployed, deploying...');
       await account.deploy();
     }
     await account.waitDeployed();
-    
-    // Wait for connection to broker
-    if (account.connectionStatus !== 'CONNECTED') {
-      console.log('Waiting for broker connection...');
-      await account.waitConnected();
-    }
     
     // Get RPC connection
     const connection = account.getRPCConnection();
     await connection.connect();
     
-    // Wait for synchronization with timeout
+    // Quick sync with short timeout
     try {
-      await connection.waitSynchronized({ timeoutInSeconds: 30 });
+      await connection.waitSynchronized({ timeoutInSeconds: 5 });
     } catch (syncError) {
-      console.log('Sync timeout, trying to get positions anyway...');
+      // Continue anyway
     }
     
-    // Get account info
-    const info = await connection.getAccountInformation();
+    // Cache this connection for future use
+    mt5Connections.set(accountId, { connection, account, lastUsed: Date.now() });
     
-    // Get open positions
+    const info = await connection.getAccountInformation();
     const positions = await connection.getPositions();
-    console.log('Found', positions.length, 'open positions');
 
     return res.json({
       positions: positions.map(p => ({
@@ -274,7 +301,6 @@ router.get('/positions/:accountId', authenticate, async (req, res) => {
         openTime: p.time,
         stopLoss: p.stopLoss,
         takeProfit: p.takeProfit,
-        magic: p.magic,
         comment: p.comment,
       })),
       account: {
