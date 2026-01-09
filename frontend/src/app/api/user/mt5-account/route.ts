@@ -42,6 +42,10 @@ export async function GET(req: NextRequest) {
 
     if (mt5Account.apiKey && BACKEND_URL) {
       try {
+        // Use AbortController for timeout (5 seconds to avoid Vercel 10s limit)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
         const backendResponse = await fetch(
           `${BACKEND_URL}/api/mt5/account-info/${mt5Account.apiKey}`,
           {
@@ -50,16 +54,23 @@ export async function GET(req: NextRequest) {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
             },
+            signal: controller.signal,
           }
         );
+        
+        clearTimeout(timeoutId);
 
         if (backendResponse.ok) {
           const liveData = await backendResponse.json();
           balance = liveData.balance || balance;
           equity = liveData.equity || equity;
         }
-      } catch (err) {
-        console.error('Failed to fetch live balance:', err);
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          console.log('Backend request timed out, using cached balance');
+        } else {
+          console.error('Failed to fetch live balance:', err);
+        }
       }
     }
 
