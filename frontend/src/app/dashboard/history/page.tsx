@@ -235,6 +235,42 @@ export default function TradesPage() {
         </Box>
       </Box>
 
+      {/* Account Summary Card */}
+      <Paper sx={{ mb: 4, background: 'linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)', overflow: 'hidden' }}>
+        <Box sx={{ p: 3, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          <Box sx={{ minWidth: 150 }}>
+            <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+              Account Balance
+            </Typography>
+            <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+              ${accountInfo?.balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+            </Typography>
+          </Box>
+          <Box sx={{ minWidth: 150 }}>
+            <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+              Account Equity
+            </Typography>
+            <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+              ${accountInfo?.equity?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+            </Typography>
+          </Box>
+          <Box sx={{ minWidth: 150 }}>
+            <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+              Open P/L
+            </Typography>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                color: openProfit >= 0 ? '#4caf50' : '#f44336', 
+                fontWeight: 'bold'
+              }}
+            >
+              {openProfit >= 0 ? '+' : ''}${openProfit.toFixed(2)}
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
+
       {/* Summary Stats */}
       <Box sx={{ display: 'flex', gap: 3, mb: 4, flexWrap: 'wrap' }}>
         <Paper sx={{ p: 2, minWidth: 150 }}>
