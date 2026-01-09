@@ -321,16 +321,23 @@ export default function RobotsPage() {
   // Fetch open trades/positions with real-time prices
   const fetchTrades = useCallback(async () => {
     try {
-      // Try to get live positions first (includes current prices)
+      // Try to get live positions first (includes current prices and account info)
       const posResponse = await fetch('/api/user/positions', {
         headers: getAuthHeaders(),
       });
       
       if (posResponse.ok) {
         const posData = await posResponse.json();
+        
+        // Update account info from live data (this is the source of truth)
+        if (posData.account) {
+          setAccountBalance(posData.account.balance || 0);
+          setAccountEquity(posData.account.equity || 0);
+        }
+        
         if (posData.positions && posData.positions.length > 0) {
           // Map positions to trade format for display
-          setTrades(posData.positions.map((p: any) => ({
+          const mappedTrades = posData.positions.map((p: any) => ({
             id: p.id,
             pair: p.symbol,
             type: p.type,
@@ -339,18 +346,17 @@ export default function RobotsPage() {
             currentPrice: p.currentPrice,
             profit: p.profit,
             robotName: p.robotName || p.comment || 'Unknown',
-          })));
-          
-          // Update account info if available
-          if (posData.account) {
-            setAccountBalance(posData.account.balance || 0);
-            setAccountEquity(posData.account.equity || 0);
-          }
+          }));
+          setTrades(mappedTrades);
+          return;
+        } else {
+          // No positions, clear trades
+          setTrades([]);
           return;
         }
       }
       
-      // Fallback to database trades
+      // Fallback to database trades only if positions endpoint fails
       const response = await fetch('/api/user/trades?status=OPEN', {
         headers: getAuthHeaders(),
       });
@@ -363,17 +369,18 @@ export default function RobotsPage() {
     }
   }, [getAuthHeaders]);
 
-  // Fetch account info from MT5 connection
+  // Fetch account info only as fallback (positions endpoint is preferred)
   const fetchAccountInfo = useCallback(async () => {
+    // Only fetch from DB if we don't have live account data
+    // Live data comes from fetchTrades -> /api/user/positions
     try {
-      // Use the same endpoint as MT5 Connection page
       const response = await fetch('/api/user/mt5-account', {
         headers: getAuthHeaders(),
       });
       if (response.ok) {
         const data = await response.json();
-        // Account data comes from data.account
-        if (data.account) {
+        // Only update if we have zero balance (not yet fetched from live)
+        if (data.account && accountBalance === 0) {
           setAccountBalance(data.account.balance || 0);
           setAccountEquity(data.account.equity || 0);
         }
@@ -381,26 +388,25 @@ export default function RobotsPage() {
     } catch (err) {
       console.error('Error fetching account:', err);
     }
-  }, [getAuthHeaders]);
+  }, [getAuthHeaders, accountBalance]);
 
   // Load data on mount
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchRobots(), fetchTrades(), fetchAccountInfo()]);
+      await Promise.all([fetchRobots(), fetchTrades()]);
       setLoading(false);
     };
     loadData();
-  }, [fetchRobots, fetchTrades, fetchAccountInfo]);
+  }, [fetchRobots, fetchTrades]);
 
-  // Poll for trade updates every 5 seconds
+  // Poll for real-time trade/P&L updates every 3 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchTrades();
-      fetchAccountInfo();
-    }, 5000);
+      fetchTrades(); // This fetches live positions with current prices and P/L
+    }, 3000);
     return () => clearInterval(interval);
-  }, [fetchTrades, fetchAccountInfo]);
+  }, [fetchTrades]);
 
   // REMOVED: Frontend trading loop
   // Trading is now handled ONLY by the backend tradingScheduler
