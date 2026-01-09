@@ -214,6 +214,7 @@ const schedulerConnections = new Map();
  */
 async function getConnection(metaApiAccountId, mt5AccountId) {
   // Check mt5Service connections first (they're properly managed)
+  // Try by database ID first
   if (mt5Connections.has(mt5AccountId)) {
     const conn = mt5Connections.get(mt5AccountId);
     if (conn && conn.connection) {
@@ -222,11 +223,28 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
     }
   }
   
-  // Check scheduler's cached connections
+  // Also try by metaApiAccountId (check all connections)
+  for (const [key, conn] of mt5Connections.entries()) {
+    if (conn.metaApiId === metaApiAccountId && conn.connection) {
+      console.log(`  ✅ Found mt5Service connection by metaApiId ${metaApiAccountId}`);
+      return conn.connection;
+    }
+  }
+  
+  // Check scheduler's cached connections by mt5AccountId
   if (schedulerConnections.has(mt5AccountId)) {
     const cached = schedulerConnections.get(mt5AccountId);
     if (cached && cached.rpcConnection) {
       console.log(`  ✅ Using cached scheduler connection`);
+      return cached.rpcConnection;
+    }
+  }
+  
+  // Also check scheduler connections by metaApiAccountId
+  if (schedulerConnections.has(metaApiAccountId)) {
+    const cached = schedulerConnections.get(metaApiAccountId);
+    if (cached && cached.rpcConnection) {
+      console.log(`  ✅ Using cached scheduler connection by metaApiId`);
       return cached.rpcConnection;
     }
   }
@@ -309,14 +327,21 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       }
     }
     
-    // Method 4: Use account directly if it has trading methods
-    if (!rpcConnection && typeof account.createMarketBuyOrder === 'function') {
-      console.log(`  🔄 Using account directly for trading...`);
-      rpcConnection = account; // Account itself has trading methods
-    }
+    // REMOVED Method 4: Don't use account directly - it doesn't have getPositions/getAccountInformation
+    // The account object has trading methods but not the data methods we need
     
     if (!rpcConnection) {
-      console.log(`  ❌ Could not establish any connection. Available methods: ${accountMethods.join(', ')}`);
+      console.log(`  ❌ Could not establish RPC connection. Available account methods: ${accountMethods.join(', ')}`);
+      return null;
+    }
+    
+    // Verify the connection has the methods we need
+    if (typeof rpcConnection.getAccountInformation !== 'function') {
+      console.log(`  ❌ Connection missing getAccountInformation method`);
+      return null;
+    }
+    if (typeof rpcConnection.getPositions !== 'function') {
+      console.log(`  ❌ Connection missing getPositions method`);
       return null;
     }
     
