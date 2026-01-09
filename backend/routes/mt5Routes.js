@@ -163,17 +163,33 @@ router.get('/account-info/:accountId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Account not found' });
     }
     
-    // Ensure deployed
+    // Ensure deployed and connected to broker
     if (account.state !== 'DEPLOYED') {
       console.log('Account not deployed, deploying...');
       await account.deploy();
-      await account.waitDeployed();
+    }
+    
+    // Wait for deployment and broker connection with timeout
+    console.log('Waiting for account deployment and broker connection...');
+    await account.waitDeployed();
+    
+    // Wait for connection to broker (this is the key step)
+    const connectionStatus = account.connectionStatus;
+    if (connectionStatus !== 'CONNECTED') {
+      console.log('Account connection status:', connectionStatus, '- waiting for connection...');
+      await account.waitConnected();
     }
     
     // Get RPC connection
     const connection = account.getRPCConnection();
     await connection.connect();
-    await connection.waitSynchronized();
+    
+    // Wait for synchronization with timeout handling
+    try {
+      await connection.waitSynchronized({ timeoutInSeconds: 30 });
+    } catch (syncError) {
+      console.log('Sync timeout, trying to get info anyway...');
+    }
     
     // Get account info
     const info = await connection.getAccountInformation();
@@ -213,17 +229,29 @@ router.get('/positions/:accountId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Account not found' });
     }
     
-    // Ensure deployed
+    // Ensure deployed and wait for broker connection
     if (account.state !== 'DEPLOYED') {
       console.log('Account not deployed, deploying...');
       await account.deploy();
-      await account.waitDeployed();
+    }
+    await account.waitDeployed();
+    
+    // Wait for connection to broker
+    if (account.connectionStatus !== 'CONNECTED') {
+      console.log('Waiting for broker connection...');
+      await account.waitConnected();
     }
     
     // Get RPC connection
     const connection = account.getRPCConnection();
     await connection.connect();
-    await connection.waitSynchronized();
+    
+    // Wait for synchronization with timeout
+    try {
+      await connection.waitSynchronized({ timeoutInSeconds: 30 });
+    } catch (syncError) {
+      console.log('Sync timeout, trying to get positions anyway...');
+    }
     
     // Get account info
     const info = await connection.getAccountInformation();
