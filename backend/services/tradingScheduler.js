@@ -1678,6 +1678,8 @@ async function manageOpenPositions(connection, account, accountId, userId) {
       const openPrice = position.openPrice;
       const currentPrice = position.currentPrice;
       const volume = position.volume;
+      const currentSL = position.stopLoss;
+      const currentTP = position.takeProfit;
       
       console.log(`    Position ${positionId}: ${symbol} ${positionType} P/L: $${profit.toFixed(2)}`);
       
@@ -1711,6 +1713,47 @@ async function manageOpenPositions(connection, account, accountId, userId) {
             ? currentPrice - openPrice 
             : openPrice - currentPrice;
           const profitInATR = atr > 0 ? priceDiff / atr : 0;
+          
+          // =========================================================================
+          // BREAKEVEN PROTECTION - Move SL to entry when position shows good profit
+          // Protects gains from structure shifts without closing prematurely
+          // =========================================================================
+          const pipSize = getPipSize(symbol);
+          const breakevenBuffer = pipSize * 3; // 3 pips buffer above entry for spread
+          
+          // Move to breakeven when profit reaches 1 ATR OR $10 (whichever is first)
+          const shouldMoveToBreakeven = profitInATR >= 1.0 || profit >= 10;
+          
+          if (shouldMoveToBreakeven && currentSL !== undefined) {
+            let newSL = null;
+            
+            if (positionType === 'buy' || positionType?.toLowerCase() === 'position_type_buy') {
+              // For BUY: SL should be below entry, move it to entry + small buffer
+              const breakevenSL = openPrice + breakevenBuffer;
+              if (!currentSL || currentSL < breakevenSL) {
+                newSL = breakevenSL;
+              }
+            } else if (positionType === 'sell' || positionType?.toLowerCase() === 'position_type_sell') {
+              // For SELL: SL should be above entry, move it to entry - small buffer
+              const breakevenSL = openPrice - breakevenBuffer;
+              if (!currentSL || currentSL > breakevenSL) {
+                newSL = breakevenSL;
+              }
+            }
+            
+            // Execute breakeven modification
+            if (newSL !== null) {
+              try {
+                await connection.modifyPosition(positionId, newSL, currentTP);
+                console.log(`    🛡️ BREAKEVEN SET: ${symbol} SL moved to ${newSL.toFixed(5)} (entry: ${openPrice.toFixed(5)})`);
+              } catch (modifyErr) {
+                // Don't spam errors for this
+                if (!modifyErr.message?.includes('same value')) {
+                  console.log(`    ⚠️ Could not set breakeven: ${modifyErr.message}`);
+                }
+              }
+            }
+          }
           
           // =========================================================================
           // EXIT CONDITIONS - CONSERVATIVE APPROACH

@@ -150,6 +150,11 @@ const updateAccountStatus = async (accountId, status, additionalFields = {}) => 
 // Connect to MT5 Account
 export const connectMT5Account = async (accountId, login, password, server) => {
   try {
+    // Validate required parameters
+    if (!login || !password || !server) {
+      throw new Error(`Missing required parameters: login=${!!login}, password=${!!password}, server=${!!server}`);
+    }
+    
     console.log(`Connecting to MT5 account ${login} on ${server}...`);
     
     // Get MetaAPI instance (ensures SDK is loaded)
@@ -533,6 +538,17 @@ export const initializeMT5Connections = async () => {
     if (result && result.rows && result.rows.length > 0) {
       for (const account of result.rows) {
         try {
+          // Validate required fields before attempting reconnection
+          if (!account.mt5_login || !account.mt5_password || !account.mt5_server) {
+            console.warn(`⚠️ Skipping account ${account.id}: Missing required fields (login: ${!!account.mt5_login}, password: ${!!account.mt5_password}, server: ${!!account.mt5_server})`);
+            // Mark as disconnected in database if missing required fields
+            await pool.query(
+              `UPDATE mt5_accounts SET status = 'disconnected' WHERE id = $1`,
+              [account.id]
+            ).catch(() => {});
+            continue;
+          }
+          
           await connectMT5Account(
             account.id,
             account.mt5_login,
