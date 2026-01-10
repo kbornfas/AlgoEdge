@@ -71,8 +71,8 @@ function httpsRequest(url, options = {}) {
 const RISK_CONFIG = {
   MAX_RISK_PER_TRADE: 0.005,    // 0.5% max risk per trade (was 2%)
   MAX_TOTAL_EXPOSURE: 0.05,     // 5% max total exposure (was 15%)
-  MIN_SIGNAL_CONFIDENCE: 60,    // Trade on 60%+ confidence signals (was 50%)
-  HIGH_CONFIDENCE_THRESHOLD: 75, // 75%+ = high confidence (was 70%)
+  MIN_SIGNAL_CONFIDENCE: 55,    // Trade on 55%+ confidence signals
+  HIGH_CONFIDENCE_THRESHOLD: 70, // 70%+ = high confidence
   STRUCTURE_SHIFT_CANDLES: 5,   // Need 5 candles to confirm structure shift
   MIN_ACCOUNT_BALANCE: 100,     // Don't trade if balance below $100
   TRADE_COOLDOWN_MS: 120000,    // 2 MINUTES cooldown between trades (was 30s)
@@ -96,7 +96,7 @@ const BOT_CONFIG = {
     description: 'Ultra-fast scalping - targets 5-15 pip moves',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY'],  // Major pairs only (tight spreads)
     timeframes: ['m1', 'm5'],
-    minConfidence: 65,
+    minConfidence: 55,
     maxLotSize: 0.03,
     maxPositions: 2,
     cooldownMs: 120000,       // 2 min cooldown
@@ -121,7 +121,7 @@ const BOT_CONFIG = {
     description: 'Momentum trading - catches strong directional moves',
     allowedPairs: ['EURUSD', 'GBPUSD', 'AUDUSD', 'USDCHF', 'XAUUSD'],
     timeframes: ['m5', 'm15'],
-    minConfidence: 70,
+    minConfidence: 55,
     maxLotSize: 0.04,
     maxPositions: 2,
     cooldownMs: 300000,       // 5 min cooldown
@@ -145,7 +145,7 @@ const BOT_CONFIG = {
     description: 'Trend following - rides medium-term trends',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD', 'XAUUSD'],
     timeframes: ['m15', 'm30', 'h1'],
-    minConfidence: 65,
+    minConfidence: 55,
     maxLotSize: 0.04,
     maxPositions: 3,
     cooldownMs: 600000,       // 10 min cooldown
@@ -169,7 +169,7 @@ const BOT_CONFIG = {
     description: 'Breakout trading - catches moves from key levels',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'EURJPY', 'GBPJPY', 'XAUUSD'],
     timeframes: ['m30', 'h1'],
-    minConfidence: 70,
+    minConfidence: 55,
     maxLotSize: 0.04,
     maxPositions: 2,
     cooldownMs: 900000,       // 15 min cooldown
@@ -193,7 +193,7 @@ const BOT_CONFIG = {
     description: 'Swing trading - captures larger market moves',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'XAUUSD'],
     timeframes: ['h1', 'h4'],
-    minConfidence: 70,
+    minConfidence: 55,
     maxLotSize: 0.03,
     maxPositions: 2,
     cooldownMs: 3600000,      // 1 hour cooldown
@@ -217,7 +217,7 @@ const BOT_CONFIG = {
     description: 'Gold specialist - trades XAUUSD with volatility filters',
     allowedPairs: ['XAUUSD'],  // Gold only
     timeframes: ['m15', 'm30', 'h1'],
-    minConfidence: 75,        // Higher confidence for gold
+    minConfidence: 55,        // Lowered for active trading
     maxLotSize: 0.02,         // Smaller lots due to volatility
     maxPositions: 1,          // Only 1 gold position at a time
     cooldownMs: 600000,       // 10 min cooldown
@@ -241,7 +241,7 @@ const BOT_CONFIG = {
     description: 'Position trading - long-term trend following',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'NZDUSD'],
     timeframes: ['h4', 'd1'],
-    minConfidence: 75,
+    minConfidence: 55,
     maxLotSize: 0.03,
     maxPositions: 2,
     cooldownMs: 14400000,     // 4 hour cooldown
@@ -265,7 +265,7 @@ const BOT_CONFIG = {
     description: 'Daily sniper - precision entries on D1 chart',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'EURJPY'],
     timeframes: ['d1'],
-    minConfidence: 80,        // Very high confidence needed
+    minConfidence: 55,        // Lowered for active trading
     maxLotSize: 0.03,
     maxPositions: 1,          // Only 1 sniper trade at a time
     cooldownMs: 86400000,     // 24 hour cooldown (1 trade per day max)
@@ -288,7 +288,7 @@ const BOT_CONFIG = {
     description: 'News trading - capitalizes on high-impact events',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD'],
     timeframes: ['m5', 'm15'],
-    minConfidence: 70,
+    minConfidence: 55,
     maxLotSize: 0.02,         // Smaller lots for news volatility
     maxPositions: 1,          // Only 1 news trade at a time
     cooldownMs: 1800000,      // 30 min cooldown
@@ -312,7 +312,7 @@ const BOT_CONFIG = {
     description: 'Grid trading - profits from ranging markets',
     allowedPairs: ['EURUSD', 'AUDNZD', 'EURGBP'],  // Range-bound pairs only
     timeframes: ['h1', 'h4'],
-    minConfidence: 75,
+    minConfidence: 55,
     maxLotSize: 0.01,         // Very small lots for grid
     maxPositions: 3,          // Limited grid levels
     cooldownMs: 3600000,      // 1 hour cooldown
@@ -351,7 +351,7 @@ const BOT_CONFIG = {
     description: 'Hedging - reduces drawdown via correlated pairs',
     allowedPairs: ['EURUSD', 'USDCHF', 'GBPUSD', 'EURGBP'],  // Correlated pairs
     timeframes: ['h1', 'h4'],
-    minConfidence: 75,
+    minConfidence: 55,
     maxLotSize: 0.02,
     maxPositions: 2,
     cooldownMs: 7200000,      // 2 hour cooldown
@@ -1293,8 +1293,8 @@ function analyzeMarketForScalping(candles, symbol, riskLevel = 'medium') {
     if (bullishCandles === 3) { confidence += 10; reason += '3-Green '; }
     if (strongBody && lastCandle.close > lastCandle.open) { confidence += 10; reason += 'StrongCandle '; }
     
-    // Must hit minimum 70% for scalping
-    if (confidence >= 70) {
+    // Must hit minimum 55% for scalping
+    if (confidence >= 55) {
       signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
@@ -1310,8 +1310,8 @@ function analyzeMarketForScalping(candles, symbol, riskLevel = 'medium') {
     if (bearishCandles === 3) { confidence += 10; reason += '3-Red '; }
     if (strongBody && lastCandle.close < lastCandle.open) { confidence += 10; reason += 'StrongCandle '; }
     
-    // Must hit minimum 70% for scalping
-    if (confidence >= 70) {
+    // Must hit minimum 55% for scalping
+    if (confidence >= 55) {
       signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
@@ -1391,7 +1391,7 @@ function analyzeMarketForMomentum(candles, symbol, riskLevel = 'medium') {
     if (trendUp) { confidence += 10; reason += 'TrendUp '; }
     if (currentRsi > prevRsi) { confidence += 5; reason += 'RSI-Turning '; }
     
-    if (confidence >= 70) {
+    if (confidence >= 55) {
       signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
@@ -1407,7 +1407,7 @@ function analyzeMarketForMomentum(candles, symbol, riskLevel = 'medium') {
     if (!trendUp) { confidence += 10; reason += 'TrendDown '; }
     if (currentRsi < prevRsi) { confidence += 5; reason += 'RSI-Turning '; }
     
-    if (confidence >= 70) {
+    if (confidence >= 55) {
       signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
@@ -1484,7 +1484,7 @@ function analyzeMarketForTrend(candles, symbol, riskLevel = 'medium') {
     if (strongTrend) { confidence += 10; reason += `ADX${adx.toFixed(0)} `; }
     if (currentPrice > ema8Val) { confidence += 10; reason += 'AboveEMA '; }
     
-    if (confidence >= 65) {
+    if (confidence >= 55) {
       signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
@@ -1499,7 +1499,7 @@ function analyzeMarketForTrend(candles, symbol, riskLevel = 'medium') {
     if (strongTrend) { confidence += 10; reason += `ADX${adx.toFixed(0)} `; }
     if (currentPrice < ema8Val) { confidence += 10; reason += 'BelowEMA '; }
     
-    if (confidence >= 65) {
+    if (confidence >= 55) {
       signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
@@ -1577,7 +1577,7 @@ function analyzeMarketForBreakout(candles, symbol, riskLevel = 'medium') {
     if (strongCandle) { confidence += 10; reason += 'StrongCandle '; }
     if (lastCandle.close > lastCandle.open) { confidence += 5; reason += 'Bullish '; }
     
-    if (confidence >= 70) {
+    if (confidence >= 55) {
       signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
@@ -1592,7 +1592,7 @@ function analyzeMarketForBreakout(candles, symbol, riskLevel = 'medium') {
     if (strongCandle) { confidence += 10; reason += 'StrongCandle '; }
     if (lastCandle.close < lastCandle.open) { confidence += 5; reason += 'Bearish '; }
     
-    if (confidence >= 70) {
+    if (confidence >= 55) {
       signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
@@ -1685,7 +1685,7 @@ function analyzeMarketForSwing(candles, symbol, riskLevel = 'medium') {
     if (nearSwingLow) { confidence += 15; reason += 'AtSupport '; }
     if (aboveEma) { confidence += 10; reason += 'AboveEMA '; }
     
-    if (confidence >= 70) {
+    if (confidence >= 55) {
       signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
@@ -1699,7 +1699,7 @@ function analyzeMarketForSwing(candles, symbol, riskLevel = 'medium') {
     if (nearSwingHigh) { confidence += 15; reason += 'AtResist '; }
     if (!aboveEma) { confidence += 10; reason += 'BelowEMA '; }
     
-    if (confidence >= 70) {
+    if (confidence >= 55) {
       signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
