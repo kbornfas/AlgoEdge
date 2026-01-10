@@ -66,19 +66,19 @@ function httpsRequest(url, options = {}) {
 }
 
 // =========================================================================
-// RISK MANAGEMENT CONSTANTS - CONSERVATIVE SETTINGS
+// RISK MANAGEMENT CONSTANTS - AGGRESSIVE SETTINGS
 // Configurable via environment variables for easy adjustment
 // =========================================================================
 const RISK_CONFIG = {
   MAX_RISK_PER_TRADE: parseFloat(process.env.MAX_RISK_PER_TRADE) || 0.02,     // Default 2%
   MAX_TOTAL_EXPOSURE: parseFloat(process.env.MAX_TOTAL_EXPOSURE) || 0.15,     // Default 15%
-  MIN_SIGNAL_CONFIDENCE: parseInt(process.env.MIN_SIGNAL_CONFIDENCE) || 55,   // Default 55%
-  HIGH_CONFIDENCE_THRESHOLD: parseInt(process.env.HIGH_CONFIDENCE_THRESHOLD) || 70, // 70%+ = UNLIMITED positions
-  STRUCTURE_SHIFT_CANDLES: 5,   // Need 5 candles to confirm structure shift
+  MIN_SIGNAL_CONFIDENCE: parseInt(process.env.MIN_SIGNAL_CONFIDENCE) || 45,   // Default 45% (aggressive)
+  HIGH_CONFIDENCE_THRESHOLD: parseInt(process.env.HIGH_CONFIDENCE_THRESHOLD) || 55, // 55%+ = UNLIMITED positions
+  STRUCTURE_SHIFT_CANDLES: 3,   // Need 3 candles to confirm structure shift (was 5)
   MIN_ACCOUNT_BALANCE: parseFloat(process.env.MIN_ACCOUNT_BALANCE) || 100,    // Default $100
   TRADE_COOLDOWN_MS: parseInt(process.env.TRADE_COOLDOWN_MS) || 60000,        // Default 1 min (faster)
   PREVENT_HEDGING: true,        // Never open opposite positions on same pair
-  MAX_POSITIONS_PER_SYMBOL: parseInt(process.env.MAX_POSITIONS_PER_SYMBOL) || 2, // Allow 2 per symbol
+  MAX_POSITIONS_PER_SYMBOL: parseInt(process.env.MAX_POSITIONS_PER_SYMBOL) || 3, // Allow 3 per symbol (was 2)
   DAILY_LOSS_LIMIT: parseFloat(process.env.DAILY_LOSS_LIMIT) || 0.10,         // Default 10%
   MAX_LOT_SIZE: parseFloat(process.env.MAX_LOT_SIZE) || 0.1,                  // Default 0.1 lots
   MIN_OPEN_POSITIONS: parseInt(process.env.MIN_OPEN_POSITIONS) || 5,          // Always maintain 5 trades
@@ -99,18 +99,18 @@ const BOT_CONFIG = {
     description: 'Ultra-fast scalping - targets 5-15 pip moves',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY'],  // Major pairs only (tight spreads)
     timeframes: ['m1', 'm5'],
-    minConfidence: 55,
+    minConfidence: 45,
     maxLotSize: 0.03,
-    maxPositions: 2,
-    cooldownMs: 120000,       // 2 min cooldown
+    maxPositions: 3,
+    cooldownMs: 60000,       // 1 min cooldown (faster)
     takeProfitPips: 10,       // Small TP
     stopLossPips: 15,         // Tight SL
     riskRewardMin: 0.5,       // Accept lower R:R for scalps
     rules: {
       checkSpread: true,      // Skip if spread > 2 pips
       maxSpreadPips: 2,
-      needsVolatility: true,  // Need price movement
-      avoidNews: true,        // Don't scalp during news
+      needsVolatility: false, // Don't require volatility
+      avoidNews: false,       // Trade during news too
       sessionFilter: ['london', 'newyork'],  // Best liquidity sessions
     }
   },
@@ -124,18 +124,18 @@ const BOT_CONFIG = {
     description: 'Momentum trading - catches strong directional moves',
     allowedPairs: ['EURUSD', 'GBPUSD', 'AUDUSD', 'USDCHF', 'XAUUSD'],
     timeframes: ['m5', 'm15'],
-    minConfidence: 55,
+    minConfidence: 45,
     maxLotSize: 0.04,
-    maxPositions: 2,
-    cooldownMs: 300000,       // 5 min cooldown
+    maxPositions: 3,
+    cooldownMs: 120000,       // 2 min cooldown (faster)
     takeProfitPips: 30,
     stopLossPips: 20,
     riskRewardMin: 1.5,
     rules: {
-      needsRSIExtreme: true,  // RSI must be < 30 or > 70
-      needsMACDAlignment: true, // MACD histogram must confirm
-      minMomentumStrength: 60,
-      avoidConsolidation: true,
+      needsRSIExtreme: false, // Don't require extreme RSI
+      needsMACDAlignment: false, // Don't require MACD alignment
+      minMomentumStrength: 40,
+      avoidConsolidation: false,
     }
   },
   
@@ -148,18 +148,18 @@ const BOT_CONFIG = {
     description: 'Trend following - rides medium-term trends',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD', 'XAUUSD'],
     timeframes: ['m15', 'm30', 'h1'],
-    minConfidence: 55,
+    minConfidence: 45,
     maxLotSize: 0.04,
-    maxPositions: 3,
-    cooldownMs: 600000,       // 10 min cooldown
+    maxPositions: 4,
+    cooldownMs: 180000,       // 3 min cooldown (faster)
     takeProfitPips: 50,
     stopLossPips: 25,
     riskRewardMin: 2.0,
     rules: {
-      needsEMACrossover: true,  // EMA 8 must cross EMA 20
-      needsADXFilter: true,     // ADX must be > 20
-      minADX: 20,
-      trendAlignment: true,     // Price above/below EMAs
+      needsEMACrossover: false,  // Don't require exact crossover
+      needsADXFilter: false,     // Don't require ADX > 20
+      minADX: 15,
+      trendAlignment: false,     // Don't require perfect alignment
     }
   },
   
@@ -172,18 +172,18 @@ const BOT_CONFIG = {
     description: 'Breakout trading - catches moves from key levels',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'EURJPY', 'GBPJPY', 'XAUUSD'],
     timeframes: ['m30', 'h1'],
-    minConfidence: 55,
+    minConfidence: 45,
     maxLotSize: 0.04,
-    maxPositions: 2,
-    cooldownMs: 900000,       // 15 min cooldown
+    maxPositions: 3,
+    cooldownMs: 300000,       // 5 min cooldown (faster)
     takeProfitPips: 40,
     stopLossPips: 20,
     riskRewardMin: 2.0,
     rules: {
-      needsConsolidation: true,  // Must break from range
-      needsVolumeSpike: true,    // Volume must increase on break
-      minConsolidationBars: 10,  // At least 10 bars of ranging
-      confirmationClose: true,   // Wait for candle close above/below
+      needsConsolidation: false,  // Don't require consolidation
+      needsVolumeSpike: false,    // Don't require volume spike
+      minConsolidationBars: 5,    // Lower bar requirement
+      confirmationClose: false,   // Don't wait for close
     }
   },
   
@@ -196,18 +196,18 @@ const BOT_CONFIG = {
     description: 'Swing trading - captures larger market moves',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'XAUUSD'],
     timeframes: ['h1', 'h4'],
-    minConfidence: 55,
+    minConfidence: 45,
     maxLotSize: 0.03,
-    maxPositions: 2,
-    cooldownMs: 3600000,      // 1 hour cooldown
+    maxPositions: 3,
+    cooldownMs: 600000,      // 10 min cooldown (was 1 hour)
     takeProfitPips: 100,
     stopLossPips: 50,
     riskRewardMin: 2.0,
     rules: {
-      needsHigherTFAlignment: true,  // H4 must confirm H1 direction
-      needsClearStructure: true,     // Clear swing highs/lows
-      minSwingPotential: 80,         // Min 80 pip potential
-      avoidRanging: true,
+      needsHigherTFAlignment: false,  // Don't require HTF confirmation
+      needsClearStructure: false,     // Don't require clear structure
+      minSwingPotential: 40,          // Lower min pip potential
+      avoidRanging: false,
     }
   },
   
@@ -220,18 +220,18 @@ const BOT_CONFIG = {
     description: 'Gold specialist - trades XAUUSD with volatility filters',
     allowedPairs: ['XAUUSD'],  // Gold only
     timeframes: ['m15', 'm30', 'h1'],
-    minConfidence: 55,        // Lowered for active trading
+    minConfidence: 45,        // More aggressive
     maxLotSize: 0.02,         // Smaller lots due to volatility
-    maxPositions: 1,          // Only 1 gold position at a time
-    cooldownMs: 600000,       // 10 min cooldown
+    maxPositions: 2,          // Allow 2 gold positions
+    cooldownMs: 300000,       // 5 min cooldown (was 10)
     takeProfitPips: 150,      // Wider TP for gold (in cents)
     stopLossPips: 100,        // Wider SL for gold
     riskRewardMin: 1.5,
     rules: {
       sessionFilter: ['london', 'newyork'],  // Best gold sessions
-      maxATR: 400,            // Don't trade when ATR too high
-      minATR: 100,            // Need some volatility
-      avoidExtremeVolatility: true,
+      maxATR: 600,            // Higher ATR tolerance
+      minATR: 50,             // Lower volatility requirement
+      avoidExtremeVolatility: false,
     }
   },
   
@@ -244,18 +244,18 @@ const BOT_CONFIG = {
     description: 'Position trading - long-term trend following',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'NZDUSD'],
     timeframes: ['h4', 'd1'],
-    minConfidence: 55,
+    minConfidence: 45,
     maxLotSize: 0.03,
-    maxPositions: 2,
-    cooldownMs: 14400000,     // 4 hour cooldown
+    maxPositions: 3,
+    cooldownMs: 1800000,     // 30 min cooldown (was 4 hours)
     takeProfitPips: 200,
     stopLossPips: 80,
     riskRewardMin: 2.5,
     rules: {
-      needsDailyTrendConfirm: true,
-      needsWeeklyAlignment: true,
-      minTrendStrength: 60,
-      avoidMajorNews: true,   // Avoid day of major news
+      needsDailyTrendConfirm: false,
+      needsWeeklyAlignment: false,
+      minTrendStrength: 40,
+      avoidMajorNews: false,
     }
   },
   
@@ -268,17 +268,17 @@ const BOT_CONFIG = {
     description: 'Daily sniper - precision entries on D1 chart',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'EURJPY'],
     timeframes: ['d1'],
-    minConfidence: 55,        // Lowered for active trading
+    minConfidence: 45,        // More aggressive
     maxLotSize: 0.03,
-    maxPositions: 1,          // Only 1 sniper trade at a time
-    cooldownMs: 86400000,     // 24 hour cooldown (1 trade per day max)
+    maxPositions: 2,          // Allow 2 sniper trades
+    cooldownMs: 3600000,      // 1 hour cooldown (was 24 hours)
     takeProfitPips: 150,
     stopLossPips: 60,
     riskRewardMin: 2.5,
     rules: {
-      needsKeyLevel: true,    // Must be at support/resistance
-      needsCandlePattern: true, // Confirming candle pattern
-      dailyCloseEntry: true,  // Enter on daily close
+      needsKeyLevel: false,    // Don't require key levels
+      needsCandlePattern: false, // Don't require patterns
+      dailyCloseEntry: false,  // Don't wait for daily close
     }
   },
   
@@ -291,23 +291,23 @@ const BOT_CONFIG = {
     description: 'News trading - capitalizes on high-impact events',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD'],
     timeframes: ['m5', 'm15'],
-    minConfidence: 55,
+    minConfidence: 45,
     maxLotSize: 0.02,         // Smaller lots for news volatility
-    maxPositions: 1,          // Only 1 news trade at a time
-    cooldownMs: 1800000,      // 30 min cooldown
+    maxPositions: 2,          // Allow 2 news trades
+    cooldownMs: 600000,       // 10 min cooldown (was 30 min)
     takeProfitPips: 50,
     stopLossPips: 30,
     riskRewardMin: 1.5,
     rules: {
-      needsNewsEvent: true,   // Must have scheduled news
-      minImpact: 'HIGH',      // Only high impact news
-      entryWindow: 15,        // Enter within 15 mins of news
-      avoidLowLiquidity: true,
+      needsNewsEvent: false,  // Don't require news events
+      minImpact: 'MEDIUM',    // Trade medium and high impact
+      entryWindow: 30,        // Enter within 30 mins of news
+      avoidLowLiquidity: false,
     }
   },
   
   // =====================================================================
-  // GRID MASTER - Range trading with grid orders (CONSERVATIVE)
+  // GRID MASTER - Range trading with grid orders
   // =====================================================================
   'algoedge-grid-master': {
     canTrade: true,
@@ -315,17 +315,17 @@ const BOT_CONFIG = {
     description: 'Grid trading - profits from ranging markets',
     allowedPairs: ['EURUSD', 'AUDNZD', 'EURGBP'],  // Range-bound pairs only
     timeframes: ['h1', 'h4'],
-    minConfidence: 55,
+    minConfidence: 45,
     maxLotSize: 0.01,         // Very small lots for grid
-    maxPositions: 3,          // Limited grid levels
-    cooldownMs: 3600000,      // 1 hour cooldown
+    maxPositions: 4,          // More grid levels
+    cooldownMs: 600000,       // 10 min cooldown (was 1 hour)
     takeProfitPips: 20,
     stopLossPips: 40,         // Wider SL for grid
     riskRewardMin: 0.5,
     rules: {
-      needsRangingMarket: true,  // ADX must be < 20
-      maxADX: 20,
-      maxGridLevels: 3,         // Only 3 grid levels max
+      needsRangingMarket: false,  // Don't require ranging
+      maxADX: 30,
+      maxGridLevels: 4,         // 4 grid levels max
       hardStopLoss: true,       // Must have hard SL on all
       noMartingale: true,       // NO lot size increases
     }
@@ -354,15 +354,15 @@ const BOT_CONFIG = {
     description: 'Hedging - reduces drawdown via correlated pairs',
     allowedPairs: ['EURUSD', 'USDCHF', 'GBPUSD', 'EURGBP'],  // Correlated pairs
     timeframes: ['h1', 'h4'],
-    minConfidence: 55,
+    minConfidence: 45,
     maxLotSize: 0.02,
-    maxPositions: 2,
-    cooldownMs: 7200000,      // 2 hour cooldown
+    maxPositions: 3,
+    cooldownMs: 600000,       // 10 min cooldown (was 2 hours)
     takeProfitPips: 30,
     stopLossPips: 40,
     riskRewardMin: 0.75,
     rules: {
-      correlationHedge: true,  // Only hedge with correlated pairs
+      correlationHedge: false,  // Don't require correlation
       sameAccountOnly: true,   // Both legs in same account
       maxHedgeRatio: 0.5,      // Hedge max 50% of position
       noSamePairHedge: true,   // Never BUY+SELL same pair
@@ -847,11 +847,40 @@ async function getConnection(metaApiAccountId, mt5AccountId) {
       return null;
     }
     
-    // Verify the connection has the methods we need
+    // For streaming connections, we need to use terminalState for account info
+    // Check what methods are available
+    const connMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(rpcConnection))
+      .filter(m => typeof rpcConnection[m] === 'function');
+    console.log(`  📋 Connection methods: ${connMethods.slice(0, 20).join(', ')}`);
+    
+    // If connection doesn't have getAccountInformation, wrap it with terminalState access
     if (typeof rpcConnection.getAccountInformation !== 'function') {
-      console.log(`  ❌ Connection missing getAccountInformation method`);
-      return null;
+      console.log(`  ⚠️ Connection missing getAccountInformation - using terminalState wrapper`);
+      
+      // Check if terminalState is available
+      if (rpcConnection.terminalState) {
+        // Create wrapper methods using terminalState
+        rpcConnection.getAccountInformation = async () => {
+          const state = rpcConnection.terminalState;
+          return {
+            balance: state.accountInformation?.balance || 0,
+            equity: state.accountInformation?.equity || 0,
+            margin: state.accountInformation?.margin || 0,
+            freeMargin: state.accountInformation?.freeMargin || 0,
+            leverage: state.accountInformation?.leverage || 100,
+            currency: state.accountInformation?.currency || 'USD',
+          };
+        };
+        rpcConnection.getPositions = async () => {
+          return rpcConnection.terminalState.positions || [];
+        };
+        console.log(`  ✅ Added terminalState wrapper methods`);
+      } else {
+        console.log(`  ❌ No terminalState available - cannot get account info`);
+        return null;
+      }
     }
+    
     if (typeof rpcConnection.getPositions !== 'function') {
       console.log(`  ❌ Connection missing getPositions method`);
       return null;
@@ -1276,41 +1305,53 @@ function analyzeMarketForScalping(candles, symbol, riskLevel = 'medium') {
   let confidence = 0;
   let reason = '';
   
-  // SCALP BUY: Quick momentum entries
-  if (fastTrendUp && bullishCandles >= 2 && strongBody) {
-    confidence = 50;
+  // SCALP BUY: Quick momentum entries (RELAXED CONDITIONS)
+  if ((ema5Val > ema10Val || bullishCandles >= 2 || currentPrice > ema5Val)) {
+    confidence = 35; // Start with base
     reason = 'SCALP-BUY: ';
     
     if (fastTrendUp) { confidence += 20; reason += 'FastTrend '; }
-    if (currentRsi > 50 && currentRsi < 70) { confidence += 10; reason += 'RSI-Good '; }
-    if (strongMomentum && priceChange > 0) { confidence += 15; reason += 'Momentum '; }
-    if (bullishCandles === 3) { confidence += 10; reason += '3-Green '; }
+    else if (ema5Val > ema10Val) { confidence += 10; reason += 'EMA-Up '; }
+    if (currentRsi > 40 && currentRsi < 70) { confidence += 10; reason += 'RSI-Good '; }
+    if (strongMomentum && priceChange > 0) { confidence += 10; reason += 'Momentum '; }
+    if (bullishCandles >= 2) { confidence += 10; reason += `${bullishCandles}-Green `; }
     if (strongBody && lastCandle.close > lastCandle.open) { confidence += 10; reason += 'StrongCandle '; }
+    if (currentPrice > ema5Val) { confidence += 5; reason += 'Above-EMA '; }
     
-    // Must hit minimum 55% for scalping
-    if (confidence >= 55) {
+    // Generate signal if above MIN_SIGNAL_CONFIDENCE
+    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
       signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  // SCALP SELL: Quick momentum entries
-  if (!signal && fastTrendDown && bearishCandles >= 2 && strongBody) {
-    confidence = 50;
+  // SCALP SELL: Quick momentum entries (RELAXED CONDITIONS)
+  if (!signal && (ema5Val < ema10Val || bearishCandles >= 2 || currentPrice < ema5Val)) {
+    confidence = 35; // Start with base
     reason = 'SCALP-SELL: ';
     
     if (fastTrendDown) { confidence += 20; reason += 'FastTrend '; }
-    if (currentRsi < 50 && currentRsi > 30) { confidence += 10; reason += 'RSI-Good '; }
-    if (strongMomentum && priceChange < 0) { confidence += 15; reason += 'Momentum '; }
-    if (bearishCandles === 3) { confidence += 10; reason += '3-Red '; }
+    else if (ema5Val < ema10Val) { confidence += 10; reason += 'EMA-Down '; }
+    if (currentRsi < 60 && currentRsi > 30) { confidence += 10; reason += 'RSI-Good '; }
+    if (strongMomentum && priceChange < 0) { confidence += 10; reason += 'Momentum '; }
+    if (bearishCandles >= 2) { confidence += 10; reason += `${bearishCandles}-Red `; }
     if (strongBody && lastCandle.close < lastCandle.open) { confidence += 10; reason += 'StrongCandle '; }
+    if (currentPrice < ema5Val) { confidence += 5; reason += 'Below-EMA '; }
     
-    // Must hit minimum 55% for scalping
-    if (confidence >= 55) {
+    // Generate signal if above MIN_SIGNAL_CONFIDENCE
+    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
       signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  if (!signal) return null;
+  // FALLBACK: Always generate a scalp signal based on last candle
+  if (!signal) {
+    const isBullish = lastCandle.close > lastCandle.open;
+    signal = { 
+      type: isBullish ? 'buy' : 'sell', 
+      confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, 
+      reason: isBullish ? 'SCALP-BUY: LastCandle-Green' : 'SCALP-SELL: LastCandle-Red'
+    };
+  }
   
   // Scalping uses TIGHT stops and quick targets
   const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
@@ -1374,39 +1415,52 @@ function analyzeMarketForMomentum(candles, symbol, riskLevel = 'medium') {
   let confidence = 0;
   let reason = '';
   
-  // MOMENTUM BUY: RSI oversold + MACD turning up
-  if (currentRsi < 35 && prevRsi < currentRsi && histogram > prevHistogram) {
-    confidence = 55;
+  // MOMENTUM BUY: RSI low OR MACD turning up (RELAXED)
+  if ((currentRsi < 50 && histogram > prevHistogram) || (currentRsi < 40) || (trendUp && histogram > 0)) {
+    confidence = 35;
     reason = 'MOMENTUM-BUY: ';
     
-    if (currentRsi < 30) { confidence += 15; reason += 'RSI-Oversold '; }
+    if (currentRsi < 30) { confidence += 20; reason += 'RSI-Oversold '; }
+    else if (currentRsi < 40) { confidence += 15; reason += 'RSI-Low '; }
+    else if (currentRsi < 50) { confidence += 10; reason += 'RSI-Neutral '; }
     if (histogram > 0 && prevHistogram < 0) { confidence += 15; reason += 'MACD-Cross '; }
     else if (histogram > prevHistogram) { confidence += 10; reason += 'MACD-Rising '; }
+    else if (histogram > 0) { confidence += 5; reason += 'MACD-Positive '; }
     if (trendUp) { confidence += 10; reason += 'TrendUp '; }
     if (currentRsi > prevRsi) { confidence += 5; reason += 'RSI-Turning '; }
     
-    if (confidence >= 55) {
+    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
       signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  // MOMENTUM SELL: RSI overbought + MACD turning down
-  if (!signal && currentRsi > 65 && prevRsi > currentRsi && histogram < prevHistogram) {
-    confidence = 55;
+  // MOMENTUM SELL: RSI high OR MACD turning down (RELAXED)
+  if (!signal && ((currentRsi > 50 && histogram < prevHistogram) || (currentRsi > 60) || (!trendUp && histogram < 0))) {
+    confidence = 35;
     reason = 'MOMENTUM-SELL: ';
     
-    if (currentRsi > 70) { confidence += 15; reason += 'RSI-Overbought '; }
+    if (currentRsi > 70) { confidence += 20; reason += 'RSI-Overbought '; }
+    else if (currentRsi > 60) { confidence += 15; reason += 'RSI-High '; }
+    else if (currentRsi > 50) { confidence += 10; reason += 'RSI-Neutral '; }
     if (histogram < 0 && prevHistogram > 0) { confidence += 15; reason += 'MACD-Cross '; }
     else if (histogram < prevHistogram) { confidence += 10; reason += 'MACD-Falling '; }
+    else if (histogram < 0) { confidence += 5; reason += 'MACD-Negative '; }
     if (!trendUp) { confidence += 10; reason += 'TrendDown '; }
     if (currentRsi < prevRsi) { confidence += 5; reason += 'RSI-Turning '; }
     
-    if (confidence >= 55) {
+    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
       signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  if (!signal) return null;
+  // FALLBACK: Generate signal based on EMA trend if no other signal
+  if (!signal) {
+    if (trendUp) {
+      signal = { type: 'buy', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'MOMENTUM-BUY: TrendUp-Fallback' };
+    } else {
+      signal = { type: 'sell', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'MOMENTUM-SELL: TrendDown-Fallback' };
+    }
+  }
   
   const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   const isBuy = signal.type === 'buy';
@@ -1454,7 +1508,7 @@ function analyzeMarketForTrend(candles, symbol, riskLevel = 'medium') {
   
   // Calculate ADX (simplified)
   const adx = calculateADX(candles, 14);
-  const strongTrend = adx > 20;
+  const strongTrend = adx > 15; // Lowered from 20
   
   // Check for EMA crossover
   const bullishCross = prevEma8 <= prevEma20 && ema8Val > ema20Val;
@@ -1464,41 +1518,56 @@ function analyzeMarketForTrend(candles, symbol, riskLevel = 'medium') {
   const bullishAlign = ema8Val > ema20Val && ema20Val > ema50Val;
   const bearishAlign = ema8Val < ema20Val && ema20Val < ema50Val;
   
+  // Simple trend check (RELAXED)
+  const simpleBullish = ema8Val > ema20Val;
+  const simpleBearish = ema8Val < ema20Val;
+  
   let signal = null;
   let confidence = 0;
   let reason = '';
   
-  // TREND BUY: EMA crossover or pullback to EMA in uptrend
-  if ((bullishCross || (bullishAlign && currentPrice > ema8Val)) && strongTrend) {
-    confidence = 50;
+  // TREND BUY: EMA crossover or any bullish alignment (RELAXED)
+  if (bullishCross || bullishAlign || (simpleBullish && currentPrice > ema8Val)) {
+    confidence = 35;
     reason = 'TREND-BUY: ';
     
     if (bullishCross) { confidence += 20; reason += 'EMA-Cross '; }
     if (bullishAlign) { confidence += 15; reason += 'Aligned '; }
+    else if (simpleBullish) { confidence += 10; reason += 'Bullish-EMA '; }
     if (strongTrend) { confidence += 10; reason += `ADX${adx.toFixed(0)} `; }
     if (currentPrice > ema8Val) { confidence += 10; reason += 'AboveEMA '; }
+    if (currentPrice > ema50Val) { confidence += 5; reason += 'Above50 '; }
     
-    if (confidence >= 55) {
+    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
       signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  // TREND SELL: EMA crossover or pullback in downtrend
-  if (!signal && (bearishCross || (bearishAlign && currentPrice < ema8Val)) && strongTrend) {
-    confidence = 50;
+  // TREND SELL: EMA crossover or any bearish alignment (RELAXED)
+  if (!signal && (bearishCross || bearishAlign || (simpleBearish && currentPrice < ema8Val))) {
+    confidence = 35;
     reason = 'TREND-SELL: ';
     
     if (bearishCross) { confidence += 20; reason += 'EMA-Cross '; }
     if (bearishAlign) { confidence += 15; reason += 'Aligned '; }
+    else if (simpleBearish) { confidence += 10; reason += 'Bearish-EMA '; }
     if (strongTrend) { confidence += 10; reason += `ADX${adx.toFixed(0)} `; }
     if (currentPrice < ema8Val) { confidence += 10; reason += 'BelowEMA '; }
+    if (currentPrice < ema50Val) { confidence += 5; reason += 'Below50 '; }
     
-    if (confidence >= 55) {
+    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
       signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  if (!signal) return null;
+  // FALLBACK: Generate signal based on price vs EMA
+  if (!signal) {
+    if (currentPrice > ema20Val) {
+      signal = { type: 'buy', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'TREND-BUY: Price-Above-EMA20' };
+    } else {
+      signal = { type: 'sell', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'TREND-SELL: Price-Below-EMA20' };
+    }
+  }
   
   const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   const isBuy = signal.type === 'buy';
@@ -1586,12 +1655,26 @@ function analyzeMarketForBreakout(candles, symbol, riskLevel = 'medium') {
     if (strongCandle) { confidence += 10; reason += 'StrongCandle '; }
     if (lastCandle.close < lastCandle.open) { confidence += 5; reason += 'Bearish '; }
     
-    if (confidence >= 55) {
+    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
       signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  if (!signal) return null;
+  // FALLBACK: Always generate a breakout signal based on price position
+  if (!signal) {
+    const priceInRange = (currentPrice - support) / (resistance - support);
+    if (priceInRange > 0.7) {
+      // Price near resistance - potential breakout up or rejection
+      signal = { type: 'buy', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'BREAKOUT-BUY: NearResistance-Potential' };
+    } else if (priceInRange < 0.3) {
+      // Price near support - potential breakdown or bounce
+      signal = { type: 'sell', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'BREAKOUT-SELL: NearSupport-Potential' };
+    } else {
+      // Price in middle - go with momentum
+      const isBullish = lastCandle.close > lastCandle.open;
+      signal = { type: isBullish ? 'buy' : 'sell', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: isBullish ? 'BREAKOUT-BUY: Momentum' : 'BREAKOUT-SELL: Momentum' };
+    }
+  }
   
   const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   const isBuy = signal.type === 'buy';
@@ -1698,7 +1781,14 @@ function analyzeMarketForSwing(candles, symbol, riskLevel = 'medium') {
     }
   }
   
-  if (!signal) return null;
+  // FALLBACK: Always generate a swing signal based on EMA and trend
+  if (!signal) {
+    if (aboveEma) {
+      signal = { type: 'buy', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'SWING-BUY: AboveEMA-Fallback' };
+    } else {
+      signal = { type: 'sell', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'SWING-SELL: BelowEMA-Fallback' };
+    }
+  }
   
   const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   const isBuy = signal.type === 'buy';
@@ -1809,8 +1899,8 @@ function analyzeMarket(candles, symbol, riskLevel = 'medium') {
   const nearResistance = currentPrice > resistance - (atr * 0.5);
   
   // =========================================================================
-  // SIGNAL DETECTION - Trade when opportunities present
-  // 50%+ = Normal trade, 70%+ = High confidence unlimited
+  // SIGNAL DETECTION - Trade when opportunities present (AGGRESSIVE MODE)
+  // 45%+ = Normal trade, 60%+ = High confidence unlimited
   // =========================================================================
   let signal = null;
   let confidence = 0;
@@ -1819,26 +1909,29 @@ function analyzeMarket(candles, symbol, riskLevel = 'medium') {
   // Get previous market structure
   const prevStructure = marketStructure.get(symbol);
   
-  // BUY CONDITIONS: Various bullish setups
+  // BUY CONDITIONS: Various bullish setups (RELAXED)
   if (
     (isUptrend) ||                                   // Any uptrend
     (emaCrossUp) ||                                  // Fresh crossover
-    (currentRsi < 40 && bullishCount >= 3) ||        // Oversold with momentum
-    (bullishCount >= 3) ||                           // Momentum
-    (nearSupport && bullishCount >= 2)               // Bounce from support
+    (currentRsi < 45 && bullishCount >= 2) ||        // RSI low with momentum
+    (bullishCount >= 2) ||                           // Any momentum
+    (nearSupport) ||                                 // Near support
+    (currentPrice > ema8Val) ||                      // Price above fast EMA
+    (ema8Val > ema20Val)                             // Fast EMA above slow
   ) {
-    confidence = 0;
+    confidence = 25; // Start with base confidence
     reason = '';
     
-    if (isUptrend) { confidence += 25; reason += 'Uptrend '; }
-    if (emaCrossUp) { confidence += 30; reason += 'EMA-Cross-Up '; }
-    if (currentRsi < 30) { confidence += 25; reason += 'RSI-Oversold '; }
-    else if (currentRsi < 40) { confidence += 15; reason += 'RSI-Low '; }
+    if (isUptrend) { confidence += 20; reason += 'Uptrend '; }
+    if (emaCrossUp) { confidence += 25; reason += 'EMA-Cross-Up '; }
+    if (currentRsi < 30) { confidence += 20; reason += 'RSI-Oversold '; }
+    else if (currentRsi < 45) { confidence += 10; reason += 'RSI-Low '; }
     if (nearSupport) { confidence += 15; reason += 'Support-Bounce '; }
-    if (bullishCount >= 4) { confidence += 25; reason += `Strong-Mom(${bullishCount}/5) `; }
-    else if (bullishCount >= 3) { confidence += 15; reason += `Momentum(${bullishCount}/5) `; }
+    if (bullishCount >= 4) { confidence += 20; reason += `Strong-Mom(${bullishCount}/5) `; }
+    else if (bullishCount >= 2) { confidence += 10; reason += `Momentum(${bullishCount}/5) `; }
     if (ema8Val > ema20Val && ema20Val > ema50Val) { confidence += 15; reason += 'EMA-Aligned '; }
     else if (ema8Val > ema20Val) { confidence += 10; reason += 'EMA-Bullish '; }
+    if (currentPrice > ema8Val) { confidence += 5; reason += 'Above-EMA '; }
     
     if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
       signal = { type: 'buy', confidence: Math.min(confidence, 100), reason: `BUY: ${reason.trim()}` };
@@ -1846,28 +1939,31 @@ function analyzeMarket(candles, symbol, riskLevel = 'medium') {
     }
   }
   
-  // SELL CONDITIONS: Various bearish setups
+  // SELL CONDITIONS: Various bearish setups (RELAXED)
   if (
     !signal && (
       (isDowntrend) ||                               // Any downtrend
       (emaCrossDown) ||                              // Fresh crossover
-      (currentRsi > 60 && bearishCount >= 3) ||      // Overbought with momentum
-      (bearishCount >= 3) ||                         // Momentum
-      (nearResistance && bearishCount >= 2)          // Rejection from resistance
+      (currentRsi > 55 && bearishCount >= 2) ||      // RSI high with momentum
+      (bearishCount >= 2) ||                         // Any momentum
+      (nearResistance) ||                            // Near resistance
+      (currentPrice < ema8Val) ||                    // Price below fast EMA
+      (ema8Val < ema20Val)                           // Fast EMA below slow
     )
   ) {
-    confidence = 0;
+    confidence = 25; // Start with base confidence
     reason = '';
     
-    if (isDowntrend) { confidence += 25; reason += 'Downtrend '; }
-    if (emaCrossDown) { confidence += 30; reason += 'EMA-Cross-Down '; }
-    if (currentRsi > 70) { confidence += 25; reason += 'RSI-Overbought '; }
-    else if (currentRsi > 60) { confidence += 15; reason += 'RSI-High '; }
+    if (isDowntrend) { confidence += 20; reason += 'Downtrend '; }
+    if (emaCrossDown) { confidence += 25; reason += 'EMA-Cross-Down '; }
+    if (currentRsi > 70) { confidence += 20; reason += 'RSI-Overbought '; }
+    else if (currentRsi > 55) { confidence += 10; reason += 'RSI-High '; }
     if (nearResistance) { confidence += 15; reason += 'Resistance-Reject '; }
-    if (bearishCount >= 4) { confidence += 25; reason += `Strong-Mom(${bearishCount}/5) `; }
-    else if (bearishCount >= 3) { confidence += 15; reason += `Momentum(${bearishCount}/5) `; }
+    if (bearishCount >= 4) { confidence += 20; reason += `Strong-Mom(${bearishCount}/5) `; }
+    else if (bearishCount >= 2) { confidence += 10; reason += `Momentum(${bearishCount}/5) `; }
     if (ema8Val < ema20Val && ema20Val < ema50Val) { confidence += 15; reason += 'EMA-Aligned '; }
     else if (ema8Val < ema20Val) { confidence += 10; reason += 'EMA-Bearish '; }
+    if (currentPrice < ema8Val) { confidence += 5; reason += 'Below-EMA '; }
     
     if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
       signal = { type: 'sell', confidence: Math.min(confidence, 100), reason: `SELL: ${reason.trim()}` };
@@ -1875,15 +1971,23 @@ function analyzeMarket(candles, symbol, riskLevel = 'medium') {
     }
   }
   
-  // FALLBACK: If no signal but clear momentum, generate a lower confidence signal
-  if (!signal && (bullishCount >= 3 || bearishCount >= 3)) {
-    const isBullish = bullishCount > bearishCount;
-    confidence = 40 + (Math.abs(bullishCount - bearishCount) * 5);
-    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
-      reason = isBullish ? `Momentum(${bullishCount}/5 bullish)` : `Momentum(${bearishCount}/5 bearish)`;
-      signal = { type: isBullish ? 'buy' : 'sell', confidence, reason };
-      marketStructure.set(symbol, isBullish ? 'bullish' : 'bearish');
-    }
+  // FALLBACK: If no signal but ANY momentum, generate a signal
+  if (!signal && (bullishCount >= 2 || bearishCount >= 2)) {
+    const isBullish = bullishCount >= bearishCount;
+    confidence = 45 + (Math.abs(bullishCount - bearishCount) * 5);
+    // Always generate fallback signal if we have momentum
+    reason = isBullish ? `Momentum(${bullishCount}/5 bullish)` : `Momentum(${bearishCount}/5 bearish)`;
+    signal = { type: isBullish ? 'buy' : 'sell', confidence: Math.max(confidence, RISK_CONFIG.MIN_SIGNAL_CONFIDENCE), reason };
+    marketStructure.set(symbol, isBullish ? 'bullish' : 'bearish');
+  }
+  
+  // LAST RESORT: Generate a signal based on current price vs EMA
+  if (!signal) {
+    const isBullish = currentPrice > ema20Val;
+    confidence = RISK_CONFIG.MIN_SIGNAL_CONFIDENCE;
+    reason = isBullish ? 'Price-Above-EMA20' : 'Price-Below-EMA20';
+    signal = { type: isBullish ? 'buy' : 'sell', confidence, reason };
+    marketStructure.set(symbol, isBullish ? 'bullish' : 'bearish');
   }
   
   // No signal at all
