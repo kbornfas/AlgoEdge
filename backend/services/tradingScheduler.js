@@ -81,6 +81,8 @@ const RISK_CONFIG = {
   MAX_POSITIONS_PER_SYMBOL: parseInt(process.env.MAX_POSITIONS_PER_SYMBOL) || 1,
   DAILY_LOSS_LIMIT: parseFloat(process.env.DAILY_LOSS_LIMIT) || 0.05,         // Default 5%
   MAX_LOT_SIZE: parseFloat(process.env.MAX_LOT_SIZE) || 0.05,                 // Default 0.05 lots
+  MIN_OPEN_POSITIONS: parseInt(process.env.MIN_OPEN_POSITIONS) || 5,          // Always maintain 5 trades
+  MAX_OPEN_POSITIONS: parseInt(process.env.MAX_OPEN_POSITIONS) || 10,         // Max 10 trades total
 };
 
 // =========================================================================
@@ -505,16 +507,12 @@ async function getCachedPositions(connection, accountId) {
  * @returns {{ target: number, max: number }} - Target and max positions
  */
 function getPositionLimits(balance) {
-  // CONSERVATIVE LIMITS - Max 3-5 positions total
-  if (balance >= 10000) {
-    return { target: 5, max: 5 };   // $10,000+: max 5 positions
-  } else if (balance >= 5000) {
-    return { target: 3, max: 4 };   // $5,000-$10,000: max 4 positions
-  } else if (balance >= 1000) {
-    return { target: 2, max: 3 };   // $1,000-$5,000: max 3 positions
-  } else {
-    return { target: 1, max: 2 };   // Below $1,000: max 2 positions
-  }
+  // Use environment variables for position targets
+  const minPositions = RISK_CONFIG.MIN_OPEN_POSITIONS;  // Default 5
+  const maxPositions = RISK_CONFIG.MAX_OPEN_POSITIONS;  // Default 10
+  
+  // Always maintain at least MIN_OPEN_POSITIONS trades
+  return { target: minPositions, max: maxPositions };
 }
 
 // Track structure direction per symbol (for detecting real structure shifts)
@@ -2505,7 +2503,7 @@ async function executeRobotTrade(robot) {
       }
     }
     
-    // For NORMAL signals - CONSERVATIVE: Only fill up to target positions
+    // For NORMAL signals - AGGRESSIVE when under target to maintain MIN_OPEN_POSITIONS
     if (normalSignals.length > 0) {
       const posLimits = getPositionLimits(accountInfo.balance);
       const currentPositionCount = livePositions.length;
@@ -2514,10 +2512,11 @@ async function executeRobotTrade(robot) {
       if (slotsToFill <= 0) {
         console.log(`  📊 At target positions (${currentPositionCount}/${posLimits.target})`);
       } else {
-        // Max 2 trades per cycle to avoid rapid position building
-        const maxTradesPerCycle = 2;
-        const slotsAvailable = Math.min(slotsToFill, maxTradesPerCycle);
-        console.log(`  🎯 FILLING POSITIONS: Need ${slotsToFill} more to reach target ${posLimits.target}`);
+        // Be MORE AGGRESSIVE when under minimum positions
+        // Open up to 5 trades per cycle if we need to fill positions
+        const maxTradesPerCycle = Math.min(slotsToFill, 5);
+        const slotsAvailable = maxTradesPerCycle;
+        console.log(`  🎯 UNDER TARGET: Only ${currentPositionCount}/${posLimits.target} positions - OPENING MORE TRADES`);
         console.log(`  🎰 Opening up to ${slotsAvailable} trade(s) this cycle...`);
         
         let tradesOpened = 0;
