@@ -67,19 +67,20 @@ function httpsRequest(url, options = {}) {
 
 // =========================================================================
 // RISK MANAGEMENT CONSTANTS - CONSERVATIVE SETTINGS
+// Configurable via environment variables for easy adjustment
 // =========================================================================
 const RISK_CONFIG = {
-  MAX_RISK_PER_TRADE: 0.005,    // 0.5% max risk per trade (was 2%)
-  MAX_TOTAL_EXPOSURE: 0.05,     // 5% max total exposure (was 15%)
-  MIN_SIGNAL_CONFIDENCE: 55,    // Trade on 55%+ confidence signals
-  HIGH_CONFIDENCE_THRESHOLD: 70, // 70%+ = high confidence
+  MAX_RISK_PER_TRADE: parseFloat(process.env.MAX_RISK_PER_TRADE) || 0.005,    // Default 0.5%
+  MAX_TOTAL_EXPOSURE: parseFloat(process.env.MAX_TOTAL_EXPOSURE) || 0.05,     // Default 5%
+  MIN_SIGNAL_CONFIDENCE: parseInt(process.env.MIN_SIGNAL_CONFIDENCE) || 55,   // Default 55%
+  HIGH_CONFIDENCE_THRESHOLD: parseInt(process.env.HIGH_CONFIDENCE_THRESHOLD) || 70, // Default 70%
   STRUCTURE_SHIFT_CANDLES: 5,   // Need 5 candles to confirm structure shift
-  MIN_ACCOUNT_BALANCE: 100,     // Don't trade if balance below $100
-  TRADE_COOLDOWN_MS: 120000,    // 2 MINUTES cooldown between trades (was 30s)
+  MIN_ACCOUNT_BALANCE: parseFloat(process.env.MIN_ACCOUNT_BALANCE) || 100,    // Default $100
+  TRADE_COOLDOWN_MS: parseInt(process.env.TRADE_COOLDOWN_MS) || 120000,       // Default 2 min
   PREVENT_HEDGING: true,        // Never open opposite positions on same pair
-  MAX_POSITIONS_PER_SYMBOL: 1,  // Only 1 position per symbol at a time
-  DAILY_LOSS_LIMIT: 0.05,       // Stop trading if down 5% today
-  MAX_LOT_SIZE: 0.05,           // Maximum 0.05 lots regardless of balance
+  MAX_POSITIONS_PER_SYMBOL: parseInt(process.env.MAX_POSITIONS_PER_SYMBOL) || 1,
+  DAILY_LOSS_LIMIT: parseFloat(process.env.DAILY_LOSS_LIMIT) || 0.05,         // Default 5%
+  MAX_LOT_SIZE: parseFloat(process.env.MAX_LOT_SIZE) || 0.05,                 // Default 0.05 lots
 };
 
 // =========================================================================
