@@ -70,19 +70,19 @@ function httpsRequest(url, options = {}) {
 // Configurable via environment variables for easy adjustment
 // =========================================================================
 const RISK_CONFIG = {
-  MAX_RISK_PER_TRADE: parseFloat(process.env.MAX_RISK_PER_TRADE) || 0.005,    // Default 0.5%
-  MAX_TOTAL_EXPOSURE: parseFloat(process.env.MAX_TOTAL_EXPOSURE) || 0.05,     // Default 5%
+  MAX_RISK_PER_TRADE: parseFloat(process.env.MAX_RISK_PER_TRADE) || 0.02,     // Default 2%
+  MAX_TOTAL_EXPOSURE: parseFloat(process.env.MAX_TOTAL_EXPOSURE) || 0.15,     // Default 15%
   MIN_SIGNAL_CONFIDENCE: parseInt(process.env.MIN_SIGNAL_CONFIDENCE) || 55,   // Default 55%
-  HIGH_CONFIDENCE_THRESHOLD: parseInt(process.env.HIGH_CONFIDENCE_THRESHOLD) || 70, // Default 70%
+  HIGH_CONFIDENCE_THRESHOLD: parseInt(process.env.HIGH_CONFIDENCE_THRESHOLD) || 70, // 70%+ = UNLIMITED positions
   STRUCTURE_SHIFT_CANDLES: 5,   // Need 5 candles to confirm structure shift
   MIN_ACCOUNT_BALANCE: parseFloat(process.env.MIN_ACCOUNT_BALANCE) || 100,    // Default $100
-  TRADE_COOLDOWN_MS: parseInt(process.env.TRADE_COOLDOWN_MS) || 120000,       // Default 2 min
+  TRADE_COOLDOWN_MS: parseInt(process.env.TRADE_COOLDOWN_MS) || 60000,        // Default 1 min (faster)
   PREVENT_HEDGING: true,        // Never open opposite positions on same pair
-  MAX_POSITIONS_PER_SYMBOL: parseInt(process.env.MAX_POSITIONS_PER_SYMBOL) || 1,
-  DAILY_LOSS_LIMIT: parseFloat(process.env.DAILY_LOSS_LIMIT) || 0.05,         // Default 5%
-  MAX_LOT_SIZE: parseFloat(process.env.MAX_LOT_SIZE) || 0.05,                 // Default 0.05 lots
+  MAX_POSITIONS_PER_SYMBOL: parseInt(process.env.MAX_POSITIONS_PER_SYMBOL) || 2, // Allow 2 per symbol
+  DAILY_LOSS_LIMIT: parseFloat(process.env.DAILY_LOSS_LIMIT) || 0.10,         // Default 10%
+  MAX_LOT_SIZE: parseFloat(process.env.MAX_LOT_SIZE) || 0.1,                  // Default 0.1 lots
   MIN_OPEN_POSITIONS: parseInt(process.env.MIN_OPEN_POSITIONS) || 5,          // Always maintain 5 trades
-  MAX_OPEN_POSITIONS: parseInt(process.env.MAX_OPEN_POSITIONS) || 10,         // Max 10 trades total
+  MAX_OPEN_POSITIONS: parseInt(process.env.MAX_OPEN_POSITIONS) || 50,         // Soft max (high conf ignores)
 };
 
 // =========================================================================
@@ -638,31 +638,26 @@ function canOpenMoreTrades(balance, equity, openPositionsCount, currentProfitLos
   const { target, max } = getPositionLimits(balance);
   
   // Check if equity is critically low (stop out protection)
-  if (equity && equity < balance * 0.8) {
+  if (equity && equity < balance * 0.7) {
     return { canTrade: false, reason: `Equity critically low (${((equity / balance) * 100).toFixed(1)}% of balance)` };
   }
   
-  // Check drawdown - don't trade if losing more than 5%
-  if (currentProfitLoss < -(balance * 0.05)) {
+  // Check drawdown - don't trade if losing more than 10%
+  if (currentProfitLoss < -(balance * 0.10)) {
     return { canTrade: false, reason: `Drawdown limit reached (${((currentProfitLoss / balance) * 100).toFixed(1)}%)` };
   }
   
-  // Hard limit - never exceed max positions for this account size
-  if (openPositionsCount >= max) {
-    return { canTrade: false, reason: `Hard limit reached (${openPositionsCount}/${max})` };
+  // HIGH CONFIDENCE = UNLIMITED POSITIONS (no position limit)
+  if (signalConfidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD) {
+    return { canTrade: true, reason: `STRONG SIGNAL (${signalConfidence}%) - NO LIMIT` };
   }
   
-  // Conservative: Only trade if under target positions
+  // For normal signals - must be under target to open
   if (openPositionsCount < target) {
     return { canTrade: true, reason: `Under target (${openPositionsCount}/${target})` };
   }
   
-  // At or above target, only trade high confidence signals
-  if (signalConfidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD) {
-    return { canTrade: true, reason: 'HIGH CONFIDENCE signal' };
-  }
-  
-  return { canTrade: false, reason: `At max positions (${openPositionsCount}/${target})` };
+  return { canTrade: false, reason: `At target (${openPositionsCount}/${target}) - need strong signal` };
 }
 
 // NO MOCK DATA - Only real prices from MetaAPI
@@ -2459,15 +2454,15 @@ async function executeRobotTrade(robot) {
       }
     }
     
-    // For HIGH CONFIDENCE signals - still respect position limits
+    // For HIGH CONFIDENCE signals - NO POSITION LIMITS (unlimited trades)
     if (highConfidenceSignals.length > 0) {
-      console.log(`  🔥 HIGH CONFIDENCE MODE - Processing ${highConfidenceSignals.length} strong signal(s)...`);
+      console.log(`  🔥 STRONG SIGNALS - Processing ${highConfidenceSignals.length} high-confidence signal(s) - NO LIMITS...`);
       
       for (const { symbol, signal } of highConfidenceSignals) {
-        // Check if we already have a position on this symbol
+        // For strong signals, allow multiple per symbol (up to 2)
         const existingOnSymbol = livePositions.filter(p => p.symbol === symbol);
         if (existingOnSymbol.length >= RISK_CONFIG.MAX_POSITIONS_PER_SYMBOL) {
-          console.log(`    ⏭️ ${symbol}: Already have position - skipping even high confidence`);
+          console.log(`    ⏭️ ${symbol}: Max ${RISK_CONFIG.MAX_POSITIONS_PER_SYMBOL} positions per symbol`);
           continue;
         }
         
