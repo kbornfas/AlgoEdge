@@ -6,12 +6,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables based on NODE_ENV
-if (process.env.NODE_ENV === 'test') {
-  dotenv.config({ path: path.join(__dirname, '..', '.env.test') });
-} else {
-  dotenv.config();
-}
+
+dotenv.config();
 
 const { Pool } = pg;
 
@@ -23,6 +19,8 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 });
+console.log('process.env.DATABASE_URL:', process.env.DATABASE_URL);
+
 
 // Test database connection
 pool.on('connect', () => {
@@ -35,8 +33,8 @@ pool.on('error', (err) => {
 });
 
 // Database initialization function
-export const `initDatabase = async () => {
-  const client = await pool.connect();
+export const initDatabase = async () => {
+  const client = await pool.connect(); 
   
   try {
     await client.query('BEGIN');
