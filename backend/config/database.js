@@ -35,7 +35,7 @@ pool.on('error', (err) => {
 });
 
 // Database initialization function
-export const initDatabase = async () => {
+export const `initDatabase = async () => {
   const client = await pool.connect();
   
   try {
