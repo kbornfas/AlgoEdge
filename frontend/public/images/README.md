@@ -2,10 +2,10 @@
 
 ## Image7: Recent Trading Profits
 This image should show recent trading profits with AlgoEdge (MT5)
-- Replace `trading-profits.jpg` with actual MT5 profit screenshots
+- Replace `trading-profits.svg` with actual MT5 profit screenshots
 
 ## Image8: Live Trades and Algorithm Activity
 This image should show live trades and algorithm activity
-- Replace `algorithm-activity.jpg` with actual chart/algorithm screenshots
+- Replace `algorithm-activity.svg` with actual chart/algorithm screenshots
 
 Current files are placeholders. Replace with actual trading screenshots for production.
