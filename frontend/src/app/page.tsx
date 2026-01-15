@@ -594,7 +594,7 @@ export default function Home() {
                 }}
               >
                 <Image
-                  src="/images/mt5-chart.png"
+                  src="/images/AI POWERED 1.jpeg"
                   alt="Live XAUUSD Trading Chart"
                   width={400}
                   height={800}
@@ -614,7 +614,7 @@ export default function Home() {
                 }}
               >
                 <Image
-                  src="/images/trading-history.png"
+                  src="/images/AI POWERED 3.jpeg"
                   alt="Trading History - $1,963 Profit"
                   width={400}
                   height={800}
