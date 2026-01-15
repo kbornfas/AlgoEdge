@@ -66,32 +66,35 @@ function httpsRequest(url, options = {}) {
 }
 
 // =========================================================================
-// RISK MANAGEMENT CONSTANTS - AGGRESSIVE SETTINGS
+// RISK MANAGEMENT CONSTANTS - OPTIMIZED FOR PROFIT
 // Configurable via environment variables for easy adjustment
 // =========================================================================
 const RISK_CONFIG = {
-  MAX_RISK_PER_TRADE: parseFloat(process.env.MAX_RISK_PER_TRADE) || 0.02,     // Default 2%
+  MAX_RISK_PER_TRADE: parseFloat(process.env.MAX_RISK_PER_TRADE) || 0.02,     // Default 2% per trade
   MAX_TOTAL_EXPOSURE: parseFloat(process.env.MAX_TOTAL_EXPOSURE) || 0.15,     // Default 15%
-  MIN_SIGNAL_CONFIDENCE: parseInt(process.env.MIN_SIGNAL_CONFIDENCE) || 45,   // Default 45% (aggressive)
-  HIGH_CONFIDENCE_THRESHOLD: parseInt(process.env.HIGH_CONFIDENCE_THRESHOLD) || 55, // 55%+ = UNLIMITED positions
-  STRUCTURE_SHIFT_CANDLES: 3,   // Need 3 candles to confirm structure shift (was 5)
+  MIN_SIGNAL_CONFIDENCE: parseInt(process.env.MIN_SIGNAL_CONFIDENCE) || 50,   // Default 50%
+  HIGH_CONFIDENCE_THRESHOLD: parseInt(process.env.HIGH_CONFIDENCE_THRESHOLD) || 70, // 70%+ = Strong signal
+  VERY_HIGH_CONFIDENCE: 85,     // 85%+ = Use maximum lot size
+  STRUCTURE_SHIFT_CANDLES: 3,   // Need 3 candles to confirm structure shift
   MIN_ACCOUNT_BALANCE: parseFloat(process.env.MIN_ACCOUNT_BALANCE) || 100,    // Default $100
-  TRADE_COOLDOWN_MS: parseInt(process.env.TRADE_COOLDOWN_MS) || 60000,        // Default 1 min (faster)
+  TRADE_COOLDOWN_MS: parseInt(process.env.TRADE_COOLDOWN_MS) || 120000,       // Default 2 min cooldown
   PREVENT_HEDGING: true,        // Never open opposite positions on same pair
-  MAX_POSITIONS_PER_SYMBOL: parseInt(process.env.MAX_POSITIONS_PER_SYMBOL) || 3, // Allow 3 per symbol (was 2)
+  MAX_POSITIONS_PER_SYMBOL: parseInt(process.env.MAX_POSITIONS_PER_SYMBOL) || 2, // Max 2 per symbol
   DAILY_LOSS_LIMIT: parseFloat(process.env.DAILY_LOSS_LIMIT) || 0.10,         // Default 10%
-  MAX_LOT_SIZE: parseFloat(process.env.MAX_LOT_SIZE) || 0.1,                  // Default 0.1 lots
-  MIN_OPEN_POSITIONS: parseInt(process.env.MIN_OPEN_POSITIONS) || 5,          // Always maintain 5 trades
-  MAX_OPEN_POSITIONS: parseInt(process.env.MAX_OPEN_POSITIONS) || 50,         // Soft max (high conf ignores)
+  MAX_LOT_SIZE: parseFloat(process.env.MAX_LOT_SIZE) || 1.0,                  // MAX 1.0 lots (user requested)
+  MIN_LOT_SIZE: 0.01,           // Minimum lot size
+  MIN_OPEN_POSITIONS: parseInt(process.env.MIN_OPEN_POSITIONS) || 3,          // Target 3 trades
+  MAX_OPEN_POSITIONS: parseInt(process.env.MAX_OPEN_POSITIONS) || 10,         // Max 10 positions
 };
 
 // =========================================================================
-// BOT CONFIGURATION - Each bot optimized for its specific strategy
-// All bots enabled with proper rules for their function
+// BOT CONFIGURATION - Each bot has STRICT rules for its specific strategy
+// SL/TP values are in PIPS and MUST be used - these are the actual distances
 // =========================================================================
 const BOT_CONFIG = {
   // =====================================================================
-  // SCALPER - Quick in-and-out trades on small moves
+  // SCALPER - Quick in-and-out trades on small moves (5-15 pips)
+  // RULES: Tight SL (10-15 pips), Quick TP (15-25 pips), 1:1.5 R:R
   // =====================================================================
   'algoedge-scalper': {
     canTrade: true,
@@ -99,24 +102,28 @@ const BOT_CONFIG = {
     description: 'Ultra-fast scalping - targets 5-15 pip moves',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY'],  // Major pairs only (tight spreads)
     timeframes: ['m1', 'm5'],
-    minConfidence: 45,
-    maxLotSize: 0.03,
+    minConfidence: 55,          // Need decent confidence for scalps
+    maxLotSize: 0.5,            // Can use up to 0.5 lots for scalps
     maxPositions: 3,
-    cooldownMs: 60000,       // 1 min cooldown (faster)
-    takeProfitPips: 10,       // Small TP
-    stopLossPips: 15,         // Tight SL
-    riskRewardMin: 0.5,       // Accept lower R:R for scalps
+    cooldownMs: 60000,          // 1 min cooldown
+    // STRICT SL/TP VALUES - MUST BE HIT
+    takeProfitPips: 20,         // 20 pips TP (realistic for scalp)
+    stopLossPips: 12,           // 12 pips SL (tight)
+    goldTPPips: 150,            // Gold: 150 cents TP
+    goldSLPips: 100,            // Gold: 100 cents SL
+    riskRewardMin: 1.5,
     rules: {
-      checkSpread: true,      // Skip if spread > 2 pips
+      checkSpread: true,
       maxSpreadPips: 2,
-      needsVolatility: false, // Don't require volatility
-      avoidNews: false,       // Trade during news too
-      sessionFilter: ['london', 'newyork'],  // Best liquidity sessions
+      needsVolatility: false,
+      avoidNews: true,          // Avoid news for scalping
+      sessionFilter: ['london', 'newyork'],
     }
   },
   
   // =====================================================================
-  // MOMENTUM - Rides strong momentum moves with RSI/MACD
+  // MOMENTUM - Rides strong momentum with RSI/MACD confirmation
+  // RULES: Medium SL (25-30 pips), Good TP (40-50 pips), 1:1.5-2 R:R
   // =====================================================================
   'algoedge-momentum': {
     canTrade: true,
@@ -124,23 +131,26 @@ const BOT_CONFIG = {
     description: 'Momentum trading - catches strong directional moves',
     allowedPairs: ['EURUSD', 'GBPUSD', 'AUDUSD', 'USDCHF', 'XAUUSD'],
     timeframes: ['m5', 'm15'],
-    minConfidence: 45,
-    maxLotSize: 0.04,
+    minConfidence: 55,
+    maxLotSize: 0.8,            // Can use bigger lots on momentum
     maxPositions: 3,
-    cooldownMs: 120000,       // 2 min cooldown (faster)
-    takeProfitPips: 30,
-    stopLossPips: 20,
+    cooldownMs: 120000,         // 2 min cooldown
+    takeProfitPips: 45,         // 45 pips TP
+    stopLossPips: 25,           // 25 pips SL
+    goldTPPips: 350,            // Gold: $3.50 TP
+    goldSLPips: 200,            // Gold: $2.00 SL
     riskRewardMin: 1.5,
     rules: {
-      needsRSIExtreme: false, // Don't require extreme RSI
-      needsMACDAlignment: false, // Don't require MACD alignment
+      needsRSIExtreme: false,
+      needsMACDAlignment: false,
       minMomentumStrength: 40,
-      avoidConsolidation: false,
+      avoidConsolidation: true,
     }
   },
   
   // =====================================================================
   // TREND HUNTER - Follows established trends with EMA crossovers
+  // RULES: Medium-wide SL (30-40 pips), Wide TP (60-80 pips), 2:1 R:R
   // =====================================================================
   'algoedge-trend-m15': {
     canTrade: true,
@@ -148,23 +158,26 @@ const BOT_CONFIG = {
     description: 'Trend following - rides medium-term trends',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD', 'XAUUSD'],
     timeframes: ['m15', 'm30', 'h1'],
-    minConfidence: 45,
-    maxLotSize: 0.04,
+    minConfidence: 55,
+    maxLotSize: 0.8,
     maxPositions: 4,
-    cooldownMs: 180000,       // 3 min cooldown (faster)
-    takeProfitPips: 50,
-    stopLossPips: 25,
+    cooldownMs: 180000,         // 3 min cooldown
+    takeProfitPips: 70,         // 70 pips TP
+    stopLossPips: 35,           // 35 pips SL
+    goldTPPips: 500,            // Gold: $5.00 TP
+    goldSLPips: 250,            // Gold: $2.50 SL
     riskRewardMin: 2.0,
     rules: {
-      needsEMACrossover: false,  // Don't require exact crossover
-      needsADXFilter: false,     // Don't require ADX > 20
+      needsEMACrossover: false,
+      needsADXFilter: false,
       minADX: 15,
-      trendAlignment: false,     // Don't require perfect alignment
+      trendAlignment: true,
     }
   },
   
   // =====================================================================
   // BREAKOUT PRO - Trades breakouts from consolidation zones
+  // RULES: SL just inside range (20-30 pips), TP 2x range (50-60 pips)
   // =====================================================================
   'algoedge-breakout': {
     canTrade: true,
@@ -172,23 +185,26 @@ const BOT_CONFIG = {
     description: 'Breakout trading - catches moves from key levels',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'EURJPY', 'GBPJPY', 'XAUUSD'],
     timeframes: ['m30', 'h1'],
-    minConfidence: 45,
-    maxLotSize: 0.04,
+    minConfidence: 60,          // Need higher confidence for breakouts
+    maxLotSize: 0.7,
     maxPositions: 3,
-    cooldownMs: 300000,       // 5 min cooldown (faster)
-    takeProfitPips: 40,
-    stopLossPips: 20,
+    cooldownMs: 300000,         // 5 min cooldown
+    takeProfitPips: 55,         // 55 pips TP
+    stopLossPips: 25,           // 25 pips SL
+    goldTPPips: 450,            // Gold: $4.50 TP
+    goldSLPips: 200,            // Gold: $2.00 SL
     riskRewardMin: 2.0,
     rules: {
-      needsConsolidation: false,  // Don't require consolidation
-      needsVolumeSpike: false,    // Don't require volume spike
-      minConsolidationBars: 5,    // Lower bar requirement
-      confirmationClose: false,   // Don't wait for close
+      needsConsolidation: false,
+      needsVolumeSpike: false,
+      minConsolidationBars: 5,
+      confirmationClose: true,  // Wait for candle close
     }
   },
   
   // =====================================================================
   // SWING MASTER - Multi-day swing trades on H1/H4
+  // RULES: Wide SL (50-80 pips), Very wide TP (100-150 pips), 2:1+ R:R
   // =====================================================================
   'algoedge-swing-h1': {
     canTrade: true,
@@ -196,47 +212,54 @@ const BOT_CONFIG = {
     description: 'Swing trading - captures larger market moves',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'XAUUSD'],
     timeframes: ['h1', 'h4'],
-    minConfidence: 45,
-    maxLotSize: 0.03,
+    minConfidence: 60,
+    maxLotSize: 0.5,            // Smaller lots for swing (wider SL)
     maxPositions: 3,
-    cooldownMs: 600000,      // 10 min cooldown (was 1 hour)
-    takeProfitPips: 100,
-    stopLossPips: 50,
+    cooldownMs: 600000,         // 10 min cooldown
+    takeProfitPips: 120,        // 120 pips TP
+    stopLossPips: 55,           // 55 pips SL
+    goldTPPips: 800,            // Gold: $8.00 TP
+    goldSLPips: 400,            // Gold: $4.00 SL
     riskRewardMin: 2.0,
     rules: {
-      needsHigherTFAlignment: false,  // Don't require HTF confirmation
-      needsClearStructure: false,     // Don't require clear structure
-      minSwingPotential: 40,          // Lower min pip potential
-      avoidRanging: false,
+      needsHigherTFAlignment: false,
+      needsClearStructure: true,
+      minSwingPotential: 50,
+      avoidRanging: true,
     }
   },
   
   // =====================================================================
   // GOLD HUNTER - Specialized for XAUUSD volatility
+  // RULES: Medium-wide SL (200-300 cents), Wide TP (400-500 cents)
+  // Gold moves ~$2-5 per day, so SL/TP must be appropriate
   // =====================================================================
   'algoedge-gold-hunter': {
     canTrade: true,
     strategy: 'gold',
     description: 'Gold specialist - trades XAUUSD with volatility filters',
-    allowedPairs: ['XAUUSD'],  // Gold only
+    allowedPairs: ['XAUUSD'],   // Gold only
     timeframes: ['m15', 'm30', 'h1'],
-    minConfidence: 45,        // More aggressive
-    maxLotSize: 0.02,         // Smaller lots due to volatility
-    maxPositions: 2,          // Allow 2 gold positions
-    cooldownMs: 300000,       // 5 min cooldown (was 10)
-    takeProfitPips: 150,      // Wider TP for gold (in cents)
-    stopLossPips: 100,        // Wider SL for gold
-    riskRewardMin: 1.5,
+    minConfidence: 55,
+    maxLotSize: 0.3,            // Smaller lots for gold (high volatility)
+    maxPositions: 2,
+    cooldownMs: 300000,         // 5 min cooldown
+    takeProfitPips: 400,        // Gold: $4.00 TP (400 cents)
+    stopLossPips: 200,          // Gold: $2.00 SL (200 cents)
+    goldTPPips: 400,            // Same as above (it's gold-specific)
+    goldSLPips: 200,
+    riskRewardMin: 2.0,
     rules: {
-      sessionFilter: ['london', 'newyork'],  // Best gold sessions
-      maxATR: 600,            // Higher ATR tolerance
-      minATR: 50,             // Lower volatility requirement
-      avoidExtremeVolatility: false,
+      sessionFilter: ['london', 'newyork'],
+      maxATR: 600,
+      minATR: 50,
+      avoidExtremeVolatility: true,
     }
   },
   
   // =====================================================================
   // POSITION TRADER - Long-term trades on H4/Daily
+  // RULES: Very wide SL (80-100 pips), Very wide TP (200-300 pips)
   // =====================================================================
   'algoedge-position-h4': {
     canTrade: true,
@@ -244,23 +267,26 @@ const BOT_CONFIG = {
     description: 'Position trading - long-term trend following',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'NZDUSD'],
     timeframes: ['h4', 'd1'],
-    minConfidence: 45,
-    maxLotSize: 0.03,
+    minConfidence: 65,          // Need higher confidence for position
+    maxLotSize: 0.4,            // Smaller lots for position (very wide SL)
     maxPositions: 3,
-    cooldownMs: 1800000,     // 30 min cooldown (was 4 hours)
-    takeProfitPips: 200,
-    stopLossPips: 80,
+    cooldownMs: 1800000,        // 30 min cooldown
+    takeProfitPips: 200,        // 200 pips TP
+    stopLossPips: 80,           // 80 pips SL
+    goldTPPips: 1000,           // Gold: $10.00 TP
+    goldSLPips: 500,            // Gold: $5.00 SL
     riskRewardMin: 2.5,
     rules: {
-      needsDailyTrendConfirm: false,
+      needsDailyTrendConfirm: true,
       needsWeeklyAlignment: false,
-      minTrendStrength: 40,
-      avoidMajorNews: false,
+      minTrendStrength: 50,
+      avoidMajorNews: true,
     }
   },
   
   // =====================================================================
   // DAILY SNIPER - High-accuracy daily chart setups
+  // RULES: Wide SL (60-80 pips), Wide TP (150-200 pips), 2.5:1 R:R
   // =====================================================================
   'algoedge-daily-sniper': {
     canTrade: true,
@@ -268,22 +294,25 @@ const BOT_CONFIG = {
     description: 'Daily sniper - precision entries on D1 chart',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'EURJPY'],
     timeframes: ['d1'],
-    minConfidence: 45,        // More aggressive
-    maxLotSize: 0.03,
-    maxPositions: 2,          // Allow 2 sniper trades
-    cooldownMs: 3600000,      // 1 hour cooldown (was 24 hours)
-    takeProfitPips: 150,
-    stopLossPips: 60,
+    minConfidence: 70,          // High confidence required for sniper
+    maxLotSize: 0.5,
+    maxPositions: 2,
+    cooldownMs: 3600000,        // 1 hour cooldown
+    takeProfitPips: 180,        // 180 pips TP
+    stopLossPips: 70,           // 70 pips SL
+    goldTPPips: 900,            // Gold: $9.00 TP
+    goldSLPips: 400,            // Gold: $4.00 SL
     riskRewardMin: 2.5,
     rules: {
-      needsKeyLevel: false,    // Don't require key levels
-      needsCandlePattern: false, // Don't require patterns
-      dailyCloseEntry: false,  // Don't wait for daily close
+      needsKeyLevel: true,
+      needsCandlePattern: false,
+      dailyCloseEntry: false,
     }
   },
   
   // =====================================================================
   // NEWS TRADER - Trades around high-impact news events
+  // RULES: Tight SL (30-40 pips), Quick TP (50-60 pips) post-news
   // =====================================================================
   'algoedge-news-trader': {
     canTrade: true,
@@ -291,23 +320,26 @@ const BOT_CONFIG = {
     description: 'News trading - capitalizes on high-impact events',
     allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD'],
     timeframes: ['m5', 'm15'],
-    minConfidence: 45,
-    maxLotSize: 0.02,         // Smaller lots for news volatility
-    maxPositions: 2,          // Allow 2 news trades
-    cooldownMs: 600000,       // 10 min cooldown (was 30 min)
-    takeProfitPips: 50,
-    stopLossPips: 30,
+    minConfidence: 55,
+    maxLotSize: 0.4,            // Smaller lots for news volatility
+    maxPositions: 2,
+    cooldownMs: 600000,         // 10 min cooldown
+    takeProfitPips: 55,         // 55 pips TP
+    stopLossPips: 35,           // 35 pips SL
+    goldTPPips: 400,            // Gold: $4.00 TP
+    goldSLPips: 250,            // Gold: $2.50 SL
     riskRewardMin: 1.5,
     rules: {
-      needsNewsEvent: false,  // Don't require news events
-      minImpact: 'MEDIUM',    // Trade medium and high impact
-      entryWindow: 30,        // Enter within 30 mins of news
-      avoidLowLiquidity: false,
+      needsNewsEvent: false,
+      minImpact: 'MEDIUM',
+      entryWindow: 30,
+      avoidLowLiquidity: true,
     }
   },
   
   // =====================================================================
   // GRID MASTER - Range trading with grid orders
+  // RULES: Medium SL (40 pips), Smaller TP (20-25 pips), multiple entries
   // =====================================================================
   'algoedge-grid-master': {
     canTrade: true,
@@ -315,19 +347,21 @@ const BOT_CONFIG = {
     description: 'Grid trading - profits from ranging markets',
     allowedPairs: ['EURUSD', 'AUDNZD', 'EURGBP'],  // Range-bound pairs only
     timeframes: ['h1', 'h4'],
-    minConfidence: 45,
-    maxLotSize: 0.01,         // Very small lots for grid
-    maxPositions: 4,          // More grid levels
-    cooldownMs: 600000,       // 10 min cooldown (was 1 hour)
-    takeProfitPips: 20,
-    stopLossPips: 40,         // Wider SL for grid
+    minConfidence: 50,
+    maxLotSize: 0.2,            // Very small lots for grid
+    maxPositions: 4,            // More grid levels
+    cooldownMs: 600000,         // 10 min cooldown
+    takeProfitPips: 25,         // Small TP per grid level
+    stopLossPips: 45,           // Wider SL for grid
+    goldTPPips: 200,
+    goldSLPips: 350,
     riskRewardMin: 0.5,
     rules: {
-      needsRangingMarket: false,  // Don't require ranging
-      maxADX: 30,
-      maxGridLevels: 4,         // 4 grid levels max
-      hardStopLoss: true,       // Must have hard SL on all
-      noMartingale: true,       // NO lot size increases
+      needsRangingMarket: true,
+      maxADX: 25,
+      maxGridLevels: 4,
+      hardStopLoss: true,
+      noMartingale: true,
     }
   },
   
@@ -335,7 +369,7 @@ const BOT_CONFIG = {
   // MARTINGALE PRO - DISABLED (Too Risky)
   // =====================================================================
   'algoedge-martingale-pro': {
-    canTrade: false,          // ❌ PERMANENTLY DISABLED - Too risky
+    canTrade: false,            // ❌ PERMANENTLY DISABLED - Too risky
     strategy: 'martingale',
     description: '⚠️ DISABLED - Martingale strategy too risky',
     allowedPairs: [],
@@ -347,25 +381,28 @@ const BOT_CONFIG = {
   
   // =====================================================================
   // HEDGE GUARDIAN - Correlation-based hedging
+  // RULES: Medium SL (40 pips), Medium TP (35 pips), used for protection
   // =====================================================================
   'algoedge-hedge-guardian': {
     canTrade: true,
     strategy: 'hedge',
     description: 'Hedging - reduces drawdown via correlated pairs',
-    allowedPairs: ['EURUSD', 'USDCHF', 'GBPUSD', 'EURGBP'],  // Correlated pairs
+    allowedPairs: ['EURUSD', 'USDCHF', 'GBPUSD', 'EURGBP'],
     timeframes: ['h1', 'h4'],
-    minConfidence: 45,
-    maxLotSize: 0.02,
+    minConfidence: 55,
+    maxLotSize: 0.3,
     maxPositions: 3,
-    cooldownMs: 600000,       // 10 min cooldown (was 2 hours)
-    takeProfitPips: 30,
-    stopLossPips: 40,
-    riskRewardMin: 0.75,
+    cooldownMs: 600000,         // 10 min cooldown
+    takeProfitPips: 40,         // 40 pips TP
+    stopLossPips: 45,           // 45 pips SL
+    goldTPPips: 350,
+    goldSLPips: 400,
+    riskRewardMin: 0.9,
     rules: {
-      correlationHedge: false,  // Don't require correlation
-      sameAccountOnly: true,   // Both legs in same account
-      maxHedgeRatio: 0.5,      // Hedge max 50% of position
-      noSamePairHedge: true,   // Never BUY+SELL same pair
+      correlationHedge: false,
+      sameAccountOnly: true,
+      maxHedgeRatio: 0.5,
+      noSamePairHedge: true,
     }
   },
 };
@@ -549,45 +586,80 @@ function getPipValuePerLot(symbol) {
 }
 
 /**
- * Calculate position size based on account balance and risk
- * Proper lot sizing for account size
+ * Calculate position size based on account balance, risk, and SIGNAL STRENGTH
+ * STRONGER SIGNALS = BIGGER LOTS (up to MAX_LOT_SIZE of 1.0)
  * @param {number} balance - Account balance
- * @param {number} stopLossPips - Stop loss in pips (already converted)
+ * @param {number} stopLossPips - Stop loss in pips
  * @param {string} symbol - Trading symbol
- * @param {number} confidence - Signal confidence
+ * @param {number} confidence - Signal confidence (0-100)
+ * @param {object} botConfig - Bot-specific configuration
  * @returns {number} - Lot size
  */
-function calculatePositionSize(balance, stopLossPips, symbol, confidence = 50) {
+function calculatePositionSize(balance, stopLossPips, symbol, confidence = 50, botConfig = null) {
   if (!balance || balance < RISK_CONFIG.MIN_ACCOUNT_BALANCE) {
-    return 0.01; // Minimum lot if no balance info
+    return RISK_CONFIG.MIN_LOT_SIZE; // Minimum lot if no balance info
   }
   
-  // CONSERVATIVE: Only 0.5% risk per trade max
-  const riskPercent = 0.005; // 0.5% risk always
+  // ================================================================
+  // DYNAMIC LOT SIZING BASED ON SIGNAL STRENGTH
+  // Weak signals (50-60%) = 1% risk, small lots
+  // Medium signals (60-70%) = 1.5% risk, medium lots
+  // Strong signals (70-85%) = 2% risk, bigger lots
+  // Very strong signals (85%+) = 2.5% risk, maximum lots
+  // ================================================================
+  let riskPercent;
+  let lotMultiplier;
+  
+  if (confidence >= RISK_CONFIG.VERY_HIGH_CONFIDENCE) {
+    // VERY STRONG: 85%+ confidence - use maximum lots
+    riskPercent = 0.025;  // 2.5% risk
+    lotMultiplier = 2.5;
+    console.log(`    🔥 VERY STRONG SIGNAL (${confidence}%) - Using 2.5% risk, max lots`);
+  } else if (confidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD) {
+    // STRONG: 70-84% confidence - bigger lots
+    riskPercent = 0.02;   // 2% risk
+    lotMultiplier = 2.0;
+    console.log(`    💪 STRONG SIGNAL (${confidence}%) - Using 2% risk, bigger lots`);
+  } else if (confidence >= 60) {
+    // MEDIUM: 60-69% confidence - medium lots
+    riskPercent = 0.015;  // 1.5% risk
+    lotMultiplier = 1.5;
+    console.log(`    📊 MEDIUM SIGNAL (${confidence}%) - Using 1.5% risk, medium lots`);
+  } else {
+    // WEAK: 50-59% confidence - small lots
+    riskPercent = 0.01;   // 1% risk
+    lotMultiplier = 1.0;
+    console.log(`    📉 STANDARD SIGNAL (${confidence}%) - Using 1% risk, standard lots`);
+  }
   
   const riskAmount = balance * riskPercent;
   
   // Get pip value per standard lot for this symbol
   const pipValuePerLot = getPipValuePerLot(symbol);
   
-  // Ensure reasonable SL pips (wider for safety)
+  // Ensure reasonable SL pips
   const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
-  const minSL = isGold ? 100 : 30;  // Wider stops
-  const maxSL = isGold ? 500 : 100;
-  const effectiveSL = Math.max(minSL, Math.min(maxSL, stopLossPips));
+  const minSL = isGold ? 100 : 15;   // Min SL in pips
+  const maxSL = isGold ? 600 : 150;  // Max SL in pips
+  const effectiveSL = Math.max(minSL, Math.min(maxSL, stopLossPips || minSL));
   
   // Calculate lot size: Risk Amount / (Stop Loss Pips * Pip Value per lot)
   let lotSize = riskAmount / (effectiveSL * pipValuePerLot);
   
+  // Apply lot multiplier for strong signals
+  lotSize = lotSize * lotMultiplier;
+  
   // Round to 2 decimal places
   lotSize = Math.round(lotSize * 100) / 100;
   
-  // STRICT LIMITS - Never exceed 0.05 lots for safety
-  const maxLot = RISK_CONFIG.MAX_LOT_SIZE; // 0.05 lots max
+  // Get bot-specific max lot or use global max
+  const botMaxLot = botConfig?.maxLotSize || RISK_CONFIG.MAX_LOT_SIZE;
+  const maxLot = Math.min(botMaxLot, RISK_CONFIG.MAX_LOT_SIZE); // Never exceed global max of 1.0
   
-  lotSize = Math.max(0.01, Math.min(maxLot, lotSize));
+  // Clamp to min/max
+  lotSize = Math.max(RISK_CONFIG.MIN_LOT_SIZE, Math.min(maxLot, lotSize));
   
-  console.log(`    💰 Lot calc: Balance=$${balance.toFixed(0)}, Risk=0.5%=$${riskAmount.toFixed(2)}, SL=${effectiveSL.toFixed(0)}pips → ${lotSize} lots (max ${maxLot})`);
+  console.log(`    💰 Lot calc: Balance=$${balance.toFixed(0)}, Risk=${(riskPercent*100).toFixed(1)}%=$${riskAmount.toFixed(2)}, SL=${effectiveSL.toFixed(0)}pips → ${lotSize} lots (max ${maxLot})`);
   
   return lotSize;
 }
@@ -1026,6 +1098,20 @@ async function executeTradeViaMetaApi(connection, accountId, robotId, userId, si
        result.price || signal.entryPrice, signal.stopLoss, signal.takeProfit]
     );
     
+    // Track strategy info for smart position management (especially swing breakeven)
+    const positionId = result.positionId || result.orderId;
+    if (positionId && signal.strategy) {
+      positionStrategyMap.set(String(positionId), {
+        strategy: signal.strategy,
+        entryPrice: result.price || signal.entryPrice,
+        slPips: signal.slPips,
+        tpPips: signal.tpPips,
+        symbol: signal.symbol,
+        type: signal.type,
+      });
+      console.log(`  📝 Tracking position ${positionId} with strategy: ${signal.strategy}`);
+    }
+    
     return tradeResult.rows[0];
   } catch (error) {
     console.error(`  ❌ Failed to execute trade via MetaAPI:`, error.message);
@@ -1179,6 +1265,1417 @@ function rateLimitLog(key, message) {
   }
 }
 
+// =========================================================================
+// PROVEN TRADING STRATEGIES - Battle-tested patterns that work with 100 candles
+// Each strategy returns { direction, confidence, reason, slPips, tpPips }
+// =========================================================================
+
+/**
+ * Calculate MACD (Moving Average Convergence Divergence)
+ */
+function calculateMACD(closes, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
+  const emaFast = calculateEMA(closes, fastPeriod);
+  const emaSlow = calculateEMA(closes, slowPeriod);
+  
+  const macdLine = [];
+  for (let i = 0; i < closes.length; i++) {
+    macdLine.push(emaFast[i] - emaSlow[i]);
+  }
+  
+  const signalLine = calculateEMA(macdLine, signalPeriod);
+  const histogram = macdLine.map((m, i) => m - signalLine[i]);
+  
+  return { macdLine, signalLine, histogram };
+}
+
+/**
+ * Calculate Bollinger Bands
+ */
+function calculateBollingerBands(closes, period = 20, stdDev = 2) {
+  const sma = [];
+  const upper = [];
+  const lower = [];
+  
+  for (let i = 0; i < closes.length; i++) {
+    if (i < period - 1) {
+      sma.push(closes[i]);
+      upper.push(closes[i]);
+      lower.push(closes[i]);
+      continue;
+    }
+    
+    const slice = closes.slice(i - period + 1, i + 1);
+    const mean = slice.reduce((a, b) => a + b, 0) / period;
+    const variance = slice.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / period;
+    const std = Math.sqrt(variance);
+    
+    sma.push(mean);
+    upper.push(mean + stdDev * std);
+    lower.push(mean - stdDev * std);
+  }
+  
+  return { sma, upper, lower };
+}
+
+/**
+ * Calculate Stochastic Oscillator
+ */
+function calculateStochastic(candles, period = 14, smoothK = 3, smoothD = 3) {
+  const kValues = [];
+  
+  for (let i = 0; i < candles.length; i++) {
+    if (i < period - 1) {
+      kValues.push(50);
+      continue;
+    }
+    
+    const slice = candles.slice(i - period + 1, i + 1);
+    const highestHigh = Math.max(...slice.map(c => c.high));
+    const lowestLow = Math.min(...slice.map(c => c.low));
+    const close = candles[i].close;
+    
+    if (highestHigh === lowestLow) {
+      kValues.push(50);
+    } else {
+      kValues.push(((close - lowestLow) / (highestHigh - lowestLow)) * 100);
+    }
+  }
+  
+  // Smooth K values
+  const smoothedK = calculateSMA(kValues, smoothK);
+  const smoothedD = calculateSMA(smoothedK, smoothD);
+  
+  return { k: smoothedK, d: smoothedD };
+}
+
+/**
+ * Calculate Simple Moving Average
+ */
+function calculateSMA(data, period) {
+  const result = [];
+  for (let i = 0; i < data.length; i++) {
+    if (i < period - 1) {
+      result.push(data[i]);
+      continue;
+    }
+    const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+    result.push(sum / period);
+  }
+  return result;
+}
+
+/**
+ * STRATEGY 1: MACD Divergence + RSI Confirmation
+ * Historically one of the most reliable reversal patterns
+ * Works best with 50-100 candles to identify divergence
+ */
+function analyzeMACD_Divergence(candles, symbol, botConfig = null) {
+  if (!candles || candles.length < 50) return null;
+  
+  const closes = candles.map(c => c.close);
+  const { macdLine, signalLine, histogram } = calculateMACD(closes);
+  const rsi = calculateRSI(closes, 14);
+  
+  const currentMACD = macdLine[macdLine.length - 1];
+  const prevMACD = macdLine[macdLine.length - 2];
+  const currentSignal = signalLine[signalLine.length - 1];
+  const currentRSI = rsi[rsi.length - 1];
+  const currentHist = histogram[histogram.length - 1];
+  const prevHist = histogram[histogram.length - 2];
+  
+  // Check for MACD crossover
+  const bullishCross = prevMACD < signalLine[signalLine.length - 2] && currentMACD > currentSignal;
+  const bearishCross = prevMACD > signalLine[signalLine.length - 2] && currentMACD < currentSignal;
+  
+  // Check for histogram momentum shift
+  const histBullish = currentHist > prevHist && currentHist > histogram[histogram.length - 3];
+  const histBearish = currentHist < prevHist && currentHist < histogram[histogram.length - 3];
+  
+  // Look for divergence in last 20 candles
+  let bullishDivergence = false;
+  let bearishDivergence = false;
+  
+  // Find recent price lows/highs and compare with MACD
+  const recentCloses = closes.slice(-20);
+  const recentMACD = macdLine.slice(-20);
+  
+  const priceLowIdx = recentCloses.indexOf(Math.min(...recentCloses));
+  const priceHighIdx = recentCloses.indexOf(Math.max(...recentCloses));
+  
+  // Bullish divergence: Lower price low + higher MACD low
+  if (priceLowIdx > 5) {
+    const prevPriceLowIdx = recentCloses.slice(0, priceLowIdx).indexOf(Math.min(...recentCloses.slice(0, priceLowIdx)));
+    if (recentCloses[priceLowIdx] < recentCloses[prevPriceLowIdx] && 
+        recentMACD[priceLowIdx] > recentMACD[prevPriceLowIdx]) {
+      bullishDivergence = true;
+    }
+  }
+  
+  // Bearish divergence: Higher price high + lower MACD high
+  if (priceHighIdx > 5) {
+    const prevPriceHighIdx = recentCloses.slice(0, priceHighIdx).indexOf(Math.max(...recentCloses.slice(0, priceHighIdx)));
+    if (recentCloses[priceHighIdx] > recentCloses[prevPriceHighIdx] && 
+        recentMACD[priceHighIdx] < recentMACD[prevPriceHighIdx]) {
+      bearishDivergence = true;
+    }
+  }
+  
+  let signal = null;
+  let confidence = 0;
+  let reason = '';
+  
+  // BUY signal
+  if ((bullishCross || histBullish) && (currentRSI < 45 || bullishDivergence)) {
+    confidence = 45;
+    reason = 'MACD-Strategy: ';
+    
+    if (bullishCross) { confidence += 25; reason += 'MACD-Crossover '; }
+    if (histBullish) { confidence += 15; reason += 'Histogram-Up '; }
+    if (bullishDivergence) { confidence += 20; reason += 'Bullish-Divergence '; }
+    if (currentRSI < 30) { confidence += 15; reason += 'RSI-Oversold '; }
+    else if (currentRSI < 45) { confidence += 8; reason += 'RSI-Low '; }
+    
+    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'macd_divergence' };
+  }
+  
+  // SELL signal
+  else if ((bearishCross || histBearish) && (currentRSI > 55 || bearishDivergence)) {
+    confidence = 45;
+    reason = 'MACD-Strategy: ';
+    
+    if (bearishCross) { confidence += 25; reason += 'MACD-Crossover '; }
+    if (histBearish) { confidence += 15; reason += 'Histogram-Down '; }
+    if (bearishDivergence) { confidence += 20; reason += 'Bearish-Divergence '; }
+    if (currentRSI > 70) { confidence += 15; reason += 'RSI-Overbought '; }
+    else if (currentRSI > 55) { confidence += 8; reason += 'RSI-High '; }
+    
+    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'macd_divergence' };
+  }
+  
+  return signal;
+}
+
+/**
+ * STRATEGY 2: Bollinger Band Squeeze + Breakout
+ * Identifies low volatility periods followed by explosive moves
+ */
+function analyzeBollingerBreakout(candles, symbol, botConfig = null) {
+  if (!candles || candles.length < 40) return null;
+  
+  const closes = candles.map(c => c.close);
+  const currentPrice = closes[closes.length - 1];
+  const { sma, upper, lower } = calculateBollingerBands(closes, 20, 2);
+  const atr = calculateATR(candles, 14);
+  
+  const currentUpper = upper[upper.length - 1];
+  const currentLower = lower[lower.length - 1];
+  const currentSMA = sma[sma.length - 1];
+  const bandWidth = (currentUpper - currentLower) / currentSMA;
+  
+  // Check recent band widths to identify squeeze
+  const recentBandWidths = [];
+  for (let i = Math.max(0, upper.length - 20); i < upper.length; i++) {
+    recentBandWidths.push((upper[i] - lower[i]) / sma[i]);
+  }
+  const avgBandWidth = recentBandWidths.reduce((a, b) => a + b, 0) / recentBandWidths.length;
+  const isSqueezing = bandWidth < avgBandWidth * 0.8;
+  const justBrokeOut = bandWidth > avgBandWidth && recentBandWidths[recentBandWidths.length - 2] < avgBandWidth;
+  
+  // Volume/momentum confirmation
+  const recentCandles = candles.slice(-5);
+  const bullishCount = recentCandles.filter(c => c.close > c.open).length;
+  const bearishCount = 5 - bullishCount;
+  
+  let signal = null;
+  let confidence = 0;
+  let reason = '';
+  
+  // BUY: Price breaks above upper band after squeeze
+  if (currentPrice > currentUpper && (justBrokeOut || isSqueezing)) {
+    confidence = 50;
+    reason = 'BB-Breakout: ';
+    
+    if (currentPrice > currentUpper) { confidence += 20; reason += 'Above-Upper '; }
+    if (justBrokeOut) { confidence += 15; reason += 'Squeeze-Break '; }
+    if (bullishCount >= 3) { confidence += 12; reason += `Momentum(${bullishCount}/5) `; }
+    if (currentPrice > closes[closes.length - 2]) { confidence += 8; reason += 'Higher-Close '; }
+    
+    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'bollinger_breakout' };
+  }
+  
+  // SELL: Price breaks below lower band after squeeze
+  else if (currentPrice < currentLower && (justBrokeOut || isSqueezing)) {
+    confidence = 50;
+    reason = 'BB-Breakout: ';
+    
+    if (currentPrice < currentLower) { confidence += 20; reason += 'Below-Lower '; }
+    if (justBrokeOut) { confidence += 15; reason += 'Squeeze-Break '; }
+    if (bearishCount >= 3) { confidence += 12; reason += `Momentum(${bearishCount}/5) `; }
+    if (currentPrice < closes[closes.length - 2]) { confidence += 8; reason += 'Lower-Close '; }
+    
+    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'bollinger_breakout' };
+  }
+  
+  // Mean reversion opportunity
+  else if (currentPrice < currentLower * 1.005) {
+    confidence = 40;
+    reason = 'BB-MeanRevert: ';
+    if (currentPrice < currentLower) { confidence += 20; reason += 'At-Lower '; }
+    if (bullishCount >= 2) { confidence += 10; reason += 'Reversal-Candle '; }
+    signal = { type: 'buy', confidence: Math.min(confidence, 85), reason: reason.trim(), strategy: 'bollinger_reversion' };
+  }
+  else if (currentPrice > currentUpper * 0.995) {
+    confidence = 40;
+    reason = 'BB-MeanRevert: ';
+    if (currentPrice > currentUpper) { confidence += 20; reason += 'At-Upper '; }
+    if (bearishCount >= 2) { confidence += 10; reason += 'Reversal-Candle '; }
+    signal = { type: 'sell', confidence: Math.min(confidence, 85), reason: reason.trim(), strategy: 'bollinger_reversion' };
+  }
+  
+  return signal;
+}
+
+/**
+ * STRATEGY 3: Double Top/Bottom Pattern
+ * Classic reversal pattern with high win rate when identified correctly
+ */
+function analyzeDoublePattern(candles, symbol, botConfig = null) {
+  if (!candles || candles.length < 60) return null;
+  
+  const closes = candles.map(c => c.close);
+  const highs = candles.map(c => c.high);
+  const lows = candles.map(c => c.low);
+  const currentPrice = closes[closes.length - 1];
+  const atr = calculateATR(candles, 14);
+  
+  // Find significant peaks and troughs in last 60 candles
+  const tolerance = atr * 0.5; // Peaks/troughs must be within 0.5 ATR to be "double"
+  
+  // Find swing highs
+  const swingHighs = [];
+  for (let i = 5; i < candles.length - 5; i++) {
+    const isSwingHigh = highs[i] > Math.max(...highs.slice(i-5, i)) && 
+                        highs[i] > Math.max(...highs.slice(i+1, i+6));
+    if (isSwingHigh) {
+      swingHighs.push({ idx: i, price: highs[i] });
+    }
+  }
+  
+  // Find swing lows
+  const swingLows = [];
+  for (let i = 5; i < candles.length - 5; i++) {
+    const isSwingLow = lows[i] < Math.min(...lows.slice(i-5, i)) && 
+                       lows[i] < Math.min(...lows.slice(i+1, i+6));
+    if (isSwingLow) {
+      swingLows.push({ idx: i, price: lows[i] });
+    }
+  }
+  
+  let signal = null;
+  let confidence = 0;
+  let reason = '';
+  
+  // Check for Double Top (bearish)
+  if (swingHighs.length >= 2) {
+    const lastTwo = swingHighs.slice(-2);
+    const priceDiff = Math.abs(lastTwo[0].price - lastTwo[1].price);
+    const timeDiff = lastTwo[1].idx - lastTwo[0].idx;
+    
+    if (priceDiff < tolerance && timeDiff > 10 && timeDiff < 40) {
+      // Found double top - check if price is breaking below neckline
+      const neckline = Math.min(...lows.slice(lastTwo[0].idx, lastTwo[1].idx + 1));
+      
+      if (currentPrice < neckline) {
+        confidence = 55;
+        reason = 'DoubleTop: ';
+        confidence += 25; reason += 'Pattern-Complete ';
+        confidence += 15; reason += 'Neckline-Break ';
+        if (currentPrice < closes[closes.length - 2]) { confidence += 10; reason += 'Bearish-Confirm '; }
+        
+        signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'double_top' };
+      }
+    }
+  }
+  
+  // Check for Double Bottom (bullish)
+  if (!signal && swingLows.length >= 2) {
+    const lastTwo = swingLows.slice(-2);
+    const priceDiff = Math.abs(lastTwo[0].price - lastTwo[1].price);
+    const timeDiff = lastTwo[1].idx - lastTwo[0].idx;
+    
+    if (priceDiff < tolerance && timeDiff > 10 && timeDiff < 40) {
+      // Found double bottom - check if price is breaking above neckline
+      const neckline = Math.max(...highs.slice(lastTwo[0].idx, lastTwo[1].idx + 1));
+      
+      if (currentPrice > neckline) {
+        confidence = 55;
+        reason = 'DoubleBottom: ';
+        confidence += 25; reason += 'Pattern-Complete ';
+        confidence += 15; reason += 'Neckline-Break ';
+        if (currentPrice > closes[closes.length - 2]) { confidence += 10; reason += 'Bullish-Confirm '; }
+        
+        signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'double_bottom' };
+      }
+    }
+  }
+  
+  return signal;
+}
+
+/**
+ * STRATEGY 4: EMA Ribbon with Stochastic Confirmation
+ * Multiple EMAs aligned with momentum confirmation
+ */
+function analyzeEMARibbon(candles, symbol, botConfig = null) {
+  if (!candles || candles.length < 55) return null;
+  
+  const closes = candles.map(c => c.close);
+  const currentPrice = closes[closes.length - 1];
+  
+  // EMA Ribbon: 8, 13, 21, 34, 55
+  const ema8 = calculateEMA(closes, 8);
+  const ema13 = calculateEMA(closes, 13);
+  const ema21 = calculateEMA(closes, 21);
+  const ema34 = calculateEMA(closes, 34);
+  const ema55 = calculateEMA(closes, 55);
+  
+  const e8 = ema8[ema8.length - 1];
+  const e13 = ema13[ema13.length - 1];
+  const e21 = ema21[ema21.length - 1];
+  const e34 = ema34[ema34.length - 1];
+  const e55 = ema55[ema55.length - 1];
+  
+  // Check ribbon alignment
+  const bullishRibbon = e8 > e13 && e13 > e21 && e21 > e34 && e34 > e55;
+  const bearishRibbon = e8 < e13 && e13 < e21 && e21 < e34 && e34 < e55;
+  
+  // Stochastic for timing
+  const { k, d } = calculateStochastic(candles, 14, 3, 3);
+  const currentK = k[k.length - 1];
+  const currentD = d[d.length - 1];
+  const prevK = k[k.length - 2];
+  
+  const stochBullish = currentK > currentD && prevK < d[d.length - 2];
+  const stochBearish = currentK < currentD && prevK > d[d.length - 2];
+  const stochOversold = currentK < 25;
+  const stochOverbought = currentK > 75;
+  
+  // Price relative to ribbon
+  const priceAboveRibbon = currentPrice > e8;
+  const priceBelowRibbon = currentPrice < e8;
+  
+  let signal = null;
+  let confidence = 0;
+  let reason = '';
+  
+  // BUY: Bullish ribbon + stochastic turning up from oversold
+  if (bullishRibbon && (stochBullish || stochOversold)) {
+    confidence = 50;
+    reason = 'EMA-Ribbon: ';
+    
+    confidence += 25; reason += 'Bullish-Align ';
+    if (stochBullish) { confidence += 15; reason += 'Stoch-CrossUp '; }
+    if (stochOversold) { confidence += 12; reason += 'Oversold '; }
+    if (priceAboveRibbon) { confidence += 8; reason += 'Above-EMAs '; }
+    
+    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'ema_ribbon' };
+  }
+  
+  // SELL: Bearish ribbon + stochastic turning down from overbought
+  else if (bearishRibbon && (stochBearish || stochOverbought)) {
+    confidence = 50;
+    reason = 'EMA-Ribbon: ';
+    
+    confidence += 25; reason += 'Bearish-Align ';
+    if (stochBearish) { confidence += 15; reason += 'Stoch-CrossDown '; }
+    if (stochOverbought) { confidence += 12; reason += 'Overbought '; }
+    if (priceBelowRibbon) { confidence += 8; reason += 'Below-EMAs '; }
+    
+    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'ema_ribbon' };
+  }
+  
+  return signal;
+}
+
+/**
+ * STRATEGY 5: Support/Resistance Bounce with Volume
+ * Identifies key S/R levels and trades bounces
+ */
+function analyzeSupportResistance(candles, symbol, botConfig = null) {
+  if (!candles || candles.length < 50) return null;
+  
+  const closes = candles.map(c => c.close);
+  const highs = candles.map(c => c.high);
+  const lows = candles.map(c => c.low);
+  const currentPrice = closes[closes.length - 1];
+  const atr = calculateATR(candles, 14);
+  
+  // Find key support and resistance levels from last 50 candles
+  const priceHistory = [...highs, ...lows];
+  
+  // Cluster nearby prices to find S/R zones
+  function findKeyLevels(prices, tolerance) {
+    const sorted = [...prices].sort((a, b) => a - b);
+    const levels = [];
+    let cluster = [sorted[0]];
+    
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] - cluster[cluster.length - 1] < tolerance) {
+        cluster.push(sorted[i]);
+      } else {
+        if (cluster.length >= 3) {
+          levels.push(cluster.reduce((a, b) => a + b, 0) / cluster.length);
+        }
+        cluster = [sorted[i]];
+      }
+    }
+    if (cluster.length >= 3) {
+      levels.push(cluster.reduce((a, b) => a + b, 0) / cluster.length);
+    }
+    return levels;
+  }
+  
+  const keyLevels = findKeyLevels(priceHistory, atr * 0.3);
+  
+  // Find nearest support and resistance
+  let nearestSupport = null;
+  let nearestResistance = null;
+  
+  for (const level of keyLevels) {
+    if (level < currentPrice && (!nearestSupport || level > nearestSupport)) {
+      nearestSupport = level;
+    }
+    if (level > currentPrice && (!nearestResistance || level < nearestResistance)) {
+      nearestResistance = level;
+    }
+  }
+  
+  if (!nearestSupport || !nearestResistance) return null;
+  
+  const distToSupport = currentPrice - nearestSupport;
+  const distToResist = nearestResistance - currentPrice;
+  const touchingSupport = distToSupport < atr * 0.5;
+  const touchingResist = distToResist < atr * 0.5;
+  
+  // Check for bounce confirmation
+  const recentCandles = candles.slice(-3);
+  const bullishBounce = touchingSupport && recentCandles[2].close > recentCandles[1].close;
+  const bearishBounce = touchingResist && recentCandles[2].close < recentCandles[1].close;
+  
+  let signal = null;
+  let confidence = 0;
+  let reason = '';
+  
+  // BUY: At support with bullish bounce
+  if (bullishBounce) {
+    confidence = 50;
+    reason = 'S/R-Strategy: ';
+    
+    confidence += 20; reason += `Support@${nearestSupport.toFixed(4)} `;
+    confidence += 15; reason += 'Bounce-Confirm ';
+    if (recentCandles[2].close > recentCandles[2].open) { confidence += 10; reason += 'Bullish-Candle '; }
+    
+    signal = { type: 'buy', confidence: Math.min(confidence, 90), reason: reason.trim(), strategy: 'support_bounce' };
+  }
+  
+  // SELL: At resistance with bearish rejection
+  else if (bearishBounce) {
+    confidence = 50;
+    reason = 'S/R-Strategy: ';
+    
+    confidence += 20; reason += `Resist@${nearestResistance.toFixed(4)} `;
+    confidence += 15; reason += 'Rejection-Confirm ';
+    if (recentCandles[2].close < recentCandles[2].open) { confidence += 10; reason += 'Bearish-Candle '; }
+    
+    signal = { type: 'sell', confidence: Math.min(confidence, 90), reason: reason.trim(), strategy: 'resistance_reject' };
+  }
+  
+  return signal;
+}
+
+// =========================================================================
+// 🚀 PROVEN HIGH WIN-RATE STRATEGIES
+// These strategies have recorded impressive results over time
+// =========================================================================
+
+/**
+ * 🚀 STRATEGY: EMA 200 Trend + Pullback (HIGH WIN RATE)
+ * One of the most reliable institutional strategies
+ * - Trend: Price relative to EMA200
+ * - Pullback: Near EMA50
+ * - Confirmation: RSI neutral (40-60) + candle close
+ */
+function analyzeEMA200Pullback(candles, symbol, botConfig = null) {
+  if (!candles || candles.length < 200) return null;
+  
+  const closes = candles.map(c => c.close);
+  const currentPrice = closes[closes.length - 1];
+  const prevPrice = closes[closes.length - 2];
+  const currentCandle = candles[candles.length - 1];
+  const atr = calculateATR(candles, 14);
+  
+  // Calculate EMAs
+  const ema50 = calculateEMA(closes, 50);
+  const ema200 = calculateEMA(closes, 200);
+  const rsi = calculateRSI(closes, 14);
+  
+  const ema50Val = ema50[ema50.length - 1];
+  const ema200Val = ema200[ema200.length - 1];
+  const currentRSI = rsi[rsi.length - 1];
+  
+  // Trend detection
+  const bullishTrend = currentPrice > ema200Val && ema50Val > ema200Val;
+  const bearishTrend = currentPrice < ema200Val && ema50Val < ema200Val;
+  
+  // Pullback detection - price near EMA50 (within 0.5 ATR)
+  const nearEMA50 = Math.abs(currentPrice - ema50Val) < atr * 0.5;
+  
+  // RSI neutral zone (40-60) - not overbought/oversold
+  const rsiNeutral = currentRSI >= 40 && currentRSI <= 60;
+  
+  // Candle confirmation
+  const bullishCandle = currentCandle.close > currentCandle.open;
+  const bearishCandle = currentCandle.close < currentCandle.open;
+  
+  let signal = null;
+  let confidence = 0;
+  let reason = '';
+  
+  // 🟢 BUY: Bullish trend + pullback to EMA50 + RSI neutral + bullish candle
+  if (bullishTrend && nearEMA50 && rsiNeutral && bullishCandle) {
+    confidence = 55;
+    reason = 'EMA200-Pullback: ';
+    
+    confidence += 20; reason += 'Bullish-Trend ';
+    confidence += 15; reason += 'Pullback-EMA50 ';
+    confidence += 10; reason += `RSI-Neutral(${currentRSI.toFixed(0)}) `;
+    confidence += 10; reason += 'Bullish-Confirm ';
+    
+    // Extra confidence if price bounced off EMA50
+    if (prevPrice < ema50Val && currentPrice > ema50Val) {
+      confidence += 10; reason += 'EMA50-Bounce ';
+    }
+    
+    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'ema200_pullback' };
+  }
+  
+  // 🔴 SELL: Bearish trend + pullback to EMA50 + RSI neutral + bearish candle
+  else if (bearishTrend && nearEMA50 && rsiNeutral && bearishCandle) {
+    confidence = 55;
+    reason = 'EMA200-Pullback: ';
+    
+    confidence += 20; reason += 'Bearish-Trend ';
+    confidence += 15; reason += 'Pullback-EMA50 ';
+    confidence += 10; reason += `RSI-Neutral(${currentRSI.toFixed(0)}) `;
+    confidence += 10; reason += 'Bearish-Confirm ';
+    
+    if (prevPrice > ema50Val && currentPrice < ema50Val) {
+      confidence += 10; reason += 'EMA50-Reject ';
+    }
+    
+    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'ema200_pullback' };
+  }
+  
+  return signal;
+}
+
+/**
+ * ⚡ STRATEGY: Break and Retest (Institutional Favorite)
+ * - Detect breakout of S/R level
+ * - Wait for price to retest the broken level
+ * - Enter on confirmation candle
+ */
+function analyzeBreakAndRetest(candles, symbol, botConfig = null) {
+  if (!candles || candles.length < 50) return null;
+  
+  const closes = candles.map(c => c.close);
+  const highs = candles.map(c => c.high);
+  const lows = candles.map(c => c.low);
+  const currentPrice = closes[closes.length - 1];
+  const currentCandle = candles[candles.length - 1];
+  const atr = calculateATR(candles, 14);
+  
+  // Find recent swing highs and lows (last 30 candles for structure)
+  const lookback = 30;
+  const recentHighs = highs.slice(-lookback);
+  const recentLows = lows.slice(-lookback);
+  
+  // Key levels - resistance from highs, support from lows
+  const resistance = Math.max(...recentHighs.slice(0, -5)); // Exclude last 5 candles
+  const support = Math.min(...recentLows.slice(0, -5));
+  
+  // Check for recent breakout (in last 10 candles)
+  let brokeResistance = false;
+  let brokeSupport = false;
+  let breakoutCandle = -1;
+  
+  for (let i = candles.length - 10; i < candles.length - 2; i++) {
+    if (highs[i] > resistance && closes[i] > resistance) {
+      brokeResistance = true;
+      breakoutCandle = i;
+    }
+    if (lows[i] < support && closes[i] < support) {
+      brokeSupport = true;
+      breakoutCandle = i;
+    }
+  }
+  
+  // Check for retest (price came back near the level)
+  const retestingResistance = brokeResistance && 
+    currentPrice > resistance && 
+    Math.abs(lows[lows.length - 1] - resistance) < atr * 0.3;
+    
+  const retestingSupport = brokeSupport && 
+    currentPrice < support && 
+    Math.abs(highs[highs.length - 1] - support) < atr * 0.3;
+  
+  // Candle confirmation
+  const bullishConfirm = currentCandle.close > currentCandle.open && 
+                         currentCandle.close > closes[closes.length - 2];
+  const bearishConfirm = currentCandle.close < currentCandle.open && 
+                         currentCandle.close < closes[closes.length - 2];
+  
+  let signal = null;
+  let confidence = 0;
+  let reason = '';
+  
+  // 🟢 BUY: Broke resistance + retesting + bullish confirmation
+  if (retestingResistance && bullishConfirm) {
+    confidence = 60;
+    reason = 'Break-Retest: ';
+    
+    confidence += 20; reason += `Broke-R@${resistance.toFixed(4)} `;
+    confidence += 15; reason += 'Retest-Complete ';
+    confidence += 10; reason += 'Bullish-Confirm ';
+    
+    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'break_retest' };
+  }
+  
+  // 🔴 SELL: Broke support + retesting + bearish confirmation
+  else if (retestingSupport && bearishConfirm) {
+    confidence = 60;
+    reason = 'Break-Retest: ';
+    
+    confidence += 20; reason += `Broke-S@${support.toFixed(4)} `;
+    confidence += 15; reason += 'Retest-Complete ';
+    confidence += 10; reason += 'Bearish-Confirm ';
+    
+    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'break_retest' };
+  }
+  
+  return signal;
+}
+
+/**
+ * 🧠 STRATEGY: Liquidity Sweep + Market Structure Shift (SMC)
+ * Smart Money Concepts - hunt stop losses then reverse
+ * - Detect liquidity sweep (wick beyond swing H/L)
+ * - Detect market structure shift
+ * - Enter on pullback
+ */
+function analyzeLiquiditySweep(candles, symbol, botConfig = null) {
+  if (!candles || candles.length < 50) return null;
+  
+  const closes = candles.map(c => c.close);
+  const highs = candles.map(c => c.high);
+  const lows = candles.map(c => c.low);
+  const currentPrice = closes[closes.length - 1];
+  const atr = calculateATR(candles, 14);
+  
+  // Find swing highs and lows
+  const swingHighs = [];
+  const swingLows = [];
+  
+  for (let i = 3; i < candles.length - 3; i++) {
+    // Swing high: higher than 3 candles before and after
+    if (highs[i] > Math.max(...highs.slice(i-3, i)) && 
+        highs[i] > Math.max(...highs.slice(i+1, i+4))) {
+      swingHighs.push({ idx: i, price: highs[i] });
+    }
+    // Swing low: lower than 3 candles before and after
+    if (lows[i] < Math.min(...lows.slice(i-3, i)) && 
+        lows[i] < Math.min(...lows.slice(i+1, i+4))) {
+      swingLows.push({ idx: i, price: lows[i] });
+    }
+  }
+  
+  if (swingHighs.length < 2 || swingLows.length < 2) return null;
+  
+  // Check for liquidity sweep in last 5 candles
+  const lastSwingHigh = swingHighs[swingHighs.length - 1];
+  const lastSwingLow = swingLows[swingLows.length - 1];
+  
+  let sweptLow = false;
+  let sweptHigh = false;
+  let sweepCandle = -1;
+  
+  // Check last 5 candles for sweep
+  for (let i = candles.length - 5; i < candles.length - 1; i++) {
+    // Swept low: wick below swing low but closed above
+    if (lows[i] < lastSwingLow.price && closes[i] > lastSwingLow.price) {
+      sweptLow = true;
+      sweepCandle = i;
+    }
+    // Swept high: wick above swing high but closed below
+    if (highs[i] > lastSwingHigh.price && closes[i] < lastSwingHigh.price) {
+      sweptHigh = true;
+      sweepCandle = i;
+    }
+  }
+  
+  // Check for market structure shift after sweep
+  const recentCandles = candles.slice(-5);
+  const bullishShift = sweptLow && 
+    recentCandles.filter(c => c.close > c.open).length >= 3 &&
+    currentPrice > closes[sweepCandle];
+    
+  const bearishShift = sweptHigh && 
+    recentCandles.filter(c => c.close < c.open).length >= 3 &&
+    currentPrice < closes[sweepCandle];
+  
+  let signal = null;
+  let confidence = 0;
+  let reason = '';
+  
+  // 🟢 BUY: Liquidity sweep below swing low + bullish structure shift
+  if (bullishShift) {
+    confidence = 60;
+    reason = 'SMC-Sweep: ';
+    
+    confidence += 20; reason += `Swept-Low@${lastSwingLow.price.toFixed(4)} `;
+    confidence += 15; reason += 'Bullish-Shift ';
+    confidence += 10; reason += 'Reversal-Confirm ';
+    
+    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'liquidity_sweep' };
+  }
+  
+  // 🔴 SELL: Liquidity sweep above swing high + bearish structure shift
+  else if (bearishShift) {
+    confidence = 60;
+    reason = 'SMC-Sweep: ';
+    
+    confidence += 20; reason += `Swept-High@${lastSwingHigh.price.toFixed(4)} `;
+    confidence += 15; reason += 'Bearish-Shift ';
+    confidence += 10; reason += 'Reversal-Confirm ';
+    
+    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'liquidity_sweep' };
+  }
+  
+  return signal;
+}
+
+/**
+ * 📈 STRATEGY: London Session Breakout
+ * Trade breakouts during London session (08:00-11:00 GMT)
+ * - Identify Asian session range
+ * - Trade breakout direction
+ */
+function analyzeLondonBreakout(candles, symbol, botConfig = null) {
+  if (!candles || candles.length < 50) return null;
+  
+  const currentTime = new Date();
+  const utcHour = currentTime.getUTCHours();
+  
+  // Only trade during London session: 08:00-11:00 GMT
+  const isLondonSession = utcHour >= 8 && utcHour <= 11;
+  if (!isLondonSession) return null;
+  
+  const closes = candles.map(c => c.close);
+  const highs = candles.map(c => c.high);
+  const lows = candles.map(c => c.low);
+  const currentPrice = closes[closes.length - 1];
+  const currentCandle = candles[candles.length - 1];
+  const atr = calculateATR(candles, 14);
+  
+  // Estimate Asian session range (last ~12-16 candles on M15, ~24-32 on M5)
+  // Use last 20 candles as approximation for Asian range
+  const asianCandles = candles.slice(-20, -3); // Exclude last 3 (current London)
+  if (asianCandles.length < 10) return null;
+  
+  const asianHigh = Math.max(...asianCandles.map(c => c.high));
+  const asianLow = Math.min(...asianCandles.map(c => c.low));
+  const asianRange = asianHigh - asianLow;
+  
+  // Check for breakout
+  const brokeAbove = currentPrice > asianHigh && closes[closes.length - 2] <= asianHigh;
+  const brokeBelow = currentPrice < asianLow && closes[closes.length - 2] >= asianLow;
+  
+  // Confirmation: strong candle in breakout direction
+  const bullishBreak = brokeAbove && currentCandle.close > currentCandle.open;
+  const bearishBreak = brokeBelow && currentCandle.close < currentCandle.open;
+  
+  let signal = null;
+  let confidence = 0;
+  let reason = '';
+  
+  // 🟢 BUY: Break above Asian high during London
+  if (bullishBreak) {
+    confidence = 60;
+    reason = 'London-Breakout: ';
+    
+    confidence += 20; reason += `Broke-Asian-High@${asianHigh.toFixed(4)} `;
+    confidence += 15; reason += 'London-Session ';
+    confidence += 10; reason += 'Bullish-Momentum ';
+    
+    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'london_breakout' };
+  }
+  
+  // 🔴 SELL: Break below Asian low during London
+  else if (bearishBreak) {
+    confidence = 60;
+    reason = 'London-Breakout: ';
+    
+    confidence += 20; reason += `Broke-Asian-Low@${asianLow.toFixed(4)} `;
+    confidence += 15; reason += 'London-Session ';
+    confidence += 10; reason += 'Bearish-Momentum ';
+    
+    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'london_breakout' };
+  }
+  
+  return signal;
+}
+
+/**
+ * 🏦 STRATEGY: Order Block Detection
+ * Identify institutional order blocks and trade rejections
+ * - Find last bullish/bearish candle before major move
+ * - Trade when price returns to that zone
+ */
+function analyzeOrderBlock(candles, symbol, botConfig = null) {
+  if (!candles || candles.length < 50) return null;
+  
+  const closes = candles.map(c => c.close);
+  const highs = candles.map(c => c.high);
+  const lows = candles.map(c => c.low);
+  const opens = candles.map(c => c.open);
+  const currentPrice = closes[closes.length - 1];
+  const currentCandle = candles[candles.length - 1];
+  const atr = calculateATR(candles, 14);
+  
+  // Find order blocks - last opposite candle before strong move
+  let bullishOB = null; // Last bearish candle before bullish move
+  let bearishOB = null; // Last bullish candle before bearish move
+  
+  // Look for order blocks in candles 10-40 (not too recent, not too old)
+  for (let i = 10; i < 40 && i < candles.length - 5; i++) {
+    const idx = candles.length - 1 - i;
+    const candle = candles[idx];
+    const isBearish = candle.close < candle.open;
+    const isBullish = candle.close > candle.open;
+    
+    // Check if followed by strong move (3+ candles in opposite direction)
+    const nextCandles = candles.slice(idx + 1, idx + 5);
+    const bullishMove = nextCandles.filter(c => c.close > c.open).length >= 3;
+    const bearishMove = nextCandles.filter(c => c.close < c.open).length >= 3;
+    
+    // Bullish OB: bearish candle before bullish move
+    if (!bullishOB && isBearish && bullishMove) {
+      bullishOB = {
+        high: candle.high,
+        low: candle.low,
+        idx: idx
+      };
+    }
+    
+    // Bearish OB: bullish candle before bearish move
+    if (!bearishOB && isBullish && bearishMove) {
+      bearishOB = {
+        high: candle.high,
+        low: candle.low,
+        idx: idx
+      };
+    }
+  }
+  
+  let signal = null;
+  let confidence = 0;
+  let reason = '';
+  
+  // 🟢 BUY: Price returns to bullish order block + rejection
+  if (bullishOB && currentPrice >= bullishOB.low && currentPrice <= bullishOB.high * 1.001) {
+    const rejection = currentCandle.close > currentCandle.open && 
+                      currentCandle.low <= bullishOB.high;
+    
+    if (rejection) {
+      confidence = 55;
+      reason = 'OrderBlock: ';
+      
+      confidence += 20; reason += `Bullish-OB@${bullishOB.low.toFixed(4)}-${bullishOB.high.toFixed(4)} `;
+      confidence += 15; reason += 'Price-In-Zone ';
+      confidence += 10; reason += 'Rejection-Candle ';
+      
+      signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'order_block' };
+    }
+  }
+  
+  // 🔴 SELL: Price returns to bearish order block + rejection
+  if (!signal && bearishOB && currentPrice <= bearishOB.high && currentPrice >= bearishOB.low * 0.999) {
+    const rejection = currentCandle.close < currentCandle.open && 
+                      currentCandle.high >= bearishOB.low;
+    
+    if (rejection) {
+      confidence = 55;
+      reason = 'OrderBlock: ';
+      
+      confidence += 20; reason += `Bearish-OB@${bearishOB.low.toFixed(4)}-${bearishOB.high.toFixed(4)} `;
+      confidence += 15; reason += 'Price-In-Zone ';
+      confidence += 10; reason += 'Rejection-Candle ';
+      
+      signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'order_block' };
+    }
+  }
+  
+  return signal;
+}
+
+/**
+ * 📉 STRATEGY: VWAP Mean Reversion
+ * Trade bounces off Volume Weighted Average Price
+ * - Buy when price below VWAP + RSI oversold
+ * - Sell when price above VWAP + RSI overbought
+ */
+function analyzeVWAPReversion(candles, symbol, botConfig = null) {
+  if (!candles || candles.length < 30) return null;
+  
+  const closes = candles.map(c => c.close);
+  const highs = candles.map(c => c.high);
+  const lows = candles.map(c => c.low);
+  const currentPrice = closes[closes.length - 1];
+  const currentCandle = candles[candles.length - 1];
+  const atr = calculateATR(candles, 14);
+  
+  // Calculate VWAP (using typical price * volume proxy from range)
+  let cumulativeTPV = 0;
+  let cumulativeVolume = 0;
+  
+  for (let i = 0; i < candles.length; i++) {
+    const typicalPrice = (candles[i].high + candles[i].low + candles[i].close) / 3;
+    // Use range as volume proxy (bigger range = more activity)
+    const volumeProxy = candles[i].high - candles[i].low;
+    cumulativeTPV += typicalPrice * volumeProxy;
+    cumulativeVolume += volumeProxy;
+  }
+  
+  const vwap = cumulativeVolume > 0 ? cumulativeTPV / cumulativeVolume : currentPrice;
+  
+  // RSI
+  const rsi = calculateRSI(closes, 14);
+  const currentRSI = rsi[rsi.length - 1];
+  
+  // Distance from VWAP
+  const distFromVWAP = currentPrice - vwap;
+  const percentFromVWAP = (distFromVWAP / vwap) * 100;
+  
+  // Conditions
+  const belowVWAP = currentPrice < vwap;
+  const aboveVWAP = currentPrice > vwap;
+  const oversold = currentRSI < 35;
+  const overbought = currentRSI > 65;
+  const bullishCandle = currentCandle.close > currentCandle.open;
+  const bearishCandle = currentCandle.close < currentCandle.open;
+  
+  let signal = null;
+  let confidence = 0;
+  let reason = '';
+  
+  // 🟢 BUY: Below VWAP + RSI oversold + bullish candle
+  if (belowVWAP && oversold && bullishCandle) {
+    confidence = 55;
+    reason = 'VWAP-Reversion: ';
+    
+    confidence += 15; reason += `Below-VWAP(${percentFromVWAP.toFixed(2)}%) `;
+    confidence += 20; reason += `RSI-Oversold(${currentRSI.toFixed(0)}) `;
+    confidence += 10; reason += 'Bullish-Candle ';
+    
+    // Extra confidence if significantly below VWAP
+    if (percentFromVWAP < -0.3) { confidence += 10; reason += 'Extended '; }
+    
+    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'vwap_reversion' };
+  }
+  
+  // 🔴 SELL: Above VWAP + RSI overbought + bearish candle
+  else if (aboveVWAP && overbought && bearishCandle) {
+    confidence = 55;
+    reason = 'VWAP-Reversion: ';
+    
+    confidence += 15; reason += `Above-VWAP(${percentFromVWAP.toFixed(2)}%) `;
+    confidence += 20; reason += `RSI-Overbought(${currentRSI.toFixed(0)}) `;
+    confidence += 10; reason += 'Bearish-Candle ';
+    
+    if (percentFromVWAP > 0.3) { confidence += 10; reason += 'Extended '; }
+    
+    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'vwap_reversion' };
+  }
+  
+  return signal;
+}
+
+/**
+ * 🎯 STRATEGY: Fibonacci Continuation
+ * Trade pullbacks to Fibonacci levels in trending market
+ * - Find recent swing
+ * - Wait for pullback to 50-61.8%
+ * - Enter on rejection candle
+ */
+function analyzeFibonacciContinuation(candles, symbol, botConfig = null) {
+  if (!candles || candles.length < 50) return null;
+  
+  const closes = candles.map(c => c.close);
+  const highs = candles.map(c => c.high);
+  const lows = candles.map(c => c.low);
+  const currentPrice = closes[closes.length - 1];
+  const currentCandle = candles[candles.length - 1];
+  const atr = calculateATR(candles, 14);
+  
+  // Find recent swing high and low (last 30 candles)
+  const recentCandles = candles.slice(-30);
+  const swingHigh = Math.max(...recentCandles.map(c => c.high));
+  const swingLow = Math.min(...recentCandles.map(c => c.low));
+  const swingRange = swingHigh - swingLow;
+  
+  // Determine trend direction
+  const highIdx = recentCandles.findIndex(c => c.high === swingHigh);
+  const lowIdx = recentCandles.findIndex(c => c.low === swingLow);
+  const isUpswing = lowIdx < highIdx; // Low came first = upswing
+  const isDownswing = highIdx < lowIdx; // High came first = downswing
+  
+  // Calculate Fibonacci levels
+  const fib382 = isUpswing ? swingHigh - swingRange * 0.382 : swingLow + swingRange * 0.382;
+  const fib50 = isUpswing ? swingHigh - swingRange * 0.5 : swingLow + swingRange * 0.5;
+  const fib618 = isUpswing ? swingHigh - swingRange * 0.618 : swingLow + swingRange * 0.618;
+  
+  // Check if price is at 50-61.8% retracement
+  let atFibLevel = false;
+  let fibLevel = '';
+  
+  if (isUpswing) {
+    // Bullish trend - price should pull back down to fib levels
+    if (currentPrice >= fib618 && currentPrice <= fib50) {
+      atFibLevel = true;
+      fibLevel = '50-61.8%';
+    }
+  } else if (isDownswing) {
+    // Bearish trend - price should pull back up to fib levels
+    if (currentPrice <= fib618 && currentPrice >= fib50) {
+      atFibLevel = true;
+      fibLevel = '50-61.8%';
+    }
+  }
+  
+  if (!atFibLevel) return null;
+  
+  // Check for rejection candle at fib level
+  const bullishRejection = currentCandle.close > currentCandle.open &&
+                           currentCandle.close > closes[closes.length - 2];
+  const bearishRejection = currentCandle.close < currentCandle.open &&
+                           currentCandle.close < closes[closes.length - 2];
+  
+  let signal = null;
+  let confidence = 0;
+  let reason = '';
+  
+  // 🟢 BUY: Upswing + at fib 50-61.8% + bullish rejection
+  if (isUpswing && atFibLevel && bullishRejection) {
+    confidence = 55;
+    reason = 'Fib-Continuation: ';
+    
+    confidence += 20; reason += 'Uptrend ';
+    confidence += 15; reason += `At-Fib-${fibLevel} `;
+    confidence += 15; reason += 'Rejection-Candle ';
+    
+    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'fibonacci_continuation' };
+  }
+  
+  // 🔴 SELL: Downswing + at fib 50-61.8% + bearish rejection
+  else if (isDownswing && atFibLevel && bearishRejection) {
+    confidence = 55;
+    reason = 'Fib-Continuation: ';
+    
+    confidence += 20; reason += 'Downtrend ';
+    confidence += 15; reason += `At-Fib-${fibLevel} `;
+    confidence += 15; reason += 'Rejection-Candle ';
+    
+    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'fibonacci_continuation' };
+  }
+  
+  return signal;
+}
+
+/**
+ * 🔥 STRATEGY: RSI Divergence Reversal (Enhanced)
+ * More precise divergence detection
+ * - Price makes lower low but RSI makes higher low (bullish)
+ * - Price makes higher high but RSI makes lower high (bearish)
+ */
+function analyzeRSIDivergence(candles, symbol, botConfig = null) {
+  if (!candles || candles.length < 50) return null;
+  
+  const closes = candles.map(c => c.close);
+  const lows = candles.map(c => c.low);
+  const highs = candles.map(c => c.high);
+  const currentPrice = closes[closes.length - 1];
+  const currentCandle = candles[candles.length - 1];
+  const atr = calculateATR(candles, 14);
+  
+  const rsi = calculateRSI(closes, 14);
+  const currentRSI = rsi[rsi.length - 1];
+  
+  // Find swing points in last 30 candles
+  const lookback = 30;
+  let priceLows = [];
+  let priceHighs = [];
+  let rsiAtLows = [];
+  let rsiAtHighs = [];
+  
+  for (let i = 5; i < lookback - 5 && i < candles.length - 5; i++) {
+    const idx = candles.length - lookback + i;
+    
+    // Swing low
+    if (lows[idx] < Math.min(...lows.slice(idx - 3, idx)) &&
+        lows[idx] < Math.min(...lows.slice(idx + 1, idx + 4))) {
+      priceLows.push({ idx, price: lows[idx], rsi: rsi[idx] });
+    }
+    
+    // Swing high
+    if (highs[idx] > Math.max(...highs.slice(idx - 3, idx)) &&
+        highs[idx] > Math.max(...highs.slice(idx + 1, idx + 4))) {
+      priceHighs.push({ idx, price: highs[idx], rsi: rsi[idx] });
+    }
+  }
+  
+  let signal = null;
+  let confidence = 0;
+  let reason = '';
+  
+  // Check for bullish divergence (lower price low, higher RSI low)
+  if (priceLows.length >= 2) {
+    const recent = priceLows[priceLows.length - 1];
+    const prev = priceLows[priceLows.length - 2];
+    
+    const bullishDiv = recent.price < prev.price && recent.rsi > prev.rsi;
+    const bullishConfirm = currentCandle.close > currentCandle.open;
+    
+    if (bullishDiv && bullishConfirm && currentRSI < 45) {
+      confidence = 60;
+      reason = 'RSI-Divergence: ';
+      
+      confidence += 25; reason += 'Bullish-Divergence ';
+      confidence += 10; reason += `RSI(${currentRSI.toFixed(0)}) `;
+      confidence += 10; reason += 'Confirm-Candle ';
+      
+      signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'rsi_divergence' };
+    }
+  }
+  
+  // Check for bearish divergence (higher price high, lower RSI high)
+  if (!signal && priceHighs.length >= 2) {
+    const recent = priceHighs[priceHighs.length - 1];
+    const prev = priceHighs[priceHighs.length - 2];
+    
+    const bearishDiv = recent.price > prev.price && recent.rsi < prev.rsi;
+    const bearishConfirm = currentCandle.close < currentCandle.open;
+    
+    if (bearishDiv && bearishConfirm && currentRSI > 55) {
+      confidence = 60;
+      reason = 'RSI-Divergence: ';
+      
+      confidence += 25; reason += 'Bearish-Divergence ';
+      confidence += 10; reason += `RSI(${currentRSI.toFixed(0)}) `;
+      confidence += 10; reason += 'Confirm-Candle ';
+      
+      signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'rsi_divergence' };
+    }
+  }
+  
+  return signal;
+}
+
+/**
+ * MULTI-STRATEGY ANALYZER
+ * Runs all proven strategies and returns the STRONGEST signal
+ * This maximizes accuracy by only trading the best setups
+ * 
+ * ✅ ONLY PROVEN HIGH WIN-RATE STRATEGIES:
+ * - EMA 200 Pullback (Institutional favorite)
+ * - Break and Retest
+ * - Liquidity Sweep (SMC)
+ * - London Session Breakout
+ * - Order Block
+ * - VWAP Mean Reversion
+ * - Fibonacci Continuation
+ * - RSI Divergence
+ */
+function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
+  if (!candles || candles.length < 60) return null;
+  
+  // 🚀 ONLY PROVEN HIGH WIN-RATE STRATEGIES
+  const strategies = [
+    { name: 'EMA200-Pullback', fn: analyzeEMA200Pullback, weight: 1.4 },      // ⭐ Institutional favorite - highest weight
+    { name: 'Break-Retest', fn: analyzeBreakAndRetest, weight: 1.35 },        // ⭐ High accuracy
+    { name: 'Liquidity-Sweep', fn: analyzeLiquiditySweep, weight: 1.3 },      // SMC strategy
+    { name: 'VWAP-Reversion', fn: analyzeVWAPReversion, weight: 1.25 },       // Mean reversion
+    { name: 'RSI-Divergence', fn: analyzeRSIDivergence, weight: 1.25 },       // Reversal detection
+    { name: 'London-Breakout', fn: analyzeLondonBreakout, weight: 1.2 },      // Session strategy
+    { name: 'Fibonacci', fn: analyzeFibonacciContinuation, weight: 1.15 },    // Trend continuation
+    { name: 'Order-Block', fn: analyzeOrderBlock, weight: 1.1 },              // Institutional zones
+  ];
+  
+  const signals = [];
+  const currentPrice = candles[candles.length - 1].close;
+  const atr = calculateATR(candles, 14);
+  const pipSize = getPipSize(symbol);
+  const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
+  
+  // Run all strategies
+  for (const strategy of strategies) {
+    try {
+      const signal = strategy.fn(candles, symbol, botConfig);
+      if (signal && signal.confidence >= 50) {
+        signals.push({
+          ...signal,
+          strategyName: strategy.name,
+          weightedConfidence: signal.confidence * strategy.weight,
+        });
+      }
+    } catch (err) {
+      // Strategy failed - skip it
+    }
+  }
+  
+  if (signals.length === 0) return null;
+  
+  // Check for confluence (multiple strategies agreeing)
+  const buySignals = signals.filter(s => s.type === 'buy');
+  const sellSignals = signals.filter(s => s.type === 'sell');
+  
+  let bestSignal = null;
+  let confluenceBonus = 0;
+  
+  if (buySignals.length >= 2) {
+    // Multiple buy signals - high confluence
+    confluenceBonus = buySignals.length * 8;
+    bestSignal = buySignals.reduce((best, s) => s.weightedConfidence > best.weightedConfidence ? s : best);
+    bestSignal.reason = `CONFLUENCE(${buySignals.length}): ` + buySignals.map(s => s.strategyName).join('+') + ' ' + bestSignal.reason;
+  } else if (sellSignals.length >= 2) {
+    // Multiple sell signals - high confluence
+    confluenceBonus = sellSignals.length * 8;
+    bestSignal = sellSignals.reduce((best, s) => s.weightedConfidence > best.weightedConfidence ? s : best);
+    bestSignal.reason = `CONFLUENCE(${sellSignals.length}): ` + sellSignals.map(s => s.strategyName).join('+') + ' ' + bestSignal.reason;
+  } else {
+    // Single strongest signal
+    bestSignal = signals.reduce((best, s) => s.weightedConfidence > best.weightedConfidence ? s : best);
+  }
+  
+  // Apply confluence bonus
+  bestSignal.confidence = Math.min(95, bestSignal.confidence + confluenceBonus);
+  
+  // Set SL/TP based on the strategy that produced the signal
+  let slPips, tpPips;
+  
+  switch (bestSignal.strategy) {
+    case 'macd_divergence':
+      // MACD divergence = reversal, use wider stops
+      slPips = isGold ? 350 : 35;
+      tpPips = isGold ? 600 : 60;
+      break;
+    case 'bollinger_breakout':
+      // Breakout = momentum, medium stops
+      slPips = isGold ? 250 : 25;
+      tpPips = isGold ? 500 : 50;
+      break;
+    case 'bollinger_reversion':
+      // Mean reversion = tight stops
+      slPips = isGold ? 200 : 20;
+      tpPips = isGold ? 350 : 35;
+      break;
+    case 'double_top':
+    case 'double_bottom':
+      // Pattern = measured move
+      slPips = isGold ? 300 : 30;
+      tpPips = isGold ? 550 : 55;
+      break;
+    case 'ema_ribbon':
+      // Trend following = trail with wider stops
+      slPips = isGold ? 400 : 40;
+      tpPips = isGold ? 700 : 70;
+      break;
+    case 'support_bounce':
+    case 'resistance_reject':
+      // S/R bounce = tight SL just beyond level
+      slPips = isGold ? 200 : 20;
+      tpPips = isGold ? 400 : 40;
+      break;
+      
+    // 🚀 NEW HIGH WIN-RATE STRATEGIES SL/TP
+    case 'ema200_pullback':
+      // EMA200 Pullback = high win rate, 1:2 RR
+      slPips = isGold ? 150 : 15;  // Tight SL below recent swing
+      tpPips = isGold ? 400 : 40;  // 1:2.5+ RR
+      break;
+    case 'break_retest':
+      // Break & Retest = SL behind retest zone, TP next structure
+      slPips = isGold ? 200 : 20;
+      tpPips = isGold ? 500 : 50;  // 1:2.5 RR
+      break;
+    case 'liquidity_sweep':
+      // SMC Liquidity Sweep = SL at sweep wick
+      slPips = isGold ? 180 : 18;  // Tight, at sweep wick
+      tpPips = isGold ? 450 : 45;  // Target opposite liquidity
+      break;
+    case 'london_breakout':
+      // London Breakout = SL mid range, TP 2x range
+      slPips = isGold ? 200 : 20;
+      tpPips = isGold ? 400 : 40;  // 2x Asian range
+      break;
+    case 'order_block':
+      // Order Block = SL at OB boundary
+      slPips = isGold ? 200 : 20;
+      tpPips = isGold ? 450 : 45;  // Liquidity target
+      break;
+    case 'vwap_reversion':
+      // VWAP Mean Reversion = tight SL, target VWAP
+      slPips = isGold ? 150 : 15;
+      tpPips = isGold ? 350 : 35;
+      break;
+    case 'fibonacci_continuation':
+      // Fibonacci = SL beyond fib level, TP at extension
+      slPips = isGold ? 200 : 20;
+      tpPips = isGold ? 500 : 50;  // 1:2.5 RR
+      break;
+    case 'rsi_divergence':
+      // RSI Divergence = reversal, wider stops
+      slPips = isGold ? 250 : 25;
+      tpPips = isGold ? 550 : 55;  // 1:2+ RR
+      break;
+      
+    default:
+      // Use botConfig defaults
+      slPips = isGold ? (botConfig?.goldSLPips || 300) : (botConfig?.stopLossPips || 30);
+      tpPips = isGold ? (botConfig?.goldTPPips || 500) : (botConfig?.takeProfitPips || 50);
+  }
+  
+  const isBuy = bestSignal.type === 'buy';
+  
+  return {
+    symbol,
+    type: bestSignal.type,
+    entryPrice: currentPrice,
+    stopLoss: isBuy ? currentPrice - (slPips * pipSize) : currentPrice + (slPips * pipSize),
+    takeProfit: isBuy ? currentPrice + (tpPips * pipSize) : currentPrice - (tpPips * pipSize),
+    volume: 0.01,
+    confidence: bestSignal.confidence,
+    reason: bestSignal.reason,
+    atr,
+    strategy: bestSignal.strategy,
+    slPips,
+    tpPips,
+    confluenceCount: Math.max(buySignals.length, sellSignals.length),
+  };
+}
+
+// Track open positions with their strategy for smart management
+const positionStrategyMap = new Map(); // positionId -> { strategy, entryPrice, slPips, tpPips }
+
 // Convert timeframe to MetaAPI expected format (e.g., m5 -> 5m, h1 -> 1h)
 function normalizeTimeframe(tf = 'm5') {
   const lower = tf.toLowerCase();
@@ -1258,11 +2755,11 @@ function calculateATR(candles, period = 14) {
 
 /**
  * =========================================================================
- * SCALPING ANALYSIS - Ultra-fast entries with tight risk
- * Designed for M1/M5 timeframes with quick profit targets
+ * SCALPING ANALYSIS - Ultra-fast entries with STRICT BOT-DEFINED SL/TP
+ * Scalper uses: 12 pip SL, 20 pip TP (from BOT_CONFIG)
  * =========================================================================
  */
-function analyzeMarketForScalping(candles, symbol, riskLevel = 'medium') {
+function analyzeMarketForScalping(candles, symbol, riskLevel = 'medium', botConfig = null) {
   if (!candles || candles.length < 30) return null;
   
   const closes = candles.map(c => c.close);
@@ -1305,70 +2802,73 @@ function analyzeMarketForScalping(candles, symbol, riskLevel = 'medium') {
   let confidence = 0;
   let reason = '';
   
-  // SCALP BUY: Quick momentum entries (RELAXED CONDITIONS)
+  // SCALP BUY: Quick momentum entries
   if ((ema5Val > ema10Val || bullishCandles >= 2 || currentPrice > ema5Val)) {
-    confidence = 35; // Start with base
+    confidence = 40; // Start with base
     reason = 'SCALP-BUY: ';
     
     if (fastTrendUp) { confidence += 20; reason += 'FastTrend '; }
     else if (ema5Val > ema10Val) { confidence += 10; reason += 'EMA-Up '; }
     if (currentRsi > 40 && currentRsi < 70) { confidence += 10; reason += 'RSI-Good '; }
-    if (strongMomentum && priceChange > 0) { confidence += 10; reason += 'Momentum '; }
+    if (strongMomentum && priceChange > 0) { confidence += 15; reason += 'Momentum '; }
     if (bullishCandles >= 2) { confidence += 10; reason += `${bullishCandles}-Green `; }
     if (strongBody && lastCandle.close > lastCandle.open) { confidence += 10; reason += 'StrongCandle '; }
     if (currentPrice > ema5Val) { confidence += 5; reason += 'Above-EMA '; }
     
-    // Generate signal if above MIN_SIGNAL_CONFIDENCE
-    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
+    if (confidence >= (botConfig?.minConfidence || 55)) {
       signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  // SCALP SELL: Quick momentum entries (RELAXED CONDITIONS)
+  // SCALP SELL: Quick momentum entries
   if (!signal && (ema5Val < ema10Val || bearishCandles >= 2 || currentPrice < ema5Val)) {
-    confidence = 35; // Start with base
+    confidence = 40;
     reason = 'SCALP-SELL: ';
     
     if (fastTrendDown) { confidence += 20; reason += 'FastTrend '; }
     else if (ema5Val < ema10Val) { confidence += 10; reason += 'EMA-Down '; }
     if (currentRsi < 60 && currentRsi > 30) { confidence += 10; reason += 'RSI-Good '; }
-    if (strongMomentum && priceChange < 0) { confidence += 10; reason += 'Momentum '; }
+    if (strongMomentum && priceChange < 0) { confidence += 15; reason += 'Momentum '; }
     if (bearishCandles >= 2) { confidence += 10; reason += `${bearishCandles}-Red `; }
     if (strongBody && lastCandle.close < lastCandle.open) { confidence += 10; reason += 'StrongCandle '; }
     if (currentPrice < ema5Val) { confidence += 5; reason += 'Below-EMA '; }
     
-    // Generate signal if above MIN_SIGNAL_CONFIDENCE
-    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
+    if (confidence >= (botConfig?.minConfidence || 55)) {
       signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  // FALLBACK: Always generate a scalp signal based on last candle
-  if (!signal) {
-    const isBullish = lastCandle.close > lastCandle.open;
-    signal = { 
-      type: isBullish ? 'buy' : 'sell', 
-      confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, 
-      reason: isBullish ? 'SCALP-BUY: LastCandle-Green' : 'SCALP-SELL: LastCandle-Red'
-    };
-  }
+  if (!signal) return null;
   
-  // Scalping uses TIGHT stops and quick targets
+  // ================================================================
+  // USE BOT-DEFINED SL/TP - These are FIXED values that WILL be hit
+  // ================================================================
   const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   const isBuy = signal.type === 'buy';
-  
-  // Scalping SL/TP - tight stops, 1:1.5 R:R for quick wins
-  const slPips = isGold ? 30 : 15;  // Tight stops
-  const tpPips = isGold ? 45 : 25;  // Quick targets
   const pipSize = getPipSize(symbol);
+  
+  // Get SL/TP from bot config or use defaults
+  const slPips = isGold 
+    ? (botConfig?.goldSLPips || 100)   // Gold: 100 cents = $1.00
+    : (botConfig?.stopLossPips || 12); // Forex: 12 pips
+  const tpPips = isGold 
+    ? (botConfig?.goldTPPips || 150)   // Gold: 150 cents = $1.50
+    : (botConfig?.takeProfitPips || 20); // Forex: 20 pips
+  
+  const stopLossPrice = isBuy 
+    ? currentPrice - (slPips * pipSize) 
+    : currentPrice + (slPips * pipSize);
+  const takeProfitPrice = isBuy 
+    ? currentPrice + (tpPips * pipSize) 
+    : currentPrice - (tpPips * pipSize);
   
   return {
     symbol,
     type: signal.type,
     entryPrice: currentPrice,
-    stopLoss: isBuy ? currentPrice - (slPips * pipSize) : currentPrice + (slPips * pipSize),
-    takeProfit: isBuy ? currentPrice + (tpPips * pipSize) : currentPrice - (tpPips * pipSize),
-    volume: 0.01, // Will be recalculated
+    stopLoss: stopLossPrice,
+    takeProfit: takeProfitPrice,
+    volume: 0.01, // Will be recalculated based on confidence
     confidence: signal.confidence,
     reason: signal.reason,
     atr,
@@ -1382,9 +2882,10 @@ function analyzeMarketForScalping(candles, symbol, riskLevel = 'medium') {
 /**
  * =========================================================================
  * MOMENTUM STRATEGY - RSI/MACD divergence trading
+ * Uses: 25 pip SL, 45 pip TP (from BOT_CONFIG)
  * =========================================================================
  */
-function analyzeMarketForMomentum(candles, symbol, riskLevel = 'medium') {
+function analyzeMarketForMomentum(candles, symbol, riskLevel = 'medium', botConfig = null) {
   if (!candles || candles.length < 50) return null;
   
   const closes = candles.map(c => c.close);
@@ -1415,76 +2916,79 @@ function analyzeMarketForMomentum(candles, symbol, riskLevel = 'medium') {
   let confidence = 0;
   let reason = '';
   
-  // MOMENTUM BUY: RSI low OR MACD turning up (RELAXED)
-  if ((currentRsi < 50 && histogram > prevHistogram) || (currentRsi < 40) || (trendUp && histogram > 0)) {
-    confidence = 35;
+  // MOMENTUM BUY: RSI low OR MACD turning up
+  if ((currentRsi < 45 && histogram > prevHistogram) || (currentRsi < 35) || (trendUp && histogram > 0 && histogram > prevHistogram)) {
+    confidence = 40;
     reason = 'MOMENTUM-BUY: ';
     
-    if (currentRsi < 30) { confidence += 20; reason += 'RSI-Oversold '; }
+    if (currentRsi < 30) { confidence += 25; reason += 'RSI-Oversold '; }
     else if (currentRsi < 40) { confidence += 15; reason += 'RSI-Low '; }
-    else if (currentRsi < 50) { confidence += 10; reason += 'RSI-Neutral '; }
-    if (histogram > 0 && prevHistogram < 0) { confidence += 15; reason += 'MACD-Cross '; }
-    else if (histogram > prevHistogram) { confidence += 10; reason += 'MACD-Rising '; }
-    else if (histogram > 0) { confidence += 5; reason += 'MACD-Positive '; }
-    if (trendUp) { confidence += 10; reason += 'TrendUp '; }
-    if (currentRsi > prevRsi) { confidence += 5; reason += 'RSI-Turning '; }
+    if (histogram > 0 && prevHistogram < 0) { confidence += 20; reason += 'MACD-Cross '; }
+    else if (histogram > prevHistogram) { confidence += 12; reason += 'MACD-Rising '; }
+    if (trendUp) { confidence += 12; reason += 'TrendUp '; }
+    if (currentRsi > prevRsi) { confidence += 8; reason += 'RSI-Turning '; }
     
-    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
+    if (confidence >= (botConfig?.minConfidence || 55)) {
       signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  // MOMENTUM SELL: RSI high OR MACD turning down (RELAXED)
-  if (!signal && ((currentRsi > 50 && histogram < prevHistogram) || (currentRsi > 60) || (!trendUp && histogram < 0))) {
-    confidence = 35;
+  // MOMENTUM SELL: RSI high OR MACD turning down
+  if (!signal && ((currentRsi > 55 && histogram < prevHistogram) || (currentRsi > 65) || (!trendUp && histogram < 0 && histogram < prevHistogram))) {
+    confidence = 40;
     reason = 'MOMENTUM-SELL: ';
     
-    if (currentRsi > 70) { confidence += 20; reason += 'RSI-Overbought '; }
+    if (currentRsi > 70) { confidence += 25; reason += 'RSI-Overbought '; }
     else if (currentRsi > 60) { confidence += 15; reason += 'RSI-High '; }
-    else if (currentRsi > 50) { confidence += 10; reason += 'RSI-Neutral '; }
-    if (histogram < 0 && prevHistogram > 0) { confidence += 15; reason += 'MACD-Cross '; }
-    else if (histogram < prevHistogram) { confidence += 10; reason += 'MACD-Falling '; }
-    else if (histogram < 0) { confidence += 5; reason += 'MACD-Negative '; }
-    if (!trendUp) { confidence += 10; reason += 'TrendDown '; }
-    if (currentRsi < prevRsi) { confidence += 5; reason += 'RSI-Turning '; }
+    if (histogram < 0 && prevHistogram > 0) { confidence += 20; reason += 'MACD-Cross '; }
+    else if (histogram < prevHistogram) { confidence += 12; reason += 'MACD-Falling '; }
+    if (!trendUp) { confidence += 12; reason += 'TrendDown '; }
+    if (currentRsi < prevRsi) { confidence += 8; reason += 'RSI-Turning '; }
     
-    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
+    if (confidence >= (botConfig?.minConfidence || 55)) {
       signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  // FALLBACK: Generate signal based on EMA trend if no other signal
-  if (!signal) {
-    if (trendUp) {
-      signal = { type: 'buy', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'MOMENTUM-BUY: TrendUp-Fallback' };
-    } else {
-      signal = { type: 'sell', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'MOMENTUM-SELL: TrendDown-Fallback' };
-    }
-  }
+  if (!signal) return null;
   
+  // ================================================================
+  // USE BOT-DEFINED SL/TP - Fixed values that WILL be hit
+  // ================================================================
   const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   const isBuy = signal.type === 'buy';
   const pipSize = getPipSize(symbol);
   
-  // Momentum uses medium stops with 1.5:1 R:R
-  const slPips = isGold ? 150 : 25;
-  const tpPips = isGold ? 225 : 40;
+  const slPips = isGold 
+    ? (botConfig?.goldSLPips || 200) 
+    : (botConfig?.stopLossPips || 25);
+  const tpPips = isGold 
+    ? (botConfig?.goldTPPips || 350) 
+    : (botConfig?.takeProfitPips || 45);
   
   return {
-    symbol, type: signal.type, entryPrice: currentPrice,
+    symbol, 
+    type: signal.type, 
+    entryPrice: currentPrice,
     stopLoss: isBuy ? currentPrice - (slPips * pipSize) : currentPrice + (slPips * pipSize),
     takeProfit: isBuy ? currentPrice + (tpPips * pipSize) : currentPrice - (tpPips * pipSize),
-    volume: 0.01, confidence: signal.confidence, reason: signal.reason, atr,
-    strategy: 'momentum', slPips, tpPips
+    volume: 0.01, 
+    confidence: signal.confidence, 
+    reason: signal.reason, 
+    atr,
+    strategy: 'momentum', 
+    slPips, 
+    tpPips
   };
 }
 
 /**
  * =========================================================================
  * TREND STRATEGY - EMA crossover with ADX filter
+ * Uses: 35 pip SL, 70 pip TP (from BOT_CONFIG)
  * =========================================================================
  */
-function analyzeMarketForTrend(candles, symbol, riskLevel = 'medium') {
+function analyzeMarketForTrend(candles, symbol, riskLevel = 'medium', botConfig = null) {
   if (!candles || candles.length < 50) return null;
   
   const closes = candles.map(c => c.close);
@@ -1506,9 +3010,9 @@ function analyzeMarketForTrend(candles, symbol, riskLevel = 'medium') {
   const prevEma8 = ema8[ema8.length - 2];
   const prevEma20 = ema20[ema20.length - 2];
   
-  // Calculate ADX (simplified)
+  // Calculate ADX
   const adx = calculateADX(candles, 14);
-  const strongTrend = adx > 15; // Lowered from 20
+  const strongTrend = adx > 20;
   
   // Check for EMA crossover
   const bullishCross = prevEma8 <= prevEma20 && ema8Val > ema20Val;
@@ -1518,80 +3022,81 @@ function analyzeMarketForTrend(candles, symbol, riskLevel = 'medium') {
   const bullishAlign = ema8Val > ema20Val && ema20Val > ema50Val;
   const bearishAlign = ema8Val < ema20Val && ema20Val < ema50Val;
   
-  // Simple trend check (RELAXED)
-  const simpleBullish = ema8Val > ema20Val;
-  const simpleBearish = ema8Val < ema20Val;
-  
   let signal = null;
   let confidence = 0;
   let reason = '';
   
-  // TREND BUY: EMA crossover or any bullish alignment (RELAXED)
-  if (bullishCross || bullishAlign || (simpleBullish && currentPrice > ema8Val)) {
-    confidence = 35;
+  // TREND BUY: EMA crossover or bullish alignment
+  if (bullishCross || bullishAlign || (ema8Val > ema20Val && currentPrice > ema8Val)) {
+    confidence = 40;
     reason = 'TREND-BUY: ';
     
-    if (bullishCross) { confidence += 20; reason += 'EMA-Cross '; }
-    if (bullishAlign) { confidence += 15; reason += 'Aligned '; }
-    else if (simpleBullish) { confidence += 10; reason += 'Bullish-EMA '; }
-    if (strongTrend) { confidence += 10; reason += `ADX${adx.toFixed(0)} `; }
+    if (bullishCross) { confidence += 25; reason += 'EMA-Cross '; }
+    if (bullishAlign) { confidence += 18; reason += 'Aligned '; }
+    if (strongTrend) { confidence += 15; reason += `ADX${adx.toFixed(0)} `; }
     if (currentPrice > ema8Val) { confidence += 10; reason += 'AboveEMA '; }
-    if (currentPrice > ema50Val) { confidence += 5; reason += 'Above50 '; }
+    if (currentPrice > ema50Val) { confidence += 8; reason += 'Above50 '; }
     
-    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
+    if (confidence >= (botConfig?.minConfidence || 55)) {
       signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  // TREND SELL: EMA crossover or any bearish alignment (RELAXED)
-  if (!signal && (bearishCross || bearishAlign || (simpleBearish && currentPrice < ema8Val))) {
-    confidence = 35;
+  // TREND SELL: EMA crossover or bearish alignment
+  if (!signal && (bearishCross || bearishAlign || (ema8Val < ema20Val && currentPrice < ema8Val))) {
+    confidence = 40;
     reason = 'TREND-SELL: ';
     
-    if (bearishCross) { confidence += 20; reason += 'EMA-Cross '; }
-    if (bearishAlign) { confidence += 15; reason += 'Aligned '; }
-    else if (simpleBearish) { confidence += 10; reason += 'Bearish-EMA '; }
-    if (strongTrend) { confidence += 10; reason += `ADX${adx.toFixed(0)} `; }
+    if (bearishCross) { confidence += 25; reason += 'EMA-Cross '; }
+    if (bearishAlign) { confidence += 18; reason += 'Aligned '; }
+    if (strongTrend) { confidence += 15; reason += `ADX${adx.toFixed(0)} `; }
     if (currentPrice < ema8Val) { confidence += 10; reason += 'BelowEMA '; }
-    if (currentPrice < ema50Val) { confidence += 5; reason += 'Below50 '; }
+    if (currentPrice < ema50Val) { confidence += 8; reason += 'Below50 '; }
     
-    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
+    if (confidence >= (botConfig?.minConfidence || 55)) {
       signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  // FALLBACK: Generate signal based on price vs EMA
-  if (!signal) {
-    if (currentPrice > ema20Val) {
-      signal = { type: 'buy', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'TREND-BUY: Price-Above-EMA20' };
-    } else {
-      signal = { type: 'sell', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'TREND-SELL: Price-Below-EMA20' };
-    }
-  }
+  if (!signal) return null;
   
+  // ================================================================
+  // USE BOT-DEFINED SL/TP
+  // ================================================================
   const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   const isBuy = signal.type === 'buy';
   const pipSize = getPipSize(symbol);
   
-  // Trend uses wider stops with 2:1 R:R
-  const slPips = isGold ? 200 : 30;
-  const tpPips = isGold ? 400 : 60;
+  const slPips = isGold 
+    ? (botConfig?.goldSLPips || 250) 
+    : (botConfig?.stopLossPips || 35);
+  const tpPips = isGold 
+    ? (botConfig?.goldTPPips || 500) 
+    : (botConfig?.takeProfitPips || 70);
   
   return {
-    symbol, type: signal.type, entryPrice: currentPrice,
+    symbol, 
+    type: signal.type, 
+    entryPrice: currentPrice,
     stopLoss: isBuy ? currentPrice - (slPips * pipSize) : currentPrice + (slPips * pipSize),
     takeProfit: isBuy ? currentPrice + (tpPips * pipSize) : currentPrice - (tpPips * pipSize),
-    volume: 0.01, confidence: signal.confidence, reason: signal.reason, atr,
-    strategy: 'trend', slPips, tpPips
+    volume: 0.01, 
+    confidence: signal.confidence, 
+    reason: signal.reason, 
+    atr,
+    strategy: 'trend', 
+    slPips, 
+    tpPips
   };
 }
 
 /**
  * =========================================================================
  * BREAKOUT STRATEGY - Support/Resistance breakout detection
+ * Uses: 25 pip SL, 55 pip TP (from BOT_CONFIG)
  * =========================================================================
  */
-function analyzeMarketForBreakout(candles, symbol, riskLevel = 'medium') {
+function analyzeMarketForBreakout(candles, symbol, riskLevel = 'medium', botConfig = null) {
   if (!candles || candles.length < 50) return null;
   
   const closes = candles.map(c => c.close);
@@ -1616,89 +3121,92 @@ function analyzeMarketForBreakout(candles, symbol, riskLevel = 'medium') {
   
   // Check for breakout
   const breakoutThreshold = atr * 0.3;
-  const bullishBreakout = currentPrice > resistance + breakoutThreshold;
-  const bearishBreakout = currentPrice < support - breakoutThreshold;
+  const bullishBreakout = currentPrice > resistance - breakoutThreshold;
+  const bearishBreakout = currentPrice < support + breakoutThreshold;
   
   // Volume check (using candle body size as proxy)
   const lastCandle = candles[candles.length - 1];
   const avgBodySize = closes.slice(-10).reduce((sum, c, i) => 
     sum + Math.abs(candles[candles.length - 10 + i].close - candles[candles.length - 10 + i].open), 0) / 10;
   const currentBodySize = Math.abs(lastCandle.close - lastCandle.open);
-  const strongCandle = currentBodySize > avgBodySize * 1.5;
+  const strongCandle = currentBodySize > avgBodySize * 1.2;
   
   let signal = null;
   let confidence = 0;
   let reason = '';
   
   // BREAKOUT BUY: Price breaks above resistance
-  if (bullishBreakout && strongCandle) {
-    confidence = 55;
+  if (bullishBreakout) {
+    confidence = 45;
     reason = 'BREAKOUT-BUY: ';
     
-    if (bullishBreakout) { confidence += 15; reason += 'AboveResist '; }
+    if (currentPrice > resistance) { confidence += 20; reason += 'AboveResist '; }
+    else { confidence += 10; reason += 'NearResist '; }
     if (isConsolidating) { confidence += 15; reason += 'FromRange '; }
-    if (strongCandle) { confidence += 10; reason += 'StrongCandle '; }
-    if (lastCandle.close > lastCandle.open) { confidence += 5; reason += 'Bullish '; }
+    if (strongCandle) { confidence += 12; reason += 'StrongCandle '; }
+    if (lastCandle.close > lastCandle.open) { confidence += 8; reason += 'Bullish '; }
     
-    if (confidence >= 55) {
+    if (confidence >= (botConfig?.minConfidence || 60)) {
       signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
   // BREAKOUT SELL: Price breaks below support
-  if (!signal && bearishBreakout && strongCandle) {
-    confidence = 55;
+  if (!signal && bearishBreakout) {
+    confidence = 45;
     reason = 'BREAKOUT-SELL: ';
     
-    if (bearishBreakout) { confidence += 15; reason += 'BelowSupport '; }
+    if (currentPrice < support) { confidence += 20; reason += 'BelowSupport '; }
+    else { confidence += 10; reason += 'NearSupport '; }
     if (isConsolidating) { confidence += 15; reason += 'FromRange '; }
-    if (strongCandle) { confidence += 10; reason += 'StrongCandle '; }
-    if (lastCandle.close < lastCandle.open) { confidence += 5; reason += 'Bearish '; }
+    if (strongCandle) { confidence += 12; reason += 'StrongCandle '; }
+    if (lastCandle.close < lastCandle.open) { confidence += 8; reason += 'Bearish '; }
     
-    if (confidence >= RISK_CONFIG.MIN_SIGNAL_CONFIDENCE) {
+    if (confidence >= (botConfig?.minConfidence || 60)) {
       signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  // FALLBACK: Always generate a breakout signal based on price position
-  if (!signal) {
-    const priceInRange = (currentPrice - support) / (resistance - support);
-    if (priceInRange > 0.7) {
-      // Price near resistance - potential breakout up or rejection
-      signal = { type: 'buy', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'BREAKOUT-BUY: NearResistance-Potential' };
-    } else if (priceInRange < 0.3) {
-      // Price near support - potential breakdown or bounce
-      signal = { type: 'sell', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'BREAKOUT-SELL: NearSupport-Potential' };
-    } else {
-      // Price in middle - go with momentum
-      const isBullish = lastCandle.close > lastCandle.open;
-      signal = { type: isBullish ? 'buy' : 'sell', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: isBullish ? 'BREAKOUT-BUY: Momentum' : 'BREAKOUT-SELL: Momentum' };
-    }
-  }
+  if (!signal) return null;
   
+  // ================================================================
+  // USE BOT-DEFINED SL/TP
+  // ================================================================
   const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   const isBuy = signal.type === 'buy';
   const pipSize = getPipSize(symbol);
   
-  // Breakout uses SL just inside the range, TP 2x the range
-  const slPips = isGold ? 150 : 25;
-  const tpPips = isGold ? 300 : 50;
+  const slPips = isGold 
+    ? (botConfig?.goldSLPips || 200) 
+    : (botConfig?.stopLossPips || 25);
+  const tpPips = isGold 
+    ? (botConfig?.goldTPPips || 450) 
+    : (botConfig?.takeProfitPips || 55);
   
   return {
-    symbol, type: signal.type, entryPrice: currentPrice,
+    symbol, 
+    type: signal.type, 
+    entryPrice: currentPrice,
     stopLoss: isBuy ? currentPrice - (slPips * pipSize) : currentPrice + (slPips * pipSize),
     takeProfit: isBuy ? currentPrice + (tpPips * pipSize) : currentPrice - (tpPips * pipSize),
-    volume: 0.01, confidence: signal.confidence, reason: signal.reason, atr,
-    strategy: 'breakout', slPips, tpPips, levels: { support, resistance }
+    volume: 0.01, 
+    confidence: signal.confidence, 
+    reason: signal.reason, 
+    atr,
+    strategy: 'breakout', 
+    slPips, 
+    tpPips, 
+    levels: { support, resistance }
   };
 }
 
 /**
  * =========================================================================
  * SWING STRATEGY - Multi-timeframe swing trading
+ * Uses: 55 pip SL, 120 pip TP (from BOT_CONFIG)
  * =========================================================================
  */
-function analyzeMarketForSwing(candles, symbol, riskLevel = 'medium') {
+function analyzeMarketForSwing(candles, symbol, riskLevel = 'medium', botConfig = null) {
   if (!candles || candles.length < 50) return null;
   
   const closes = candles.map(c => c.close);
@@ -1740,7 +3248,6 @@ function analyzeMarketForSwing(candles, symbol, riskLevel = 'medium') {
   
   // EMA filter
   const ema50 = calculateEMA(closes, 50);
-  const ema200 = calculateEMA(closes, 50); // Using 50 as proxy for longer term
   const aboveEma = currentPrice > ema50[ema50.length - 1];
   
   // Pullback to key level
@@ -1754,59 +3261,107 @@ function analyzeMarketForSwing(candles, symbol, riskLevel = 'medium') {
   let reason = '';
   
   // SWING BUY: Uptrend + pullback to support
-  if (uptrend && nearSwingLow && aboveEma) {
-    confidence = 55;
+  if ((uptrend || aboveEma) && nearSwingLow) {
+    confidence = 45;
     reason = 'SWING-BUY: ';
     
-    if (uptrend) { confidence += 15; reason += 'Uptrend '; }
+    if (uptrend) { confidence += 20; reason += 'Uptrend '; }
     if (nearSwingLow) { confidence += 15; reason += 'AtSupport '; }
-    if (aboveEma) { confidence += 10; reason += 'AboveEMA '; }
+    if (aboveEma) { confidence += 12; reason += 'AboveEMA '; }
     
-    if (confidence >= 55) {
+    if (confidence >= (botConfig?.minConfidence || 60)) {
       signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
   // SWING SELL: Downtrend + rally to resistance
-  if (!signal && downtrend && nearSwingHigh && !aboveEma) {
-    confidence = 55;
+  if (!signal && (downtrend || !aboveEma) && nearSwingHigh) {
+    confidence = 45;
     reason = 'SWING-SELL: ';
     
-    if (downtrend) { confidence += 15; reason += 'Downtrend '; }
+    if (downtrend) { confidence += 20; reason += 'Downtrend '; }
     if (nearSwingHigh) { confidence += 15; reason += 'AtResist '; }
-    if (!aboveEma) { confidence += 10; reason += 'BelowEMA '; }
+    if (!aboveEma) { confidence += 12; reason += 'BelowEMA '; }
     
-    if (confidence >= 55) {
+    if (confidence >= (botConfig?.minConfidence || 60)) {
       signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim() };
     }
   }
   
-  // FALLBACK: Always generate a swing signal based on EMA and trend
-  if (!signal) {
-    if (aboveEma) {
-      signal = { type: 'buy', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'SWING-BUY: AboveEMA-Fallback' };
-    } else {
-      signal = { type: 'sell', confidence: RISK_CONFIG.MIN_SIGNAL_CONFIDENCE, reason: 'SWING-SELL: BelowEMA-Fallback' };
-    }
-  }
+  if (!signal) return null;
   
+  // ================================================================
+  // USE BOT-DEFINED SL/TP
+  // ================================================================
   const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   const isBuy = signal.type === 'buy';
   const pipSize = getPipSize(symbol);
   
-  // Swing uses wider stops with 2:1 R:R for larger moves
-  const slPips = isGold ? 300 : 50;
-  const tpPips = isGold ? 600 : 100;
+  const slPips = isGold 
+    ? (botConfig?.goldSLPips || 400) 
+    : (botConfig?.stopLossPips || 55);
+  const tpPips = isGold 
+    ? (botConfig?.goldTPPips || 800) 
+    : (botConfig?.takeProfitPips || 120);
   
   return {
-    symbol, type: signal.type, entryPrice: currentPrice,
+    symbol, 
+    type: signal.type, 
+    entryPrice: currentPrice,
     stopLoss: isBuy ? currentPrice - (slPips * pipSize) : currentPrice + (slPips * pipSize),
     takeProfit: isBuy ? currentPrice + (tpPips * pipSize) : currentPrice - (tpPips * pipSize),
-    volume: 0.01, confidence: signal.confidence, reason: signal.reason, atr,
-    strategy: 'swing', slPips, tpPips
+    volume: 0.01, 
+    confidence: signal.confidence, 
+    reason: signal.reason, 
+    atr,
+    strategy: 'swing', 
+    slPips, 
+    tpPips
   };
 }
 
+/**
+ * Calculate ADX (Average Directional Index)
+ */
+function calculateADX(candles, period = 14) {
+  if (candles.length < period * 2) return 20; // Default
+  
+  let sumDX = 0;
+  let plusDMSum = 0;
+  let minusDMSum = 0;
+  let trSum = 0;
+  
+  for (let i = 1; i < candles.length; i++) {
+    const high = candles[i].high;
+    const low = candles[i].low;
+    const prevHigh = candles[i-1].high;
+    const prevLow = candles[i-1].low;
+    const prevClose = candles[i-1].close;
+    
+    const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+    const plusDM = high - prevHigh > prevLow - low ? Math.max(high - prevHigh, 0) : 0;
+    const minusDM = prevLow - low > high - prevHigh ? Math.max(prevLow - low, 0) : 0;
+    
+    if (i <= period) {
+      trSum += tr;
+      plusDMSum += plusDM;
+      minusDMSum += minusDM;
+    } else {
+      trSum = trSum - trSum/period + tr;
+      plusDMSum = plusDMSum - plusDMSum/period + plusDM;
+      minusDMSum = minusDMSum - minusDMSum/period + minusDM;
+    }
+    
+    if (i >= period) {
+      const plusDI = trSum > 0 ? (plusDMSum / trSum) * 100 : 0;
+      const minusDI = trSum > 0 ? (minusDMSum / trSum) * 100 : 0;
+      const dx = (plusDI + minusDI) > 0 ? Math.abs(plusDI - minusDI) / (plusDI + minusDI) * 100 : 0;
+      sumDX += dx;
+    }
+  }
+  
+  return sumDX / (candles.length - period);
+}
 /**
  * Calculate ADX (Average Directional Index)
  */
@@ -1855,7 +3410,7 @@ function calculateADX(candles, period = 14) {
  * SMART MARKET ANALYSIS - Only trade on real opportunities
  * =========================================================================
  */
-function analyzeMarket(candles, symbol, riskLevel = 'medium') {
+function analyzeMarket(candles, symbol, riskLevel = 'medium', botConfig = null) {
   if (!candles || candles.length < 30) return null;
   
   const closes = candles.map(c => c.close);
@@ -2021,12 +3576,36 @@ function analyzeMarket(candles, symbol, riskLevel = 'medium') {
     tpMultiplier = 3.5;
   }
   
+  // Use bot-defined SL/TP pip values if available, otherwise fall back to ATR
+  const isGold = symbol.toUpperCase().includes('XAU') || symbol.toUpperCase().includes('GOLD');
+  let slPips, tpPips;
+  
+  if (botConfig) {
+    slPips = isGold ? (botConfig.goldSLPips || botConfig.stopLossPips * 10) : botConfig.stopLossPips;
+    tpPips = isGold ? (botConfig.goldTPPips || botConfig.takeProfitPips * 10) : botConfig.takeProfitPips;
+  } else {
+    // Fallback: Calculate from ATR but convert to reasonable pip values
+    const pipValue = symbol.includes('JPY') ? 0.01 : 0.0001;
+    slPips = Math.round((atr * slMultiplier) / pipValue);
+    tpPips = Math.round((atr * tpMultiplier) / pipValue);
+    // Ensure reasonable bounds
+    slPips = Math.max(10, Math.min(slPips, 100));
+    tpPips = Math.max(20, Math.min(tpPips, 200));
+  }
+  
+  // Calculate actual SL/TP prices from pip values
+  const pipSize = symbol.includes('JPY') ? 0.01 : (isGold ? 0.1 : 0.0001);
+  const stopLoss = isBuy ? currentPrice - (slPips * pipSize) : currentPrice + (slPips * pipSize);
+  const takeProfit = isBuy ? currentPrice + (tpPips * pipSize) : currentPrice - (tpPips * pipSize);
+  
   return {
     symbol,
     type: signal.type,
     entryPrice: currentPrice,
-    stopLoss: isBuy ? currentPrice - (atr * slMultiplier) : currentPrice + (atr * slMultiplier),
-    takeProfit: isBuy ? currentPrice + (atr * tpMultiplier) : currentPrice - (atr * tpMultiplier),
+    stopLoss,
+    takeProfit,
+    slPips,
+    tpPips,
     volume: risk.volume, // Will be recalculated based on account balance
     confidence: signal.confidence,
     reason: signal.reason,
@@ -2346,94 +3925,31 @@ async function executeRobotTrade(robot) {
         
         // ================================================================
         // STRATEGY-SPECIFIC SIGNAL GENERATION
-        // Each bot type uses its own analysis method
+        // ALL BOTS NOW USE THE 8 PROVEN HIGH WIN-RATE STRATEGIES
+        // The multi-strategy analyzer picks the strongest signal
         // ================================================================
-        switch (botStrategy) {
-          case 'scalping':
-            signal = analyzeMarketForScalping(candles, symbol, riskLevel);
-            if (signal) console.log(`  ⚡ ${symbol}: SCALP ${signal.type} (${signal.confidence}%) - ${signal.reason}`);
-            break;
-            
-          case 'momentum':
-            signal = analyzeMarketForMomentum(candles, symbol, riskLevel);
-            if (signal) console.log(`  🚀 ${symbol}: MOMENTUM ${signal.type} (${signal.confidence}%) - ${signal.reason}`);
-            break;
-            
-          case 'trend':
-            signal = analyzeMarketForTrend(candles, symbol, riskLevel);
-            if (signal) console.log(`  📈 ${symbol}: TREND ${signal.type} (${signal.confidence}%) - ${signal.reason}`);
-            break;
-            
-          case 'breakout':
-            signal = analyzeMarketForBreakout(candles, symbol, riskLevel);
-            if (signal) console.log(`  💥 ${symbol}: BREAKOUT ${signal.type} (${signal.confidence}%) - ${signal.reason}`);
-            break;
-            
-          case 'swing':
-            signal = analyzeMarketForSwing(candles, symbol, riskLevel);
-            if (signal) console.log(`  🔄 ${symbol}: SWING ${signal.type} (${signal.confidence}%) - ${signal.reason}`);
-            break;
-            
-          case 'gold':
-            // Gold uses trend analysis with tighter volatility filters
-            if (symbol.includes('XAU') || symbol.includes('GOLD')) {
-              signal = analyzeMarketForTrend(candles, symbol, riskLevel);
-              if (signal) console.log(`  🥇 ${symbol}: GOLD ${signal.type} (${signal.confidence}%) - ${signal.reason}`);
-            }
-            break;
-            
-          case 'position':
-            // Position trading uses swing analysis on higher timeframes
-            signal = analyzeMarketForSwing(candles, symbol, riskLevel);
-            if (signal) console.log(`  🎯 ${symbol}: POSITION ${signal.type} (${signal.confidence}%) - ${signal.reason}`);
-            break;
-            
-          case 'sniper':
-            // Sniper uses breakout analysis on daily charts
-            signal = analyzeMarketForBreakout(candles, symbol, riskLevel);
-            if (signal) console.log(`  🎯 ${symbol}: SNIPER ${signal.type} (${signal.confidence}%) - ${signal.reason}`);
-            break;
-            
-          case 'news':
-            try {
-              signal = await generateNewsSignal(symbol, candles, currentPrice);
-              if (signal) {
-                console.log(`  📰 ${symbol}: NEWS ${signal.type} (${signal.confidence}%) - ${signal.reason}`);
-              } else {
-                const newsAvoid = await shouldAvoidTradingDueToNews(symbol);
-                if (newsAvoid.avoid) {
-                  console.log(`  ⏸️ ${symbol}: Avoiding - ${newsAvoid.reason}`);
-                  continue;
-                }
-                // Fall back to momentum for news bot
-                signal = analyzeMarketForMomentum(candles, symbol, riskLevel);
-              }
-            } catch (newsErr) {
-              console.log(`  ⚠️ News analysis error: ${newsErr.message}`);
-              signal = analyzeMarketForMomentum(candles, symbol, riskLevel);
-            }
-            break;
-            
-          case 'grid':
-            // Grid trading - only in ranging markets (low ADX)
-            const adx = calculateADX(candles, 14);
-            if (adx < 20) { // Only trade when ranging
-              signal = analyzeMarket(candles, symbol, riskLevel);
-              if (signal) console.log(`  📊 ${symbol}: GRID ${signal.type} (${signal.confidence}%) ADX=${adx.toFixed(0)} - ${signal.reason}`);
-            } else {
-              skippedSymbols.push(`${symbol}(ADX=${adx.toFixed(0)}>20)`);
-            }
-            break;
-            
-          case 'hedge':
-            // Hedge uses trend analysis on correlated pairs
-            signal = analyzeMarketForTrend(candles, symbol, riskLevel);
-            if (signal) console.log(`  🛡️ ${symbol}: HEDGE ${signal.type} (${signal.confidence}%) - ${signal.reason}`);
-            break;
-            
-          default:
-            // Default analysis
-            signal = analyzeMarket(candles, symbol, riskLevel);
+        
+        // 🚀 ALL BOTS USE PROVEN STRATEGIES
+        signal = analyzeWithMultipleStrategies(candles, symbol, botConfig);
+        
+        if (signal) {
+          // Log with bot-specific emoji for clarity
+          const botEmoji = {
+            'scalping': '⚡',
+            'momentum': '🚀', 
+            'trend': '📈',
+            'breakout': '💥',
+            'swing': '🔄',
+            'gold': '🥇',
+            'position': '🎯',
+            'sniper': '🎯',
+            'news': '📰',
+            'grid': '📊',
+            'hedge': '🛡️',
+            'default': '🎯'
+          };
+          const emoji = botEmoji[botStrategy] || '🎯';
+          console.log(`  ${emoji} ${symbol}: ${botStrategy.toUpperCase()} via [${signal.strategy}] ${signal.type} (${signal.confidence}%) SL=${signal.slPips}pips TP=${signal.tpPips}pips - ${signal.reason}`);
         }
         
         // Use BOT-SPECIFIC minimum confidence
@@ -2536,13 +4052,13 @@ async function executeRobotTrade(robot) {
         }
         
         try {
-          // News signals already have SL/TP calculated
-          const lotSize = calculatePositionSize(accountInfo.balance, signal.slPips, symbol, signal.confidence);
+          // Calculate lot size using signal confidence and bot config
+          const lotSize = calculatePositionSize(accountInfo.balance, signal.slPips, symbol, signal.confidence, botConfig);
           signal.volume = lotSize;
           
           console.log(`    📰 ${symbol}: ${signal.impactLevel} IMPACT NEWS - ${signal.tradingMode}`);
           console.log(`       ${signal.type} @ ${signal.entryPrice?.toFixed(5)}, SL: ${signal.stopLoss?.toFixed(5)}, TP: ${signal.takeProfit?.toFixed(5)}`);
-          console.log(`       R:R ${signal.riskReward}:1, Lots: ${lotSize}`);
+          console.log(`       Lots: ${lotSize} (confidence: ${signal.confidence}%)`);
           
           const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
           if (trade) {
@@ -2558,9 +4074,9 @@ async function executeRobotTrade(robot) {
       }
     }
     
-    // For HIGH CONFIDENCE signals - NO POSITION LIMITS (unlimited trades)
+    // For HIGH CONFIDENCE signals - BIGGER LOT SIZES
     if (highConfidenceSignals.length > 0) {
-      console.log(`  🔥 STRONG SIGNALS - Processing ${highConfidenceSignals.length} high-confidence signal(s) - NO LIMITS...`);
+      console.log(`  🔥 STRONG SIGNALS - Processing ${highConfidenceSignals.length} high-confidence signal(s) with BIGGER LOTS...`);
       
       for (const { symbol, signal } of highConfidenceSignals) {
         // For strong signals, allow multiple per symbol (up to 2)
@@ -2580,13 +4096,11 @@ async function executeRobotTrade(robot) {
         }
         
         try {
-          // Calculate position size with conservative settings
-          const pipSize = getPipSize(symbol);
-          const stopLossPips = Math.abs(signal.entryPrice - signal.stopLoss) / pipSize;
-          const lotSize = calculatePositionSize(accountInfo.balance, stopLossPips, symbol, signal.confidence);
+          // Calculate position size - BIGGER lots for high confidence
+          const lotSize = calculatePositionSize(accountInfo.balance, signal.slPips, symbol, signal.confidence, botConfig);
           signal.volume = lotSize;
           
-          console.log(`    🔥 ${symbol}: HIGH CONFIDENCE ${signal.confidence}% - SL=${stopLossPips.toFixed(0)}pips, Lots=${lotSize}`);
+          console.log(`    🔥 ${symbol}: HIGH CONFIDENCE ${signal.confidence}% - SL=${signal.slPips}pips, TP=${signal.tpPips}pips, Lots=${lotSize}`);
           
           // Execute trade
           const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
@@ -2602,7 +4116,7 @@ async function executeRobotTrade(robot) {
       }
     }
     
-    // For NORMAL signals - AGGRESSIVE when under target to maintain MIN_OPEN_POSITIONS
+    // For NORMAL signals - standard lot sizes
     if (normalSignals.length > 0) {
       const posLimits = getPositionLimits(accountInfo.balance);
       const currentPositionCount = livePositions.length;
@@ -2611,9 +4125,8 @@ async function executeRobotTrade(robot) {
       if (slotsToFill <= 0) {
         console.log(`  📊 At target positions (${currentPositionCount}/${posLimits.target})`);
       } else {
-        // Be MORE AGGRESSIVE when under minimum positions
-        // Open up to 5 trades per cycle if we need to fill positions
-        const maxTradesPerCycle = Math.min(slotsToFill, 5);
+        // Open up to 3 trades per cycle
+        const maxTradesPerCycle = Math.min(slotsToFill, 3);
         const slotsAvailable = maxTradesPerCycle;
         console.log(`  🎯 UNDER TARGET: Only ${currentPositionCount}/${posLimits.target} positions - OPENING MORE TRADES`);
         console.log(`  🎰 Opening up to ${slotsAvailable} trade(s) this cycle...`);
@@ -2639,13 +4152,11 @@ async function executeRobotTrade(robot) {
           }
           
           try {
-            // Calculate proper position size based on account balance
-            const pipSize = getPipSize(symbol);
-            const stopLossPips = Math.abs(signal.entryPrice - signal.stopLoss) / pipSize;
-            const lotSize = calculatePositionSize(accountInfo.balance, stopLossPips, symbol, signal.confidence);
+            // Calculate proper position size based on account balance and signal strength
+            const lotSize = calculatePositionSize(accountInfo.balance, signal.slPips, symbol, signal.confidence, botConfig);
             signal.volume = lotSize;
             
-            console.log(`    📐 ${symbol}: ${signal.confidence}% - SL=${stopLossPips.toFixed(0)}pips, Lots=${lotSize}`);
+            console.log(`    📐 ${symbol}: ${signal.confidence}% - SL=${signal.slPips}pips, TP=${signal.tpPips}pips, Lots=${lotSize}`);
             
             // Execute trade
             const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
@@ -2898,21 +4409,65 @@ async function manageOpenPositions(connection, account, accountId, userId) {
           const ema8Val = ema8[ema8.length - 1];
           const ema20Val = ema20[ema20.length - 1];
           
+          // =========================================================================
+          // SMART BREAKEVEN - Strategy-aware position management
+          // Swing trades: Move to BE when price moves X pips AND shows momentum
+          // Other trades: Standard breakeven at 1 ATR profit
+          // =========================================================================
+          const pipSize = getPipSize(symbol);
+          const breakevenBuffer = pipSize * 3; // 3 pips buffer above entry for spread
+          
           // Calculate profit in pips/points
           const priceDiff = positionType === 'buy' 
             ? currentPrice - openPrice 
             : openPrice - currentPrice;
           const profitInATR = atr > 0 ? priceDiff / atr : 0;
+          const profitInPips = priceDiff / pipSize;
           
-          // =========================================================================
-          // BREAKEVEN PROTECTION - Move SL to entry when position shows good profit
-          // Protects gains from structure shifts without closing prematurely
-          // =========================================================================
-          const pipSize = getPipSize(symbol);
-          const breakevenBuffer = pipSize * 3; // 3 pips buffer above entry for spread
+          // Get tracked strategy info if available
+          const strategyInfo = positionStrategyMap.get(String(positionId));
+          const isSwingTrade = strategyInfo?.strategy === 'swing' || 
+                              strategyInfo?.strategy?.includes('swing') ||
+                              (strategyInfo?.slPips >= 40 && strategyInfo?.tpPips >= 80);
+          const isPositionTrade = strategyInfo?.strategy === 'position' ||
+                                  strategyInfo?.strategy === 'ema_ribbon' ||
+                                  (strategyInfo?.slPips >= 60);
           
-          // Move to breakeven when profit reaches 1 ATR OR $10 (whichever is first)
-          const shouldMoveToBreakeven = profitInATR >= 1.0 || profit >= 10;
+          // SWING/POSITION TRADE: Special breakeven rules
+          // Move to BE when: 30+ pips profit AND momentum confirms continuation
+          let shouldMoveToBreakeven = false;
+          let breakevenReason = '';
+          
+          if (isSwingTrade || isPositionTrade) {
+            const minPipsForBE = isPositionTrade ? 40 : 30; // Position needs more confirmation
+            
+            if (profitInPips >= minPipsForBE) {
+              // Check if momentum shows continuation
+              const recentCandles = candles.slice(-5);
+              const isBuy = positionType === 'buy' || positionType?.toLowerCase()?.includes('buy');
+              const favorableCount = isBuy 
+                ? recentCandles.filter(c => c.close > c.open).length
+                : recentCandles.filter(c => c.close < c.open).length;
+              
+              // Also check RSI for momentum
+              const rsiConfirm = isBuy ? (currentRsi > 40 && currentRsi < 70) : (currentRsi > 30 && currentRsi < 60);
+              
+              // Move to BE if 3+ candles favorable OR strong profit (50+ pips)
+              if (favorableCount >= 3 || profitInPips >= 50) {
+                shouldMoveToBreakeven = true;
+                breakevenReason = `SWING-BE: ${profitInPips.toFixed(0)}pips profit + ${favorableCount}/5 favorable candles`;
+              } else if (rsiConfirm && profitInPips >= minPipsForBE + 10) {
+                shouldMoveToBreakeven = true;
+                breakevenReason = `SWING-BE: ${profitInPips.toFixed(0)}pips profit + RSI ${currentRsi.toFixed(0)} confirms`;
+              }
+            }
+          } else {
+            // Standard trades: Move to breakeven when profit reaches 1 ATR OR $10
+            shouldMoveToBreakeven = profitInATR >= 1.0 || profit >= 10;
+            if (shouldMoveToBreakeven) {
+              breakevenReason = `Standard-BE: ${profitInATR.toFixed(1)} ATR profit`;
+            }
+          }
           
           if (shouldMoveToBreakeven && currentSL !== undefined) {
             let newSL = null;
@@ -2935,7 +4490,8 @@ async function manageOpenPositions(connection, account, accountId, userId) {
             if (newSL !== null) {
               try {
                 await connection.modifyPosition(positionId, newSL, currentTP);
-                console.log(`    🛡️ BREAKEVEN SET: ${symbol} SL moved to ${newSL.toFixed(5)} (entry: ${openPrice.toFixed(5)})`);
+                console.log(`    🛡️ ${breakevenReason}`);
+                console.log(`       SL moved to ${newSL.toFixed(5)} (entry: ${openPrice.toFixed(5)})`);
               } catch (modifyErr) {
                 // Don't spam errors for this
                 if (!modifyErr.message?.includes('same value')) {
