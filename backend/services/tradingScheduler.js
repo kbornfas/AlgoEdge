@@ -3814,48 +3814,6 @@ function calculateADX(candles, period = 14) {
   
   return sumDX / (candles.length - period);
 }
-/**
- * Calculate ADX (Average Directional Index)
- */
-function calculateADX(candles, period = 14) {
-  if (candles.length < period * 2) return 20; // Default
-  
-  let sumDX = 0;
-  let plusDMSum = 0;
-  let minusDMSum = 0;
-  let trSum = 0;
-  
-  for (let i = 1; i < candles.length; i++) {
-    const high = candles[i].high;
-    const low = candles[i].low;
-    const prevHigh = candles[i-1].high;
-    const prevLow = candles[i-1].low;
-    const prevClose = candles[i-1].close;
-    
-    const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
-    const plusDM = high - prevHigh > prevLow - low ? Math.max(high - prevHigh, 0) : 0;
-    const minusDM = prevLow - low > high - prevHigh ? Math.max(prevLow - low, 0) : 0;
-    
-    if (i <= period) {
-      trSum += tr;
-      plusDMSum += plusDM;
-      minusDMSum += minusDM;
-    } else {
-      trSum = trSum - trSum/period + tr;
-      plusDMSum = plusDMSum - plusDMSum/period + plusDM;
-      minusDMSum = minusDMSum - minusDMSum/period + minusDM;
-    }
-    
-    if (i >= period) {
-      const plusDI = trSum > 0 ? (plusDMSum / trSum) * 100 : 0;
-      const minusDI = trSum > 0 ? (minusDMSum / trSum) * 100 : 0;
-      const dx = (plusDI + minusDI) > 0 ? Math.abs(plusDI - minusDI) / (plusDI + minusDI) * 100 : 0;
-      sumDX += dx;
-    }
-  }
-  
-  return sumDX / (candles.length - period);
-}
 
 /**
  * =========================================================================
