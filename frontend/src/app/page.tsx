@@ -1083,7 +1083,7 @@ export default function Home() {
               >
                 <CardContent>
                   <Box sx={{ color: '#10b981', mb: 2, display: 'flex', justifyContent: 'center' }}>
-                    <Zap size={48} />
+                    <TrendingUp size={48} />
                   </Box>
                   <Typography variant="h6" gutterBottom sx={{ color: '#10b981', fontWeight: 700 }}>
                     Real-Time Trading
