@@ -1,10 +1,9 @@
 'use client';
 
 import { Box, Container, Typography, Button, Grid, Card, CardContent, Stack, Fab } from '@mui/material';
-import { TrendingUp, Shield, Zap, BarChart3, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, Shield, BarChart3, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import CTACard from '@/components/CTACard';
 import { useState, useEffect } from 'react';
 
 /**
@@ -155,9 +154,9 @@ export default function Home() {
           <Typography
             variant="h1"
             sx={{
-              fontSize: { xs: '2rem', sm: '2.5rem', md: '3.5rem' },
+              fontSize: { xs: '2.5rem', sm: '3rem', md: '4rem' },
               fontWeight: 800,
-              mb: 2,
+              mb: 3,
               background: 'linear-gradient(135deg, #00ff00 0%, #10b981 50%, #22c55e 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -165,247 +164,289 @@ export default function Home() {
               lineHeight: 1.2,
             }}
           >
-            Early Access to AlgoEdge Automated Trading
+            AlgoEdge Trading Hub
           </Typography>
           
-          {/* Price Offer */}
-          <Box sx={{ mb: 3 }}>
+          {/* Hero Description */}
+          <Typography
+            sx={{
+              fontSize: { xs: '1.1rem', md: '1.3rem' },
+              color: 'text.primary',
+              mb: 4,
+              maxWidth: '800px',
+              mx: 'auto',
+              lineHeight: 1.6,
+              fontWeight: 500,
+            }}
+          >
+            Fully automated trading with MetaTrader 5 integration. 
+            Professional algorithms trade 24/7 while you relax. 
+            Easy setup—we handle everything for you.
+          </Typography>
+          
+          {/* CTA Buttons - Get Started & Login */}
+          <Stack 
+            direction={{ xs: 'column', sm: 'row' }} 
+            spacing={2} 
+            sx={{ 
+              justifyContent: 'center', 
+              alignItems: 'center',
+              mb: 3,
+              maxWidth: '600px',
+              mx: 'auto',
+            }}
+          >
+            <Button
+              component={Link}
+              href="/auth/register"
+              variant="contained"
+              size="large"
+              sx={{
+                minWidth: { xs: '100%', sm: 240 },
+                bgcolor: '#10b981',
+                color: 'white',
+                fontWeight: 700,
+                fontSize: { xs: '1.1rem', md: '1.2rem' },
+                py: 2,
+                px: 5,
+                '&:hover': {
+                  bgcolor: '#059669',
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 12px 32px rgba(16, 185, 129, 0.5)',
+                },
+                transition: 'all 0.3s ease',
+                textTransform: 'none',
+                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)',
+                borderRadius: 2,
+              }}
+            >
+              Get Started
+            </Button>
+            <Button
+              component={Link}
+              href="/auth/login"
+              variant="outlined"
+              size="large"
+              sx={{
+                minWidth: { xs: '100%', sm: 240 },
+                borderColor: '#10b981',
+                color: '#10b981',
+                fontWeight: 700,
+                fontSize: { xs: '1.1rem', md: '1.2rem' },
+                py: 2,
+                px: 5,
+                borderWidth: 2,
+                '&:hover': {
+                  borderColor: '#059669',
+                  bgcolor: 'rgba(16, 185, 129, 0.1)',
+                  borderWidth: 2,
+                  transform: 'translateY(-4px)',
+                },
+                transition: 'all 0.3s ease',
+                textTransform: 'none',
+                borderRadius: 2,
+              }}
+            >
+              Login
+            </Button>
+          </Stack>
+
+          {/* Price Offer - Clean and Modern */}
+          <Box 
+            sx={{ 
+              mb: 5,
+              py: 3,
+              px: 4,
+              bgcolor: 'rgba(16, 185, 129, 0.1)',
+              borderRadius: 3,
+              border: '2px solid rgba(16, 185, 129, 0.3)',
+              maxWidth: '600px',
+              mx: 'auto',
+            }}
+          >
             <Typography
               sx={{
-                fontSize: { xs: '2.5rem', md: '3.5rem' },
+                fontSize: { xs: '2.5rem', md: '3rem' },
                 fontWeight: 900,
                 color: '#10b981',
                 textShadow: '0 4px 20px rgba(16, 185, 129, 0.5)',
-                display: 'inline-block',
+                lineHeight: 1,
+                mb: 1,
               }}
             >
               $200 Only
             </Typography>
             <Typography
-              component="span"
               sx={{
-                fontSize: { xs: '1.2rem', md: '1.5rem' },
+                fontSize: { xs: '1.1rem', md: '1.3rem' },
                 color: 'text.secondary',
-                ml: 2,
                 textDecoration: 'line-through',
+                fontWeight: 600,
               }}
             >
               Normally $1000
             </Typography>
           </Box>
 
-          {/* 7-Day Money-Back Guarantee Badge */}
+          {/* Guarantee and Proof Block */}
           <Box
             sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 1,
-              bgcolor: 'rgba(16, 185, 129, 0.2)',
-              border: '2px solid #10b981',
-              borderRadius: 3,
-              px: 3,
-              py: 1.5,
+              maxWidth: '700px',
+              mx: 'auto',
               mb: 4,
             }}
           >
-            <Shield size={24} color="#10b981" />
-            <Typography
+            {/* 7-Day Money-Back Guarantee */}
+            <Box
               sx={{
-                fontSize: { xs: '1rem', md: '1.2rem' },
-                fontWeight: 700,
-                color: '#10b981',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1.5,
+                bgcolor: 'rgba(16, 185, 129, 0.2)',
+                border: '2px solid #10b981',
+                borderRadius: 3,
+                px: 4,
+                py: 2,
+                mb: 3,
               }}
             >
-              7-Day Money-Back Guarantee
-            </Typography>
+              <Shield size={28} color="#10b981" />
+              <Typography
+                sx={{
+                  fontSize: { xs: '1.1rem', md: '1.3rem' },
+                  fontWeight: 700,
+                  color: '#10b981',
+                }}
+              >
+                7-Day Money-Back Guarantee
+              </Typography>
+            </Box>
+
+            {/* WhatsApp CTA */}
+            <Button
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="contained"
+              size="large"
+              sx={{
+                width: '100%',
+                maxWidth: { xs: '100%', sm: 400 },
+                mx: 'auto',
+                display: 'flex',
+                bgcolor: '#25D366',
+                color: 'white',
+                fontWeight: 700,
+                fontSize: { xs: '1rem', md: '1.1rem' },
+                py: 2,
+                px: 4,
+                alignItems: 'center',
+                gap: 1.5,
+                justifyContent: 'center',
+                '&:hover': {
+                  bgcolor: '#1da851',
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 12px 32px rgba(37, 211, 102, 0.5)',
+                },
+                transition: 'all 0.3s ease',
+                textTransform: 'none',
+                boxShadow: '0 8px 24px rgba(37, 211, 102, 0.4)',
+                borderRadius: 2,
+              }}
+            >
+              <WhatsAppIcon />
+              Message on WhatsApp — Only 20 Spots Left
+            </Button>
           </Box>
 
-          {/* Primary WhatsApp CTA */}
-          <Button
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            variant="contained"
-            size="large"
-            sx={{
-              minWidth: { xs: '100%', sm: 320 },
-              bgcolor: '#25D366',
-              color: 'white',
-              fontWeight: 700,
-              fontSize: { xs: '1rem', md: '1.2rem' },
-              py: 2,
-              px: 4,
-              mb: 4,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-              justifyContent: 'center',
-              '&:hover': {
-                bgcolor: '#1da851',
-                transform: 'translateY(-4px)',
-                boxShadow: '0 12px 32px rgba(37, 211, 102, 0.5)',
-              },
-              transition: 'all 0.3s ease',
-              textTransform: 'none',
-              boxShadow: '0 8px 24px rgba(37, 211, 102, 0.4)',
-            }}
-          >
-            <WhatsAppIcon />
-            Message on WhatsApp to Secure Your Spot — Only 20 Available
-          </Button>
-
-          {/* 3-Point Proof Snapshot */}
-          <Grid container spacing={2} sx={{ mb: 4, maxWidth: '900px', mx: 'auto' }}>
-            <Grid item xs={12} md={4}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1,
-                  bgcolor: 'rgba(16, 185, 129, 0.1)',
-                  borderRadius: 2,
-                  py: 2,
-                  px: 2,
-                }}
-              >
-                <CheckCircle2 size={24} color="#10b981" />
-                <Typography
-                  sx={{
-                    fontSize: { xs: '0.9rem', md: '1rem' },
-                    fontWeight: 600,
-                    color: 'text.primary',
-                  }}
-                >
-                  Fully Automated MT5 Trading
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1,
-                  bgcolor: 'rgba(16, 185, 129, 0.1)',
-                  borderRadius: 2,
-                  py: 2,
-                  px: 2,
-                }}
-              >
-                <CheckCircle2 size={24} color="#10b981" />
-                <Typography
-                  sx={{
-                    fontSize: { xs: '0.9rem', md: '1rem' },
-                    fontWeight: 600,
-                    color: 'text.primary',
-                  }}
-                >
-                  Real Results & Profits
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1,
-                  bgcolor: 'rgba(16, 185, 129, 0.1)',
-                  borderRadius: 2,
-                  py: 2,
-                  px: 2,
-                }}
-              >
-                <CheckCircle2 size={24} color="#10b981" />
-                <Typography
-                  sx={{
-                    fontSize: { xs: '0.9rem', md: '1rem' },
-                    fontWeight: 600,
-                    color: 'text.primary',
-                  }}
-                >
-                  Money-Back Guarantee
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
-
           {/* Benefit Bullets */}
-          <Box sx={{ maxWidth: '700px', mx: 'auto', textAlign: 'left' }}>
+          <Box sx={{ maxWidth: '800px', mx: 'auto', mb: 4 }}>
             <Typography
               sx={{
-                fontSize: { xs: '1.1rem', md: '1.3rem' },
-                fontWeight: 600,
-                color: 'text.primary',
-                mb: 2,
+                fontSize: { xs: '1.3rem', md: '1.5rem' },
+                fontWeight: 700,
+                color: '#10b981',
+                mb: 3,
                 textAlign: 'center',
               }}
             >
               What You Get:
             </Typography>
-            <Grid container spacing={2}>
+            <Grid container spacing={3}>
               <Grid item xs={12} sm={6}>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                  <Zap size={20} color="#10b981" style={{ marginTop: 2, flexShrink: 0 }} />
-                  <Typography sx={{ color: 'text.primary', fontSize: { xs: '0.95rem', md: '1.05rem' } }}>
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    gap: 1.5, 
+                    alignItems: 'flex-start',
+                    bgcolor: 'rgba(16, 185, 129, 0.05)',
+                    p: 2.5,
+                    borderRadius: 2,
+                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                  }}
+                >
+                  <CheckCircle2 size={24} color="#10b981" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <Typography sx={{ color: 'text.primary', fontSize: { xs: '1rem', md: '1.1rem' }, lineHeight: 1.6 }}>
                     <strong>Instant Setup</strong> – We install and configure everything for you
                   </Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                  <Zap size={20} color="#10b981" style={{ marginTop: 2, flexShrink: 0 }} />
-                  <Typography sx={{ color: 'text.primary', fontSize: { xs: '0.95rem', md: '1.05rem' } }}>
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    gap: 1.5, 
+                    alignItems: 'flex-start',
+                    bgcolor: 'rgba(16, 185, 129, 0.05)',
+                    p: 2.5,
+                    borderRadius: 2,
+                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                  }}
+                >
+                  <CheckCircle2 size={24} color="#10b981" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <Typography sx={{ color: 'text.primary', fontSize: { xs: '1rem', md: '1.1rem' }, lineHeight: 1.6 }}>
                     <strong>All 7 Strategies</strong> – Trend, scalping, breakout & more
                   </Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                  <Zap size={20} color="#10b981" style={{ marginTop: 2, flexShrink: 0 }} />
-                  <Typography sx={{ color: 'text.primary', fontSize: { xs: '0.95rem', md: '1.05rem' } }}>
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    gap: 1.5, 
+                    alignItems: 'flex-start',
+                    bgcolor: 'rgba(16, 185, 129, 0.05)',
+                    p: 2.5,
+                    borderRadius: 2,
+                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                  }}
+                >
+                  <CheckCircle2 size={24} color="#10b981" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <Typography sx={{ color: 'text.primary', fontSize: { xs: '1rem', md: '1.1rem' }, lineHeight: 1.6 }}>
                     <strong>No Manual Trading</strong> – Algorithm handles everything 24/7
                   </Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                  <Zap size={20} color="#10b981" style={{ marginTop: 2, flexShrink: 0 }} />
-                  <Typography sx={{ color: 'text.primary', fontSize: { xs: '0.95rem', md: '1.05rem' } }}>
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    gap: 1.5, 
+                    alignItems: 'flex-start',
+                    bgcolor: 'rgba(16, 185, 129, 0.05)',
+                    p: 2.5,
+                    borderRadius: 2,
+                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                  }}
+                >
+                  <CheckCircle2 size={24} color="#10b981" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <Typography sx={{ color: 'text.primary', fontSize: { xs: '1rem', md: '1.1rem' }, lineHeight: 1.6 }}>
                     <strong>Works with MT5</strong> – Seamless MetaTrader 5 integration
                   </Typography>
                 </Box>
               </Grid>
             </Grid>
-          </Box>
-
-          {/* Telegram Link */}
-          <Box sx={{ mt: 4, textAlign: 'center' }}>
-            <Link
-              href="https://t.me/+newQkIa06W1kNmMx"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ textDecoration: 'none' }}
-            >
-              <Typography
-                sx={{
-                  fontSize: '1.1rem',
-                  fontWeight: 600,
-                  color: '#10b981',
-                  textShadow: '0 2px 8px rgba(16, 185, 129, 0.5)',
-                  '&:hover': {
-                    color: '#22c55e',
-                    textDecoration: 'underline',
-                  },
-                  cursor: 'pointer',
-                }}
-              >
-                🎯 Join our Telegram channel for free AI signals 🚀
-              </Typography>
-            </Link>
           </Box>
         </Box>
 
@@ -427,14 +468,14 @@ export default function Home() {
           <Typography
             align="center"
             sx={{
-              mb: 4,
+              mb: 5,
               fontSize: { xs: '1rem', md: '1.1rem' },
               color: 'text.secondary',
               maxWidth: '700px',
               mx: 'auto',
             }}
           >
-            Watch our platform in action and see actual trading results from AlgoEdge
+            Authentic trading results and platform demonstrations from AlgoEdge users
           </Typography>
 
           {/* Demo Video */}
@@ -466,21 +507,22 @@ export default function Home() {
             </video>
           </Box>
 
-          {/* Trading Results Images */}
+          {/* Authenticity Images - Images 7-11 (Unaltered) */}
           <Grid container spacing={4} sx={{ mb: 4 }}>
+            {/* Image 7: Trading Profits Screenshot */}
             <Grid item xs={12} md={6}>
               <Box
                 sx={{
-                  borderRadius: 3,
+                  borderRadius: 2,
                   overflow: 'hidden',
-                  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4)',
-                  border: '2px solid rgba(16, 185, 129, 0.3)',
-                  bgcolor: '#1E293B',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  bgcolor: '#1a1a1a',
                 }}
               >
                 <Image
                   src="/images/trading-profits.svg"
-                  alt="Recent trading profits with AlgoEdge (MT5)"
+                  alt="Real trading profits - MT5 account"
                   width={800}
                   height={600}
                   style={{
@@ -489,32 +531,35 @@ export default function Home() {
                     display: 'block',
                   }}
                 />
-                <Box sx={{ p: 2, textAlign: 'center' }}>
+                <Box sx={{ p: 2.5, bgcolor: 'rgba(30, 41, 59, 0.8)' }}>
                   <Typography
                     sx={{
                       fontSize: '1rem',
                       fontWeight: 600,
-                      color: '#10b981',
+                      color: 'text.primary',
+                      textAlign: 'center',
                     }}
                   >
-                    Recent Trading Profits with AlgoEdge (MT5)
+                    Real Trading Profits - MT5 Account
                   </Typography>
                 </Box>
               </Box>
             </Grid>
+
+            {/* Image 8: Algorithm Activity */}
             <Grid item xs={12} md={6}>
               <Box
                 sx={{
-                  borderRadius: 3,
+                  borderRadius: 2,
                   overflow: 'hidden',
-                  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4)',
-                  border: '2px solid rgba(16, 185, 129, 0.3)',
-                  bgcolor: '#1E293B',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  bgcolor: '#1a1a1a',
                 }}
               >
                 <Image
                   src="/images/algorithm-activity.svg"
-                  alt="Live trades and algorithm activity"
+                  alt="Live algorithm trading activity"
                   width={800}
                   height={600}
                   style={{
@@ -523,19 +568,23 @@ export default function Home() {
                     display: 'block',
                   }}
                 />
-                <Box sx={{ p: 2, textAlign: 'center' }}>
+                <Box sx={{ p: 2.5, bgcolor: 'rgba(30, 41, 59, 0.8)' }}>
                   <Typography
                     sx={{
                       fontSize: '1rem',
                       fontWeight: 600,
-                      color: '#10b981',
+                      color: 'text.primary',
+                      textAlign: 'center',
                     }}
                   >
-                    Live Trades and Algorithm Activity
+                    Live Algorithm Trading Activity
                   </Typography>
                 </Box>
               </Box>
             </Grid>
+
+            {/* Additional authenticity images can be added here (Images 9-11)
+                Replace these SVG placeholders with actual image files when available */}
           </Grid>
         </Box>
 
@@ -557,7 +606,7 @@ export default function Home() {
           <Typography
             align="center"
             sx={{
-              mb: 5,
+              mb: 6,
               fontSize: { xs: '1rem', md: '1.1rem' },
               color: 'text.secondary',
               maxWidth: '700px',
@@ -567,30 +616,50 @@ export default function Home() {
             Get started in 3 simple steps
           </Typography>
 
-          <Grid container spacing={4} sx={{ maxWidth: '1000px', mx: 'auto' }}>
+          <Grid container spacing={4} sx={{ maxWidth: '1100px', mx: 'auto' }}>
             <Grid item xs={12} md={4}>
               <Card
                 sx={{
                   height: '100%',
                   textAlign: 'center',
-                  p: 3,
-                  bgcolor: 'rgba(30, 41, 59, 0.8)',
+                  p: 4,
+                  bgcolor: 'rgba(30, 41, 59, 0.6)',
                   backdropFilter: 'blur(10px)',
                   border: '2px solid rgba(16, 185, 129, 0.3)',
                   borderRadius: 3,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    borderColor: '#10b981',
+                    boxShadow: '0 12px 40px rgba(16, 185, 129, 0.3)',
+                  },
                 }}
               >
                 <CardContent>
-                  <Typography
+                  <Box
                     sx={{
-                      fontSize: '3rem',
-                      fontWeight: 900,
-                      color: '#10b981',
-                      mb: 2,
+                      width: 80,
+                      height: 80,
+                      borderRadius: '50%',
+                      bgcolor: 'rgba(16, 185, 129, 0.2)',
+                      border: '3px solid #10b981',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: 3,
                     }}
                   >
-                    1
-                  </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: '2.5rem',
+                        fontWeight: 900,
+                        color: '#10b981',
+                      }}
+                    >
+                      1
+                    </Typography>
+                  </Box>
                   <Typography
                     variant="h5"
                     gutterBottom
@@ -598,7 +667,7 @@ export default function Home() {
                   >
                     We Install & Set Up
                   </Typography>
-                  <Typography variant="body1" color="text.primary">
+                  <Typography variant="body1" color="text.primary" sx={{ lineHeight: 1.7 }}>
                     Our team installs the bot and configures all 7 trading strategies on your MT5 account. Zero technical work required from you.
                   </Typography>
                 </CardContent>
@@ -610,24 +679,44 @@ export default function Home() {
                 sx={{
                   height: '100%',
                   textAlign: 'center',
-                  p: 3,
-                  bgcolor: 'rgba(30, 41, 59, 0.8)',
+                  p: 4,
+                  bgcolor: 'rgba(30, 41, 59, 0.6)',
                   backdropFilter: 'blur(10px)',
                   border: '2px solid rgba(16, 185, 129, 0.3)',
                   borderRadius: 3,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    borderColor: '#10b981',
+                    boxShadow: '0 12px 40px rgba(16, 185, 129, 0.3)',
+                  },
                 }}
               >
                 <CardContent>
-                  <Typography
+                  <Box
                     sx={{
-                      fontSize: '3rem',
-                      fontWeight: 900,
-                      color: '#10b981',
-                      mb: 2,
+                      width: 80,
+                      height: 80,
+                      borderRadius: '50%',
+                      bgcolor: 'rgba(16, 185, 129, 0.2)',
+                      border: '3px solid #10b981',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: 3,
                     }}
                   >
-                    2
-                  </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: '2.5rem',
+                        fontWeight: 900,
+                        color: '#10b981',
+                      }}
+                    >
+                      2
+                    </Typography>
+                  </Box>
                   <Typography
                     variant="h5"
                     gutterBottom
@@ -635,7 +724,7 @@ export default function Home() {
                   >
                     Algorithm Trades
                   </Typography>
-                  <Typography variant="body1" color="text.primary">
+                  <Typography variant="body1" color="text.primary" sx={{ lineHeight: 1.7 }}>
                     The AI-powered algorithm analyzes markets 24/7 and executes trades automatically based on proven strategies.
                   </Typography>
                 </CardContent>
@@ -647,24 +736,44 @@ export default function Home() {
                 sx={{
                   height: '100%',
                   textAlign: 'center',
-                  p: 3,
-                  bgcolor: 'rgba(30, 41, 59, 0.8)',
+                  p: 4,
+                  bgcolor: 'rgba(30, 41, 59, 0.6)',
                   backdropFilter: 'blur(10px)',
                   border: '2px solid rgba(16, 185, 129, 0.3)',
                   borderRadius: 3,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    borderColor: '#10b981',
+                    boxShadow: '0 12px 40px rgba(16, 185, 129, 0.3)',
+                  },
                 }}
               >
                 <CardContent>
-                  <Typography
+                  <Box
                     sx={{
-                      fontSize: '3rem',
-                      fontWeight: 900,
-                      color: '#10b981',
-                      mb: 2,
+                      width: 80,
+                      height: 80,
+                      borderRadius: '50%',
+                      bgcolor: 'rgba(16, 185, 129, 0.2)',
+                      border: '3px solid #10b981',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: 3,
                     }}
                   >
-                    3
-                  </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: '2.5rem',
+                        fontWeight: 900,
+                        color: '#10b981',
+                      }}
+                    >
+                      3
+                    </Typography>
+                  </Box>
                   <Typography
                     variant="h5"
                     gutterBottom
@@ -672,7 +781,7 @@ export default function Home() {
                   >
                     Watch Growth
                   </Typography>
-                  <Typography variant="body1" color="text.primary">
+                  <Typography variant="body1" color="text.primary" sx={{ lineHeight: 1.7 }}>
                     Monitor your performance through real-time dashboards. Track profits, analyze statistics, and watch your account grow.
                   </Typography>
                 </CardContent>
@@ -685,9 +794,9 @@ export default function Home() {
         <Box sx={{ py: 6 }}>
           <Card
             sx={{
-              maxWidth: '800px',
+              maxWidth: '900px',
               mx: 'auto',
-              p: 4,
+              p: { xs: 3, md: 5 },
               bgcolor: 'rgba(16, 185, 129, 0.1)',
               backdropFilter: 'blur(10px)',
               border: '3px solid #10b981',
@@ -695,12 +804,12 @@ export default function Home() {
               textAlign: 'center',
             }}
           >
-            <Shield size={64} color="#10b981" style={{ marginBottom: 16 }} />
+            <Shield size={72} color="#10b981" style={{ marginBottom: 24 }} />
             <Typography
               variant="h4"
               sx={{
                 fontWeight: 700,
-                mb: 2,
+                mb: 3,
                 color: '#10b981',
                 fontSize: { xs: '1.75rem', md: '2.125rem' },
               }}
@@ -709,22 +818,22 @@ export default function Home() {
             </Typography>
             <Typography
               sx={{
-                fontSize: { xs: '1rem', md: '1.1rem' },
+                fontSize: { xs: '1rem', md: '1.2rem' },
                 color: 'text.primary',
-                mb: 3,
-                lineHeight: 1.7,
+                mb: 2,
+                lineHeight: 1.8,
               }}
             >
-              Try AlgoEdge completely risk-free. If you're not satisfied with the platform or results within 7 days, we'll refund your money—no questions asked. We're confident in our system and stand behind it 100%.
+              Try AlgoEdge completely risk-free. If you're not satisfied with the platform or results within 7 days, we'll refund your money—no questions asked.
             </Typography>
             <Typography
               sx={{
-                fontSize: { xs: '0.95rem', md: '1rem' },
+                fontSize: { xs: '1rem', md: '1.1rem' },
                 color: 'text.secondary',
                 fontStyle: 'italic',
               }}
             >
-              Your success is our priority. We want you to trade with confidence.
+              We're confident in our system and stand behind it 100%.
             </Typography>
           </Card>
         </Box>
@@ -751,70 +860,130 @@ export default function Home() {
               mx: 'auto',
             }}
           >
-            Join the 20 early access spots available. Message us on WhatsApp now to secure your bot and start trading.
+            Limited to 20 early access spots. Secure your bot and start trading today.
           </Typography>
           
-          <Button
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            variant="contained"
-            size="large"
-            sx={{
-              minWidth: { xs: '100%', sm: 320 },
-              bgcolor: '#25D366',
-              color: 'white',
-              fontWeight: 700,
-              fontSize: { xs: '1rem', md: '1.2rem' },
-              py: 2,
-              px: 4,
-              mb: 3,
-              display: 'inline-flex',
+          <Stack 
+            direction={{ xs: 'column', sm: 'row' }} 
+            spacing={2} 
+            sx={{ 
+              justifyContent: 'center', 
               alignItems: 'center',
-              gap: 1.5,
-              justifyContent: 'center',
-              '&:hover': {
-                bgcolor: '#1da851',
-                transform: 'translateY(-4px)',
-                boxShadow: '0 12px 32px rgba(37, 211, 102, 0.5)',
-              },
-              transition: 'all 0.3s ease',
-              textTransform: 'none',
-              boxShadow: '0 8px 24px rgba(37, 211, 102, 0.4)',
+              mb: 4,
             }}
           >
-            <WhatsAppIcon />
-            Message on WhatsApp Now
-          </Button>
-
-          {/* Instagram CTA */}
-          <Box sx={{ mt: 4 }}>
-            <Typography
-              sx={{
-                mb: 2,
-                fontSize: '1rem',
-                color: 'text.secondary',
-              }}
-            >
-              Follow us for trading tips and updates
-            </Typography>
             <Button
-              href={instagramUrl}
+              href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              variant="outlined"
+              variant="contained"
+              size="large"
               sx={{
-                borderColor: '#E1306C',
-                color: '#E1306C',
-                fontWeight: 600,
+                minWidth: { xs: '100%', sm: 280 },
+                bgcolor: '#25D366',
+                color: 'white',
+                fontWeight: 700,
+                fontSize: { xs: '1rem', md: '1.1rem' },
+                py: 2,
+                px: 4,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1.5,
+                justifyContent: 'center',
                 '&:hover': {
-                  borderColor: '#C13584',
-                  bgcolor: 'rgba(225, 48, 108, 0.1)',
+                  bgcolor: '#1da851',
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 12px 32px rgba(37, 211, 102, 0.5)',
                 },
+                transition: 'all 0.3s ease',
+                textTransform: 'none',
+                boxShadow: '0 8px 24px rgba(37, 211, 102, 0.4)',
+                borderRadius: 2,
               }}
             >
-              Follow on Instagram
+              <WhatsAppIcon />
+              Message on WhatsApp
             </Button>
+
+            <Button
+              component={Link}
+              href="/auth/register"
+              variant="contained"
+              size="large"
+              sx={{
+                minWidth: { xs: '100%', sm: 280 },
+                bgcolor: '#10b981',
+                color: 'white',
+                fontWeight: 700,
+                fontSize: { xs: '1rem', md: '1.1rem' },
+                py: 2,
+                px: 4,
+                '&:hover': {
+                  bgcolor: '#059669',
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 12px 32px rgba(16, 185, 129, 0.5)',
+                },
+                transition: 'all 0.3s ease',
+                textTransform: 'none',
+                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)',
+                borderRadius: 2,
+              }}
+            >
+              Get Started Now
+            </Button>
+          </Stack>
+
+          {/* Social Links */}
+          <Box sx={{ mt: 4 }}>
+            <Stack 
+              direction="row" 
+              spacing={3} 
+              sx={{ 
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <Link
+                href="https://t.me/+newQkIa06W1kNmMx"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: 'none' }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: '0.95rem',
+                    fontWeight: 600,
+                    color: 'text.secondary',
+                    '&:hover': {
+                      color: '#10b981',
+                    },
+                    cursor: 'pointer',
+                  }}
+                >
+                  📱 Join Telegram
+                </Typography>
+              </Link>
+              <Link
+                href={instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: 'none' }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: '0.95rem',
+                    fontWeight: 600,
+                    color: 'text.secondary',
+                    '&:hover': {
+                      color: '#E1306C',
+                    },
+                    cursor: 'pointer',
+                  }}
+                >
+                  📸 Follow Instagram
+                </Typography>
+              </Link>
+            </Stack>
           </Box>
         </Box>
 
@@ -914,7 +1083,7 @@ export default function Home() {
               >
                 <CardContent>
                   <Box sx={{ color: '#10b981', mb: 2, display: 'flex', justifyContent: 'center' }}>
-                    <Zap size={48} />
+                    <TrendingUp size={48} />
                   </Box>
                   <Typography variant="h6" gutterBottom sx={{ color: '#10b981', fontWeight: 700 }}>
                     Real-Time Trading
