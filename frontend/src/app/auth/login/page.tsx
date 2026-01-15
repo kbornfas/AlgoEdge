@@ -220,36 +220,6 @@ export default function LoginPage() {
             </Box>
           </CardContent>
         </Card>
-
-        {/* CTA Cards */}
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <CTACard
-              title="Get started now."
-              description="Don't wait, start trading smarter today! Let us help you set up your trading bot instantly."
-              buttonText="Buy & Start Trading Now"
-              buttonIcon={<MessageCircle size={20} />}
-              buttonHref={whatsappUrl}
-              buttonColor="#25D366"
-              buttonHoverColor="#1da851"
-              iconColor="#25D366"
-              ariaLabel="Contact us on WhatsApp to buy and start trading"
-            />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <CTACard
-              title="Follow Us on Instagram"
-              description="Follow us on Instagram for updates, tips, and trading insights"
-              buttonText="Follow IG"
-              buttonIcon={<InstagramIcon />}
-              buttonHref={instagramUrl}
-              buttonColor="#E1306C"
-              buttonHoverColor="#C13584"
-              iconColor="#E1306C"
-              ariaLabel="Follow us on Instagram"
-            />
-          </Grid>
-        </Grid>
       </Container>
     </Box>
   );

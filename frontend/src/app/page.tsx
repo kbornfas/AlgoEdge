@@ -251,113 +251,130 @@ export default function Home() {
             </Button>
           </Stack>
 
-          {/* Price Offer - Clean and Modern */}
-          <Box 
-            sx={{ 
-              mb: 5,
-              py: 3,
-              px: 4,
-              bgcolor: 'rgba(16, 185, 129, 0.1)',
-              borderRadius: 3,
-              border: '2px solid rgba(16, 185, 129, 0.3)',
-              maxWidth: '600px',
-              mx: 'auto',
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: { xs: '2.5rem', md: '3rem' },
-                fontWeight: 900,
-                color: '#10b981',
-                textShadow: '0 4px 20px rgba(16, 185, 129, 0.5)',
-                lineHeight: 1,
-                mb: 1,
-              }}
-            >
-              $200 Only
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: { xs: '1.1rem', md: '1.3rem' },
-                color: 'text.secondary',
-                textDecoration: 'line-through',
-                fontWeight: 600,
-              }}
-            >
-              Normally $1000
-            </Typography>
-          </Box>
-
-          {/* Guarantee and Proof Block */}
+          {/* Ready to Start CTA Section */}
           <Box
             sx={{
-              maxWidth: '700px',
+              maxWidth: '800px',
               mx: 'auto',
-              mb: 4,
+              mb: 5,
+              mt: 4,
+              textAlign: 'center',
             }}
           >
-            {/* 7-Day Money-Back Guarantee */}
-            <Box
+            <Typography
+              variant="h3"
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 1.5,
-                bgcolor: 'rgba(16, 185, 129, 0.2)',
-                border: '2px solid #10b981',
-                borderRadius: 3,
-                px: 4,
-                py: 2,
-                mb: 3,
+                fontSize: { xs: '1.8rem', md: '2.5rem' },
+                fontWeight: 700,
+                color: '#10b981',
+                mb: 2,
+                fontStyle: 'italic',
               }}
             >
-              <Shield size={28} color="#10b981" />
-              <Typography
+              Ready to Start Automated Trading?
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: { xs: '1rem', md: '1.1rem' },
+                color: 'text.secondary',
+                mb: 4,
+              }}
+            >
+              Limited to 20 early access spots. Secure your bot and start trading today.
+            </Typography>
+
+            {/* Main CTA Buttons */}
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={2}
+              sx={{ justifyContent: 'center', mb: 3 }}
+            >
+              <Button
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="contained"
+                size="large"
                 sx={{
-                  fontSize: { xs: '1.1rem', md: '1.3rem' },
+                  minWidth: 220,
+                  bgcolor: '#25D366',
+                  color: 'white',
                   fontWeight: 700,
-                  color: '#10b981',
+                  fontSize: '1.1rem',
+                  py: 1.5,
+                  px: 4,
+                  gap: 1.5,
+                  '&:hover': {
+                    bgcolor: '#1da851',
+                    transform: 'translateY(-2px)',
+                  },
+                  transition: 'all 0.3s ease',
+                  textTransform: 'none',
+                  borderRadius: 50,
                 }}
               >
-                7-Day Money-Back Guarantee
-              </Typography>
-            </Box>
+                <WhatsAppIcon />
+                Message on WhatsApp
+              </Button>
+              <Button
+                component={Link}
+                href="/auth/register"
+                variant="contained"
+                size="large"
+                sx={{
+                  minWidth: 220,
+                  bgcolor: '#10b981',
+                  color: 'white',
+                  fontWeight: 700,
+                  fontSize: '1.1rem',
+                  py: 1.5,
+                  px: 4,
+                  '&:hover': {
+                    bgcolor: '#059669',
+                    transform: 'translateY(-2px)',
+                  },
+                  transition: 'all 0.3s ease',
+                  textTransform: 'none',
+                  borderRadius: 50,
+                }}
+              >
+                Get Started Now
+              </Button>
+            </Stack>
 
-            {/* WhatsApp CTA */}
-            <Button
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="contained"
-              size="large"
-              sx={{
-                width: '100%',
-                maxWidth: { xs: '100%', sm: 400 },
-                mx: 'auto',
-                display: 'flex',
-                bgcolor: '#25D366',
-                color: 'white',
-                fontWeight: 700,
-                fontSize: { xs: '1rem', md: '1.1rem' },
-                py: 2,
-                px: 4,
-                alignItems: 'center',
-                gap: 1.5,
-                justifyContent: 'center',
-                '&:hover': {
-                  bgcolor: '#1da851',
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 32px rgba(37, 211, 102, 0.5)',
-                },
-                transition: 'all 0.3s ease',
-                textTransform: 'none',
-                boxShadow: '0 8px 24px rgba(37, 211, 102, 0.4)',
-                borderRadius: 2,
-              }}
+            {/* Social Links */}
+            <Stack
+              direction="row"
+              spacing={4}
+              sx={{ justifyContent: 'center' }}
             >
-              <WhatsAppIcon />
-              Message on WhatsApp — Only 20 Spots Left
-            </Button>
+              <Button
+                href="https://t.me/algoedge"
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{
+                  color: 'text.secondary',
+                  textTransform: 'none',
+                  fontSize: '0.9rem',
+                  '&:hover': { color: '#10b981' },
+                }}
+              >
+                🎯 Join Telegram channel for AI Signals 🚀
+              </Button>
+              <Button
+                href={instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{
+                  color: 'text.secondary',
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                  '&:hover': { color: '#10b981' },
+                }}
+              >
+                📷 Follow Instagram
+              </Button>
+            </Stack>
           </Box>
 
           {/* Benefit Bullets */}
@@ -450,7 +467,7 @@ export default function Home() {
           </Box>
         </Box>
 
-        {/* Proof and Trust Section */}
+        {/* How AlgoEdge Works - Demo Video Section */}
         <Box sx={{ py: 6 }}>
           <Typography
             variant="h3"
@@ -463,7 +480,7 @@ export default function Home() {
               textShadow: '0 2px 10px rgba(16, 185, 129, 0.3)',
             }}
           >
-            See Real Results
+            How AlgoEdge Works
           </Typography>
           <Typography
             align="center"
@@ -475,7 +492,7 @@ export default function Home() {
               mx: 'auto',
             }}
           >
-            Authentic trading results and platform demonstrations from AlgoEdge users
+            Watch our algorithm in action - real trades, real profits
           </Typography>
 
           {/* Demo Video */}
@@ -487,7 +504,6 @@ export default function Home() {
               overflow: 'hidden',
               boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
               border: '2px solid rgba(16, 185, 129, 0.3)',
-              mb: 6,
             }}
           >
             <video
@@ -506,85 +522,106 @@ export default function Home() {
               Your browser does not support the video tag.
             </video>
           </Box>
+        </Box>
 
-          {/* Authenticity Images - Images 7-11 (Unaltered) */}
-          <Grid container spacing={4} sx={{ mb: 4 }}>
-            {/* Image 7: Trading Profits Screenshot */}
-            <Grid item xs={12} md={6}>
+        {/* See AlgoEdge's Real Results Section */}
+        <Box sx={{ py: 4 }}>
+          <Typography
+            variant="h4"
+            align="center"
+            sx={{
+              fontWeight: 700,
+              mb: 3,
+              fontSize: { xs: '1.5rem', md: '2rem' },
+              color: '#10b981',
+            }}
+          >
+            See AlgoEdge's Real Results
+          </Typography>
+
+          {/* Compact Grid for Videos and Images */}
+          <Grid container spacing={2} sx={{ maxWidth: '900px', mx: 'auto', justifyContent: 'center' }}>
+            {/* Video 1 */}
+            <Grid item xs={6} md={3}>
               <Box
                 sx={{
                   borderRadius: 2,
                   overflow: 'hidden',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
                   bgcolor: '#1a1a1a',
                 }}
               >
-                <Image
-                  src="/images/trading-profits.svg"
-                  alt="Real trading profits - MT5 account"
-                  width={800}
-                  height={600}
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    display: 'block',
-                  }}
-                />
-                <Box sx={{ p: 2.5, bgcolor: 'rgba(30, 41, 59, 0.8)' }}>
-                  <Typography
-                    sx={{
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      color: 'text.primary',
-                      textAlign: 'center',
-                    }}
-                  >
-                    Real Trading Profits - MT5 Account
-                  </Typography>
-                </Box>
+                <video
+                  controls
+                  muted
+                  playsInline
+                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                >
+                  <source src="/video/results1.mp4" type="video/mp4" />
+                </video>
               </Box>
             </Grid>
 
-            {/* Image 8: Algorithm Activity */}
-            <Grid item xs={12} md={6}>
+            {/* Video 2 */}
+            <Grid item xs={6} md={3}>
               <Box
                 sx={{
                   borderRadius: 2,
                   overflow: 'hidden',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  bgcolor: '#1a1a1a',
+                }}
+              >
+                <video
+                  controls
+                  muted
+                  playsInline
+                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                >
+                  <source src="/video/results2.mp4" type="video/mp4" />
+                </video>
+              </Box>
+            </Grid>
+
+            {/* Image 1 - MT5 Chart */}
+            <Grid item xs={6} md={3}>
+              <Box
+                sx={{
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
                   bgcolor: '#1a1a1a',
                 }}
               >
                 <Image
-                  src="/images/algorithm-activity.svg"
-                  alt="Live algorithm trading activity"
-                  width={800}
-                  height={600}
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    display: 'block',
-                  }}
+                  src="/images/mt5-chart.png"
+                  alt="Live XAUUSD Trading Chart"
+                  width={400}
+                  height={800}
+                  style={{ width: '100%', height: 'auto', display: 'block' }}
                 />
-                <Box sx={{ p: 2.5, bgcolor: 'rgba(30, 41, 59, 0.8)' }}>
-                  <Typography
-                    sx={{
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      color: 'text.primary',
-                      textAlign: 'center',
-                    }}
-                  >
-                    Live Algorithm Trading Activity
-                  </Typography>
-                </Box>
               </Box>
             </Grid>
 
-            {/* Additional authenticity images can be added here (Images 9-11)
-                Replace these SVG placeholders with actual image files when available */}
+            {/* Image 2 - Trading History */}
+            <Grid item xs={6} md={3}>
+              <Box
+                sx={{
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  bgcolor: '#1a1a1a',
+                }}
+              >
+                <Image
+                  src="/images/trading-history.png"
+                  alt="Trading History - $1,963 Profit"
+                  width={400}
+                  height={800}
+                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                />
+              </Box>
+            </Grid>
           </Grid>
         </Box>
 
@@ -836,155 +873,6 @@ export default function Home() {
               We're confident in our system and stand behind it 100%.
             </Typography>
           </Card>
-        </Box>
-
-        {/* Final CTA Section */}
-        <Box sx={{ py: 6, textAlign: 'center' }}>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 700,
-              mb: 3,
-              color: '#10b981',
-              fontSize: { xs: '1.75rem', md: '2.125rem' },
-            }}
-          >
-            Ready to Start Automated Trading?
-          </Typography>
-          <Typography
-            sx={{
-              mb: 4,
-              fontSize: { xs: '1rem', md: '1.1rem' },
-              color: 'text.secondary',
-              maxWidth: '600px',
-              mx: 'auto',
-            }}
-          >
-            Limited to 20 early access spots. Secure your bot and start trading today.
-          </Typography>
-          
-          <Stack 
-            direction={{ xs: 'column', sm: 'row' }} 
-            spacing={2} 
-            sx={{ 
-              justifyContent: 'center', 
-              alignItems: 'center',
-              mb: 4,
-            }}
-          >
-            <Button
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="contained"
-              size="large"
-              sx={{
-                minWidth: { xs: '100%', sm: 280 },
-                bgcolor: '#25D366',
-                color: 'white',
-                fontWeight: 700,
-                fontSize: { xs: '1rem', md: '1.1rem' },
-                py: 2,
-                px: 4,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 1.5,
-                justifyContent: 'center',
-                '&:hover': {
-                  bgcolor: '#1da851',
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 32px rgba(37, 211, 102, 0.5)',
-                },
-                transition: 'all 0.3s ease',
-                textTransform: 'none',
-                boxShadow: '0 8px 24px rgba(37, 211, 102, 0.4)',
-                borderRadius: 2,
-              }}
-            >
-              <WhatsAppIcon />
-              Message on WhatsApp
-            </Button>
-
-            <Button
-              component={Link}
-              href="/auth/register"
-              variant="contained"
-              size="large"
-              sx={{
-                minWidth: { xs: '100%', sm: 280 },
-                bgcolor: '#10b981',
-                color: 'white',
-                fontWeight: 700,
-                fontSize: { xs: '1rem', md: '1.1rem' },
-                py: 2,
-                px: 4,
-                '&:hover': {
-                  bgcolor: '#059669',
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 32px rgba(16, 185, 129, 0.5)',
-                },
-                transition: 'all 0.3s ease',
-                textTransform: 'none',
-                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)',
-                borderRadius: 2,
-              }}
-            >
-              Get Started Now
-            </Button>
-          </Stack>
-
-          {/* Social Links */}
-          <Box sx={{ mt: 4 }}>
-            <Stack 
-              direction="row" 
-              spacing={3} 
-              sx={{ 
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <Link
-                href="https://t.me/+newQkIa06W1kNmMx"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ textDecoration: 'none' }}
-              >
-                <Typography
-                  sx={{
-                    fontSize: '0.95rem',
-                    fontWeight: 600,
-                    color: 'text.secondary',
-                    '&:hover': {
-                      color: '#10b981',
-                    },
-                    cursor: 'pointer',
-                  }}
-                >
-                  📱 Join Telegram
-                </Typography>
-              </Link>
-              <Link
-                href={instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ textDecoration: 'none' }}
-              >
-                <Typography
-                  sx={{
-                    fontSize: '0.95rem',
-                    fontWeight: 600,
-                    color: 'text.secondary',
-                    '&:hover': {
-                      color: '#E1306C',
-                    },
-                    cursor: 'pointer',
-                  }}
-                >
-                  📸 Follow Instagram
-                </Typography>
-              </Link>
-            </Stack>
-          </Box>
         </Box>
 
         {/* Features Section - Moved to Bottom */}
