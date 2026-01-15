@@ -539,7 +539,7 @@ export default function Home() {
             See AlgoEdge's Real Results
           </Typography>
 
-          {/* Compact Grid for Videos and Images */}
+          {/* Grid for Videos and Images - 2x2 on mobile, 4 columns on desktop */}
           <Grid container spacing={2} sx={{ maxWidth: '900px', mx: 'auto', justifyContent: 'center' }}>
             {/* Video 1 */}
             <Grid item xs={6} md={3}>
@@ -549,13 +549,14 @@ export default function Home() {
                   overflow: 'hidden',
                   border: '1px solid rgba(16, 185, 129, 0.3)',
                   bgcolor: '#1a1a1a',
+                  aspectRatio: '9/16',
                 }}
               >
                 <video
                   controls
                   muted
                   playsInline
-                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 >
                   <source src="/video/results1.mp4" type="video/mp4" />
                 </video>
@@ -570,13 +571,14 @@ export default function Home() {
                   overflow: 'hidden',
                   border: '1px solid rgba(16, 185, 129, 0.3)',
                   bgcolor: '#1a1a1a',
+                  aspectRatio: '9/16',
                 }}
               >
                 <video
                   controls
                   muted
                   playsInline
-                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 >
                   <source src="/video/results2.mp4" type="video/mp4" />
                 </video>
@@ -591,14 +593,13 @@ export default function Home() {
                   overflow: 'hidden',
                   border: '1px solid rgba(16, 185, 129, 0.3)',
                   bgcolor: '#1a1a1a',
+                  aspectRatio: '9/16',
                 }}
               >
-                <Image
-                  src="/images/AI POWERED 1.jpeg"
+                <img
+                  src="/images/ai-powered-1.jpeg"
                   alt="Live XAUUSD Trading Chart"
-                  width={400}
-                  height={800}
-                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
               </Box>
             </Grid>
@@ -611,14 +612,13 @@ export default function Home() {
                   overflow: 'hidden',
                   border: '1px solid rgba(16, 185, 129, 0.3)',
                   bgcolor: '#1a1a1a',
+                  aspectRatio: '9/16',
                 }}
               >
-                <Image
-                  src="/images/AI POWERED 3.jpeg"
+                <img
+                  src="/images/ai-powered-3.jpeg"
                   alt="Trading History - $1,963 Profit"
-                  width={400}
-                  height={800}
-                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
               </Box>
             </Grid>
