@@ -1,7 +1,7 @@
 'use client';
 
 import { Box, Container, Typography, Button, Grid, Card, CardContent, Stack, Fab } from '@mui/material';
-import { TrendingUp, Shield, BarChart3, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, Shield, BarChart3, CheckCircle2, Send, Instagram } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
@@ -346,17 +346,18 @@ export default function Home() {
             <Stack
               direction="row"
               spacing={4}
-              sx={{ justifyContent: 'center' }}
+              sx={{ justifyContent: 'center', flexWrap: 'wrap', gap: 2 }}
             >
               <Button
                 href="https://t.me/algoedge"
                 target="_blank"
                 rel="noopener noreferrer"
+                startIcon={<Send size={18} />}
                 sx={{
                   color: 'text.secondary',
                   textTransform: 'none',
                   fontSize: '0.9rem',
-                  '&:hover': { color: '#10b981' },
+                  '&:hover': { color: '#0088cc' },
                 }}
               >
                 🎯 Join Telegram channel for AI Signals 🚀
@@ -365,14 +366,15 @@ export default function Home() {
                 href={instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                startIcon={<Instagram size={18} />}
                 sx={{
                   color: 'text.secondary',
                   textTransform: 'none',
                   fontSize: '1rem',
-                  '&:hover': { color: '#10b981' },
+                  '&:hover': { color: '#E4405F' },
                 }}
               >
-                📷 Follow Instagram
+                Follow Instagram
               </Button>
             </Stack>
           </Box>
@@ -653,13 +655,13 @@ export default function Home() {
             Get started in 3 simple steps
           </Typography>
 
-          <Grid container spacing={4} sx={{ maxWidth: '1100px', mx: 'auto' }}>
+          <Grid container spacing={{ xs: 2, md: 4 }} sx={{ maxWidth: '1100px', mx: 'auto', px: { xs: 2, md: 0 } }}>
             <Grid item xs={12} md={4}>
               <Card
                 sx={{
                   height: '100%',
                   textAlign: 'center',
-                  p: 4,
+                  p: { xs: 2, md: 4 },
                   bgcolor: 'rgba(30, 41, 59, 0.6)',
                   backdropFilter: 'blur(10px)',
                   border: '2px solid rgba(16, 185, 129, 0.3)',
@@ -672,11 +674,11 @@ export default function Home() {
                   },
                 }}
               >
-                <CardContent>
+                <CardContent sx={{ p: { xs: 1, md: 2 } }}>
                   <Box
                     sx={{
-                      width: 80,
-                      height: 80,
+                      width: { xs: 60, md: 80 },
+                      height: { xs: 60, md: 80 },
                       borderRadius: '50%',
                       bgcolor: 'rgba(16, 185, 129, 0.2)',
                       border: '3px solid #10b981',
@@ -684,12 +686,12 @@ export default function Home() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       mx: 'auto',
-                      mb: 3,
+                      mb: { xs: 2, md: 3 },
                     }}
                   >
                     <Typography
                       sx={{
-                        fontSize: '2.5rem',
+                        fontSize: { xs: '1.8rem', md: '2.5rem' },
                         fontWeight: 900,
                         color: '#10b981',
                       }}
@@ -700,11 +702,11 @@ export default function Home() {
                   <Typography
                     variant="h5"
                     gutterBottom
-                    sx={{ color: '#10b981', fontWeight: 700, mb: 2 }}
+                    sx={{ color: '#10b981', fontWeight: 700, mb: 2, fontSize: { xs: '1.2rem', md: '1.5rem' } }}
                   >
                     We Install & Set Up
                   </Typography>
-                  <Typography variant="body1" color="text.primary" sx={{ lineHeight: 1.7 }}>
+                  <Typography variant="body1" color="text.primary" sx={{ lineHeight: 1.7, fontSize: { xs: '0.9rem', md: '1rem' } }}>
                     Our team installs the bot and configures all 7 trading strategies on your MT5 account. Zero technical work required from you.
                   </Typography>
                 </CardContent>
@@ -716,7 +718,7 @@ export default function Home() {
                 sx={{
                   height: '100%',
                   textAlign: 'center',
-                  p: 4,
+                  p: { xs: 2, md: 4 },
                   bgcolor: 'rgba(30, 41, 59, 0.6)',
                   backdropFilter: 'blur(10px)',
                   border: '2px solid rgba(16, 185, 129, 0.3)',
@@ -729,11 +731,11 @@ export default function Home() {
                   },
                 }}
               >
-                <CardContent>
+                <CardContent sx={{ p: { xs: 1, md: 2 } }}>
                   <Box
                     sx={{
-                      width: 80,
-                      height: 80,
+                      width: { xs: 60, md: 80 },
+                      height: { xs: 60, md: 80 },
                       borderRadius: '50%',
                       bgcolor: 'rgba(16, 185, 129, 0.2)',
                       border: '3px solid #10b981',
@@ -741,12 +743,12 @@ export default function Home() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       mx: 'auto',
-                      mb: 3,
+                      mb: { xs: 2, md: 3 },
                     }}
                   >
                     <Typography
                       sx={{
-                        fontSize: '2.5rem',
+                        fontSize: { xs: '1.8rem', md: '2.5rem' },
                         fontWeight: 900,
                         color: '#10b981',
                       }}
@@ -757,11 +759,11 @@ export default function Home() {
                   <Typography
                     variant="h5"
                     gutterBottom
-                    sx={{ color: '#10b981', fontWeight: 700, mb: 2 }}
+                    sx={{ color: '#10b981', fontWeight: 700, mb: 2, fontSize: { xs: '1.2rem', md: '1.5rem' } }}
                   >
                     Algorithm Trades
                   </Typography>
-                  <Typography variant="body1" color="text.primary" sx={{ lineHeight: 1.7 }}>
+                  <Typography variant="body1" color="text.primary" sx={{ lineHeight: 1.7, fontSize: { xs: '0.9rem', md: '1rem' } }}>
                     The AI-powered algorithm analyzes markets 24/7 and executes trades automatically based on proven strategies.
                   </Typography>
                 </CardContent>
@@ -773,7 +775,7 @@ export default function Home() {
                 sx={{
                   height: '100%',
                   textAlign: 'center',
-                  p: 4,
+                  p: { xs: 2, md: 4 },
                   bgcolor: 'rgba(30, 41, 59, 0.6)',
                   backdropFilter: 'blur(10px)',
                   border: '2px solid rgba(16, 185, 129, 0.3)',
@@ -786,11 +788,11 @@ export default function Home() {
                   },
                 }}
               >
-                <CardContent>
+                <CardContent sx={{ p: { xs: 1, md: 2 } }}>
                   <Box
                     sx={{
-                      width: 80,
-                      height: 80,
+                      width: { xs: 60, md: 80 },
+                      height: { xs: 60, md: 80 },
                       borderRadius: '50%',
                       bgcolor: 'rgba(16, 185, 129, 0.2)',
                       border: '3px solid #10b981',
@@ -798,12 +800,12 @@ export default function Home() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       mx: 'auto',
-                      mb: 3,
+                      mb: { xs: 2, md: 3 },
                     }}
                   >
                     <Typography
                       sx={{
-                        fontSize: '2.5rem',
+                        fontSize: { xs: '1.8rem', md: '2.5rem' },
                         fontWeight: 900,
                         color: '#10b981',
                       }}
@@ -814,11 +816,11 @@ export default function Home() {
                   <Typography
                     variant="h5"
                     gutterBottom
-                    sx={{ color: '#10b981', fontWeight: 700, mb: 2 }}
+                    sx={{ color: '#10b981', fontWeight: 700, mb: 2, fontSize: { xs: '1.2rem', md: '1.5rem' } }}
                   >
                     Watch Growth
                   </Typography>
-                  <Typography variant="body1" color="text.primary" sx={{ lineHeight: 1.7 }}>
+                  <Typography variant="body1" color="text.primary" sx={{ lineHeight: 1.7, fontSize: { xs: '0.9rem', md: '1rem' } }}>
                     Monitor your performance through real-time dashboards. Track profits, analyze statistics, and watch your account grow.
                   </Typography>
                 </CardContent>
