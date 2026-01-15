@@ -100,7 +100,7 @@ const BOT_CONFIG = {
     canTrade: true,
     strategy: 'scalping',
     description: 'Ultra-fast scalping - targets 5-15 pip moves',
-    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY'],  // Major pairs only (tight spreads)
+    allowedPairs: ['XAUUSD'],  // Focus only on Gold
     timeframes: ['m1', 'm5'],
     minConfidence: 55,          // Need decent confidence for scalps
     maxLotSize: 0.5,            // Can use up to 0.5 lots for scalps
@@ -129,7 +129,7 @@ const BOT_CONFIG = {
     canTrade: true,
     strategy: 'momentum',
     description: 'Momentum trading - catches strong directional moves',
-    allowedPairs: ['EURUSD', 'GBPUSD', 'AUDUSD', 'USDCHF', 'XAUUSD'],
+    allowedPairs: ['XAUUSD'],  // Focus only on Gold
     timeframes: ['m5', 'm15'],
     minConfidence: 55,
     maxLotSize: 0.8,            // Can use bigger lots on momentum
@@ -156,7 +156,7 @@ const BOT_CONFIG = {
     canTrade: true,
     strategy: 'trend',
     description: 'Trend following - rides medium-term trends',
-    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD', 'XAUUSD'],
+    allowedPairs: ['XAUUSD'],  // Focus only on Gold
     timeframes: ['m15', 'm30', 'h1'],
     minConfidence: 55,
     maxLotSize: 0.8,
@@ -183,7 +183,7 @@ const BOT_CONFIG = {
     canTrade: true,
     strategy: 'breakout',
     description: 'Breakout trading - catches moves from key levels',
-    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'EURJPY', 'GBPJPY', 'XAUUSD'],
+    allowedPairs: ['XAUUSD'],  // Focus only on Gold
     timeframes: ['m30', 'h1'],
     minConfidence: 60,          // Need higher confidence for breakouts
     maxLotSize: 0.7,
@@ -210,7 +210,7 @@ const BOT_CONFIG = {
     canTrade: true,
     strategy: 'swing',
     description: 'Swing trading - captures larger market moves',
-    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'XAUUSD'],
+    allowedPairs: ['XAUUSD'],  // Focus only on Gold
     timeframes: ['h1', 'h4'],
     minConfidence: 60,
     maxLotSize: 0.5,            // Smaller lots for swing (wider SL)
@@ -265,7 +265,7 @@ const BOT_CONFIG = {
     canTrade: true,
     strategy: 'position',
     description: 'Position trading - long-term trend following',
-    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'NZDUSD'],
+    allowedPairs: ['XAUUSD'],  // Focus only on Gold
     timeframes: ['h4', 'd1'],
     minConfidence: 65,          // Need higher confidence for position
     maxLotSize: 0.4,            // Smaller lots for position (very wide SL)
@@ -292,7 +292,7 @@ const BOT_CONFIG = {
     canTrade: true,
     strategy: 'sniper',
     description: 'Daily sniper - precision entries on D1 chart',
-    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'EURJPY'],
+    allowedPairs: ['XAUUSD'],  // Focus only on Gold
     timeframes: ['d1'],
     minConfidence: 70,          // High confidence required for sniper
     maxLotSize: 0.5,
@@ -318,7 +318,7 @@ const BOT_CONFIG = {
     canTrade: true,
     strategy: 'news',
     description: 'News trading - capitalizes on high-impact events',
-    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD'],
+    allowedPairs: ['XAUUSD'],  // Focus only on Gold
     timeframes: ['m5', 'm15'],
     minConfidence: 55,
     maxLotSize: 0.4,            // Smaller lots for news volatility
@@ -345,7 +345,7 @@ const BOT_CONFIG = {
     canTrade: true,
     strategy: 'grid',
     description: 'Grid trading - profits from ranging markets',
-    allowedPairs: ['EURUSD', 'AUDNZD', 'EURGBP'],  // Range-bound pairs only
+    allowedPairs: ['XAUUSD'],  // Focus only on Gold
     timeframes: ['h1', 'h4'],
     minConfidence: 50,
     maxLotSize: 0.2,            // Very small lots for grid
@@ -387,7 +387,7 @@ const BOT_CONFIG = {
     canTrade: true,
     strategy: 'hedge',
     description: 'Hedging - reduces drawdown via correlated pairs',
-    allowedPairs: ['EURUSD', 'USDCHF', 'GBPUSD', 'EURGBP'],
+    allowedPairs: ['XAUUSD'],  // Focus only on Gold
     timeframes: ['h1', 'h4'],
     minConfidence: 55,
     maxLotSize: 0.3,
@@ -1182,18 +1182,9 @@ function createForcedSignal(candles, symbol, riskLevel = 'medium') {
   };
 }
 
-// Premium trading pairs - expanded list
+// Premium trading pairs - XAUUSD only for now
 const TRADING_PAIRS = [
-  'EURUSD',  // Major forex pair - most liquid
-  'GBPUSD',  // British Pound
-  'USDJPY',  // Japanese Yen
-  'XAUUSD',  // Gold
-  'AUDUSD',  // Australian Dollar
-  'USDCAD',  // Canadian Dollar
-  'NZDUSD',  // New Zealand Dollar
-  'USDCHF',  // Swiss Franc
-  'EURJPY',  // Euro/Yen cross
-  'GBPJPY',  // Pound/Yen cross
+  'XAUUSD',  // Gold only - focus on one pair
 ];
 
 // Trading interval by timeframe
@@ -3020,33 +3011,50 @@ function analyzeRSIDivergence(candles, symbol, botConfig = null) {
 function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
   if (!candles || candles.length < 60) return null;
   
-  // 🚀 ONLY PROVEN HIGH WIN-RATE STRATEGIES
-  const strategies = [
-    { name: 'EMA200-Pullback', fn: analyzeEMA200Pullback, weight: 1.4 },      // ⭐ Institutional favorite - highest weight
-    { name: 'Break-Retest', fn: analyzeBreakAndRetest, weight: 1.35 },        // ⭐ High accuracy
-    { name: 'Liquidity-Sweep', fn: analyzeLiquiditySweep, weight: 1.3 },      // SMC strategy
-    { name: 'VWAP-Reversion', fn: analyzeVWAPReversion, weight: 1.25 },       // Mean reversion
-    { name: 'RSI-Divergence', fn: analyzeRSIDivergence, weight: 1.25 },       // Reversal detection
-    { name: 'London-Breakout', fn: analyzeLondonBreakout, weight: 1.2 },      // Session strategy
-    { name: 'Fibonacci', fn: analyzeFibonacciContinuation, weight: 1.15 },    // Trend continuation
-    { name: 'Order-Block', fn: analyzeOrderBlock, weight: 1.1 },              // Institutional zones
+  const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
+  
+  // 🚀 PROVEN HIGH WIN-RATE STRATEGIES WITH GOLD-OPTIMIZED WEIGHTS
+  // Gold moves differently - momentum and breakout strategies work best
+  const strategies = isGold ? [
+    // GOLD-OPTIMIZED WEIGHTS - Gold respects these patterns strongly
+    { name: 'Break-Retest', fn: analyzeBreakAndRetest, weight: 1.5 },          // ⭐⭐ Gold loves break & retest
+    { name: 'Liquidity-Sweep', fn: analyzeLiquiditySweep, weight: 1.45 },      // ⭐⭐ Gold sweeps liquidity hard
+    { name: 'EMA200-Pullback', fn: analyzeEMA200Pullback, weight: 1.4 },       // ⭐ Gold respects EMA200
+    { name: 'Order-Block', fn: analyzeOrderBlock, weight: 1.35 },              // ⭐ Institutional zones on gold
+    { name: 'Fibonacci', fn: analyzeFibonacciContinuation, weight: 1.3 },      // Gold respects fib levels
+    { name: 'RSI-Divergence', fn: analyzeRSIDivergence, weight: 1.25 },        // Divergence works on gold
+    { name: 'VWAP-Reversion', fn: analyzeVWAPReversion, weight: 1.2 },         // Mean reversion
+    { name: 'London-Breakout', fn: analyzeLondonBreakout, weight: 1.15 },      // Session breakouts
+  ] : [
+    // FOREX WEIGHTS
+    { name: 'EMA200-Pullback', fn: analyzeEMA200Pullback, weight: 1.4 },       // ⭐ Institutional favorite
+    { name: 'Break-Retest', fn: analyzeBreakAndRetest, weight: 1.35 },         // ⭐ High accuracy
+    { name: 'Liquidity-Sweep', fn: analyzeLiquiditySweep, weight: 1.3 },       // SMC strategy
+    { name: 'VWAP-Reversion', fn: analyzeVWAPReversion, weight: 1.25 },        // Mean reversion
+    { name: 'RSI-Divergence', fn: analyzeRSIDivergence, weight: 1.25 },        // Reversal detection
+    { name: 'London-Breakout', fn: analyzeLondonBreakout, weight: 1.2 },       // Session strategy
+    { name: 'Fibonacci', fn: analyzeFibonacciContinuation, weight: 1.15 },     // Trend continuation
+    { name: 'Order-Block', fn: analyzeOrderBlock, weight: 1.1 },               // Institutional zones
   ];
   
   const signals = [];
   const currentPrice = candles[candles.length - 1].close;
   const atr = calculateATR(candles, 14);
   const pipSize = getPipSize(symbol);
-  const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   
   // Run all strategies - collect ALL signals regardless of confidence
+  console.log(`  🔍 ${symbol}: Running ${strategies.length} strategies...`);
+  
   for (const strategy of strategies) {
     try {
       const signal = strategy.fn(candles, symbol, botConfig);
       if (signal) {
+        const weighted = signal.confidence * strategy.weight;
+        console.log(`    ✓ ${strategy.name}: ${signal.type.toUpperCase()} ${signal.confidence}% (weighted: ${weighted.toFixed(1)})`);
         signals.push({
           ...signal,
           strategyName: strategy.name,
-          weightedConfidence: signal.confidence * strategy.weight,
+          weightedConfidence: weighted,
         });
       }
     } catch (err) {
@@ -3054,25 +3062,30 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
     }
   }
   
-  if (signals.length === 0) return null;
+  if (signals.length === 0) {
+    console.log(`  ⏸️ ${symbol}: No signals from any strategy - waiting for setup`);
+    return null;
+  }
   
   // Check for confluence (multiple strategies agreeing)
   const buySignals = signals.filter(s => s.type === 'buy');
   const sellSignals = signals.filter(s => s.type === 'sell');
+  
+  console.log(`  📊 ${symbol}: ${buySignals.length} BUY signals, ${sellSignals.length} SELL signals`);
   
   let bestSignal = null;
   let confluenceBonus = 0;
   
   if (buySignals.length >= 2) {
     // Multiple buy signals - high confluence
-    confluenceBonus = buySignals.length * 8;
+    confluenceBonus = buySignals.length * 10; // Increased bonus for gold
     bestSignal = buySignals.reduce((best, s) => s.weightedConfidence > best.weightedConfidence ? s : best);
-    bestSignal.reason = `CONFLUENCE(${buySignals.length}): ` + buySignals.map(s => s.strategyName).join('+') + ' ' + bestSignal.reason;
+    bestSignal.reason = `🔥CONFLUENCE(${buySignals.length}): ` + buySignals.map(s => s.strategyName).join('+') + ' ' + bestSignal.reason;
   } else if (sellSignals.length >= 2) {
     // Multiple sell signals - high confluence
-    confluenceBonus = sellSignals.length * 8;
+    confluenceBonus = sellSignals.length * 10;
     bestSignal = sellSignals.reduce((best, s) => s.weightedConfidence > best.weightedConfidence ? s : best);
-    bestSignal.reason = `CONFLUENCE(${sellSignals.length}): ` + sellSignals.map(s => s.strategyName).join('+') + ' ' + bestSignal.reason;
+    bestSignal.reason = `🔥CONFLUENCE(${sellSignals.length}): ` + sellSignals.map(s => s.strategyName).join('+') + ' ' + bestSignal.reason;
   } else {
     // Single strongest signal
     bestSignal = signals.reduce((best, s) => s.weightedConfidence > best.weightedConfidence ? s : best);
@@ -3080,6 +3093,8 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
   
   // Apply confluence bonus
   bestSignal.confidence = Math.min(95, bestSignal.confidence + confluenceBonus);
+  
+  console.log(`  🎯 ${symbol}: BEST SIGNAL = ${bestSignal.type.toUpperCase()} via ${bestSignal.strategyName} (${bestSignal.confidence}%)`);
   
   // ================================================================
   // USE THE SL/TP ALREADY CALCULATED BY THE STRATEGY
