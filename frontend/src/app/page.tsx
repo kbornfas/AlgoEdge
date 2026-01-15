@@ -349,7 +349,7 @@ export default function Home() {
               sx={{ justifyContent: 'center', flexWrap: 'wrap', gap: 2 }}
             >
               <Button
-                href="https://t.me/algoedge"
+                href="https://t.me/+newQkIa06W1kNmMx"
                 target="_blank"
                 rel="noopener noreferrer"
                 startIcon={<Send size={18} />}

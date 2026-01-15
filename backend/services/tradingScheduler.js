@@ -1804,15 +1804,21 @@ function analyzeSupportResistance(candles, symbol, botConfig = null) {
  * - Trend: Price relative to EMA200
  * - Pullback: Near EMA50
  * - Confirmation: RSI neutral (40-60) + candle close
+ * - SL: Below recent swing low (BUY) / Above recent swing high (SELL)
+ * - TP: Recent swing high (BUY) / Recent swing low (SELL) or 2x SL
  */
 function analyzeEMA200Pullback(candles, symbol, botConfig = null) {
   if (!candles || candles.length < 200) return null;
   
   const closes = candles.map(c => c.close);
+  const highs = candles.map(c => c.high);
+  const lows = candles.map(c => c.low);
   const currentPrice = closes[closes.length - 1];
   const prevPrice = closes[closes.length - 2];
   const currentCandle = candles[candles.length - 1];
   const atr = calculateATR(candles, 14);
+  const pipSize = getPipSize(symbol);
+  const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   
   // Calculate EMAs
   const ema50 = calculateEMA(closes, 50);
@@ -1822,6 +1828,12 @@ function analyzeEMA200Pullback(candles, symbol, botConfig = null) {
   const ema50Val = ema50[ema50.length - 1];
   const ema200Val = ema200[ema200.length - 1];
   const currentRSI = rsi[rsi.length - 1];
+  
+  // Find recent swing highs/lows for SL/TP calculation
+  const recentLows = lows.slice(-20);
+  const recentHighs = highs.slice(-20);
+  const recentSwingLow = Math.min(...recentLows);
+  const recentSwingHigh = Math.max(...recentHighs);
   
   // Trend detection
   const bullishTrend = currentPrice > ema200Val && ema50Val > ema200Val;
@@ -1856,7 +1868,36 @@ function analyzeEMA200Pullback(candles, symbol, botConfig = null) {
       confidence += 10; reason += 'EMA50-Bounce ';
     }
     
-    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'ema200_pullback' };
+    // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+    // SL: Below recent swing low + buffer
+    const slBuffer = atr * 0.3;
+    const stopLossPrice = recentSwingLow - slBuffer;
+    const slDistance = currentPrice - stopLossPrice;
+    
+    // TP: At recent swing high OR 2x risk if swing high is too close
+    let takeProfitPrice = recentSwingHigh;
+    const tpDistance = takeProfitPrice - currentPrice;
+    
+    // Ensure minimum 1:2 RR
+    if (tpDistance < slDistance * 2) {
+      takeProfitPrice = currentPrice + (slDistance * 2.5);
+    }
+    
+    // Calculate pips for logging
+    const slPips = Math.round(slDistance / pipSize);
+    const tpPips = Math.round((takeProfitPrice - currentPrice) / pipSize);
+    
+    signal = { 
+      type: 'buy', 
+      confidence: Math.min(confidence, 95), 
+      reason: reason.trim(), 
+      strategy: 'ema200_pullback',
+      stopLoss: stopLossPrice,
+      takeProfit: takeProfitPrice,
+      slPips: slPips,
+      tpPips: tpPips,
+      entryPrice: currentPrice
+    };
   }
   
   // 🔴 SELL: Bearish trend + pullback to EMA50 + RSI neutral + bearish candle
@@ -1873,7 +1914,36 @@ function analyzeEMA200Pullback(candles, symbol, botConfig = null) {
       confidence += 10; reason += 'EMA50-Reject ';
     }
     
-    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'ema200_pullback' };
+    // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+    // SL: Above recent swing high + buffer
+    const slBuffer = atr * 0.3;
+    const stopLossPrice = recentSwingHigh + slBuffer;
+    const slDistance = stopLossPrice - currentPrice;
+    
+    // TP: At recent swing low OR 2x risk if swing low is too close
+    let takeProfitPrice = recentSwingLow;
+    const tpDistance = currentPrice - takeProfitPrice;
+    
+    // Ensure minimum 1:2 RR
+    if (tpDistance < slDistance * 2) {
+      takeProfitPrice = currentPrice - (slDistance * 2.5);
+    }
+    
+    // Calculate pips for logging
+    const slPips = Math.round(slDistance / pipSize);
+    const tpPips = Math.round((currentPrice - takeProfitPrice) / pipSize);
+    
+    signal = { 
+      type: 'sell', 
+      confidence: Math.min(confidence, 95), 
+      reason: reason.trim(), 
+      strategy: 'ema200_pullback',
+      stopLoss: stopLossPrice,
+      takeProfit: takeProfitPrice,
+      slPips: slPips,
+      tpPips: tpPips,
+      entryPrice: currentPrice
+    };
   }
   
   return signal;
@@ -1884,6 +1954,8 @@ function analyzeEMA200Pullback(candles, symbol, botConfig = null) {
  * - Detect breakout of S/R level
  * - Wait for price to retest the broken level
  * - Enter on confirmation candle
+ * - SL: Just below broken level (BUY) / Just above broken level (SELL)
+ * - TP: Measured move OR next structure level
  */
 function analyzeBreakAndRetest(candles, symbol, botConfig = null) {
   if (!candles || candles.length < 50) return null;
@@ -1894,6 +1966,8 @@ function analyzeBreakAndRetest(candles, symbol, botConfig = null) {
   const currentPrice = closes[closes.length - 1];
   const currentCandle = candles[candles.length - 1];
   const atr = calculateATR(candles, 14);
+  const pipSize = getPipSize(symbol);
+  const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   
   // Find recent swing highs and lows (last 30 candles for structure)
   const lookback = 30;
@@ -1903,6 +1977,10 @@ function analyzeBreakAndRetest(candles, symbol, botConfig = null) {
   // Key levels - resistance from highs, support from lows
   const resistance = Math.max(...recentHighs.slice(0, -5)); // Exclude last 5 candles
   const support = Math.min(...recentLows.slice(0, -5));
+  
+  // Find next structure levels for TP
+  const nextResistance = Math.max(...highs.slice(-50));
+  const nextSupport = Math.min(...lows.slice(-50));
   
   // Check for recent breakout (in last 10 candles)
   let brokeResistance = false;
@@ -1948,7 +2026,35 @@ function analyzeBreakAndRetest(candles, symbol, botConfig = null) {
     confidence += 15; reason += 'Retest-Complete ';
     confidence += 10; reason += 'Bullish-Confirm ';
     
-    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'break_retest' };
+    // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+    // SL: Just below the broken resistance level (now support)
+    const slBuffer = atr * 0.3;
+    const stopLossPrice = resistance - slBuffer;
+    const slDistance = currentPrice - stopLossPrice;
+    
+    // TP: Next resistance level OR 2.5x risk
+    let takeProfitPrice = nextResistance;
+    const tpDistance = takeProfitPrice - currentPrice;
+    
+    // Ensure minimum 1:2 RR
+    if (tpDistance < slDistance * 2) {
+      takeProfitPrice = currentPrice + (slDistance * 2.5);
+    }
+    
+    const slPips = Math.round(slDistance / pipSize);
+    const tpPips = Math.round((takeProfitPrice - currentPrice) / pipSize);
+    
+    signal = { 
+      type: 'buy', 
+      confidence: Math.min(confidence, 95), 
+      reason: reason.trim(), 
+      strategy: 'break_retest',
+      stopLoss: stopLossPrice,
+      takeProfit: takeProfitPrice,
+      slPips: slPips,
+      tpPips: tpPips,
+      entryPrice: currentPrice
+    };
   }
   
   // 🔴 SELL: Broke support + retesting + bearish confirmation
@@ -1960,7 +2066,35 @@ function analyzeBreakAndRetest(candles, symbol, botConfig = null) {
     confidence += 15; reason += 'Retest-Complete ';
     confidence += 10; reason += 'Bearish-Confirm ';
     
-    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'break_retest' };
+    // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+    // SL: Just above the broken support level (now resistance)
+    const slBuffer = atr * 0.3;
+    const stopLossPrice = support + slBuffer;
+    const slDistance = stopLossPrice - currentPrice;
+    
+    // TP: Next support level OR 2.5x risk
+    let takeProfitPrice = nextSupport;
+    const tpDistance = currentPrice - takeProfitPrice;
+    
+    // Ensure minimum 1:2 RR
+    if (tpDistance < slDistance * 2) {
+      takeProfitPrice = currentPrice - (slDistance * 2.5);
+    }
+    
+    const slPips = Math.round(slDistance / pipSize);
+    const tpPips = Math.round((currentPrice - takeProfitPrice) / pipSize);
+    
+    signal = { 
+      type: 'sell', 
+      confidence: Math.min(confidence, 95), 
+      reason: reason.trim(), 
+      strategy: 'break_retest',
+      stopLoss: stopLossPrice,
+      takeProfit: takeProfitPrice,
+      slPips: slPips,
+      tpPips: tpPips,
+      entryPrice: currentPrice
+    };
   }
   
   return signal;
@@ -1972,6 +2106,8 @@ function analyzeBreakAndRetest(candles, symbol, botConfig = null) {
  * - Detect liquidity sweep (wick beyond swing H/L)
  * - Detect market structure shift
  * - Enter on pullback
+ * - SL: At the sweep wick (where liquidity was grabbed)
+ * - TP: Opposite liquidity zone (where stops are resting)
  */
 function analyzeLiquiditySweep(candles, symbol, botConfig = null) {
   if (!candles || candles.length < 50) return null;
@@ -1981,6 +2117,8 @@ function analyzeLiquiditySweep(candles, symbol, botConfig = null) {
   const lows = candles.map(c => c.low);
   const currentPrice = closes[closes.length - 1];
   const atr = calculateATR(candles, 14);
+  const pipSize = getPipSize(symbol);
+  const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   
   // Find swing highs and lows
   const swingHighs = [];
@@ -2004,10 +2142,14 @@ function analyzeLiquiditySweep(candles, symbol, botConfig = null) {
   // Check for liquidity sweep in last 5 candles
   const lastSwingHigh = swingHighs[swingHighs.length - 1];
   const lastSwingLow = swingLows[swingLows.length - 1];
+  const prevSwingHigh = swingHighs.length > 1 ? swingHighs[swingHighs.length - 2] : lastSwingHigh;
+  const prevSwingLow = swingLows.length > 1 ? swingLows[swingLows.length - 2] : lastSwingLow;
   
   let sweptLow = false;
   let sweptHigh = false;
   let sweepCandle = -1;
+  let sweepWickLow = Infinity;
+  let sweepWickHigh = -Infinity;
   
   // Check last 5 candles for sweep
   for (let i = candles.length - 5; i < candles.length - 1; i++) {
@@ -2015,11 +2157,13 @@ function analyzeLiquiditySweep(candles, symbol, botConfig = null) {
     if (lows[i] < lastSwingLow.price && closes[i] > lastSwingLow.price) {
       sweptLow = true;
       sweepCandle = i;
+      sweepWickLow = Math.min(sweepWickLow, lows[i]);
     }
     // Swept high: wick above swing high but closed below
     if (highs[i] > lastSwingHigh.price && closes[i] < lastSwingHigh.price) {
       sweptHigh = true;
       sweepCandle = i;
+      sweepWickHigh = Math.max(sweepWickHigh, highs[i]);
     }
   }
   
@@ -2046,7 +2190,35 @@ function analyzeLiquiditySweep(candles, symbol, botConfig = null) {
     confidence += 15; reason += 'Bullish-Shift ';
     confidence += 10; reason += 'Reversal-Confirm ';
     
-    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'liquidity_sweep' };
+    // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+    // SL: Just below the sweep wick (where liquidity was grabbed)
+    const slBuffer = atr * 0.2;
+    const stopLossPrice = sweepWickLow - slBuffer;
+    const slDistance = currentPrice - stopLossPrice;
+    
+    // TP: Target the opposite liquidity (swing high where shorts have stops)
+    let takeProfitPrice = lastSwingHigh.price;
+    const tpDistance = takeProfitPrice - currentPrice;
+    
+    // Ensure minimum 1:2 RR
+    if (tpDistance < slDistance * 2) {
+      takeProfitPrice = currentPrice + (slDistance * 2.5);
+    }
+    
+    const slPips = Math.round(slDistance / pipSize);
+    const tpPips = Math.round((takeProfitPrice - currentPrice) / pipSize);
+    
+    signal = { 
+      type: 'buy', 
+      confidence: Math.min(confidence, 95), 
+      reason: reason.trim(), 
+      strategy: 'liquidity_sweep',
+      stopLoss: stopLossPrice,
+      takeProfit: takeProfitPrice,
+      slPips: slPips,
+      tpPips: tpPips,
+      entryPrice: currentPrice
+    };
   }
   
   // 🔴 SELL: Liquidity sweep above swing high + bearish structure shift
@@ -2058,7 +2230,35 @@ function analyzeLiquiditySweep(candles, symbol, botConfig = null) {
     confidence += 15; reason += 'Bearish-Shift ';
     confidence += 10; reason += 'Reversal-Confirm ';
     
-    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'liquidity_sweep' };
+    // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+    // SL: Just above the sweep wick (where liquidity was grabbed)
+    const slBuffer = atr * 0.2;
+    const stopLossPrice = sweepWickHigh + slBuffer;
+    const slDistance = stopLossPrice - currentPrice;
+    
+    // TP: Target the opposite liquidity (swing low where longs have stops)
+    let takeProfitPrice = lastSwingLow.price;
+    const tpDistance = currentPrice - takeProfitPrice;
+    
+    // Ensure minimum 1:2 RR
+    if (tpDistance < slDistance * 2) {
+      takeProfitPrice = currentPrice - (slDistance * 2.5);
+    }
+    
+    const slPips = Math.round(slDistance / pipSize);
+    const tpPips = Math.round((currentPrice - takeProfitPrice) / pipSize);
+    
+    signal = { 
+      type: 'sell', 
+      confidence: Math.min(confidence, 95), 
+      reason: reason.trim(), 
+      strategy: 'liquidity_sweep',
+      stopLoss: stopLossPrice,
+      takeProfit: takeProfitPrice,
+      slPips: slPips,
+      tpPips: tpPips,
+      entryPrice: currentPrice
+    };
   }
   
   return signal;
@@ -2069,6 +2269,8 @@ function analyzeLiquiditySweep(candles, symbol, botConfig = null) {
  * Trade breakouts during London session (08:00-11:00 GMT)
  * - Identify Asian session range
  * - Trade breakout direction
+ * - SL: Mid-range of Asian session
+ * - TP: 1.5-2x the Asian range from breakout point
  */
 function analyzeLondonBreakout(candles, symbol, botConfig = null) {
   if (!candles || candles.length < 50) return null;
@@ -2086,6 +2288,8 @@ function analyzeLondonBreakout(candles, symbol, botConfig = null) {
   const currentPrice = closes[closes.length - 1];
   const currentCandle = candles[candles.length - 1];
   const atr = calculateATR(candles, 14);
+  const pipSize = getPipSize(symbol);
+  const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   
   // Estimate Asian session range (last ~12-16 candles on M15, ~24-32 on M5)
   // Use last 20 candles as approximation for Asian range
@@ -2095,6 +2299,7 @@ function analyzeLondonBreakout(candles, symbol, botConfig = null) {
   const asianHigh = Math.max(...asianCandles.map(c => c.high));
   const asianLow = Math.min(...asianCandles.map(c => c.low));
   const asianRange = asianHigh - asianLow;
+  const asianMid = (asianHigh + asianLow) / 2;
   
   // Check for breakout
   const brokeAbove = currentPrice > asianHigh && closes[closes.length - 2] <= asianHigh;
@@ -2117,7 +2322,29 @@ function analyzeLondonBreakout(candles, symbol, botConfig = null) {
     confidence += 15; reason += 'London-Session ';
     confidence += 10; reason += 'Bullish-Momentum ';
     
-    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'london_breakout' };
+    // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+    // SL: Mid-range of Asian session (conservative) or just below Asian high
+    const stopLossPrice = asianMid; // Mid-range is standard for London breakout
+    const slDistance = currentPrice - stopLossPrice;
+    
+    // TP: 1.5-2x the Asian range from the breakout point
+    const takeProfitPrice = asianHigh + (asianRange * 2);
+    const tpDistance = takeProfitPrice - currentPrice;
+    
+    const slPips = Math.round(slDistance / pipSize);
+    const tpPips = Math.round(tpDistance / pipSize);
+    
+    signal = { 
+      type: 'buy', 
+      confidence: Math.min(confidence, 95), 
+      reason: reason.trim(), 
+      strategy: 'london_breakout',
+      stopLoss: stopLossPrice,
+      takeProfit: takeProfitPrice,
+      slPips: slPips,
+      tpPips: tpPips,
+      entryPrice: currentPrice
+    };
   }
   
   // 🔴 SELL: Break below Asian low during London
@@ -2129,7 +2356,29 @@ function analyzeLondonBreakout(candles, symbol, botConfig = null) {
     confidence += 15; reason += 'London-Session ';
     confidence += 10; reason += 'Bearish-Momentum ';
     
-    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'london_breakout' };
+    // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+    // SL: Mid-range of Asian session (conservative)
+    const stopLossPrice = asianMid;
+    const slDistance = stopLossPrice - currentPrice;
+    
+    // TP: 1.5-2x the Asian range from the breakout point
+    const takeProfitPrice = asianLow - (asianRange * 2);
+    const tpDistance = currentPrice - takeProfitPrice;
+    
+    const slPips = Math.round(slDistance / pipSize);
+    const tpPips = Math.round(tpDistance / pipSize);
+    
+    signal = { 
+      type: 'sell', 
+      confidence: Math.min(confidence, 95), 
+      reason: reason.trim(), 
+      strategy: 'london_breakout',
+      stopLoss: stopLossPrice,
+      takeProfit: takeProfitPrice,
+      slPips: slPips,
+      tpPips: tpPips,
+      entryPrice: currentPrice
+    };
   }
   
   return signal;
@@ -2140,6 +2389,8 @@ function analyzeLondonBreakout(candles, symbol, botConfig = null) {
  * Identify institutional order blocks and trade rejections
  * - Find last bullish/bearish candle before major move
  * - Trade when price returns to that zone
+ * - SL: Just beyond the order block zone
+ * - TP: Target the liquidity above/below (where stops are resting)
  */
 function analyzeOrderBlock(candles, symbol, botConfig = null) {
   if (!candles || candles.length < 50) return null;
@@ -2151,6 +2402,14 @@ function analyzeOrderBlock(candles, symbol, botConfig = null) {
   const currentPrice = closes[closes.length - 1];
   const currentCandle = candles[candles.length - 1];
   const atr = calculateATR(candles, 14);
+  const pipSize = getPipSize(symbol);
+  const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
+  
+  // Find swing highs and lows for TP targeting
+  const recentHighs = highs.slice(-30);
+  const recentLows = lows.slice(-30);
+  const swingHigh = Math.max(...recentHighs);
+  const swingLow = Math.min(...recentLows);
   
   // Find order blocks - last opposite candle before strong move
   let bullishOB = null; // Last bearish candle before bullish move
@@ -2204,7 +2463,35 @@ function analyzeOrderBlock(candles, symbol, botConfig = null) {
       confidence += 15; reason += 'Price-In-Zone ';
       confidence += 10; reason += 'Rejection-Candle ';
       
-      signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'order_block' };
+      // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+      // SL: Just below the order block low + buffer
+      const slBuffer = atr * 0.3;
+      const stopLossPrice = bullishOB.low - slBuffer;
+      const slDistance = currentPrice - stopLossPrice;
+      
+      // TP: Target the swing high (liquidity above)
+      let takeProfitPrice = swingHigh;
+      const tpDistance = takeProfitPrice - currentPrice;
+      
+      // Ensure minimum 1:2 RR
+      if (tpDistance < slDistance * 2) {
+        takeProfitPrice = currentPrice + (slDistance * 2.5);
+      }
+      
+      const slPips = Math.round(slDistance / pipSize);
+      const tpPips = Math.round((takeProfitPrice - currentPrice) / pipSize);
+      
+      signal = { 
+        type: 'buy', 
+        confidence: Math.min(confidence, 95), 
+        reason: reason.trim(), 
+        strategy: 'order_block',
+        stopLoss: stopLossPrice,
+        takeProfit: takeProfitPrice,
+        slPips: slPips,
+        tpPips: tpPips,
+        entryPrice: currentPrice
+      };
     }
   }
   
@@ -2221,7 +2508,35 @@ function analyzeOrderBlock(candles, symbol, botConfig = null) {
       confidence += 15; reason += 'Price-In-Zone ';
       confidence += 10; reason += 'Rejection-Candle ';
       
-      signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'order_block' };
+      // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+      // SL: Just above the order block high + buffer
+      const slBuffer = atr * 0.3;
+      const stopLossPrice = bearishOB.high + slBuffer;
+      const slDistance = stopLossPrice - currentPrice;
+      
+      // TP: Target the swing low (liquidity below)
+      let takeProfitPrice = swingLow;
+      const tpDistance = currentPrice - takeProfitPrice;
+      
+      // Ensure minimum 1:2 RR
+      if (tpDistance < slDistance * 2) {
+        takeProfitPrice = currentPrice - (slDistance * 2.5);
+      }
+      
+      const slPips = Math.round(slDistance / pipSize);
+      const tpPips = Math.round((currentPrice - takeProfitPrice) / pipSize);
+      
+      signal = { 
+        type: 'sell', 
+        confidence: Math.min(confidence, 95), 
+        reason: reason.trim(), 
+        strategy: 'order_block',
+        stopLoss: stopLossPrice,
+        takeProfit: takeProfitPrice,
+        slPips: slPips,
+        tpPips: tpPips,
+        entryPrice: currentPrice
+      };
     }
   }
   
@@ -2233,6 +2548,8 @@ function analyzeOrderBlock(candles, symbol, botConfig = null) {
  * Trade bounces off Volume Weighted Average Price
  * - Buy when price below VWAP + RSI oversold
  * - Sell when price above VWAP + RSI overbought
+ * - SL: Beyond the recent extreme (lowest low or highest high)
+ * - TP: At or slightly past VWAP
  */
 function analyzeVWAPReversion(candles, symbol, botConfig = null) {
   if (!candles || candles.length < 30) return null;
@@ -2243,6 +2560,14 @@ function analyzeVWAPReversion(candles, symbol, botConfig = null) {
   const currentPrice = closes[closes.length - 1];
   const currentCandle = candles[candles.length - 1];
   const atr = calculateATR(candles, 14);
+  const pipSize = getPipSize(symbol);
+  const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
+  
+  // Find recent extremes for SL placement
+  const recentLows = lows.slice(-10);
+  const recentHighs = highs.slice(-10);
+  const recentSwingLow = Math.min(...recentLows);
+  const recentSwingHigh = Math.max(...recentHighs);
   
   // Calculate VWAP (using typical price * volume proxy from range)
   let cumulativeTPV = 0;
@@ -2290,7 +2615,35 @@ function analyzeVWAPReversion(candles, symbol, botConfig = null) {
     // Extra confidence if significantly below VWAP
     if (percentFromVWAP < -0.3) { confidence += 10; reason += 'Extended '; }
     
-    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'vwap_reversion' };
+    // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+    // SL: Just below the recent swing low (where the extreme was)
+    const slBuffer = atr * 0.3;
+    const stopLossPrice = recentSwingLow - slBuffer;
+    const slDistance = currentPrice - stopLossPrice;
+    
+    // TP: Target VWAP or slightly above (mean reversion target)
+    let takeProfitPrice = vwap + (atr * 0.5); // Slightly past VWAP
+    const tpDistance = takeProfitPrice - currentPrice;
+    
+    // Ensure minimum 1:1.5 RR for mean reversion (typically tighter)
+    if (tpDistance < slDistance * 1.5) {
+      takeProfitPrice = currentPrice + (slDistance * 2);
+    }
+    
+    const slPips = Math.round(slDistance / pipSize);
+    const tpPips = Math.round((takeProfitPrice - currentPrice) / pipSize);
+    
+    signal = { 
+      type: 'buy', 
+      confidence: Math.min(confidence, 95), 
+      reason: reason.trim(), 
+      strategy: 'vwap_reversion',
+      stopLoss: stopLossPrice,
+      takeProfit: takeProfitPrice,
+      slPips: slPips,
+      tpPips: tpPips,
+      entryPrice: currentPrice
+    };
   }
   
   // 🔴 SELL: Above VWAP + RSI overbought + bearish candle
@@ -2304,7 +2657,35 @@ function analyzeVWAPReversion(candles, symbol, botConfig = null) {
     
     if (percentFromVWAP > 0.3) { confidence += 10; reason += 'Extended '; }
     
-    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'vwap_reversion' };
+    // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+    // SL: Just above the recent swing high (where the extreme was)
+    const slBuffer = atr * 0.3;
+    const stopLossPrice = recentSwingHigh + slBuffer;
+    const slDistance = stopLossPrice - currentPrice;
+    
+    // TP: Target VWAP or slightly below (mean reversion target)
+    let takeProfitPrice = vwap - (atr * 0.5); // Slightly past VWAP
+    const tpDistance = currentPrice - takeProfitPrice;
+    
+    // Ensure minimum 1:1.5 RR for mean reversion
+    if (tpDistance < slDistance * 1.5) {
+      takeProfitPrice = currentPrice - (slDistance * 2);
+    }
+    
+    const slPips = Math.round(slDistance / pipSize);
+    const tpPips = Math.round((currentPrice - takeProfitPrice) / pipSize);
+    
+    signal = { 
+      type: 'sell', 
+      confidence: Math.min(confidence, 95), 
+      reason: reason.trim(), 
+      strategy: 'vwap_reversion',
+      stopLoss: stopLossPrice,
+      takeProfit: takeProfitPrice,
+      slPips: slPips,
+      tpPips: tpPips,
+      entryPrice: currentPrice
+    };
   }
   
   return signal;
@@ -2316,6 +2697,8 @@ function analyzeVWAPReversion(candles, symbol, botConfig = null) {
  * - Find recent swing
  * - Wait for pullback to 50-61.8%
  * - Enter on rejection candle
+ * - SL: Just beyond the 78.6% fib level
+ * - TP: At or past the previous swing high/low (127.2% or 161.8% extension)
  */
 function analyzeFibonacciContinuation(candles, symbol, botConfig = null) {
   if (!candles || candles.length < 50) return null;
@@ -2326,6 +2709,8 @@ function analyzeFibonacciContinuation(candles, symbol, botConfig = null) {
   const currentPrice = closes[closes.length - 1];
   const currentCandle = candles[candles.length - 1];
   const atr = calculateATR(candles, 14);
+  const pipSize = getPipSize(symbol);
+  const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   
   // Find recent swing high and low (last 30 candles)
   const recentCandles = candles.slice(-30);
@@ -2343,6 +2728,11 @@ function analyzeFibonacciContinuation(candles, symbol, botConfig = null) {
   const fib382 = isUpswing ? swingHigh - swingRange * 0.382 : swingLow + swingRange * 0.382;
   const fib50 = isUpswing ? swingHigh - swingRange * 0.5 : swingLow + swingRange * 0.5;
   const fib618 = isUpswing ? swingHigh - swingRange * 0.618 : swingLow + swingRange * 0.618;
+  const fib786 = isUpswing ? swingHigh - swingRange * 0.786 : swingLow + swingRange * 0.786;
+  
+  // Fibonacci extensions for TP
+  const fib127 = isUpswing ? swingHigh + swingRange * 0.272 : swingLow - swingRange * 0.272;
+  const fib161 = isUpswing ? swingHigh + swingRange * 0.618 : swingLow - swingRange * 0.618;
   
   // Check if price is at 50-61.8% retracement
   let atFibLevel = false;
@@ -2383,7 +2773,35 @@ function analyzeFibonacciContinuation(candles, symbol, botConfig = null) {
     confidence += 15; reason += `At-Fib-${fibLevel} `;
     confidence += 15; reason += 'Rejection-Candle ';
     
-    signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'fibonacci_continuation' };
+    // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+    // SL: Just below the 78.6% fib level (invalidation point)
+    const slBuffer = atr * 0.2;
+    const stopLossPrice = fib786 - slBuffer;
+    const slDistance = currentPrice - stopLossPrice;
+    
+    // TP: Target the swing high or 127.2% extension
+    let takeProfitPrice = swingHigh > currentPrice ? swingHigh : fib127;
+    const tpDistance = takeProfitPrice - currentPrice;
+    
+    // Ensure minimum 1:2 RR
+    if (tpDistance < slDistance * 2) {
+      takeProfitPrice = currentPrice + (slDistance * 2.5);
+    }
+    
+    const slPips = Math.round(slDistance / pipSize);
+    const tpPips = Math.round((takeProfitPrice - currentPrice) / pipSize);
+    
+    signal = { 
+      type: 'buy', 
+      confidence: Math.min(confidence, 95), 
+      reason: reason.trim(), 
+      strategy: 'fibonacci_continuation',
+      stopLoss: stopLossPrice,
+      takeProfit: takeProfitPrice,
+      slPips: slPips,
+      tpPips: tpPips,
+      entryPrice: currentPrice
+    };
   }
   
   // 🔴 SELL: Downswing + at fib 50-61.8% + bearish rejection
@@ -2395,7 +2813,35 @@ function analyzeFibonacciContinuation(candles, symbol, botConfig = null) {
     confidence += 15; reason += `At-Fib-${fibLevel} `;
     confidence += 15; reason += 'Rejection-Candle ';
     
-    signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'fibonacci_continuation' };
+    // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+    // SL: Just above the 78.6% fib level (invalidation point)
+    const slBuffer = atr * 0.2;
+    const stopLossPrice = fib786 + slBuffer;
+    const slDistance = stopLossPrice - currentPrice;
+    
+    // TP: Target the swing low or 127.2% extension
+    let takeProfitPrice = swingLow < currentPrice ? swingLow : fib127;
+    const tpDistance = currentPrice - takeProfitPrice;
+    
+    // Ensure minimum 1:2 RR
+    if (tpDistance < slDistance * 2) {
+      takeProfitPrice = currentPrice - (slDistance * 2.5);
+    }
+    
+    const slPips = Math.round(slDistance / pipSize);
+    const tpPips = Math.round((currentPrice - takeProfitPrice) / pipSize);
+    
+    signal = { 
+      type: 'sell', 
+      confidence: Math.min(confidence, 95), 
+      reason: reason.trim(), 
+      strategy: 'fibonacci_continuation',
+      stopLoss: stopLossPrice,
+      takeProfit: takeProfitPrice,
+      slPips: slPips,
+      tpPips: tpPips,
+      entryPrice: currentPrice
+    };
   }
   
   return signal;
@@ -2406,6 +2852,8 @@ function analyzeFibonacciContinuation(candles, symbol, botConfig = null) {
  * More precise divergence detection
  * - Price makes lower low but RSI makes higher low (bullish)
  * - Price makes higher high but RSI makes lower high (bearish)
+ * - SL: Just beyond the divergence swing point
+ * - TP: Target the previous swing high/low (reversal target)
  */
 function analyzeRSIDivergence(candles, symbol, botConfig = null) {
   if (!candles || candles.length < 50) return null;
@@ -2416,9 +2864,17 @@ function analyzeRSIDivergence(candles, symbol, botConfig = null) {
   const currentPrice = closes[closes.length - 1];
   const currentCandle = candles[candles.length - 1];
   const atr = calculateATR(candles, 14);
+  const pipSize = getPipSize(symbol);
+  const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   
   const rsi = calculateRSI(closes, 14);
   const currentRSI = rsi[rsi.length - 1];
+  
+  // Find swing highs for TP targeting
+  const recentHighs = highs.slice(-30);
+  const recentLows = lows.slice(-30);
+  const swingHigh = Math.max(...recentHighs);
+  const swingLow = Math.min(...recentLows);
   
   // Find swing points in last 30 candles
   const lookback = 30;
@@ -2463,7 +2919,35 @@ function analyzeRSIDivergence(candles, symbol, botConfig = null) {
       confidence += 10; reason += `RSI(${currentRSI.toFixed(0)}) `;
       confidence += 10; reason += 'Confirm-Candle ';
       
-      signal = { type: 'buy', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'rsi_divergence' };
+      // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+      // SL: Just below the recent divergence low (the swing low)
+      const slBuffer = atr * 0.3;
+      const stopLossPrice = recent.price - slBuffer;
+      const slDistance = currentPrice - stopLossPrice;
+      
+      // TP: Target the previous swing high (reversal target)
+      let takeProfitPrice = swingHigh;
+      const tpDistance = takeProfitPrice - currentPrice;
+      
+      // Ensure minimum 1:2 RR
+      if (tpDistance < slDistance * 2) {
+        takeProfitPrice = currentPrice + (slDistance * 2.5);
+      }
+      
+      const slPips = Math.round(slDistance / pipSize);
+      const tpPips = Math.round((takeProfitPrice - currentPrice) / pipSize);
+      
+      signal = { 
+        type: 'buy', 
+        confidence: Math.min(confidence, 95), 
+        reason: reason.trim(), 
+        strategy: 'rsi_divergence',
+        stopLoss: stopLossPrice,
+        takeProfit: takeProfitPrice,
+        slPips: slPips,
+        tpPips: tpPips,
+        entryPrice: currentPrice
+      };
     }
   }
   
@@ -2483,7 +2967,35 @@ function analyzeRSIDivergence(candles, symbol, botConfig = null) {
       confidence += 10; reason += `RSI(${currentRSI.toFixed(0)}) `;
       confidence += 10; reason += 'Confirm-Candle ';
       
-      signal = { type: 'sell', confidence: Math.min(confidence, 95), reason: reason.trim(), strategy: 'rsi_divergence' };
+      // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
+      // SL: Just above the recent divergence high (the swing high)
+      const slBuffer = atr * 0.3;
+      const stopLossPrice = recent.price + slBuffer;
+      const slDistance = stopLossPrice - currentPrice;
+      
+      // TP: Target the previous swing low (reversal target)
+      let takeProfitPrice = swingLow;
+      const tpDistance = currentPrice - takeProfitPrice;
+      
+      // Ensure minimum 1:2 RR
+      if (tpDistance < slDistance * 2) {
+        takeProfitPrice = currentPrice - (slDistance * 2.5);
+      }
+      
+      const slPips = Math.round(slDistance / pipSize);
+      const tpPips = Math.round((currentPrice - takeProfitPrice) / pipSize);
+      
+      signal = { 
+        type: 'sell', 
+        confidence: Math.min(confidence, 95), 
+        reason: reason.trim(), 
+        strategy: 'rsi_divergence',
+        stopLoss: stopLossPrice,
+        takeProfit: takeProfitPrice,
+        slPips: slPips,
+        tpPips: tpPips,
+        entryPrice: currentPrice
+      };
     }
   }
   
@@ -2526,11 +3038,11 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
   const pipSize = getPipSize(symbol);
   const isGold = symbol.includes('XAU') || symbol.includes('GOLD');
   
-  // Run all strategies
+  // Run all strategies - collect ALL signals regardless of confidence
   for (const strategy of strategies) {
     try {
       const signal = strategy.fn(candles, symbol, botConfig);
-      if (signal && signal.confidence >= 50) {
+      if (signal) {
         signals.push({
           ...signal,
           strategyName: strategy.name,
@@ -2569,106 +3081,46 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
   // Apply confluence bonus
   bestSignal.confidence = Math.min(95, bestSignal.confidence + confluenceBonus);
   
-  // Set SL/TP based on the strategy that produced the signal
-  let slPips, tpPips;
+  // ================================================================
+  // USE THE SL/TP ALREADY CALCULATED BY THE STRATEGY
+  // Each strategy calculates proper structure-based SL/TP
+  // This ensures SL/TP are based on actual market levels that WILL get hit
+  // ================================================================
   
-  switch (bestSignal.strategy) {
-    case 'macd_divergence':
-      // MACD divergence = reversal, use wider stops
-      slPips = isGold ? 350 : 35;
-      tpPips = isGold ? 600 : 60;
-      break;
-    case 'bollinger_breakout':
-      // Breakout = momentum, medium stops
-      slPips = isGold ? 250 : 25;
-      tpPips = isGold ? 500 : 50;
-      break;
-    case 'bollinger_reversion':
-      // Mean reversion = tight stops
-      slPips = isGold ? 200 : 20;
-      tpPips = isGold ? 350 : 35;
-      break;
-    case 'double_top':
-    case 'double_bottom':
-      // Pattern = measured move
-      slPips = isGold ? 300 : 30;
-      tpPips = isGold ? 550 : 55;
-      break;
-    case 'ema_ribbon':
-      // Trend following = trail with wider stops
-      slPips = isGold ? 400 : 40;
-      tpPips = isGold ? 700 : 70;
-      break;
-    case 'support_bounce':
-    case 'resistance_reject':
-      // S/R bounce = tight SL just beyond level
-      slPips = isGold ? 200 : 20;
-      tpPips = isGold ? 400 : 40;
-      break;
-      
-    // 🚀 NEW HIGH WIN-RATE STRATEGIES SL/TP
-    case 'ema200_pullback':
-      // EMA200 Pullback = high win rate, 1:2 RR
-      slPips = isGold ? 150 : 15;  // Tight SL below recent swing
-      tpPips = isGold ? 400 : 40;  // 1:2.5+ RR
-      break;
-    case 'break_retest':
-      // Break & Retest = SL behind retest zone, TP next structure
-      slPips = isGold ? 200 : 20;
-      tpPips = isGold ? 500 : 50;  // 1:2.5 RR
-      break;
-    case 'liquidity_sweep':
-      // SMC Liquidity Sweep = SL at sweep wick
-      slPips = isGold ? 180 : 18;  // Tight, at sweep wick
-      tpPips = isGold ? 450 : 45;  // Target opposite liquidity
-      break;
-    case 'london_breakout':
-      // London Breakout = SL mid range, TP 2x range
-      slPips = isGold ? 200 : 20;
-      tpPips = isGold ? 400 : 40;  // 2x Asian range
-      break;
-    case 'order_block':
-      // Order Block = SL at OB boundary
-      slPips = isGold ? 200 : 20;
-      tpPips = isGold ? 450 : 45;  // Liquidity target
-      break;
-    case 'vwap_reversion':
-      // VWAP Mean Reversion = tight SL, target VWAP
-      slPips = isGold ? 150 : 15;
-      tpPips = isGold ? 350 : 35;
-      break;
-    case 'fibonacci_continuation':
-      // Fibonacci = SL beyond fib level, TP at extension
-      slPips = isGold ? 200 : 20;
-      tpPips = isGold ? 500 : 50;  // 1:2.5 RR
-      break;
-    case 'rsi_divergence':
-      // RSI Divergence = reversal, wider stops
-      slPips = isGold ? 250 : 25;
-      tpPips = isGold ? 550 : 55;  // 1:2+ RR
-      break;
-      
-    default:
-      // Use botConfig defaults
-      slPips = isGold ? (botConfig?.goldSLPips || 300) : (botConfig?.stopLossPips || 30);
-      tpPips = isGold ? (botConfig?.goldTPPips || 500) : (botConfig?.takeProfitPips || 50);
+  // The strategy should have already calculated these values
+  // If not present for some reason, fall back to ATR-based defaults
+  let stopLoss = bestSignal.stopLoss;
+  let takeProfit = bestSignal.takeProfit;
+  let slPips = bestSignal.slPips;
+  let tpPips = bestSignal.tpPips;
+  
+  // Fallback only if strategy didn't calculate SL/TP
+  if (!stopLoss || !takeProfit) {
+    console.log(`  ⚠️ ${symbol}: Strategy ${bestSignal.strategy} missing SL/TP - using ATR fallback`);
+    const isBuy = bestSignal.type === 'buy';
+    const atrMultiplierSL = isGold ? 1.5 : 1.5;
+    const atrMultiplierTP = isGold ? 3 : 3;
+    
+    slPips = Math.round((atr * atrMultiplierSL) / pipSize);
+    tpPips = Math.round((atr * atrMultiplierTP) / pipSize);
+    
+    stopLoss = isBuy ? currentPrice - (slPips * pipSize) : currentPrice + (slPips * pipSize);
+    takeProfit = isBuy ? currentPrice + (tpPips * pipSize) : currentPrice - (tpPips * pipSize);
   }
-  
-  const isBuy = bestSignal.type === 'buy';
   
   return {
     symbol,
     type: bestSignal.type,
     entryPrice: currentPrice,
-    stopLoss: isBuy ? currentPrice - (slPips * pipSize) : currentPrice + (slPips * pipSize),
-    takeProfit: isBuy ? currentPrice + (tpPips * pipSize) : currentPrice - (tpPips * pipSize),
+    stopLoss: stopLoss,
+    takeProfit: takeProfit,
     volume: 0.01,
     confidence: bestSignal.confidence,
     reason: bestSignal.reason,
     atr,
     strategy: bestSignal.strategy,
-    slPips,
-    tpPips,
+    slPips: slPips,
+    tpPips: tpPips,
     confluenceCount: Math.max(buySignals.length, sellSignals.length),
   };
 }
@@ -3952,11 +4404,8 @@ async function executeRobotTrade(robot) {
           console.log(`  ${emoji} ${symbol}: ${botStrategy.toUpperCase()} via [${signal.strategy}] ${signal.type} (${signal.confidence}%) SL=${signal.slPips}pips TP=${signal.tpPips}pips - ${signal.reason}`);
         }
         
-        // Use BOT-SPECIFIC minimum confidence
-        if (!signal || signal.confidence < botMinConfidence) {
-          if (signal) {
-            skippedSymbols.push(`${symbol}(${signal.confidence}%<${botMinConfidence}%)`);
-          }
+        // Skip only if NO signal at all (strategy returned null)
+        if (!signal) {
           continue;
         }
         
