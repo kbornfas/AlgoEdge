@@ -34,6 +34,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if user registered with Google (no password)
+    if (!user.passwordHash) {
+      return NextResponse.json(
+        { error: 'This account was created with Google. Please sign in with Google instead.' },
+        { status: 401 }
+      );
+    }
+
     // Verify password
     const isPasswordValid = await comparePassword(
       validatedData.password,
