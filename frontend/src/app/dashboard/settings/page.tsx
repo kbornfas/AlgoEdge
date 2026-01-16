@@ -1480,13 +1480,17 @@ export default function SettingsPage() {
               <Button
                 fullWidth
                 variant="contained"
+                component="a"
+                href={telegramConnectLink || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
                 startIcon={<Send size={18} />}
-                onClick={handleOpenTelegramLink}
                 disabled={!telegramConnectLink}
                 sx={{ 
                   bgcolor: '#0088cc', 
                   '&:hover': { bgcolor: '#006699' },
-                  py: 1.5
+                  py: 1.5,
+                  textDecoration: 'none',
                 }}
               >
                 Open @Algoedge_rs_bot in Telegram
