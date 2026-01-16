@@ -167,10 +167,12 @@ model UserSettings {
   takeProfitPercent  Decimal  @default(5.0) @map("take_profit_percent") @db.Decimal(5, 2)
   autoCloseProfit    Boolean  @default(false) @map("auto_close_profit")
   theme              String   @default("dark") @db.VarChar(20)
+  telegramChatId     String?  @map("telegram_chat_id") @db.VarChar(50)
+  telegramAlerts     Boolean  @default(true) @map("telegram_alerts")
+  telegramUsername   String?  @map("telegram_username") @db.VarChar(100)
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
-  telegram_username  String?  @db.VarChar(100)
-  users              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_settings")
 }
