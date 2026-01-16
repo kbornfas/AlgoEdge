@@ -179,12 +179,20 @@ export default function SettingsPage() {
 
       if (response.ok) {
         const data = await response.json();
+        // Profile API returns data directly (not nested under 'user')
         setProfile({
-          fullName: data.user.fullName || '',
-          email: data.user.email || '',
-          username: data.user.username || '',
-          phone: data.user.phone || '',
+          fullName: data.fullName || '',
+          email: data.email || '',
+          username: data.username || '',
+          phone: data.phone || '',
         });
+        
+        // Set 2FA status from user data
+        setSecurity(prev => ({
+          ...prev,
+          twoFactorEnabled: data.twoFaEnabled || false,
+        }));
+        
         if (data.settings) {
           setNotifications({
             emailNotifications: data.settings.emailNotifications ?? true,
@@ -195,9 +203,6 @@ export default function SettingsPage() {
           });
           if (data.settings.tradingPrefs) {
             setTradingPrefs(prev => ({ ...prev, ...data.settings.tradingPrefs }));
-          }
-          if (data.settings.security) {
-            setSecurity(prev => ({ ...prev, ...data.settings.security }));
           }
         }
       }
