@@ -171,49 +171,6 @@ export default function DashboardPage() {
         </Button>
       </Box>
 
-      {/* Payment Status Alert */}
-      {!loading && !paymentStatus?.isActivated && (
-        <Alert
-          severity={paymentStatus?.paymentStatus === 'pending' ? 'info' : 'warning'}
-          sx={{ mb: 4 }}
-          icon={<AlertCircle size={24} />}
-          action={
-            paymentStatus?.paymentStatus === 'pending' && (
-              <Button
-                component={Link}
-                href="/payment-proof"
-                variant="contained"
-                size="small"
-                startIcon={<Upload size={16} />}
-              >
-                Submit Payment
-              </Button>
-            )
-          }
-        >
-          <AlertTitle>
-            {paymentStatus?.paymentStatus === 'submitted'
-              ? 'Payment Under Review'
-              : paymentStatus?.paymentStatus === 'rejected'
-              ? 'Payment Rejected'
-              : 'Account Not Activated'}
-          </AlertTitle>
-          {paymentStatus?.paymentStatus === 'submitted' ? (
-            <Typography variant="body2">
-              Your payment proof is under admin review. You will be notified once approved.
-            </Typography>
-          ) : paymentStatus?.paymentStatus === 'rejected' ? (
-            <Typography variant="body2">
-              Your payment proof was rejected. Please submit a valid payment proof.
-            </Typography>
-          ) : (
-            <Typography variant="body2">
-              Please submit your payment proof to activate your account.
-            </Typography>
-          )}
-        </Alert>
-      )}
-
       {/* MT5 Connection Alert */}
       {!loading && !isAccountConnected && (
         <Alert
