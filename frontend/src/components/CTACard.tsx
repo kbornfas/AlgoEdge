@@ -21,7 +21,7 @@ export default function CTACard({
   buttonText,
   buttonIcon,
   buttonHref,
-  buttonColor = '#3B82F6',
+  buttonColor = '#10B981',
   buttonHoverColor,
   iconColor,
   ariaLabel,

@@ -2,14 +2,14 @@
 
 import { createTheme } from '@mui/material/styles';
 
-// AlgoEdge Dark Theme with Blue Accents
+// AlgoEdge Dark Theme with Green Accents
 const theme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#3B82F6', // Blue
-      light: '#60A5FA',
-      dark: '#2563EB',
+      main: '#10B981', // Green
+      light: '#34D399',
+      dark: '#059669',
       contrastText: '#FFFFFF',
     },
     secondary: {
@@ -39,14 +39,14 @@ const theme = createTheme({
       dark: '#0891B2',
     },
     background: {
-      default: '#0F172A', // Dark blue background
-      paper: '#1E293B',   // Lighter dark blue for cards
+      default: '#000000', // Total black background for dashboard
+      paper: '#0a0a0a',   // Very dark for cards
     },
     text: {
       primary: '#F1F5F9',
       secondary: '#94A3B8',
     },
-    divider: '#334155',
+    divider: '#1a1a1a',
   },
   typography: {
     fontFamily: [
@@ -102,7 +102,7 @@ const theme = createTheme({
         contained: {
           boxShadow: 'none',
           '&:hover': {
-            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
           },
         },
       },
@@ -112,7 +112,7 @@ const theme = createTheme({
         root: {
           backgroundImage: 'none',
           borderRadius: 16,
-          border: '1px solid #334155',
+          border: '1px solid #1a1a1a',
         },
       },
     },

@@ -124,7 +124,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      <body style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: 'transparent' }}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
           {children}

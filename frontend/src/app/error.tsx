@@ -46,7 +46,7 @@ export default function Error({
             sx={{
               fontWeight: 700,
               mb: 2,
-              background: 'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)',
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}

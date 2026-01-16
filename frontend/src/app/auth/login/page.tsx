@@ -20,6 +20,7 @@ import { Eye, EyeOff, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import CTACard from '@/components/CTACard';
+import AuthBackground from '@/components/AuthBackground';
 
 // Instagram icon component
 const InstagramIcon = () => (
@@ -116,11 +117,12 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: 'background.default',
+        position: 'relative',
         py: 4,
       }}
     >
-      <Container maxWidth="md">
+      <AuthBackground />
+      <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
         {/* Login Form */}
         <Card sx={{ mb: 4 }}>
           <CardContent sx={{ p: 4 }}>

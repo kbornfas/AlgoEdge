@@ -88,321 +88,227 @@ const RISK_CONFIG = {
 };
 
 // =========================================================================
-// BOT CONFIGURATION - Each bot has STRICT rules for its specific strategy
-// SL/TP values are in PIPS and MUST be used - these are the actual distances
+// BOT CONFIGURATION - 8 Core Strategies
+// Each bot uses a specific proven strategy with STRICT SL/TP rules
 // =========================================================================
 const BOT_CONFIG = {
   // =====================================================================
-  // SCALPER - Quick in-and-out trades on small moves (5-15 pips)
-  // RULES: Tight SL (10-15 pips), Quick TP (15-25 pips), 1:1.5 R:R
+  // EMA 200 PULLBACK PRO - High Win Rate Trend Strategy
+  // Uses EMA200/50 alignment with RSI neutral zone pullback entries
+  // RULES: SL below swing (10-20 pips), TP 1:2 or 1:3 R:R
   // =====================================================================
-  'algoedge-scalper': {
+  'ema-pullback': {
     canTrade: true,
-    strategy: 'scalping',
-    description: 'Ultra-fast scalping - targets 5-15 pip moves',
-    allowedPairs: ['XAUUSD'],  // Focus only on Gold
-    timeframes: ['m1', 'm5'],
-    minConfidence: 55,          // Need decent confidence for scalps
-    maxLotSize: 0.5,            // Can use up to 0.5 lots for scalps
-    maxPositions: 3,
-    cooldownMs: 60000,          // 1 min cooldown
-    // STRICT SL/TP VALUES - MUST BE HIT
-    takeProfitPips: 20,         // 20 pips TP (realistic for scalp)
-    stopLossPips: 12,           // 12 pips SL (tight)
-    goldTPPips: 150,            // Gold: 150 cents TP
-    goldSLPips: 100,            // Gold: 100 cents SL
-    riskRewardMin: 1.5,
-    rules: {
-      checkSpread: true,
-      maxSpreadPips: 2,
-      needsVolatility: false,
-      avoidNews: true,          // Avoid news for scalping
-      sessionFilter: ['london', 'newyork'],
-    }
-  },
-  
-  // =====================================================================
-  // MOMENTUM - Rides strong momentum with RSI/MACD confirmation
-  // RULES: Medium SL (25-30 pips), Good TP (40-50 pips), 1:1.5-2 R:R
-  // =====================================================================
-  'algoedge-momentum': {
-    canTrade: true,
-    strategy: 'momentum',
-    description: 'Momentum trading - catches strong directional moves',
-    allowedPairs: ['XAUUSD'],  // Focus only on Gold
-    timeframes: ['m5', 'm15'],
-    minConfidence: 55,
-    maxLotSize: 0.8,            // Can use bigger lots on momentum
-    maxPositions: 3,
-    cooldownMs: 120000,         // 2 min cooldown
-    takeProfitPips: 45,         // 45 pips TP
-    stopLossPips: 25,           // 25 pips SL
-    goldTPPips: 350,            // Gold: $3.50 TP
-    goldSLPips: 200,            // Gold: $2.00 SL
-    riskRewardMin: 1.5,
-    rules: {
-      needsRSIExtreme: false,
-      needsMACDAlignment: false,
-      minMomentumStrength: 40,
-      avoidConsolidation: true,
-    }
-  },
-  
-  // =====================================================================
-  // TREND HUNTER - Follows established trends with EMA crossovers
-  // RULES: Medium-wide SL (30-40 pips), Wide TP (60-80 pips), 2:1 R:R
-  // =====================================================================
-  'algoedge-trend-m15': {
-    canTrade: true,
-    strategy: 'trend',
-    description: 'Trend following - rides medium-term trends',
-    allowedPairs: ['XAUUSD'],  // Focus only on Gold
-    timeframes: ['m15', 'm30', 'h1'],
-    minConfidence: 55,
-    maxLotSize: 0.8,
-    maxPositions: 4,
-    cooldownMs: 180000,         // 3 min cooldown
-    takeProfitPips: 70,         // 70 pips TP
-    stopLossPips: 35,           // 35 pips SL
-    goldTPPips: 500,            // Gold: $5.00 TP
-    goldSLPips: 250,            // Gold: $2.50 SL
-    riskRewardMin: 2.0,
-    rules: {
-      needsEMACrossover: false,
-      needsADXFilter: false,
-      minADX: 15,
-      trendAlignment: true,
-    }
-  },
-  
-  // =====================================================================
-  // BREAKOUT PRO - Trades breakouts from consolidation zones
-  // RULES: SL just inside range (20-30 pips), TP 2x range (50-60 pips)
-  // =====================================================================
-  'algoedge-breakout': {
-    canTrade: true,
-    strategy: 'breakout',
-    description: 'Breakout trading - catches moves from key levels',
-    allowedPairs: ['XAUUSD'],  // Focus only on Gold
-    timeframes: ['m30', 'h1'],
-    minConfidence: 60,          // Need higher confidence for breakouts
-    maxLotSize: 0.7,
-    maxPositions: 3,
-    cooldownMs: 300000,         // 5 min cooldown
-    takeProfitPips: 55,         // 55 pips TP
-    stopLossPips: 25,           // 25 pips SL
-    goldTPPips: 450,            // Gold: $4.50 TP
-    goldSLPips: 200,            // Gold: $2.00 SL
-    riskRewardMin: 2.0,
-    rules: {
-      needsConsolidation: false,
-      needsVolumeSpike: false,
-      minConsolidationBars: 5,
-      confirmationClose: true,  // Wait for candle close
-    }
-  },
-  
-  // =====================================================================
-  // SWING MASTER - Multi-day swing trades on H1/H4
-  // RULES: Wide SL (50-80 pips), Very wide TP (100-150 pips), 2:1+ R:R
-  // =====================================================================
-  'algoedge-swing-h1': {
-    canTrade: true,
-    strategy: 'swing',
-    description: 'Swing trading - captures larger market moves',
-    allowedPairs: ['XAUUSD'],  // Focus only on Gold
-    timeframes: ['h1', 'h4'],
+    strategy: 'ema_pullback',
+    description: 'EMA200/50 trend + pullback with RSI 40-60 neutral zone',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'AUDUSD'],
+    timeframes: ['m5', 'm15', 'h1', 'h4'],
     minConfidence: 60,
-    maxLotSize: 0.5,            // Smaller lots for swing (wider SL)
-    maxPositions: 3,
-    cooldownMs: 600000,         // 10 min cooldown
-    takeProfitPips: 120,        // 120 pips TP
-    stopLossPips: 55,           // 55 pips SL
-    goldTPPips: 800,            // Gold: $8.00 TP
-    goldSLPips: 400,            // Gold: $4.00 SL
-    riskRewardMin: 2.0,
-    rules: {
-      needsHigherTFAlignment: false,
-      needsClearStructure: true,
-      minSwingPotential: 50,
-      avoidRanging: true,
-    }
-  },
-  
-  // =====================================================================
-  // GOLD HUNTER - Specialized for XAUUSD volatility
-  // RULES: Medium-wide SL (200-300 cents), Wide TP (400-500 cents)
-  // Gold moves ~$2-5 per day, so SL/TP must be appropriate
-  // =====================================================================
-  'algoedge-gold-hunter': {
-    canTrade: true,
-    strategy: 'gold',
-    description: 'Gold specialist - trades XAUUSD with volatility filters',
-    allowedPairs: ['XAUUSD'],   // Gold only
-    timeframes: ['m15', 'm30', 'h1'],
-    minConfidence: 55,
-    maxLotSize: 0.3,            // Smaller lots for gold (high volatility)
-    maxPositions: 2,
-    cooldownMs: 300000,         // 5 min cooldown
-    takeProfitPips: 400,        // Gold: $4.00 TP (400 cents)
-    stopLossPips: 200,          // Gold: $2.00 SL (200 cents)
-    goldTPPips: 400,            // Same as above (it's gold-specific)
-    goldSLPips: 200,
-    riskRewardMin: 2.0,
-    rules: {
-      sessionFilter: ['london', 'newyork'],
-      maxATR: 600,
-      minATR: 50,
-      avoidExtremeVolatility: true,
-    }
-  },
-  
-  // =====================================================================
-  // POSITION TRADER - Long-term trades on H4/Daily
-  // RULES: Very wide SL (80-100 pips), Very wide TP (200-300 pips)
-  // =====================================================================
-  'algoedge-position-h4': {
-    canTrade: true,
-    strategy: 'position',
-    description: 'Position trading - long-term trend following',
-    allowedPairs: ['XAUUSD'],  // Focus only on Gold
-    timeframes: ['h4', 'd1'],
-    minConfidence: 65,          // Need higher confidence for position
-    maxLotSize: 0.4,            // Smaller lots for position (very wide SL)
-    maxPositions: 3,
-    cooldownMs: 1800000,        // 30 min cooldown
-    takeProfitPips: 200,        // 200 pips TP
-    stopLossPips: 80,           // 80 pips SL
-    goldTPPips: 1000,           // Gold: $10.00 TP
-    goldSLPips: 500,            // Gold: $5.00 SL
-    riskRewardMin: 2.5,
-    rules: {
-      needsDailyTrendConfirm: true,
-      needsWeeklyAlignment: false,
-      minTrendStrength: 50,
-      avoidMajorNews: true,
-    }
-  },
-  
-  // =====================================================================
-  // DAILY SNIPER - High-accuracy daily chart setups
-  // RULES: Wide SL (60-80 pips), Wide TP (150-200 pips), 2.5:1 R:R
-  // =====================================================================
-  'algoedge-daily-sniper': {
-    canTrade: true,
-    strategy: 'sniper',
-    description: 'Daily sniper - precision entries on D1 chart',
-    allowedPairs: ['XAUUSD'],  // Focus only on Gold
-    timeframes: ['d1'],
-    minConfidence: 70,          // High confidence required for sniper
     maxLotSize: 0.5,
-    maxPositions: 2,
-    cooldownMs: 3600000,        // 1 hour cooldown
-    takeProfitPips: 180,        // 180 pips TP
-    stopLossPips: 70,           // 70 pips SL
-    goldTPPips: 900,            // Gold: $9.00 TP
-    goldSLPips: 400,            // Gold: $4.00 SL
-    riskRewardMin: 2.5,
+    maxPositions: 3,
+    cooldownMs: 180000,         // 3 min cooldown
+    takeProfitPips: 45,         // 1:2 R:R
+    stopLossPips: 20,           // Below recent swing
+    goldTPPips: 350,            // Gold: $3.50 TP
+    goldSLPips: 150,            // Gold: $1.50 SL
+    riskRewardMin: 2.0,
     rules: {
-      needsKeyLevel: true,
-      needsCandlePattern: false,
-      dailyCloseEntry: false,
+      needsEMA200Above: true,   // Price above EMA200 for buy
+      needsEMA50Above200: true, // EMA50 above EMA200 for buy
+      rsiNeutral: [40, 60],     // RSI between 40-60
+      needsPullback: true,      // Price pulls back to EMA50
+      confirmationCandle: true, // Bullish/bearish candle close
     }
   },
   
   // =====================================================================
-  // NEWS TRADER - Trades around high-impact news events
-  // RULES: Tight SL (30-40 pips), Quick TP (50-60 pips) post-news
+  // BREAK & RETEST - Institutional Favorite
+  // Trades breakouts with confirmed retests
+  // RULES: SL behind retest zone, TP at next structure level
   // =====================================================================
-  'algoedge-news-trader': {
+  'break-retest': {
     canTrade: true,
-    strategy: 'news',
-    description: 'News trading - capitalizes on high-impact events',
-    allowedPairs: ['XAUUSD'],  // Focus only on Gold
+    strategy: 'break_retest',
+    description: 'Breakout + retest of support/resistance levels',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'EURJPY', 'GBPJPY'],
+    timeframes: ['m5', 'm15', 'h1'],
+    minConfidence: 60,
+    maxLotSize: 0.5,
+    maxPositions: 3,
+    cooldownMs: 300000,         // 5 min cooldown
+    takeProfitPips: 50,         // Next structure level
+    stopLossPips: 25,           // Behind retest zone
+    goldTPPips: 400,            // Gold: $4.00 TP
+    goldSLPips: 200,            // Gold: $2.00 SL
+    riskRewardMin: 2.0,
+    rules: {
+      needsBreakout: true,      // Price breaks S/R
+      needsRetest: true,        // Wait for price to retest
+      confirmationCandle: true, // Bullish/bearish confirmation
+      volumeFilter: false,      // Optional volume spike
+    }
+  },
+  
+  // =====================================================================
+  // LIQUIDITY SWEEP SMC - Smart Money Concept
+  // Detects liquidity sweeps + market structure shifts
+  // RULES: SL at sweep wick, TP at opposite liquidity
+  // =====================================================================
+  'liquidity-sweep': {
+    canTrade: true,
+    strategy: 'liquidity_sweep',
+    description: 'SMC liquidity sweep + market structure shift',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDJPY'],
     timeframes: ['m5', 'm15'],
+    minConfidence: 60,
+    maxLotSize: 0.4,
+    maxPositions: 3,
+    cooldownMs: 180000,         // 3 min cooldown
+    takeProfitPips: 40,         // Opposite liquidity
+    stopLossPips: 20,           // At sweep wick
+    goldTPPips: 300,            // Gold: $3.00 TP
+    goldSLPips: 150,            // Gold: $1.50 SL
+    riskRewardMin: 2.0,
+    rules: {
+      needsSwingHLDetection: true,
+      needsLiquiditySweep: true, // Price sweeps prev low/high
+      needsStructureShift: true, // Strong reversal candle
+      pullbackEntry: true,       // Enter on pullback
+    }
+  },
+  
+  // =====================================================================
+  // LONDON SESSION BREAKOUT
+  // Trades Asian range breakouts during London session (08:00-11:00 GMT)
+  // RULES: SL at mid range, TP 2x range
+  // =====================================================================
+  'london-breakout': {
+    canTrade: true,
+    strategy: 'london_breakout',
+    description: 'Asian range breakout during London session',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'XAUUSD', 'EURJPY', 'GBPJPY'],
+    timeframes: ['m5', 'm15', 'm30'],
     minConfidence: 55,
-    maxLotSize: 0.4,            // Smaller lots for news volatility
+    maxLotSize: 0.4,
     maxPositions: 2,
     cooldownMs: 600000,         // 10 min cooldown
-    takeProfitPips: 55,         // 55 pips TP
-    stopLossPips: 35,           // 35 pips SL
-    goldTPPips: 400,            // Gold: $4.00 TP
-    goldSLPips: 250,            // Gold: $2.50 SL
+    takeProfitPips: 40,         // 2x Asian range
+    stopLossPips: 20,           // Mid range
+    goldTPPips: 300,            // Gold: $3.00 TP
+    goldSLPips: 150,            // Gold: $1.50 SL
+    riskRewardMin: 2.0,
+    rules: {
+      sessionFilter: ['london'],// Only trade London session
+      timeWindow: { start: 8, end: 11 }, // 08:00-11:00 GMT
+      asianRangeBreak: true,    // Break above/below Asian high/low
+    }
+  },
+  
+  // =====================================================================
+  // ORDER BLOCK TRADER
+  // Identifies institutional order blocks on H1, entries on M5
+  // RULES: SL at OB boundary, TP at liquidity target
+  // =====================================================================
+  'order-block': {
+    canTrade: true,
+    strategy: 'order_block',
+    description: 'Institutional order block identification + rejection',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDJPY', 'AUDUSD'],
+    timeframes: ['m5', 'm15', 'h1'],
+    minConfidence: 60,
+    maxLotSize: 0.5,
+    maxPositions: 3,
+    cooldownMs: 300000,         // 5 min cooldown
+    takeProfitPips: 45,         // Liquidity target
+    stopLossPips: 22,           // OB boundary
+    goldTPPips: 350,            // Gold: $3.50 TP
+    goldSLPips: 175,            // Gold: $1.75 SL
+    riskRewardMin: 2.0,
+    rules: {
+      needsOrderBlock: true,    // Detect bullish/bearish OB
+      needsRejection: true,     // Price rejects from OB
+      confirmationCandle: true, // Rejection candle pattern
+    }
+  },
+  
+  // =====================================================================
+  // VWAP MEAN REVERSION
+  // Mean reversion using VWAP deviations + RSI extremes
+  // RULES: SL beyond VWAP deviation, TP at VWAP
+  // =====================================================================
+  'vwap-reversion': {
+    canTrade: true,
+    strategy: 'vwap_reversion',
+    description: 'VWAP mean reversion with RSI confirmation',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDJPY'],
+    timeframes: ['m5', 'm15', 'm30'],
+    minConfidence: 55,
+    maxLotSize: 0.4,
+    maxPositions: 3,
+    cooldownMs: 180000,         // 3 min cooldown
+    takeProfitPips: 30,         // Return to VWAP
+    stopLossPips: 18,           // Beyond deviation
+    goldTPPips: 250,            // Gold: $2.50 TP
+    goldSLPips: 150,            // Gold: $1.50 SL
     riskRewardMin: 1.5,
     rules: {
-      needsNewsEvent: false,
-      minImpact: 'MEDIUM',
-      entryWindow: 30,
-      avoidLowLiquidity: true,
+      needsVWAPDeviation: true, // Price below/above VWAP
+      needsRSIExtreme: true,    // RSI oversold/overbought
+      confirmationCandle: true, // Reversal candle
     }
   },
   
   // =====================================================================
-  // GRID MASTER - Range trading with grid orders
-  // RULES: Medium SL (40 pips), Smaller TP (20-25 pips), multiple entries
+  // FIBONACCI CONTINUATION
+  // Trend continuation at Fib 50-61.8% retracement
+  // RULES: SL below Fib 78.6%, TP at trend continuation
   // =====================================================================
-  'algoedge-grid-master': {
+  'fib-continuation': {
     canTrade: true,
-    strategy: 'grid',
-    description: 'Grid trading - profits from ranging markets',
-    allowedPairs: ['XAUUSD'],  // Focus only on Gold
-    timeframes: ['h1', 'h4'],
-    minConfidence: 50,
-    maxLotSize: 0.2,            // Very small lots for grid
-    maxPositions: 4,            // More grid levels
-    cooldownMs: 600000,         // 10 min cooldown
-    takeProfitPips: 25,         // Small TP per grid level
-    stopLossPips: 45,           // Wider SL for grid
-    goldTPPips: 200,
-    goldSLPips: 350,
-    riskRewardMin: 0.5,
-    rules: {
-      needsRangingMarket: true,
-      maxADX: 25,
-      maxGridLevels: 4,
-      hardStopLoss: true,
-      noMartingale: true,
-    }
-  },
-  
-  // =====================================================================
-  // MARTINGALE PRO - DISABLED (Too Risky)
-  // =====================================================================
-  'algoedge-martingale-pro': {
-    canTrade: false,            // ❌ PERMANENTLY DISABLED - Too risky
-    strategy: 'martingale',
-    description: '⚠️ DISABLED - Martingale strategy too risky',
-    allowedPairs: [],
-    timeframes: [],
-    rules: {
-      disabledReason: 'Martingale doubles lot sizes on losses and can blow accounts. This strategy is disabled for safety.',
-    }
-  },
-  
-  // =====================================================================
-  // HEDGE GUARDIAN - Correlation-based hedging
-  // RULES: Medium SL (40 pips), Medium TP (35 pips), used for protection
-  // =====================================================================
-  'algoedge-hedge-guardian': {
-    canTrade: true,
-    strategy: 'hedge',
-    description: 'Hedging - reduces drawdown via correlated pairs',
-    allowedPairs: ['XAUUSD'],  // Focus only on Gold
-    timeframes: ['h1', 'h4'],
-    minConfidence: 55,
-    maxLotSize: 0.3,
+    strategy: 'fibonacci_continuation',
+    description: 'Fibonacci 50-61.8% retracement continuation',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDJPY', 'AUDUSD', 'NZDUSD'],
+    timeframes: ['m15', 'h1', 'h4'],
+    minConfidence: 60,
+    maxLotSize: 0.5,
     maxPositions: 3,
-    cooldownMs: 600000,         // 10 min cooldown
-    takeProfitPips: 40,         // 40 pips TP
-    stopLossPips: 45,           // 45 pips SL
-    goldTPPips: 350,
-    goldSLPips: 400,
-    riskRewardMin: 0.9,
+    cooldownMs: 300000,         // 5 min cooldown
+    takeProfitPips: 50,         // Trend extension
+    stopLossPips: 25,           // Below Fib 78.6%
+    goldTPPips: 400,            // Gold: $4.00 TP
+    goldSLPips: 200,            // Gold: $2.00 SL
+    riskRewardMin: 2.0,
     rules: {
-      correlationHedge: false,
-      sameAccountOnly: true,
-      maxHedgeRatio: 0.5,
-      noSamePairHedge: true,
+      needsTrend: true,         // Established trend
+      fibLevels: [0.5, 0.618],  // 50-61.8% retracement
+      needsRejection: true,     // Rejection candle at fib
+    }
+  },
+  
+  // =====================================================================
+  // RSI DIVERGENCE REVERSAL
+  // Catches reversals using RSI divergence patterns
+  // RULES: SL at recent extreme, TP at structure level
+  // =====================================================================
+  'rsi-divergence': {
+    canTrade: true,
+    strategy: 'rsi_divergence',
+    description: 'RSI divergence reversal patterns',
+    allowedPairs: ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDJPY', 'AUDUSD'],
+    timeframes: ['m15', 'h1', 'h4'],
+    minConfidence: 60,
+    maxLotSize: 0.4,
+    maxPositions: 3,
+    cooldownMs: 300000,         // 5 min cooldown
+    takeProfitPips: 45,         // Structure level
+    stopLossPips: 22,           // Recent extreme
+    goldTPPips: 350,            // Gold: $3.50 TP
+    goldSLPips: 175,            // Gold: $1.75 SL
+    riskRewardMin: 2.0,
+    rules: {
+      needsBullishDiv: true,    // Price LL + RSI HL
+      needsBearishDiv: true,    // Price HH + RSI LH
+      confirmationCandle: true, // Reversal confirmation
     }
   },
 };
@@ -419,7 +325,7 @@ function canBotTrade(robotId, robotName) {
   if (!config) {
     const nameLower = robotName.toLowerCase();
     for (const [id, cfg] of Object.entries(BOT_CONFIG)) {
-      const idPattern = id.replace('algoedge-', '').replace(/-/g, ' ');
+      const idPattern = id.replace(/-/g, ' ');
       if (nameLower.includes(idPattern) || nameLower.includes(idPattern.replace(' ', ''))) {
         config = cfg;
         break;
@@ -427,21 +333,17 @@ function canBotTrade(robotId, robotName) {
     }
   }
   
-  // Also check common name variations
+  // Also check common name variations for the 8 core strategies
   if (!config) {
     const nameLower = robotName.toLowerCase();
-    if (nameLower.includes('scalp')) config = BOT_CONFIG['algoedge-scalper'];
-    else if (nameLower.includes('momentum')) config = BOT_CONFIG['algoedge-momentum'];
-    else if (nameLower.includes('trend')) config = BOT_CONFIG['algoedge-trend-m15'];
-    else if (nameLower.includes('breakout')) config = BOT_CONFIG['algoedge-breakout'];
-    else if (nameLower.includes('swing')) config = BOT_CONFIG['algoedge-swing-h1'];
-    else if (nameLower.includes('gold')) config = BOT_CONFIG['algoedge-gold-hunter'];
-    else if (nameLower.includes('position')) config = BOT_CONFIG['algoedge-position-h4'];
-    else if (nameLower.includes('sniper') || nameLower.includes('daily')) config = BOT_CONFIG['algoedge-daily-sniper'];
-    else if (nameLower.includes('news')) config = BOT_CONFIG['algoedge-news-trader'];
-    else if (nameLower.includes('grid')) config = BOT_CONFIG['algoedge-grid-master'];
-    else if (nameLower.includes('martingale')) config = BOT_CONFIG['algoedge-martingale-pro'];
-    else if (nameLower.includes('hedge')) config = BOT_CONFIG['algoedge-hedge-guardian'];
+    if (nameLower.includes('ema') || nameLower.includes('pullback')) config = BOT_CONFIG['ema-pullback'];
+    else if (nameLower.includes('break') && nameLower.includes('retest')) config = BOT_CONFIG['break-retest'];
+    else if (nameLower.includes('liquidity') || nameLower.includes('sweep') || nameLower.includes('smc')) config = BOT_CONFIG['liquidity-sweep'];
+    else if (nameLower.includes('london') || nameLower.includes('session')) config = BOT_CONFIG['london-breakout'];
+    else if (nameLower.includes('order') && nameLower.includes('block')) config = BOT_CONFIG['order-block'];
+    else if (nameLower.includes('vwap') || nameLower.includes('reversion')) config = BOT_CONFIG['vwap-reversion'];
+    else if (nameLower.includes('fib') || nameLower.includes('fibonacci')) config = BOT_CONFIG['fib-continuation'];
+    else if (nameLower.includes('rsi') && nameLower.includes('divergence')) config = BOT_CONFIG['rsi-divergence'];
   }
   
   if (!config) {
@@ -4074,10 +3976,13 @@ function calculateRSI(closes, period = 14) {
 
 /**
  * Get active robots with their connected MT5 accounts
+ * IMPORTANT: Only returns robots that users have explicitly started (is_enabled = true)
+ * If no robots are enabled, no trades will be executed
  */
 async function getActiveRobots() {
   try {
-    // Query ONLY enabled robots with connected MT5 accounts
+    // Query ONLY robots that users have clicked "Start Bot" on (is_enabled = true)
+    // AND have a properly connected MT5 account
     const query = `
       SELECT 
         tr.id as robot_id, 
@@ -4102,14 +4007,15 @@ async function getActiveRobots() {
     const result = await pool.query(query);
     
     if (result.rows.length === 0) {
+      // No users have started any robots - no trades will be executed
       return [];
     }
     
-    console.log(`Found ${result.rows.length} enabled robot(s) with connected accounts`);
+    console.log(`Found ${result.rows.length} user-enabled robot(s) with connected accounts`);
     
     // Log details for debugging
     result.rows.forEach(r => {
-      console.log(`  Robot: ${r.name}, MT5 account: ${r.mt5_account_id}, status: ${r.mt5_status}`);
+      console.log(`  ✅ Robot: ${r.name} (started by user ${r.user_id}), MT5: ${r.mt5_account_id}`);
     });
     
     return result.rows;
@@ -4704,12 +4610,14 @@ async function runTradingCycle() {
     const robots = await getActiveRobots();
     
     if (robots.length === 0) {
-      // Silent - no spam when no robots enabled
+      // No robots enabled by users - don't execute any trades
+      // Users must click "Start Bot" to enable trading
       return;
     }
     
     console.log(`\n[${new Date().toLocaleTimeString()}] ========== TRADING CYCLE ==========`);
-    console.log(`📊 Processing ${robots.length} active robot(s)...\n`);
+    console.log(`📊 Processing ${robots.length} user-enabled robot(s)...`);
+    console.log(`   (Only robots started by users will trade)\n`);
     
     // Group robots by MT5 account to manage trades efficiently
     const accountRobots = new Map();

@@ -16,6 +16,7 @@ import {
   Divider,
 } from '@mui/material';
 import { CheckCircle, MessageSquare, Clock, DollarSign } from 'lucide-react';
+import AuthBackground from '@/components/AuthBackground';
 import { useRouter } from 'next/navigation';
 
 const steps = [
@@ -67,17 +68,21 @@ export default function PaymentInstructionsPage() {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'background.default',
-        py: 4,
-      }}
-    >
-      <Container maxWidth="md">
+    <>
+      <AuthBackground />
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'transparent',
+          py: 4,
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <Container maxWidth="md">
         <Card>
           <CardContent sx={{ p: 4 }}>
             <Box sx={{ textAlign: 'center', mb: 4 }}>
@@ -186,5 +191,6 @@ export default function PaymentInstructionsPage() {
         </Card>
       </Container>
     </Box>
+    </>
   );
 }

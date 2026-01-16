@@ -14,6 +14,7 @@ import {
   Paper,
 } from '@mui/material';
 import { Mail, CheckCircle, MessageSquare } from 'lucide-react';
+import AuthBackground from '@/components/AuthBackground';
 import { useRouter } from 'next/navigation';
 
 // OTP Configuration - matches backend constants
@@ -130,21 +131,25 @@ export default function VerifyOTPPage() {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'background.default',
-        py: 4,
-      }}
-    >
-      <Container maxWidth="sm">
+    <>
+      <AuthBackground />
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'transparent',
+          py: 4,
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <Container maxWidth="sm">
         <Card>
           <CardContent sx={{ p: 4 }}>
             <Box sx={{ textAlign: 'center', mb: 4 }}>
-              <Mail size={48} style={{ color: '#3B82F6', marginBottom: 16 }} />
+              <Mail size={48} style={{ color: '#10B981', marginBottom: 16 }} />
               <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
                 Verify Your Email
               </Typography>
@@ -261,5 +266,6 @@ export default function VerifyOTPPage() {
         </Card>
       </Container>
     </Box>
+    </>
   );
 }

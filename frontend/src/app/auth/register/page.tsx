@@ -19,6 +19,7 @@ import {
 import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import AuthBackground from '@/components/AuthBackground';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -115,11 +116,12 @@ export default function RegisterPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: 'background.default',
+        position: 'relative',
         py: 4,
       }}
     >
-      <Container maxWidth="sm">
+      <AuthBackground />
+      <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
         <Card>
           <CardContent sx={{ p: 4 }}>
             <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 600 }}>

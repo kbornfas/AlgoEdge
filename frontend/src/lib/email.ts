@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 
 // Constants for email styling and configuration
-const BRAND_PRIMARY_COLOR = '#3B82F6';
+const BRAND_PRIMARY_COLOR = '#10B981';
 const BRAND_SECONDARY_COLOR = '#8B5CF6';
 const SUCCESS_COLOR = '#10B981';
 const ERROR_COLOR = '#EF4444';
@@ -62,17 +62,17 @@ export async function sendVerificationEmail(
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to AlgoEdge!</h1>
         </div>
         <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-          <h2 style="color: #3B82F6; margin-top: 0;">Hi ${username}!</h2>
+          <h2 style="color: #10B981; margin-top: 0;">Hi ${username}!</h2>
           <p>Thank you for registering with AlgoEdge. Please verify your email address to get started with automated trading.</p>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${verificationUrl}" style="display: inline-block; background: #3B82F6; color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">Verify Email Address</a>
+            <a href="${verificationUrl}" style="display: inline-block; background: #10B981; color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">Verify Email Address</a>
           </div>
           <p style="color: #666; font-size: 14px;">Or copy this link into your browser:</p>
-          <p style="color: #3B82F6; word-break: break-all; font-size: 14px;">${verificationUrl}</p>
+          <p style="color: #10B981; word-break: break-all; font-size: 14px;">${verificationUrl}</p>
           <p style="color: #666; font-size: 14px; margin-top: 30px;">This link will expire in 24 hours.</p>
           <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
           <p style="color: #999; font-size: 12px; text-align: center;">If you didn't create an account, please ignore this email.</p>
@@ -106,17 +106,17 @@ export async function sendPasswordResetEmail(
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 28px;">Password Reset</h1>
         </div>
         <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-          <h2 style="color: #3B82F6; margin-top: 0;">Hi ${username}!</h2>
+          <h2 style="color: #10B981; margin-top: 0;">Hi ${username}!</h2>
           <p>We received a request to reset your AlgoEdge account password.</p>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetUrl}" style="display: inline-block; background: #3B82F6; color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">Reset Password</a>
+            <a href="${resetUrl}" style="display: inline-block; background: #10B981; color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">Reset Password</a>
           </div>
           <p style="color: #666; font-size: 14px;">Or copy this link into your browser:</p>
-          <p style="color: #3B82F6; word-break: break-all; font-size: 14px;">${resetUrl}</p>
+          <p style="color: #10B981; word-break: break-all; font-size: 14px;">${resetUrl}</p>
           <p style="color: #666; font-size: 14px; margin-top: 30px;">This link will expire in 1 hour.</p>
           <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
           <p style="color: #999; font-size: 12px; text-align: center;">If you didn't request this, please ignore this email and your password will remain unchanged.</p>
@@ -148,15 +148,15 @@ export async function sendOTPEmail(
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 28px;">Verify Your Email</h1>
         </div>
         <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-          <h2 style="color: #3B82F6; margin-top: 0;">Hi ${username}!</h2>
+          <h2 style="color: #10B981; margin-top: 0;">Hi ${username}!</h2>
           <p>Thank you for registering with AlgoEdge. Please use the verification code below to complete your registration:</p>
           <div style="text-align: center; margin: 30px 0;">
-            <div style="display: inline-block; background: white; padding: 20px 40px; border-radius: 8px; border: 2px solid #3B82F6;">
-              <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #3B82F6;">${code}</span>
+            <div style="display: inline-block; background: white; padding: 20px 40px; border-radius: 8px; border: 2px solid #10B981;">
+              <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #10B981;">${code}</span>
             </div>
           </div>
           <p style="color: #666; font-size: 14px; text-align: center;">Enter this code in the verification page to continue.</p>
@@ -199,11 +199,11 @@ export async function sendTradeAlertEmail(
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 28px;">Trade ${tradeData.status === 'closed' ? 'Closed' : 'Alert'}</h1>
         </div>
         <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-          <h2 style="color: #3B82F6; margin-top: 0;">Hi ${username}!</h2>
+          <h2 style="color: #10B981; margin-top: 0;">Hi ${username}!</h2>
           <p>Your trade has been ${tradeData.status}.</p>
           <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <table style="width: 100%; border-collapse: collapse;">
@@ -228,7 +228,7 @@ export async function sendTradeAlertEmail(
             </table>
           </div>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" style="display: inline-block; background: #3B82F6; color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">View Dashboard</a>
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" style="display: inline-block; background: #10B981; color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">View Dashboard</a>
           </div>
           <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
           <p style="color: #999; font-size: 12px; text-align: center;">You're receiving this because you have trade alerts enabled in your AlgoEdge settings.</p>
