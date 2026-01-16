@@ -179,9 +179,7 @@ export default function Home() {
               fontWeight: 500,
             }}
           >
-            Fully automated trading with MetaTrader 5 integration. 
-            Professional algorithms trade 24/7 while you relax. 
-            Easy setup—we handle everything for you.
+            Earn Consistent Forex Returns with Fully Automated Trading Bots — No Experience Needed.
           </Typography>
           
           {/* CTA Buttons - Get Started & Login */}
