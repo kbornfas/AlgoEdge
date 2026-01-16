@@ -15,14 +15,12 @@ import {
   InputAdornment,
   IconButton,
   Grid,
-  Divider,
 } from '@mui/material';
 import { Eye, EyeOff, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import CTACard from '@/components/CTACard';
 import AuthBackground from '@/components/AuthBackground';
-import GoogleSignInButton from '@/components/GoogleSignInButton';
 import ThemeToggle from '@/components/ThemeToggle';
 
 // Instagram icon component
@@ -222,17 +220,7 @@ export default function LoginPage() {
                 {loading ? <CircularProgress size={24} /> : 'Sign In'}
               </Button>
 
-              {/* Divider */}
-              <Divider sx={{ my: 3 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Or continue with
-                </Typography>
-              </Divider>
-
-              {/* Google Sign In */}
-              <GoogleSignInButton variant="signin" disabled={loading} />
-
-              <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 3 }}>
+              <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 2 }}>
                 Don&apos;t have an account?{' '}
                 <MuiLink component={Link} href="/auth/register" underline="hover">
                   Sign up

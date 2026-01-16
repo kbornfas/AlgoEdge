@@ -30,31 +30,47 @@ export default function PaymentInstructionsPage() {
   const router = useRouter();
   const [redirecting, setRedirecting] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
-    // Check if user is verified
-    const userStr = localStorage.getItem('user');
-    if (!userStr) {
-      router.push('/auth/register');
-      return;
-    }
+    // Check for Google sign-up user first (from cookies)
+    const pendingUserCookie = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('pending_user='));
+    
+    if (pendingUserCookie) {
+      try {
+        const userData = JSON.parse(decodeURIComponent(pendingUserCookie.split('=')[1]));
+        setUserEmail(userData.email || '');
+        setUserName(userData.firstName || '');
+      } catch (e) {
+        console.error('Failed to parse pending user data');
+      }
+    } else {
+      // Check if user is in localStorage (regular sign-up)
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        router.push('/auth/register');
+        return;
+      }
 
-    const user = JSON.parse(userStr);
-    if (!user.isVerified) {
-      router.push('/auth/verify-otp');
-      return;
+      const user = JSON.parse(userStr);
+      if (!user.isVerified) {
+        router.push('/auth/verify-otp');
+        return;
+      }
+      setUserEmail(user.email || '');
+      setUserName(user.username || '');
     }
 
     // Get WhatsApp URL from environment
-    const url = process.env.NEXT_PUBLIC_WHATSAPP_URL;
-    if (!url || url === 'https://wa.me/your_number') {
-      console.error('NEXT_PUBLIC_WHATSAPP_URL not configured properly');
-      // Still set it but show a warning
-      setWhatsappUrl(url || 'https://wa.me/');
-    } else {
-      setWhatsappUrl(url);
-    }
-  }, [router]);
+    const baseUrl = 'https://wa.me/254704618663';
+    const message = encodeURIComponent(
+      `Hi! I just registered on AlgoEdge Trading Hub.\n\nEmail: ${userEmail || 'My registered email'}\n\nI would like to complete my payment and get started with the trading bot.`
+    );
+    setWhatsappUrl(`${baseUrl}?text=${message}`);
+  }, [router, userEmail]);
 
   const handleWhatsAppRedirect = () => {
     setRedirecting(true);
@@ -88,11 +104,16 @@ export default function PaymentInstructionsPage() {
             <Box sx={{ textAlign: 'center', mb: 4 }}>
               <CheckCircle size={56} style={{ color: '#10B981', marginBottom: 16 }} />
               <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-                Email Verified Successfully!
+                Registration Successful! 🎉
               </Typography>
               <Typography variant="body1" color="text.secondary">
-                You&apos;re almost ready to start trading
+                {userName ? `Welcome ${userName}! ` : ''}You&apos;re almost ready to start trading
               </Typography>
+              {userEmail && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Registered email: <strong>{userEmail}</strong>
+                </Typography>
+              )}
             </Box>
 
             <Stepper activeStep={1} sx={{ mb: 4 }}>

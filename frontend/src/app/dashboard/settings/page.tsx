@@ -35,6 +35,7 @@ import {
   ListItemSecondaryAction,
   Card,
   CardContent,
+  CircularProgress,
 } from '@mui/material';
 import {
   User,
@@ -54,6 +55,7 @@ import {
   Copy,
   Key,
   QrCode,
+  CheckCircle,
 } from 'lucide-react';
 
 interface TabPanelProps {
@@ -151,6 +153,7 @@ export default function SettingsPage() {
   const [security, setSecurity] = useState({
     twoFactorEnabled: false,
     twoFactorSecret: '',
+    twoFactorQrCode: '',
     telegramConnected: false,
     telegramChatId: '',
   });
@@ -337,38 +340,201 @@ export default function SettingsPage() {
     }
   };
 
-  const handleEnable2FA = () => {
-    const mockSecret = 'JBSWY3DPEHPK3PXP';
-    setSecurity({ ...security, twoFactorSecret: mockSecret });
-    setShow2FADialog(true);
+  const handleEnable2FA = async () => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/auth/2fa/setup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSecurity({ 
+          ...security, 
+          twoFactorSecret: data.secret,
+          twoFactorQrCode: data.qrCode 
+        });
+        setShow2FADialog(true);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to setup 2FA');
+      }
+    } catch (err) {
+      setError('Failed to setup 2FA');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleConfirm2FA = () => {
-    setSecurity({ ...security, twoFactorEnabled: true });
-    setShow2FADialog(false);
-    setSuccess('Two-factor authentication enabled');
+  const [twoFACode, setTwoFACode] = useState('');
+
+  const handleConfirm2FA = async () => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/auth/2fa/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ token: twoFACode }),
+      });
+
+      if (response.ok) {
+        setSecurity({ ...security, twoFactorEnabled: true });
+        setShow2FADialog(false);
+        setTwoFACode('');
+        setSuccess('Two-factor authentication enabled');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Invalid 2FA code');
+      }
+    } catch (err) {
+      setError('Failed to verify 2FA code');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDisable2FA = () => {
-    setSecurity({ ...security, twoFactorEnabled: false, twoFactorSecret: '' });
-    setSuccess('Two-factor authentication disabled');
+  const handleDisable2FA = async () => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/auth/2fa/disable', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setSecurity({ ...security, twoFactorEnabled: false, twoFactorSecret: '', twoFactorQrCode: '' });
+        setSuccess('Two-factor authentication disabled');
+      } else {
+        setError('Failed to disable 2FA');
+      }
+    } catch (err) {
+      setError('Failed to disable 2FA');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleConnectTelegram = () => {
-    setShowTelegramDialog(true);
+  // Telegram state
+  const [telegramConnectLink, setTelegramConnectLink] = useState('');
+  const [telegramLoading, setTelegramLoading] = useState(false);
+
+  const handleConnectTelegram = async () => {
+    setTelegramLoading(true);
+    setError('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/telegram/connect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setTelegramConnectLink(data.connectLink);
+        setShowTelegramDialog(true);
+      } else {
+        if (data.error === 'Telegram already connected') {
+          setError('Telegram is already connected to your account');
+        } else {
+          setError(data.error || 'Failed to generate connection link');
+        }
+      }
+    } catch (err) {
+      setError('Failed to connect to Telegram');
+    } finally {
+      setTelegramLoading(false);
+    }
   };
 
-  const handleTelegramConnected = () => {
-    setSecurity({ ...security, telegramConnected: true, telegramChatId: '123456789' });
-    setNotifications({ ...notifications, telegramAlerts: true });
-    setShowTelegramDialog(false);
-    setSuccess('Telegram connected successfully');
+  const handleOpenTelegramLink = () => {
+    if (telegramConnectLink) {
+      window.open(telegramConnectLink, '_blank');
+    }
   };
 
-  const handleDisconnectTelegram = () => {
-    setSecurity({ ...security, telegramConnected: false, telegramChatId: '' });
-    setNotifications({ ...notifications, telegramAlerts: false });
-    setSuccess('Telegram disconnected');
+  const handleCheckTelegramConnection = async () => {
+    setTelegramLoading(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/telegram/status', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.connected) {
+        setSecurity({ 
+          ...security, 
+          telegramConnected: true, 
+          telegramChatId: data.chatId || '',
+        });
+        setNotifications({ ...notifications, telegramAlerts: data.alertsEnabled ?? true });
+        setShowTelegramDialog(false);
+        setTelegramConnectLink('');
+        setSuccess('🎉 Telegram connected successfully!');
+      } else {
+        setError('Not connected yet. Please click the link and start the bot.');
+      }
+    } catch (err) {
+      setError('Failed to check connection status');
+    } finally {
+      setTelegramLoading(false);
+    }
+  };
+
+  const handleDisconnectTelegram = async () => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/telegram/disconnect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setSecurity({ ...security, telegramConnected: false, telegramChatId: '' });
+        setNotifications({ ...notifications, telegramAlerts: false });
+        setSuccess('Telegram disconnected');
+      } else {
+        setError('Failed to disconnect Telegram');
+      }
+    } catch (err) {
+      setError('Failed to disconnect Telegram');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogoutSession = (sessionId: number) => {
@@ -1209,8 +1375,8 @@ export default function SettingsPage() {
           <Box sx={{ textAlign: 'center', mb: 3 }}>
             <Box
               sx={{
-                width: 200,
-                height: 200,
+                width: 220,
+                height: 220,
                 bgcolor: 'white',
                 mx: 'auto',
                 p: 2,
@@ -1220,7 +1386,20 @@ export default function SettingsPage() {
                 justifyContent: 'center',
               }}
             >
-              <QrCode size={160} color="black" />
+              {security.twoFactorQrCode ? (
+                <img 
+                  src={security.twoFactorQrCode} 
+                  alt="2FA QR Code" 
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'contain',
+                    imageRendering: 'pixelated'
+                  }} 
+                />
+              ) : (
+                <CircularProgress />
+              )}
             </Box>
           </Box>
 
@@ -1233,6 +1412,13 @@ export default function SettingsPage() {
               value={security.twoFactorSecret}
               InputProps={{ readOnly: true }}
               size="small"
+              sx={{ 
+                '& input': { 
+                  fontFamily: 'monospace', 
+                  letterSpacing: '0.1em',
+                  fontWeight: 600 
+                } 
+              }}
             />
             <IconButton onClick={() => copyToClipboard(security.twoFactorSecret)}>
               <Copy size={18} />
@@ -1243,77 +1429,128 @@ export default function SettingsPage() {
             fullWidth
             label="Enter 6-digit code from app"
             placeholder="000000"
+            value={twoFACode}
+            onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
             inputProps={{ maxLength: 6 }}
+            sx={{ 
+              '& input': { 
+                textAlign: 'center',
+                fontSize: '1.5rem',
+                letterSpacing: '0.5em',
+                fontWeight: 600 
+              } 
+            }}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShow2FADialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleConfirm2FA}>
-            Verify & Enable
+          <Button onClick={() => { setShow2FADialog(false); setTwoFACode(''); }}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleConfirm2FA}
+            disabled={twoFACode.length !== 6 || loading}
+          >
+            {loading ? <CircularProgress size={20} /> : 'Verify & Enable'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Telegram Connect Dialog */}
-      <Dialog open={showTelegramDialog} onClose={() => setShowTelegramDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Connect Telegram</DialogTitle>
+      <Dialog open={showTelegramDialog} onClose={() => { setShowTelegramDialog(false); setTelegramConnectLink(''); }} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Send size={24} color="#0088cc" />
+          Connect Telegram
+        </DialogTitle>
         <DialogContent>
           <Typography color="text.secondary" sx={{ mb: 3 }}>
-            Follow these steps to connect your Telegram account:
+            Click the button below to open Telegram and connect your account:
           </Typography>
           
-          <List>
-            <ListItem>
-              <ListItemIcon>
+          {/* Step 1: Open Link */}
+          <Card variant="outlined" sx={{ mb: 2, bgcolor: 'background.default' }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                 <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>1</Avatar>
-              </ListItemIcon>
-              <ListItemText
-                primary="Open Telegram"
-                secondary="Search for @AlgoEdgeBot"
-              />
-            </ListItem>
-            <ListItem>
-              <ListItemIcon>
-                <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>2</Avatar>
-              </ListItemIcon>
-              <ListItemText
-                primary="Start the bot"
-                secondary="Click 'Start' or send /start"
-              />
-            </ListItem>
-            <ListItem>
-              <ListItemIcon>
-                <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>3</Avatar>
-              </ListItemIcon>
-              <ListItemText
-                primary="Link your account"
-                secondary="Send your account email to the bot"
-              />
-            </ListItem>
-          </List>
-
-          <Box sx={{ mt: 2, p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              Your verification code:
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-              <Typography variant="h5" fontWeight={700} fontFamily="monospace">
-                AE-{Math.random().toString(36).substring(2, 8).toUpperCase()}
+                <Typography fontWeight={600}>Open Telegram Bot</Typography>
+              </Box>
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<Send size={18} />}
+                onClick={handleOpenTelegramLink}
+                disabled={!telegramConnectLink}
+                sx={{ 
+                  bgcolor: '#0088cc', 
+                  '&:hover': { bgcolor: '#006699' },
+                  py: 1.5
+                }}
+              >
+                Open @Algoedge_rs_bot in Telegram
+              </Button>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, textAlign: 'center' }}>
+                This will open Telegram with a unique connection link
               </Typography>
-              <IconButton size="small">
-                <Copy size={16} />
-              </IconButton>
+            </CardContent>
+          </Card>
+
+          {/* Step 2: Press Start */}
+          <Card variant="outlined" sx={{ mb: 2, bgcolor: 'background.default' }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>2</Avatar>
+                <Typography fontWeight={600}>Press START in Telegram</Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                After opening the bot, press the <b>START</b> button or send <code>/start</code>
+              </Typography>
+            </CardContent>
+          </Card>
+
+          {/* Step 3: Verify */}
+          <Card variant="outlined" sx={{ bgcolor: 'background.default' }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>3</Avatar>
+                <Typography fontWeight={600}>Verify Connection</Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                After pressing START, click below to verify your connection:
+              </Typography>
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={handleCheckTelegramConnection}
+                disabled={telegramLoading}
+                startIcon={telegramLoading ? <CircularProgress size={18} /> : <CheckCircle size={18} />}
+              >
+                {telegramLoading ? 'Checking...' : 'I Pressed START - Verify Now'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Connection Link (for manual copy) */}
+          {telegramConnectLink && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+              <Typography variant="caption" color="text.secondary">
+                Or copy this link manually:
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  value={telegramConnectLink}
+                  InputProps={{ readOnly: true }}
+                  sx={{ '& input': { fontSize: '0.75rem' } }}
+                />
+                <IconButton size="small" onClick={() => copyToClipboard(telegramConnectLink)}>
+                  <Copy size={16} />
+                </IconButton>
+              </Box>
             </Box>
-          </Box>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowTelegramDialog(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
-            onClick={handleTelegramConnected}
-            sx={{ bgcolor: '#0088cc', '&:hover': { bgcolor: '#006699' } }}
-          >
-            I have Connected
+          <Button onClick={() => { setShowTelegramDialog(false); setTelegramConnectLink(''); }}>
+            Cancel
           </Button>
         </DialogActions>
       </Dialog>

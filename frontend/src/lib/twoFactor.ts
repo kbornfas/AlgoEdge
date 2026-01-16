@@ -26,7 +26,16 @@ export function generateTwoFactorSecret(username: string): {
  */
 export async function generateQRCode(otpauthUrl: string): Promise<string> {
   try {
-    const qrCodeDataUrl = await qrcode.toDataURL(otpauthUrl);
+    const qrCodeDataUrl = await qrcode.toDataURL(otpauthUrl, {
+      errorCorrectionLevel: 'H', // High error correction
+      type: 'image/png',
+      width: 300,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#ffffff',
+      },
+    });
     return qrCodeDataUrl;
   } catch (error) {
     console.error('Error generating QR code:', error);

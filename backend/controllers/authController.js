@@ -303,8 +303,17 @@ export const setup2FA = async (req, res) => {
       length: 32,
     });
 
-    // Generate QR code
-    const qrCode = await QRCode.toDataURL(secret.otpauth_url);
+    // Generate high-quality QR code
+    const qrCode = await QRCode.toDataURL(secret.otpauth_url, {
+      errorCorrectionLevel: 'H',
+      type: 'image/png',
+      width: 300,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#ffffff',
+      },
+    });
 
     // Store secret temporarily (will be confirmed on verification)
     await pool.query(

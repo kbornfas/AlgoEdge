@@ -12,11 +12,13 @@ model User {
   id                   Int                 @id @default(autoincrement())
   username             String              @unique @db.VarChar(50)
   email                String              @unique @db.VarChar(255)
-  passwordHash         String              @map("password_hash") @db.VarChar(255)
+  passwordHash         String?             @map("password_hash") @db.VarChar(255)
   fullName             String?             @map("full_name") @db.VarChar(100)
   phone                String?             @db.VarChar(20)
   country              String?             @db.VarChar(100)
   timezone             String              @default("UTC") @db.VarChar(50)
+  googleId             String?             @map("google_id") @db.VarChar(255)
+  profilePicture       String?             @map("profile_picture") @db.Text
   isVerified           Boolean             @default(false) @map("is_verified")
   verificationToken    String?             @map("verification_token") @db.VarChar(255)
   verificationExpires  DateTime?           @map("verification_expires")
@@ -51,6 +53,7 @@ model User {
   @@index([isActivated])
   @@index([approvalStatus])
   @@index([paymentStatus])
+  @@index([googleId])
   @@map("users")
 }
 

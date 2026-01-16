@@ -85,8 +85,9 @@ export async function GET(request: NextRequest) {
     if (!authResponse.ok) {
       // Handle specific error cases
       if (authData.requiresActivation) {
+        // For new users - redirect to payment instructions page
         return NextResponse.redirect(
-          new URL('/auth/login?error=Account pending approval. Please complete payment and wait for admin approval.', request.url)
+          new URL('/auth/payment-instructions', request.url)
         );
       }
       if (authData.isRejected) {
@@ -99,7 +100,37 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Create response with redirect to dashboard
+    // Check if this is a new registration (signup) - redirect to payment instructions
+    if (state === 'signup' || authData.requiresActivation || !authData.user?.isActive) {
+      // Store token temporarily for after payment
+      const response = NextResponse.redirect(new URL('/auth/payment-instructions', request.url));
+      
+      // Set token in cookie so user can be identified
+      response.cookies.set('pending_auth_token', authData.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60, // 24 hours
+        path: '/',
+      });
+
+      // Store user info for display on payment page
+      response.cookies.set('pending_user', JSON.stringify({
+        email: authData.user.email,
+        firstName: authData.user.firstName,
+        lastName: authData.user.lastName,
+      }), {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60,
+        path: '/',
+      });
+
+      return response;
+    }
+
+    // Existing approved user - redirect to dashboard
     const response = NextResponse.redirect(new URL('/dashboard', request.url));
 
     // Set token in a secure cookie

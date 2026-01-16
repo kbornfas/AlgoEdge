@@ -21,6 +21,7 @@ import userRoutes from './routes/userRoutes.js';
 import tradeRoutes from './routes/tradeRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import mt5Routes from './routes/mt5Routes.js';
+import telegramRoutes from './routes/telegramRoutes.js';
 
 /* -------------------------------------------------------------------------- */
 /*                              ENV & CONSTANTS                               */
@@ -116,6 +117,7 @@ const setupRoutes = (app) => {
   app.use('/api/trades', tradeRoutes);
   app.use('/api/payments', paymentRoutes);
   app.use('/api/mt5', mt5Routes);
+  app.use('/api/telegram', telegramRoutes);
   console.log('✅ All routes registered');
 };
 

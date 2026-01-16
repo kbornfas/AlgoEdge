@@ -62,6 +62,8 @@ export async function GET(req: NextRequest) {
           email: true,
           fullName: true,
           phone: true,
+          googleId: true,
+          profilePicture: true,
           isVerified: true,
           isActivated: true,
           approvalStatus: true,

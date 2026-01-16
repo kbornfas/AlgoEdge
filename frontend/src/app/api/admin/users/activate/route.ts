@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { sendAccountApprovedEmail, sendAccountRejectedEmail } from '@/lib/email';
 import { z } from 'zod';
 
 const activateSchema = z.object({
@@ -45,6 +46,20 @@ export async function POST(req: NextRequest) {
         rejectionReason: activate ? null : rejectionReason,
       },
     });
+
+    // Send email notification to user
+    try {
+      if (activate) {
+        await sendAccountApprovedEmail(user.email, user.username);
+        console.log(`✅ Approval email sent to ${user.email}`);
+      } else {
+        await sendAccountRejectedEmail(user.email, user.username, rejectionReason);
+        console.log(`✅ Rejection email sent to ${user.email}`);
+      }
+    } catch (emailError) {
+      console.error('❌ Failed to send status email:', emailError);
+      // Don't fail the request if email fails - user status is already updated
+    }
 
     // Log the action
     await prisma.auditLog.create({
