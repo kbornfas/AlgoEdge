@@ -1,9 +1,12 @@
 export default function Head() {
   return (
     <>
-      {/* Favicon */}
-      <link rel="icon" href="/images/logo.png" type="image/png" />
-      <link rel="apple-touch-icon" href="/images/logo.png" />
+      {/* Favicon - Multiple formats for browser compatibility */}
+      <link rel="icon" href="/favicon.ico" sizes="any" />
+      <link rel="icon" type="image/png" sizes="32x32" href="/images/logo.png" />
+      <link rel="icon" type="image/png" sizes="16x16" href="/images/logo.png" />
+      <link rel="shortcut icon" href="/favicon.ico" />
+      <link rel="apple-touch-icon" sizes="180x180" href="/images/logo.png" />
       
       {/* Preconnect to important domains for performance */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
