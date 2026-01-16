@@ -79,17 +79,11 @@ export default function AdminLogin() {
         >
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <Box
-              sx={{
-                display: 'inline-flex',
-                p: 2,
-                borderRadius: 2,
-                bgcolor: 'primary.main',
-                color: 'white',
-                mb: 2,
-              }}
-            >
-              <Shield size={48} />
-            </Box>
+              component="img"
+              src="/images/logo.png"
+              alt="AlgoEdge Logo"
+              sx={{ width: 80, height: 80, objectFit: 'contain', mx: 'auto', mb: 2 }}
+            />
             <Typography variant="h4" gutterBottom fontWeight={600}>
               Admin Login
             </Typography>

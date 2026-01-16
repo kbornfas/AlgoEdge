@@ -86,7 +86,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const drawer = (
     <Box>
-      <Toolbar>
+      <Toolbar sx={{ gap: 1.5, py: 1 }}>
+        <Box
+          component="img"
+          src="/images/logo.png"
+          alt="AlgoEdge Logo"
+          sx={{ width: 40, height: 40, objectFit: 'contain' }}
+        />
         <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
           AlgoEdge
         </Typography>

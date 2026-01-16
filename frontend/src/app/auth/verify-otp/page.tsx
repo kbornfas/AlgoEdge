@@ -150,6 +150,16 @@ export default function VerifyOTPPage() {
         }}
       >
         <Container maxWidth="sm">
+        {/* Logo */}
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Box
+            component="img"
+            src="/images/logo.png"
+            alt="AlgoEdge Logo"
+            sx={{ width: 80, height: 80, objectFit: 'contain', mx: 'auto' }}
+          />
+        </Box>
+        
         <Card>
           <CardContent sx={{ p: 4 }}>
             <Box sx={{ textAlign: 'center', mb: 4 }}>

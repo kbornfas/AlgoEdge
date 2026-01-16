@@ -138,6 +138,16 @@ export default function PaymentProofPage() {
         </Button>
 
         <Paper sx={{ p: 4 }}>
+          {/* Logo */}
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Box
+              component="img"
+              src="/images/logo.png"
+              alt="AlgoEdge Logo"
+              sx={{ width: 60, height: 60, objectFit: 'contain', mx: 'auto' }}
+            />
+          </Box>
+          
           <Typography variant="h4" gutterBottom fontWeight={600}>
             Payment Proof Submission
           </Typography>

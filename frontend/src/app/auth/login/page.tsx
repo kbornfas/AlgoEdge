@@ -132,6 +132,16 @@ export default function LoginPage() {
       </Box>
 
       <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
+        {/* Logo */}
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Box
+            component="img"
+            src="/images/logo.png"
+            alt="AlgoEdge Logo"
+            sx={{ width: 80, height: 80, objectFit: 'contain', mx: 'auto' }}
+          />
+        </Box>
+        
         {/* Login Form */}
         <Card sx={{ mb: 4 }}>
           <CardContent sx={{ p: 4 }}>
