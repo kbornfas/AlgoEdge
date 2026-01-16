@@ -5,6 +5,7 @@ import { TrendingUp, Shield, BarChart3, CheckCircle2, Send, Instagram, Star, Use
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
+import ThemeToggle from '@/components/ThemeToggle';
 
 /**
  * Trading Background Component
@@ -252,6 +253,11 @@ export default function Home() {
     <Box sx={{ minHeight: '100vh', bgcolor: 'transparent', position: 'relative' }}>
       {/* Trading Background - Animated Candlestick Chart */}
       <TradingBackground />
+      
+      {/* Theme Toggle - Top Right */}
+      <Box sx={{ position: 'fixed', top: 16, right: 16, zIndex: 1000 }}>
+        <ThemeToggle />
+      </Box>
       
       {/* Sticky WhatsApp Button */}
       <StickyWhatsAppButton whatsappUrl={whatsappUrl} />

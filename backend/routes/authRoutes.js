@@ -10,6 +10,7 @@ import {
   disable2FA,
   sendVerificationCode,
   verifyCode,
+  googleAuth,
 } from '../controllers/authController.js';
 import { authenticate } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
@@ -23,6 +24,9 @@ router.post('/login', authLimiter, login);
 router.post('/verify-email', verifyEmail);
 router.post('/request-password-reset', authLimiter, requestPasswordReset);
 router.post('/reset-password', authLimiter, resetPassword);
+
+// Google OAuth
+router.post('/google', authLimiter, googleAuth);
 
 // Verification code routes
 router.post('/send-verification-code', authLimiter, sendVerificationCode);

@@ -6,6 +6,7 @@ import {
   emitNewTrade,
   emitTradeClosed,
 } from './websocketService.js';
+import { sendTradeClosedAlert } from './notificationService.js';
 
 // Safe MetaAPI SDK import for Node.js (ESM compatible)
 let MetaApi = null;
@@ -514,6 +515,10 @@ export const closeTrade = async (tradeId) => {
 
     // Emit real-time update
     emitTradeClosed(trade.user_id, closedTrade);
+    
+    // Send email notification (async - don't block)
+    sendTradeClosedAlert(trade.user_id, closedTrade)
+      .catch(err => console.log(`⚠️ Close trade email notification failed:`, err.message));
 
     console.log(`Real trade closed: ${trade.mt5_ticket} with profit: $${profit}`);
     return closedTrade;

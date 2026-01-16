@@ -527,6 +527,140 @@ export const verifyCode = async (req, res) => {
   }
 };
 
+// Google OAuth Authentication
+export const googleAuth = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { googleId, email, firstName, lastName, picture, isNewUser } = req.body;
+
+    if (!googleId || !email) {
+      return res.status(400).json({ error: 'Google ID and email are required' });
+    }
+
+    await client.query('BEGIN');
+
+    // Check if user exists by Google ID or email
+    let user = await client.query(
+      'SELECT * FROM users WHERE google_id = $1 OR email = $2',
+      [googleId, email]
+    );
+
+    if (user.rows.length > 0) {
+      // Existing user - update Google ID if needed
+      user = user.rows[0];
+
+      // Check if account is rejected
+      if (user.approval_status === 'rejected') {
+        await client.query('ROLLBACK');
+        return res.status(403).json({
+          error: 'Your account has been rejected',
+          isRejected: true,
+          rejectionReason: user.rejection_reason
+        });
+      }
+
+      // Check if account requires activation
+      if (!user.is_active && user.approval_status !== 'approved') {
+        await client.query('ROLLBACK');
+        return res.status(403).json({
+          error: 'Account pending approval',
+          requiresActivation: true,
+          isVerified: user.is_verified
+        });
+      }
+
+      // Update Google ID if not set
+      if (!user.google_id) {
+        await client.query(
+          'UPDATE users SET google_id = $1, profile_picture = COALESCE(profile_picture, $2) WHERE id = $3',
+          [googleId, picture, user.id]
+        );
+      }
+
+      await client.query('COMMIT');
+
+      // Generate JWT token
+      const token = generateToken(user.id);
+
+      // Audit log
+      auditLog(user.id, 'GOOGLE_LOGIN', { email, googleId }, req);
+
+      return res.json({
+        message: 'Login successful',
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.first_name || firstName,
+          lastName: user.last_name || lastName,
+          role: user.role,
+          isVerified: user.is_verified,
+          profilePicture: user.profile_picture || picture
+        }
+      });
+    }
+
+    // New user - create account
+    const username = email.split('@')[0] + '_' + Math.random().toString(36).substring(2, 6);
+    
+    const result = await client.query(
+      `INSERT INTO users (
+        username, email, google_id, first_name, last_name, 
+        profile_picture, is_verified, is_active, approval_status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id, username, email, role, is_verified, is_active, approval_status`,
+      [username, email, googleId, firstName, lastName, picture, true, false, 'pending']
+    );
+
+    const newUser = result.rows[0];
+
+    // Create default subscription
+    await client.query(
+      'INSERT INTO subscriptions (user_id, plan, status) VALUES ($1, $2, $3)',
+      [newUser.id, 'free', 'active']
+    );
+
+    // Create default settings
+    await client.query(
+      'INSERT INTO user_settings (user_id) VALUES ($1)',
+      [newUser.id]
+    );
+
+    await client.query('COMMIT');
+
+    // Generate JWT token
+    const token = generateToken(newUser.id);
+
+    // Audit log
+    auditLog(newUser.id, 'GOOGLE_REGISTRATION', { email, googleId }, req);
+
+    res.status(201).json({
+      message: 'Registration successful! Your account is pending approval.',
+      token,
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email,
+        firstName,
+        lastName,
+        role: newUser.role,
+        isVerified: true,
+        isActive: newUser.is_active,
+        approvalStatus: newUser.approval_status,
+        profilePicture: picture
+      },
+      requiresActivation: !newUser.is_active
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Google auth error:', error);
+    res.status(500).json({ error: 'Authentication failed' });
+  } finally {
+    client.release();
+  }
+};
+
 export default {
   register,
   login,
@@ -538,4 +672,5 @@ export default {
   disable2FA,
   sendVerificationCode,
   verifyCode,
+  googleAuth,
 };

@@ -18,6 +18,23 @@ import {
   Tabs,
   Tab,
   InputAdornment,
+  Slider,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  ListItemSecondaryAction,
+  Card,
+  CardContent,
 } from '@mui/material';
 import {
   User,
@@ -27,7 +44,16 @@ import {
   Save,
   Eye,
   EyeOff,
-  Camera,
+  TrendingUp,
+  Send,
+  LogOut,
+  Trash2,
+  Download,
+  AlertTriangle,
+  Monitor,
+  Copy,
+  Key,
+  QrCode,
 } from 'lucide-react';
 
 interface TabPanelProps {
@@ -45,6 +71,33 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+// Timezone options
+const TIMEZONES = [
+  { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+  { value: 'America/New_York', label: 'Eastern Time (ET) - New York' },
+  { value: 'America/Chicago', label: 'Central Time (CT) - Chicago' },
+  { value: 'America/Denver', label: 'Mountain Time (MT) - Denver' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (PT) - Los Angeles' },
+  { value: 'Europe/London', label: 'GMT - London' },
+  { value: 'Europe/Paris', label: 'CET - Paris, Berlin' },
+  { value: 'Europe/Moscow', label: 'MSK - Moscow' },
+  { value: 'Asia/Dubai', label: 'GST - Dubai' },
+  { value: 'Asia/Singapore', label: 'SGT - Singapore' },
+  { value: 'Asia/Tokyo', label: 'JST - Tokyo' },
+  { value: 'Asia/Hong_Kong', label: 'HKT - Hong Kong' },
+  { value: 'Australia/Sydney', label: 'AEST - Sydney' },
+  { value: 'Africa/Nairobi', label: 'EAT - Nairobi' },
+  { value: 'Africa/Lagos', label: 'WAT - Lagos' },
+  { value: 'Africa/Johannesburg', label: 'SAST - Johannesburg' },
+];
+
+// Mock active sessions for demo
+const mockSessions = [
+  { id: 1, device: 'Chrome on Windows', location: 'New York, USA', lastActive: 'Active now', current: true },
+  { id: 2, device: 'Safari on iPhone', location: 'London, UK', lastActive: '2 hours ago', current: false },
+  { id: 3, device: 'Firefox on MacOS', location: 'Singapore', lastActive: '1 day ago', current: false },
+];
+
 export default function SettingsPage() {
   const router = useRouter();
   const [tabValue, setTabValue] = useState(0);
@@ -53,6 +106,12 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  
+  // Dialogs
+  const [show2FADialog, setShow2FADialog] = useState(false);
+  const [showTelegramDialog, setShowTelegramDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   
   const [profile, setProfile] = useState({
     fullName: '',
@@ -72,7 +131,32 @@ export default function SettingsPage() {
     tradeAlerts: true,
     marketNews: false,
     weeklyReports: true,
+    telegramAlerts: false,
   });
+
+  // Trading Preferences
+  const [tradingPrefs, setTradingPrefs] = useState({
+    defaultRiskPercent: 2,
+    maxDailyTrades: 10,
+    maxDailyLossPercent: 5,
+    maxLotSize: 0.5,
+    tradingHoursStart: '00:00',
+    tradingHoursEnd: '23:59',
+    timezone: 'UTC',
+    autoStopOnDailyLoss: true,
+    weekendTrading: false,
+  });
+
+  // Security settings
+  const [security, setSecurity] = useState({
+    twoFactorEnabled: false,
+    twoFactorSecret: '',
+    telegramConnected: false,
+    telegramChatId: '',
+  });
+
+  // Sessions
+  const [sessions, setSessions] = useState(mockSessions);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -104,7 +188,14 @@ export default function SettingsPage() {
             tradeAlerts: data.settings.tradeAlerts ?? true,
             marketNews: data.settings.marketNews ?? false,
             weeklyReports: data.settings.weeklyReports ?? true,
+            telegramAlerts: data.settings.telegramAlerts ?? false,
           });
+          if (data.settings.tradingPrefs) {
+            setTradingPrefs(prev => ({ ...prev, ...data.settings.tradingPrefs }));
+          }
+          if (data.settings.security) {
+            setSecurity(prev => ({ ...prev, ...data.settings.security }));
+          }
         }
       }
     } catch (err) {
@@ -130,7 +221,6 @@ export default function SettingsPage() {
 
       if (response.ok) {
         setSuccess('Profile updated successfully');
-        // Update localStorage
         const userData = localStorage.getItem('user');
         if (userData) {
           const user = JSON.parse(userData);
@@ -219,6 +309,94 @@ export default function SettingsPage() {
     }
   };
 
+  const handleUpdateTradingPrefs = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/user/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ tradingPrefs }),
+      });
+
+      if (response.ok) {
+        setSuccess('Trading preferences saved');
+      } else {
+        setError('Failed to save trading preferences');
+      }
+    } catch (err) {
+      setError('Failed to save trading preferences');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEnable2FA = () => {
+    const mockSecret = 'JBSWY3DPEHPK3PXP';
+    setSecurity({ ...security, twoFactorSecret: mockSecret });
+    setShow2FADialog(true);
+  };
+
+  const handleConfirm2FA = () => {
+    setSecurity({ ...security, twoFactorEnabled: true });
+    setShow2FADialog(false);
+    setSuccess('Two-factor authentication enabled');
+  };
+
+  const handleDisable2FA = () => {
+    setSecurity({ ...security, twoFactorEnabled: false, twoFactorSecret: '' });
+    setSuccess('Two-factor authentication disabled');
+  };
+
+  const handleConnectTelegram = () => {
+    setShowTelegramDialog(true);
+  };
+
+  const handleTelegramConnected = () => {
+    setSecurity({ ...security, telegramConnected: true, telegramChatId: '123456789' });
+    setNotifications({ ...notifications, telegramAlerts: true });
+    setShowTelegramDialog(false);
+    setSuccess('Telegram connected successfully');
+  };
+
+  const handleDisconnectTelegram = () => {
+    setSecurity({ ...security, telegramConnected: false, telegramChatId: '' });
+    setNotifications({ ...notifications, telegramAlerts: false });
+    setSuccess('Telegram disconnected');
+  };
+
+  const handleLogoutSession = (sessionId: number) => {
+    setSessions(sessions.filter(s => s.id !== sessionId));
+    setSuccess('Session logged out');
+  };
+
+  const handleLogoutAllSessions = () => {
+    setSessions(sessions.filter(s => s.current));
+    setSuccess('All other sessions logged out');
+  };
+
+  const handleExportData = () => {
+    setSuccess('Data export started. You will receive an email with download link.');
+  };
+
+  const handleDeleteAccount = () => {
+    if (deleteConfirmText === 'DELETE') {
+      setShowDeleteDialog(false);
+      router.push('/');
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setSuccess('Copied to clipboard');
+  };
+
   return (
     <Box>
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
@@ -244,11 +422,16 @@ export default function SettingsPage() {
         <Tabs
           value={tabValue}
           onChange={(_, newValue) => setTabValue(newValue)}
+          variant="scrollable"
+          scrollButtons="auto"
           sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
         >
           <Tab icon={<User size={18} />} label="Profile" iconPosition="start" />
+          <Tab icon={<TrendingUp size={18} />} label="Trading" iconPosition="start" />
           <Tab icon={<Lock size={18} />} label="Security" iconPosition="start" />
           <Tab icon={<Bell size={18} />} label="Notifications" iconPosition="start" />
+          <Tab icon={<Monitor size={18} />} label="Sessions" iconPosition="start" />
+          <Tab icon={<AlertTriangle size={18} />} label="Danger Zone" iconPosition="start" sx={{ color: 'error.main' }} />
         </Tabs>
 
         {/* Profile Tab */}
@@ -256,7 +439,7 @@ export default function SettingsPage() {
           <Box sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
               <Avatar
-                sx={{ width: 80, height: 80, mr: 3, bgcolor: 'primary.main' }}
+                sx={{ width: 80, height: 80, mr: 3, bgcolor: 'primary.main', fontSize: '2rem' }}
               >
                 {profile.fullName?.charAt(0) || profile.username?.charAt(0) || 'U'}
               </Avatar>
@@ -300,7 +483,24 @@ export default function SettingsPage() {
                   label="Phone Number"
                   value={profile.phone}
                   onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                  placeholder="+1 234 567 8900"
                 />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Timezone</InputLabel>
+                  <Select
+                    value={tradingPrefs.timezone}
+                    label="Timezone"
+                    onChange={(e) => setTradingPrefs({ ...tradingPrefs, timezone: e.target.value })}
+                  >
+                    {TIMEZONES.map((tz) => (
+                      <MenuItem key={tz.value} value={tz.value}>
+                        {tz.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
             </Grid>
 
@@ -317,9 +517,187 @@ export default function SettingsPage() {
           </Box>
         </TabPanel>
 
-        {/* Security Tab */}
+        {/* Trading Preferences Tab */}
         <TabPanel value={tabValue} index={1}>
           <Box sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Risk Management
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 3 }}>
+              Configure your default trading risk settings
+            </Typography>
+
+            <Grid container spacing={4}>
+              <Grid item xs={12} md={6}>
+                <Typography gutterBottom>Default Risk Per Trade: {tradingPrefs.defaultRiskPercent}%</Typography>
+                <Slider
+                  value={tradingPrefs.defaultRiskPercent}
+                  onChange={(_, value) => setTradingPrefs({ ...tradingPrefs, defaultRiskPercent: value as number })}
+                  min={0.5}
+                  max={10}
+                  step={0.5}
+                  marks={[
+                    { value: 1, label: '1%' },
+                    { value: 5, label: '5%' },
+                    { value: 10, label: '10%' },
+                  ]}
+                  valueLabelDisplay="auto"
+                  sx={{ color: tradingPrefs.defaultRiskPercent > 5 ? 'error.main' : 'primary.main' }}
+                />
+                <Typography variant="caption" color="text.secondary">
+                  Recommended: 1-2% for conservative trading
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Typography gutterBottom>Max Daily Loss Limit: {tradingPrefs.maxDailyLossPercent}%</Typography>
+                <Slider
+                  value={tradingPrefs.maxDailyLossPercent}
+                  onChange={(_, value) => setTradingPrefs({ ...tradingPrefs, maxDailyLossPercent: value as number })}
+                  min={1}
+                  max={20}
+                  step={1}
+                  marks={[
+                    { value: 5, label: '5%' },
+                    { value: 10, label: '10%' },
+                    { value: 20, label: '20%' },
+                  ]}
+                  valueLabelDisplay="auto"
+                  sx={{ color: tradingPrefs.maxDailyLossPercent > 10 ? 'error.main' : 'primary.main' }}
+                />
+                <Typography variant="caption" color="text.secondary">
+                  Bot stops trading when daily loss reaches this limit
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Max Daily Trades"
+                  value={tradingPrefs.maxDailyTrades}
+                  onChange={(e) => setTradingPrefs({ ...tradingPrefs, maxDailyTrades: parseInt(e.target.value) || 0 })}
+                  InputProps={{ inputProps: { min: 1, max: 100 } }}
+                  helperText="Maximum number of trades per day (1-100)"
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Max Lot Size"
+                  value={tradingPrefs.maxLotSize}
+                  onChange={(e) => setTradingPrefs({ ...tradingPrefs, maxLotSize: parseFloat(e.target.value) || 0.01 })}
+                  InputProps={{ inputProps: { min: 0.01, max: 10, step: 0.01 } }}
+                  helperText="Maximum lot size per trade (overrides account tier)"
+                />
+              </Grid>
+            </Grid>
+
+            <Divider sx={{ my: 4 }} />
+
+            <Typography variant="h6" gutterBottom>
+              Trading Hours
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 3 }}>
+              Set when the bot is allowed to open new trades
+            </Typography>
+
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  type="time"
+                  label="Start Time"
+                  value={tradingPrefs.tradingHoursStart}
+                  onChange={(e) => setTradingPrefs({ ...tradingPrefs, tradingHoursStart: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  type="time"
+                  label="End Time"
+                  value={tradingPrefs.tradingHoursEnd}
+                  onChange={(e) => setTradingPrefs({ ...tradingPrefs, tradingHoursEnd: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Timezone</InputLabel>
+                  <Select
+                    value={tradingPrefs.timezone}
+                    label="Timezone"
+                    onChange={(e) => setTradingPrefs({ ...tradingPrefs, timezone: e.target.value })}
+                  >
+                    {TIMEZONES.map((tz) => (
+                      <MenuItem key={tz.value} value={tz.value}>
+                        {tz.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+
+            <Box sx={{ mt: 3 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={tradingPrefs.autoStopOnDailyLoss}
+                    onChange={(e) => setTradingPrefs({ ...tradingPrefs, autoStopOnDailyLoss: e.target.checked })}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography>Auto-stop on Daily Loss Limit</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Automatically pause trading when daily loss limit is reached
+                    </Typography>
+                  </Box>
+                }
+              />
+            </Box>
+
+            <Box sx={{ mt: 2 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={tradingPrefs.weekendTrading}
+                    onChange={(e) => setTradingPrefs({ ...tradingPrefs, weekendTrading: e.target.checked })}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography>Weekend Trading</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Allow trading on Saturday and Sunday (when markets are open)
+                    </Typography>
+                  </Box>
+                }
+              />
+            </Box>
+
+            <Box sx={{ mt: 4 }}>
+              <Button
+                variant="contained"
+                startIcon={<Save size={18} />}
+                onClick={handleUpdateTradingPrefs}
+                disabled={loading}
+              >
+                Save Trading Preferences
+              </Button>
+            </Box>
+          </Box>
+        </TabPanel>
+
+        {/* Security Tab */}
+        <TabPanel value={tabValue} index={2}>
+          <Box sx={{ p: 3 }}>
+            {/* Password Section */}
             <Typography variant="h6" gutterBottom>
               Change Password
             </Typography>
@@ -375,7 +753,7 @@ export default function SettingsPage() {
               </Grid>
             </Grid>
 
-            <Box sx={{ mt: 4 }}>
+            <Box sx={{ mt: 3 }}>
               <Button
                 variant="contained"
                 startIcon={<Shield size={18} />}
@@ -385,11 +763,142 @@ export default function SettingsPage() {
                 Change Password
               </Button>
             </Box>
+
+            <Divider sx={{ my: 4 }} />
+
+            {/* 2FA Section */}
+            <Typography variant="h6" gutterBottom>
+              Two-Factor Authentication (2FA)
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 3 }}>
+              Add an extra layer of security to your account
+            </Typography>
+
+            <Card sx={{ maxWidth: 500, bgcolor: 'background.default' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 2,
+                        bgcolor: security.twoFactorEnabled ? 'success.main' : 'grey.700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Key size={24} color="white" />
+                    </Box>
+                    <Box>
+                      <Typography fontWeight={600}>Authenticator App</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {security.twoFactorEnabled ? 'Enabled' : 'Not configured'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  {security.twoFactorEnabled ? (
+                    <Chip label="Active" color="success" size="small" />
+                  ) : (
+                    <Chip label="Disabled" color="default" size="small" />
+                  )}
+                </Box>
+                <Box sx={{ mt: 2 }}>
+                  {security.twoFactorEnabled ? (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={handleDisable2FA}
+                    >
+                      Disable 2FA
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      size="small"
+                      startIcon={<QrCode size={16} />}
+                      onClick={handleEnable2FA}
+                    >
+                      Enable 2FA
+                    </Button>
+                  )}
+                </Box>
+              </CardContent>
+            </Card>
+
+            <Divider sx={{ my: 4 }} />
+
+            {/* Telegram Section */}
+            <Typography variant="h6" gutterBottom>
+              Telegram Integration
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 3 }}>
+              Connect Telegram for instant trade notifications on your phone
+            </Typography>
+
+            <Card sx={{ maxWidth: 500, bgcolor: 'background.default' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 2,
+                        bgcolor: security.telegramConnected ? '#0088cc' : 'grey.700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Send size={24} color="white" />
+                    </Box>
+                    <Box>
+                      <Typography fontWeight={600}>Telegram Bot</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {security.telegramConnected 
+                          ? `Connected (ID: ${security.telegramChatId})` 
+                          : 'Not connected'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  {security.telegramConnected ? (
+                    <Chip label="Connected" color="info" size="small" />
+                  ) : (
+                    <Chip label="Disconnected" color="default" size="small" />
+                  )}
+                </Box>
+                <Box sx={{ mt: 2 }}>
+                  {security.telegramConnected ? (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={handleDisconnectTelegram}
+                    >
+                      Disconnect
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      size="small"
+                      startIcon={<Send size={16} />}
+                      onClick={handleConnectTelegram}
+                      sx={{ bgcolor: '#0088cc', '&:hover': { bgcolor: '#006699' } }}
+                    >
+                      Connect Telegram
+                    </Button>
+                  )}
+                </Box>
+              </CardContent>
+            </Card>
           </Box>
         </TabPanel>
 
         {/* Notifications Tab */}
-        <TabPanel value={tabValue} index={2}>
+        <TabPanel value={tabValue} index={3}>
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Email Notifications
@@ -476,6 +985,33 @@ export default function SettingsPage() {
                 }
                 sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}
               />
+
+              {security.telegramConnected && (
+                <>
+                  <Divider sx={{ my: 2 }} />
+                  
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={notifications.telegramAlerts}
+                        onChange={(e) => setNotifications({ ...notifications, telegramAlerts: e.target.checked })}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography>Telegram Alerts</Typography>
+                          <Chip label="NEW" size="small" color="info" sx={{ height: 20 }} />
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">
+                          Receive instant trade alerts via Telegram
+                        </Typography>
+                      </Box>
+                    }
+                    sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}
+                  />
+                </>
+              )}
             </Box>
 
             <Box sx={{ mt: 4 }}>
@@ -490,7 +1026,338 @@ export default function SettingsPage() {
             </Box>
           </Box>
         </TabPanel>
+
+        {/* Sessions Tab */}
+        <TabPanel value={tabValue} index={4}>
+          <Box sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Active Sessions
+                </Typography>
+                <Typography color="text.secondary">
+                  Manage devices where you are currently logged in
+                </Typography>
+              </Box>
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                startIcon={<LogOut size={16} />}
+                onClick={handleLogoutAllSessions}
+                disabled={sessions.length <= 1}
+              >
+                Logout All Others
+              </Button>
+            </Box>
+
+            <List sx={{ maxWidth: 600 }}>
+              {sessions.map((session) => (
+                <Paper key={session.id} sx={{ mb: 2 }}>
+                  <ListItem>
+                    <ListItemIcon>
+                      <Box
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 2,
+                          bgcolor: session.current ? 'primary.main' : 'grey.700',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Monitor size={20} color="white" />
+                      </Box>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography fontWeight={500}>{session.device}</Typography>
+                          {session.current && (
+                            <Chip label="Current" size="small" color="primary" sx={{ height: 20 }} />
+                          )}
+                        </Box>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            {session.location}
+                          </Typography>
+                          <Typography variant="caption" color={session.current ? 'success.main' : 'text.secondary'}>
+                            {session.lastActive}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                    {!session.current && (
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          color="error"
+                          onClick={() => handleLogoutSession(session.id)}
+                        >
+                          <LogOut size={18} />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    )}
+                  </ListItem>
+                </Paper>
+              ))}
+            </List>
+
+            {sessions.length === 0 && (
+              <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                No active sessions found
+              </Typography>
+            )}
+          </Box>
+        </TabPanel>
+
+        {/* Danger Zone Tab */}
+        <TabPanel value={tabValue} index={5}>
+          <Box sx={{ p: 3 }}>
+            <Alert severity="warning" sx={{ mb: 4 }}>
+              <Typography fontWeight={600}>Caution</Typography>
+              Actions in this section are permanent and cannot be undone.
+            </Alert>
+
+            {/* Export Data */}
+            <Card sx={{ mb: 3, bgcolor: 'background.default', border: '1px solid', borderColor: 'divider' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 2,
+                        bgcolor: 'info.main',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Download size={24} color="white" />
+                    </Box>
+                    <Box>
+                      <Typography fontWeight={600}>Export Your Data</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Download a copy of all your data including trades, settings, and account info
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Download size={16} />}
+                    onClick={handleExportData}
+                  >
+                    Export Data
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+
+            {/* Delete Account */}
+            <Card sx={{ bgcolor: 'background.default', border: '1px solid', borderColor: 'error.main' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 2,
+                        bgcolor: 'error.main',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Trash2 size={24} color="white" />
+                    </Box>
+                    <Box>
+                      <Typography fontWeight={600} color="error.main">Delete Account</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Permanently delete your account and all associated data. This action cannot be undone.
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<Trash2 size={16} />}
+                    onClick={() => setShowDeleteDialog(true)}
+                  >
+                    Delete Account
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Box>
+        </TabPanel>
       </Paper>
+
+      {/* 2FA Setup Dialog */}
+      <Dialog open={show2FADialog} onClose={() => setShow2FADialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Enable Two-Factor Authentication</DialogTitle>
+        <DialogContent>
+          <Typography color="text.secondary" sx={{ mb: 3 }}>
+            Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
+          </Typography>
+          
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Box
+              sx={{
+                width: 200,
+                height: 200,
+                bgcolor: 'white',
+                mx: 'auto',
+                p: 2,
+                borderRadius: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <QrCode size={160} color="black" />
+            </Box>
+          </Box>
+
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Or enter this code manually:
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+            <TextField
+              fullWidth
+              value={security.twoFactorSecret}
+              InputProps={{ readOnly: true }}
+              size="small"
+            />
+            <IconButton onClick={() => copyToClipboard(security.twoFactorSecret)}>
+              <Copy size={18} />
+            </IconButton>
+          </Box>
+
+          <TextField
+            fullWidth
+            label="Enter 6-digit code from app"
+            placeholder="000000"
+            inputProps={{ maxLength: 6 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShow2FADialog(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleConfirm2FA}>
+            Verify & Enable
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Telegram Connect Dialog */}
+      <Dialog open={showTelegramDialog} onClose={() => setShowTelegramDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Connect Telegram</DialogTitle>
+        <DialogContent>
+          <Typography color="text.secondary" sx={{ mb: 3 }}>
+            Follow these steps to connect your Telegram account:
+          </Typography>
+          
+          <List>
+            <ListItem>
+              <ListItemIcon>
+                <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>1</Avatar>
+              </ListItemIcon>
+              <ListItemText
+                primary="Open Telegram"
+                secondary="Search for @AlgoEdgeBot"
+              />
+            </ListItem>
+            <ListItem>
+              <ListItemIcon>
+                <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>2</Avatar>
+              </ListItemIcon>
+              <ListItemText
+                primary="Start the bot"
+                secondary="Click 'Start' or send /start"
+              />
+            </ListItem>
+            <ListItem>
+              <ListItemIcon>
+                <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>3</Avatar>
+              </ListItemIcon>
+              <ListItemText
+                primary="Link your account"
+                secondary="Send your account email to the bot"
+              />
+            </ListItem>
+          </List>
+
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Your verification code:
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+              <Typography variant="h5" fontWeight={700} fontFamily="monospace">
+                AE-{Math.random().toString(36).substring(2, 8).toUpperCase()}
+              </Typography>
+              <IconButton size="small">
+                <Copy size={16} />
+              </IconButton>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowTelegramDialog(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleTelegramConnected}
+            sx={{ bgcolor: '#0088cc', '&:hover': { bgcolor: '#006699' } }}
+          >
+            I have Connected
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Account Dialog */}
+      <Dialog open={showDeleteDialog} onClose={() => setShowDeleteDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ color: 'error.main' }}>Delete Account</DialogTitle>
+        <DialogContent>
+          <Alert severity="error" sx={{ mb: 3 }}>
+            This action is <strong>permanent</strong> and cannot be undone. All your data including:
+            <ul style={{ marginBottom: 0 }}>
+              <li>Trade history</li>
+              <li>MT5 connection settings</li>
+              <li>Account preferences</li>
+              <li>Payment history</li>
+            </ul>
+            will be permanently deleted.
+          </Alert>
+          
+          <Typography sx={{ mb: 2 }}>
+            To confirm, type <strong>DELETE</strong> below:
+          </Typography>
+          <TextField
+            fullWidth
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            placeholder="Type DELETE to confirm"
+            error={deleteConfirmText.length > 0 && deleteConfirmText !== 'DELETE'}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setShowDeleteDialog(false); setDeleteConfirmText(''); }}>
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            color="error"
+            onClick={handleDeleteAccount}
+            disabled={deleteConfirmText !== 'DELETE'}
+          >
+            Delete My Account
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

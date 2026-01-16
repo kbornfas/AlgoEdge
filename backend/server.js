@@ -12,6 +12,7 @@ import {
   startBalanceSyncScheduler,
 } from './services/mt5Service.js';
 import { startTradingScheduler, stopTradingScheduler } from './services/tradingScheduler.js';
+import { startReportSchedulers, stopReportSchedulers } from './services/reportScheduler.js';
 
 import { auditMiddleware } from './middleware/audit.js';
 
@@ -161,6 +162,10 @@ const startServer = async () => {
     await startTradingScheduler();
     console.log('✅ Trading scheduler started - robots will trade automatically');
 
+    // Start email report schedulers (daily + weekly)
+    startReportSchedulers();
+    console.log('✅ Report schedulers started - emails will be sent on schedule');
+
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Backend server running on port ${PORT}`);
     });
@@ -177,6 +182,7 @@ const startServer = async () => {
 const shutdown = () => {
   console.log('🛑 Shutting down server...');
   stopTradingScheduler();
+  stopReportSchedulers();
   server.close(() => process.exit(0));
 };
 

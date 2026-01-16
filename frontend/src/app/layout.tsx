@@ -1,9 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
-import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import theme from '@/theme/theme';
+import { ThemeProvider } from '@/context/ThemeContext';
 
 const GA_MEASUREMENT_ID = "G-N3C6NNCLVL";
 
@@ -125,8 +123,7 @@ export default function RootLayout({
         </Script>
       </head>
       <body style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: 'transparent' }}>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
+        <ThemeProvider>
           {children}
         </ThemeProvider>
       </body>

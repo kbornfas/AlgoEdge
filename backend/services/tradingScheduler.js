@@ -2,6 +2,7 @@ import pool from '../config/database.js';
 import { mt5Connections, connectMT5Account, isMetaApiReady, waitForMetaApi } from './mt5Service.js';
 import { emitTradeSignal, emitTradeClosed, emitPositionUpdate, emitBalanceUpdate } from './websocketService.js';
 import { generateNewsSignal, shouldAvoidTradingDueToNews, IMPACT } from './newsService.js';
+import { sendTradeOpenedAlert, sendTradeClosedAlert } from './notificationService.js';
 import https from 'https';
 
 /**
@@ -1137,6 +1138,16 @@ async function executeTrade(connection, accountId, robotId, userId, robotName, s
       
       // Emit trade signal
       emitTradeSignal(userId, { robotId, robotName, signal, trade });
+      
+      // Send email notification (async - don't block trade execution)
+      sendTradeOpenedAlert(userId, {
+        ...trade,
+        robot: robotName,
+        reason: signal.reason,
+        stop_loss: signal.stopLoss,
+        take_profit: signal.takeProfit,
+      }).catch(err => console.log(`  ⚠️ Email notification failed:`, err.message));
+      
       return trade;
     }
     return null;

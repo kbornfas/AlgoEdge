@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const drawerWidth = 260;
 
@@ -154,7 +155,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {menuItems.find(item => item.href === pathname)?.text || 'Dashboard'}
           </Typography>
 
-          <IconButton color="inherit" onClick={handleProfileMenuOpen}>
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
+          <IconButton color="inherit" onClick={handleProfileMenuOpen} sx={{ ml: 1 }}>
             <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
               {user?.username?.charAt(0).toUpperCase() || 'U'}
             </Avatar>

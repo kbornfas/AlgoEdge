@@ -15,11 +15,14 @@ import {
   InputAdornment,
   IconButton,
   Grid,
+  Divider,
 } from '@mui/material';
 import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AuthBackground from '@/components/AuthBackground';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -121,6 +124,12 @@ export default function RegisterPage() {
       }}
     >
       <AuthBackground />
+      
+      {/* Theme Toggle - Top Right */}
+      <Box sx={{ position: 'fixed', top: 16, right: 16, zIndex: 1000 }}>
+        <ThemeToggle />
+      </Box>
+
       <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
         <Card>
           <CardContent sx={{ p: 4 }}>
@@ -233,7 +242,17 @@ export default function RegisterPage() {
                 {loading ? <CircularProgress size={24} /> : 'Create Account'}
               </Button>
 
-              <Typography variant="body2" align="center" color="text.secondary">
+              {/* Divider */}
+              <Divider sx={{ my: 3 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Or continue with
+                </Typography>
+              </Divider>
+
+              {/* Google Sign Up */}
+              <GoogleSignInButton variant="signup" disabled={loading || success} />
+
+              <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 3 }}>
                 Already have an account?{' '}
                 <MuiLink component={Link} href="/auth/login" underline="hover">
                   Sign in
