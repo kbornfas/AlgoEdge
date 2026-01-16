@@ -1,4 +1,3 @@
-// AlgoEdge Database Schema
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,68 +8,60 @@ datasource db {
 }
 
 model User {
-  id                   Int                 @id @default(autoincrement())
-  username             String              @unique @db.VarChar(50)
-  email                String              @unique @db.VarChar(255)
-  passwordHash         String?             @map("password_hash") @db.VarChar(255)
-  fullName             String?             @map("full_name") @db.VarChar(100)
-  phone                String?             @db.VarChar(20)
-  country              String?             @db.VarChar(100)
-  timezone             String              @default("UTC") @db.VarChar(50)
-  googleId             String?             @map("google_id") @db.VarChar(255)
-  profilePicture       String?             @map("profile_picture") @db.Text
-  isVerified           Boolean             @default(false) @map("is_verified")
-  verificationToken    String?             @map("verification_token") @db.VarChar(255)
-  verificationExpires  DateTime?           @map("verification_expires")
-  twoFaEnabled         Boolean             @default(false) @map("two_fa_enabled")
-  twoFaSecret          String?             @map("two_fa_secret") @db.VarChar(255)
-  resetToken           String?             @map("reset_token") @db.VarChar(255)
-  resetExpires         DateTime?           @map("reset_expires")
-  lastLogin            DateTime?           @map("last_login")
-  isAdmin              Boolean             @default(false) @map("is_admin")
-  isActivated          Boolean             @default(false) @map("is_activated")
-  approvalStatus       String              @default("pending") @map("approval_status") @db.VarChar(50) // pending, approved, rejected
-  rejectionReason      String?             @map("rejection_reason") @db.Text
-  paymentProofUrl      String?             @map("payment_proof_url") @db.Text
-  paymentStatus        String              @default("pending") @map("payment_status") @db.VarChar(50)
-  paymentSubmittedAt   DateTime?           @map("payment_submitted_at")
-  activatedAt          DateTime?           @map("activated_at")
-  activatedBy          Int?                @map("activated_by")
-  createdAt            DateTime            @default(now()) @map("created_at")
-  updatedAt            DateTime            @default(now()) @updatedAt @map("updated_at")
+  id                         Int       @id @default(autoincrement())
+  email                      String    @unique @db.VarChar(255)
+  passwordHash               String?   @map("password_hash") @db.VarChar(255)
+  username                   String?   @unique @db.VarChar(50)
+  fullName                   String?   @map("full_name") @db.VarChar(100)
+  phone                      String?   @db.VarChar(20)
+  country                    String?   @db.VarChar(100)
+  timezone                   String?   @default("UTC") @db.VarChar(50)
+  googleId                   String?   @map("google_id") @db.VarChar(255)
+  profilePicture             String?   @map("profile_picture")
+  isVerified                 Boolean?  @default(false) @map("is_verified")
+  verificationToken          String?   @map("verification_token") @db.VarChar(255)
+  verificationExpires        DateTime? @map("verification_expires") @db.Timestamp(6)
+  verification_code          String?   @db.VarChar(10)
+  verification_code_expires  DateTime? @db.Timestamp(6)
+  verification_code_attempts Int?      @default(0)
+  twoFaEnabled               Boolean?  @default(false) @map("two_fa_enabled")
+  twoFaSecret                String?   @map("two_fa_secret") @db.VarChar(255)
+  resetToken                 String?   @map("reset_token") @db.VarChar(255)
+  resetExpires               DateTime? @map("reset_expires") @db.Timestamp(6)
+  lastLogin                  DateTime? @map("last_login") @db.Timestamp(6)
+  isAdmin                    Boolean?  @default(false) @map("is_admin")
+  isActivated                Boolean?  @default(false) @map("is_activated")
+  approvalStatus             String?   @default("pending") @map("approval_status") @db.VarChar(50)
+  rejectionReason            String?   @map("rejection_reason")
+  paymentProofUrl            String?   @map("payment_proof_url")
+  paymentStatus              String?   @default("pending") @map("payment_status") @db.VarChar(50)
+  paymentSubmittedAt         DateTime? @map("payment_submitted_at") @db.Timestamp(6)
+  activatedAt                DateTime? @map("activated_at") @db.Timestamp(6)
+  activatedBy                Int?      @map("activated_by")
+  createdAt                  DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt                  DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
 
-  // Relations
-  subscription         Subscription?
-  mt5Accounts          Mt5Account[]
-  robotConfigs         UserRobotConfig[]
-  trades               Trade[]
-  settings             UserSettings?
-  auditLogs            AuditLog[]
-  paymentProofs        PaymentProof[]
-
-  @@index([email])
-  @@index([username])
-  @@index([isActivated])
-  @@index([approvalStatus])
-  @@index([paymentStatus])
   @@index([googleId])
+  @@index([email], map: "idx_users_email")
+  @@index([username], map: "idx_users_username")
+  @@index([isActivated], map: "idx_users_is_activated")
+  @@index([approvalStatus], map: "idx_users_approval_status")
+  @@index([paymentStatus], map: "idx_users_payment_status")
   @@map("users")
 }
 
 model Subscription {
-  id                    Int       @id @default(autoincrement())
-  userId                Int       @unique @map("user_id")
-  plan                  String    @default("free") @db.VarChar(50)
-  status                String    @default("active") @db.VarChar(50)
-  stripeCustomerId      String?   @map("stripe_customer_id") @db.VarChar(255)
-  stripeSubscriptionId  String?   @map("stripe_subscription_id") @db.VarChar(255)
-  currentPeriodStart    DateTime? @map("current_period_start")
-  currentPeriodEnd      DateTime? @map("current_period_end")
-  cancelAtPeriodEnd     Boolean   @default(false) @map("cancel_at_period_end")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   Int       @id @default(autoincrement())
+  userId               Int       @unique @map("user_id")
+  plan                 String    @default("free") @db.VarChar(50)
+  status               String    @default("active") @db.VarChar(50)
+  stripeCustomerId     String?   @map("stripe_customer_id") @db.VarChar(255)
+  stripeSubscriptionId String?   @map("stripe_subscription_id") @db.VarChar(255)
+  currentPeriodStart   DateTime? @map("current_period_start")
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  cancelAtPeriodEnd    Boolean   @default(false) @map("cancel_at_period_end")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at")
 
   @@map("subscriptions")
 }
@@ -80,127 +71,114 @@ model Mt5Account {
   userId      Int       @map("user_id")
   accountId   String    @map("account_id") @db.VarChar(50)
   server      String    @db.VarChar(100)
-  apiKey      String?   @map("api_key") @db.Text
-  apiSecret   String?   @map("api_secret") @db.Text
-  isDemo      Boolean   @default(true) @map("is_demo")
-  isConnected Boolean   @default(false) @map("is_connected")
-  status      String    @default("disconnected") @db.VarChar(50)
-  balance     Decimal   @default(0) @db.Decimal(15, 2)
-  equity      Decimal   @default(0) @db.Decimal(15, 2)
-  lastSync    DateTime? @map("last_sync")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
-
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trades Trade[]
+  status      String    @default("disconnected") @db.VarChar(50)
+  lastSync    DateTime? @map("last_sync")
+  apiKey      String?   @map("api_key")
+  apiSecret   String?   @map("api_secret")
+  balance     Decimal   @default(0) @db.Decimal(15, 2)
+  equity      Decimal   @default(0) @db.Decimal(15, 2)
+  isConnected Boolean   @default(false) @map("is_connected")
+  isDemo      Boolean   @default(true) @map("is_demo")
 
   @@map("mt5_accounts")
 }
 
 model TradingRobot {
-  id          String   @id @db.VarChar(50)
-  name        String   @db.VarChar(100)
-  description String?  @db.Text
-  strategy    String?  @db.VarChar(100)
-  timeframe   String?  @db.VarChar(10)
-  timeframes  String[] @default([])
-  pairs       String[] @default([])
-  riskLevel   String?  @map("risk_level") @db.VarChar(20)
-  winRate     Decimal? @map("win_rate") @db.Decimal(5, 2)
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  userConfigs UserRobotConfig[]
-  trades      Trade[]
+  id          String    @id @db.VarChar(50)
+  name        String    @db.VarChar(100)
+  description String?
+  strategy    String?   @db.VarChar(100)
+  timeframe   String?   @db.VarChar(10)
+  riskLevel   String?   @map("risk_level") @db.VarChar(20)
+  winRate     Decimal?  @map("win_rate") @db.Decimal(5, 2)
+  isActive    Boolean?  @default(true) @map("is_active")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
 
   @@map("trading_robots")
 }
 
 model UserRobotConfig {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  robotId   String   @map("robot_id") @db.VarChar(50)
-  isEnabled Boolean  @default(false) @map("is_enabled")
-  settings  Json?    @db.JsonB
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
-
-  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  robot TradingRobot  @relation(fields: [robotId], references: [id])
+  id        Int       @id @default(autoincrement())
+  userId    Int?      @map("user_id")
+  robotId   String?   @map("robot_id") @db.VarChar(50)
+  isEnabled Boolean?  @default(false) @map("is_enabled")
+  settings  Json?
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
 
   @@unique([userId, robotId])
   @@map("user_robot_configs")
 }
 
 model Trade {
-  id            BigInt    @id @default(autoincrement())
-  userId        Int       @map("user_id")
-  robotId       String?   @map("robot_id") @db.VarChar(50)
-  mt5AccountId  Int?      @map("mt5_account_id")
-  pair          String    @db.VarChar(20)
-  type          String    @db.VarChar(10)
-  volume        Decimal   @db.Decimal(10, 2)
-  openPrice     Decimal   @map("open_price") @db.Decimal(15, 5)
-  closePrice    Decimal?  @map("close_price") @db.Decimal(15, 5)
-  stopLoss      Decimal?  @map("stop_loss") @db.Decimal(15, 5)
-  takeProfit    Decimal?  @map("take_profit") @db.Decimal(15, 5)
-  profit        Decimal?  @db.Decimal(15, 2)
-  status        String    @default("open") @db.VarChar(20)
-  openTime      DateTime  @default(now()) @map("open_time")
-  closeTime     DateTime? @map("close_time")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+  id           Int       @id @default(autoincrement())
+  userId       Int?      @map("user_id")
+  mt5AccountId Int?      @map("mt5_account_id")
+  ticket       String    @db.VarChar(255)
+  symbol       String    @db.VarChar(50)
+  type         String    @db.VarChar(20)
+  volume       Decimal   @db.Decimal(15, 5)
+  openPrice    Decimal   @map("open_price") @db.Decimal(15, 5)
+  closePrice   Decimal?  @map("close_price") @db.Decimal(15, 5)
+  stopLoss     Decimal?  @map("stop_loss") @db.Decimal(15, 5)
+  takeProfit   Decimal?  @map("take_profit") @db.Decimal(15, 5)
+  profit       Decimal?  @db.Decimal(15, 2)
+  commission   Decimal?  @db.Decimal(15, 2)
+  swap         Decimal?  @db.Decimal(15, 2)
+  openTime     DateTime  @map("open_time") @db.Timestamp(6)
+  closeTime    DateTime? @map("close_time") @db.Timestamp(6)
+  status       String?   @default("open") @db.VarChar(20)
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  mt5_ticket   String?   @db.VarChar(255)
+  closed_at    DateTime? @db.Timestamp(6)
 
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  robot      TradingRobot? @relation(fields: [robotId], references: [id])
-  mt5Account Mt5Account?   @relation(fields: [mt5AccountId], references: [id])
-
-  @@index([userId])
-  @@index([status])
-  @@index([openTime])
+  @@index([openTime], map: "idx_trades_open_time")
+  @@index([status], map: "idx_trades_status")
+  @@index([userId], map: "idx_trades_user_id")
   @@map("trades")
 }
 
 model UserSettings {
-  id                 Int      @id @default(autoincrement())
-  userId             Int      @unique @map("user_id")
-  emailNotifications Boolean  @default(true) @map("email_notifications")
-  tradeAlerts        Boolean  @default(true) @map("trade_alerts")
-  dailyReports       Boolean  @default(false) @map("daily_reports")
-  weeklyReports      Boolean  @default(true) @map("weekly_reports")
-  marketNews         Boolean  @default(false) @map("market_news")
-  telegramAlerts     Boolean  @default(false) @map("telegram_alerts")
-  telegramChatId     String?  @map("telegram_chat_id") @db.VarChar(50)
-  timezone           String   @default("UTC") @db.VarChar(50)
-  tradingPrefs       Json?    @default("{}") @map("trading_prefs") @db.JsonB
-  lastWeeklyReport   DateTime? @map("last_weekly_report")
-  lastDailyReport    DateTime? @map("last_daily_report")
-  riskLevel          String   @default("medium") @map("risk_level") @db.VarChar(20)
-  stopLossPercent    Decimal  @default(2.0) @map("stop_loss_percent") @db.Decimal(5, 2)
-  takeProfitPercent  Decimal  @default(5.0) @map("take_profit_percent") @db.Decimal(5, 2)
-  autoCloseProfit    Boolean  @default(false) @map("auto_close_profit")
-  theme              String   @default("dark") @db.VarChar(20)
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 Int       @id @default(autoincrement())
+  userId             Int?      @unique @map("user_id")
+  emailNotifications Boolean?  @default(true) @map("email_notifications")
+  tradeAlerts        Boolean?  @default(true) @map("trade_alerts")
+  dailyReports       Boolean?  @default(false) @map("daily_reports")
+  riskLevel          String?   @default("medium") @map("risk_level") @db.VarChar(20)
+  stopLossPercent    Decimal?  @default(2.0) @map("stop_loss_percent") @db.Decimal(5, 2)
+  takeProfitPercent  Decimal?  @default(5.0) @map("take_profit_percent") @db.Decimal(5, 2)
+  autoCloseProfit    Boolean?  @default(false) @map("auto_close_profit")
+  theme              String?   @default("dark") @db.VarChar(20)
+  createdAt          DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt          DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  weeklyReports      Boolean?  @default(true) @map("weekly_reports")
+  marketNews         Boolean?  @default(false) @map("market_news")
+  telegramAlerts     Boolean?  @default(false) @map("telegram_alerts")
+  telegramChatId     String?   @map("telegram_chat_id") @db.VarChar(50)
+  timezone           String?   @default("UTC") @db.VarChar(50)
+  tradingPrefs       Json?     @default("{}") @map("trading_prefs")
+  lastWeeklyReport   DateTime? @map("last_weekly_report") @db.Timestamp(6)
+  lastDailyReport    DateTime? @map("last_daily_report") @db.Timestamp(6)
+  telegram_username  String?   @db.VarChar(100)
 
   @@map("user_settings")
 }
 
 model VerificationCode {
-  id        Int      @id @default(autoincrement())
-  email     String   @db.VarChar(255)
-  code      String   @db.VarChar(10)
-  type      String   @db.VarChar(50)
-  expiresAt DateTime @map("expires_at")
-  used      Boolean  @default(false)
-  metadata  Json?    @db.JsonB
-  createdAt DateTime @default(now()) @map("created_at")
+  id        Int       @id @default(autoincrement())
+  email     String    @db.VarChar(255)
+  code      String    @db.VarChar(10)
+  type      String    @db.VarChar(50)
+  expiresAt DateTime  @map("expires_at") @db.Timestamp(6)
+  used      Boolean?  @default(false)
+  metadata  Json?
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
 
   @@unique([email, type])
-  @@index([email, type])
-  @@index([expiresAt])
+  @@index([email, type], map: "idx_verification_codes_email_type")
+  @@index([expiresAt], map: "idx_verification_codes_expires")
   @@map("verification_codes")
 }
 
@@ -208,35 +186,39 @@ model AuditLog {
   id        BigInt   @id @default(autoincrement())
   userId    Int?     @map("user_id")
   action    String   @db.VarChar(100)
-  details   Json?    @db.JsonB
+  details   Json?
   ipAddress String?  @map("ip_address") @db.VarChar(50)
-  userAgent String?  @map("user_agent") @db.Text
+  userAgent String?  @map("user_agent")
   createdAt DateTime @default(now()) @map("created_at")
 
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([createdAt])
+  @@index([createdAt], map: "idx_audit_logs_created_at")
+  @@index([userId], map: "idx_audit_logs_user_id")
   @@map("audit_logs")
 }
 
-model PaymentProof {
-  id           Int       @id @default(autoincrement())
-  userId       Int       @map("user_id")
-  proofUrl     String    @map("proof_url") @db.Text
-  amount       Decimal?  @db.Decimal(10, 2)
-  currency     String    @default("USD") @db.VarChar(10)
-  status       String    @default("pending") @db.VarChar(50)
-  notes        String?   @db.Text
-  reviewedBy   Int?      @map("reviewed_by")
-  reviewedAt   DateTime? @map("reviewed_at")
-  submittedAt  DateTime  @default(now()) @map("submitted_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+model balance_history {
+  id             Int       @id @default(autoincrement())
+  user_id        Int?
+  mt5_account_id Int?
+  balance        Decimal   @db.Decimal(15, 2)
+  equity         Decimal   @db.Decimal(15, 2)
+  margin         Decimal?  @db.Decimal(15, 2)
+  free_margin    Decimal?  @db.Decimal(15, 2)
+  margin_level   Decimal?  @db.Decimal(10, 2)
+  recorded_at    DateTime? @default(now()) @db.Timestamp(6)
 
-  @@index([userId])
-  @@index([status])
-  @@index([submittedAt])
-  @@map("payment_proofs")
+  @@index([recorded_at], map: "idx_balance_history_recorded_at")
+  @@index([user_id], map: "idx_balance_history_user_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model telegram_pending_connections {
+  id         Int       @id @default(autoincrement())
+  user_id    Int       @unique
+  token      String    @unique @db.VarChar(64)
+  expires_at DateTime  @db.Timestamp(6)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([expires_at], map: "idx_telegram_pending_expires")
+  @@index([token], map: "idx_telegram_pending_token")
 }
