@@ -1,6 +1,10 @@
 export default function Head() {
   return (
     <>
+      {/* Favicon */}
+      <link rel="icon" href="/images/logo.png" type="image/png" />
+      <link rel="apple-touch-icon" href="/images/logo.png" />
+      
       {/* Preconnect to important domains for performance */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -17,7 +21,7 @@ export default function Head() {
             "@type": "Organization",
             "name": "AlgoEdge",
             "url": "https://algoedgehub.com",
-            "logo": "https://algoedgehub.com/logo.png",
+            "logo": "https://algoedgehub.com/images/logo.png",
             "description": "AI-Powered Automated Forex Trading Platform",
             "sameAs": [
               "https://t.me/+newQkIa06W1kNmMx"
