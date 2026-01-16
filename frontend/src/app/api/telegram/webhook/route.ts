@@ -54,39 +54,32 @@ export async function POST(req: NextRequest) {
       const token = parts[1]; // Token from deep link
 
       if (token) {
-        // Find pending connection with this token
+        // Find pending connection with this token using raw SQL
         const pending = await prisma.$queryRaw<Array<{user_id: number}>>`
           SELECT user_id FROM telegram_pending_connections 
           WHERE token = ${token} AND expires_at > NOW()
         `;
 
         if (pending.length > 0) {
-          const userId = pending[0].user_id;
+          const odUser = pending[0].user_id;
 
-          // Update user settings with Telegram chat ID
-          await prisma.userSettings.upsert({
-            where: { userId },
-            update: {
-              telegramChatId: chatId.toString(),
-              telegramAlerts: true,
-              telegramUsername,
-            },
-            create: {
-              userId,
-              telegramChatId: chatId.toString(),
-              telegramAlerts: true,
-              telegramUsername,
-            },
-          });
+          // Update user settings with Telegram chat ID using raw SQL
+          await prisma.$executeRaw`
+            UPDATE user_settings 
+            SET telegram_chat_id = ${chatId.toString()}, 
+                telegram_alerts = true, 
+                telegram_username = ${telegramUsername}
+            WHERE user_id = ${odUser}
+          `;
 
           // Delete pending connection
           await prisma.$executeRaw`
-            DELETE FROM telegram_pending_connections WHERE user_id = ${userId}
+            DELETE FROM telegram_pending_connections WHERE user_id = ${odUser}
           `;
 
           // Get user info
           const user = await prisma.user.findUnique({
-            where: { id: userId },
+            where: { id: odUser },
             select: { username: true },
           });
 
@@ -133,16 +126,19 @@ export async function POST(req: NextRequest) {
 
     // Handle /status command
     if (text === '/status') {
-      const settings = await prisma.userSettings.findFirst({
-        where: { telegramChatId: chatId.toString() },
-        include: { user: { select: { username: true } } },
-      });
+      const settings = await prisma.$queryRaw<Array<{username: string, telegram_alerts: boolean}>>`
+        SELECT u.username, us.telegram_alerts 
+        FROM user_settings us 
+        JOIN users u ON u.id = us.user_id 
+        WHERE us.telegram_chat_id = ${chatId.toString()}
+      `;
 
-      if (settings) {
+      if (settings.length > 0) {
+        const setting = settings[0];
         await sendTelegramMessage(chatId,
           `✅ <b>Connected</b>\n\n` +
-          `Account: <code>${settings.user.username}</code>\n` +
-          `Alerts: ${settings.telegramAlerts ? '🔔 Enabled' : '🔕 Disabled'}`
+          `Account: <code>${setting.username}</code>\n` +
+          `Alerts: ${setting.telegram_alerts ? '🔔 Enabled' : '🔕 Disabled'}`
         );
       } else {
         await sendTelegramMessage(chatId,
@@ -156,20 +152,18 @@ export async function POST(req: NextRequest) {
 
     // Handle /mute command
     if (text === '/mute') {
-      await prisma.userSettings.updateMany({
-        where: { telegramChatId: chatId.toString() },
-        data: { telegramAlerts: false },
-      });
+      await prisma.$executeRaw`
+        UPDATE user_settings SET telegram_alerts = false WHERE telegram_chat_id = ${chatId.toString()}
+      `;
       await sendTelegramMessage(chatId, '🔕 Alerts muted. Use /unmute to resume.');
       return NextResponse.json({ ok: true, action: 'muted' });
     }
 
     // Handle /unmute command
     if (text === '/unmute') {
-      await prisma.userSettings.updateMany({
-        where: { telegramChatId: chatId.toString() },
-        data: { telegramAlerts: true },
-      });
+      await prisma.$executeRaw`
+        UPDATE user_settings SET telegram_alerts = true WHERE telegram_chat_id = ${chatId.toString()}
+      `;
       await sendTelegramMessage(chatId, '🔔 Alerts resumed!');
       return NextResponse.json({ ok: true, action: 'unmuted' });
     }
