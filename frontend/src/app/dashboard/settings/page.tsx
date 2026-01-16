@@ -242,6 +242,7 @@ export default function SettingsPage() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Profile data:', data); // Debug log
         // Profile API returns data directly (not nested under 'user')
         setProfile({
           fullName: data.fullName || '',
@@ -250,10 +251,10 @@ export default function SettingsPage() {
           phone: data.phone || '',
         });
         
-        // Set 2FA status from user data
+        // Set 2FA status from user data (use explicit check for boolean)
         setSecurity(prev => ({
           ...prev,
-          twoFactorEnabled: data.twoFaEnabled || false,
+          twoFactorEnabled: data.twoFaEnabled === true,
         }));
         
         if (data.settings) {
@@ -432,6 +433,10 @@ export default function SettingsPage() {
         setShow2FADialog(true);
       } else {
         const errorData = await response.json();
+        // If 2FA is already enabled, update the UI state
+        if (errorData.error?.includes('already enabled')) {
+          setSecurity(prev => ({ ...prev, twoFactorEnabled: true }));
+        }
         setError(errorData.error || 'Failed to setup 2FA');
       }
     } catch (err) {
