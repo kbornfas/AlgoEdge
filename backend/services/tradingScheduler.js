@@ -3254,7 +3254,6 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
   
   // 🚀 PRECIOUS METALS OPTIMIZED STRATEGIES
   // Both Gold and Silver are traded - each has different characteristics
-  const isSilver = isSilverSymbol(symbol);
   
   const strategies = isGold ? [
     // GOLD-OPTIMIZED WEIGHTS - Gold respects these patterns strongly
