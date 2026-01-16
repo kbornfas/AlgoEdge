@@ -3,8 +3,8 @@
  * Handles scheduled sending of reports (daily summaries, weekly reports)
  */
 
-import { sendWeeklyReportsToAll, sendDailyReportsToAllUsers } from './notificationService.js';
-import { sendDailyReportsToAllUsers as legacySendDaily } from './emailService.js';
+import { sendWeeklyReportsToAll } from './notificationService.js';
+import { sendDailyReportsToAllUsers } from './emailService.js';
 import pool from '../config/database.js';
 
 let weeklyReportInterval = null;
