@@ -48,20 +48,26 @@ export default function PaymentInstructionsPage() {
         console.error('Failed to parse pending user data');
       }
     } else {
-      // Check if user is in localStorage (regular sign-up)
-      const userStr = localStorage.getItem('user');
-      if (!userStr) {
+      // Check if user is in localStorage (regular sign-up - use pendingUser)
+      const pendingUserStr = localStorage.getItem('pendingUser');
+      const pendingEmail = localStorage.getItem('pendingEmail');
+      
+      if (!pendingUserStr && !pendingEmail) {
         router.push('/auth/register');
         return;
       }
 
-      const user = JSON.parse(userStr);
-      if (!user.isVerified) {
-        router.push('/auth/verify-otp');
-        return;
+      if (pendingUserStr) {
+        const user = JSON.parse(pendingUserStr);
+        if (!user.isVerified) {
+          router.push('/auth/verify-otp');
+          return;
+        }
+        setUserEmail(user.email || '');
+        setUserName(user.username || '');
+      } else if (pendingEmail) {
+        setUserEmail(pendingEmail);
       }
-      setUserEmail(user.email || '');
-      setUserName(user.username || '');
     }
 
     // Get WhatsApp URL from environment

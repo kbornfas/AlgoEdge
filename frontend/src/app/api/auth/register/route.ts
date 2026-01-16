@@ -91,18 +91,11 @@ export async function POST(req: NextRequest) {
 
     // Don't send verification email - will send OTP instead when user requests it
     // Verification email sending removed - using OTP flow instead
-
-    // Generate JWT token
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      username: user.username,
-    });
+    // DO NOT return a token - user must verify email and wait for admin approval
 
     return NextResponse.json(
       {
         message: 'Registration successful. Please verify your email with OTP.',
-        token,
         user: {
           id: user.id,
           username: user.username,

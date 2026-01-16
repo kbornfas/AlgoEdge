@@ -97,9 +97,11 @@ export default function LoginPage() {
         return;
       }
 
-      // Save token to localStorage
+      // Save token to localStorage and clear any pending registration data
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.removeItem('pendingUser');
+      localStorage.removeItem('pendingEmail');
 
       // Redirect to dashboard
       router.push('/dashboard');

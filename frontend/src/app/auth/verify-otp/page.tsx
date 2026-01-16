@@ -32,11 +32,15 @@ export default function VerifyOTPPage() {
   const [otpSent, setOtpSent] = useState(false);
 
   useEffect(() => {
-    // Get user info from localStorage
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
+    // Get user info from localStorage (check both pendingUser and user for backward compatibility)
+    const pendingUserStr = localStorage.getItem('pendingUser');
+    const pendingEmail = localStorage.getItem('pendingEmail');
+    
+    if (pendingUserStr) {
+      const user = JSON.parse(pendingUserStr);
       setEmail(user.email || '');
+    } else if (pendingEmail) {
+      setEmail(pendingEmail);
     } else {
       // No user found, redirect to register
       router.push('/auth/register');
@@ -101,12 +105,12 @@ export default function VerifyOTPPage() {
         return;
       }
 
-      // Update user in localStorage
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
+      // Update pending user in localStorage
+      const pendingUserStr = localStorage.getItem('pendingUser');
+      if (pendingUserStr) {
+        const user = JSON.parse(pendingUserStr);
         user.isVerified = true;
-        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('pendingUser', JSON.stringify(user));
       }
 
       setSuccess('Email verified successfully! Redirecting to payment instructions...');

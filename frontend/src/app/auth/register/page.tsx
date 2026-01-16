@@ -94,9 +94,9 @@ export default function RegisterPage() {
         return;
       }
 
-      // Save token to localStorage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      // Store email for OTP verification (no token - user must verify and be approved)
+      localStorage.setItem('pendingEmail', data.user.email);
+      localStorage.setItem('pendingUser', JSON.stringify(data.user));
 
       setSuccess(true);
 
