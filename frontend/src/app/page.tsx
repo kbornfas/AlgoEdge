@@ -259,22 +259,6 @@ export default function Home() {
       {/* Hero Section - Above the Fold */}
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 10 }}>
         <Box sx={{ py: { xs: 6, md: 10 }, textAlign: 'center' }}>
-          {/* Logo */}
-          <Box sx={{ mb: 4 }}>
-            <Box
-              component="img"
-              src="/images/logo.png"
-              alt="AlgoEdge Logo"
-              sx={{ 
-                width: { xs: 100, md: 140 }, 
-                height: { xs: 100, md: 140 }, 
-                objectFit: 'contain', 
-                mx: 'auto',
-                filter: 'drop-shadow(0 0 30px rgba(16, 185, 129, 0.3))',
-              }}
-            />
-          </Box>
-          
           {/* Main Headline with Clear Offer */}
           <Typography
             variant="h1"
