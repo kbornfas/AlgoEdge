@@ -161,6 +161,10 @@ export default function SettingsPage() {
   // Sessions
   const [sessions, setSessions] = useState(mockSessions);
 
+  // Telegram state - declare before useEffect that uses it
+  const [telegramConnectLink, setTelegramConnectLink] = useState('');
+  const [telegramLoading, setTelegramLoading] = useState(false);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -168,7 +172,66 @@ export default function SettingsPage() {
       return;
     }
     fetchProfile();
+    // Also check Telegram status on page load
+    checkTelegramStatusSilent();
   }, [router]);
+
+  // Auto-poll for Telegram connection when dialog is open
+  useEffect(() => {
+    if (!showTelegramDialog || !telegramConnectLink) return;
+    
+    const pollInterval = setInterval(async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      try {
+        const response = await fetch('/api/telegram/status', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        
+        if (data.connected) {
+          setSecurity(prev => ({ 
+            ...prev, 
+            telegramConnected: true, 
+            telegramChatId: data.chatId || '',
+          }));
+          setNotifications(prev => ({ ...prev, telegramAlerts: data.alertsEnabled ?? true }));
+          setShowTelegramDialog(false);
+          setTelegramConnectLink('');
+          setSuccess('🎉 Telegram connected successfully!');
+          clearInterval(pollInterval);
+        }
+      } catch (err) {
+        // Silent fail for polling
+      }
+    }, 3000); // Poll every 3 seconds
+    
+    return () => clearInterval(pollInterval);
+  }, [showTelegramDialog, telegramConnectLink]);
+
+  const checkTelegramStatusSilent = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const response = await fetch('/api/telegram/status', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      
+      if (data.connected) {
+        setSecurity(prev => ({ 
+          ...prev, 
+          telegramConnected: true, 
+          telegramChatId: data.chatId || '',
+        }));
+        setNotifications(prev => ({ ...prev, telegramAlerts: data.alertsEnabled ?? true }));
+      }
+    } catch (err) {
+      // Silent fail
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -438,10 +501,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Telegram state
-  const [telegramConnectLink, setTelegramConnectLink] = useState('');
-  const [telegramLoading, setTelegramLoading] = useState(false);
-
   const handleConnectTelegram = async () => {
     setTelegramLoading(true);
     setError('');
@@ -481,7 +540,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleCheckTelegramConnection = async () => {
+  const handleCheckTelegramConnection = async (showError = true) => {
     setTelegramLoading(true);
     
     try {
@@ -504,11 +563,18 @@ export default function SettingsPage() {
         setShowTelegramDialog(false);
         setTelegramConnectLink('');
         setSuccess('🎉 Telegram connected successfully!');
+        return true;
       } else {
-        setError('Not connected yet. Please click the link and start the bot.');
+        if (showError) {
+          setError('Not connected yet. Please click the link and start the bot.');
+        }
+        return false;
       }
     } catch (err) {
-      setError('Failed to check connection status');
+      if (showError) {
+        setError('Failed to check connection status');
+      }
+      return false;
     } finally {
       setTelegramLoading(false);
     }
@@ -1527,7 +1593,7 @@ export default function SettingsPage() {
               <Button
                 fullWidth
                 variant="outlined"
-                onClick={handleCheckTelegramConnection}
+                onClick={() => handleCheckTelegramConnection(true)}
                 disabled={telegramLoading}
                 startIcon={telegramLoading ? <CircularProgress size={18} /> : <CheckCircle size={18} />}
               >
