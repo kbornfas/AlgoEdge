@@ -133,6 +133,21 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Check for logged-in user first (from localStorage token)
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setUserEmail(user.email || '');
+        setUserName(user.firstName || user.username || '');
+        return; // User is logged in, don't redirect
+      } catch (e) {
+        console.error('Failed to parse user data');
+      }
+    }
+    
     // Check for Google sign-up user first (from cookies)
     const pendingUserCookie = document.cookie
       .split('; ')
