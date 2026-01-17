@@ -147,6 +147,24 @@ export const login = async (req, res) => {
       [user.id]
     );
 
+    // Check subscription status
+    const subscriptionResult = await pool.query(
+      `SELECT * FROM subscriptions 
+       WHERE user_id = $1 
+       AND status = 'active' 
+       AND (plan != 'free' OR whop_membership_id IS NOT NULL)
+       ORDER BY created_at DESC LIMIT 1`,
+      [user.id]
+    );
+    
+    // Also check subscription_status field on user
+    const userStatusResult = await pool.query(
+      'SELECT subscription_status FROM users WHERE id = $1',
+      [user.id]
+    );
+    const userStatus = userStatusResult.rows[0]?.subscription_status;
+    const hasActiveSubscription = subscriptionResult.rows.length > 0 || userStatus === 'active';
+
     // Generate token
     const token = generateToken(user.id);
 
@@ -161,6 +179,7 @@ export const login = async (req, res) => {
         email: user.email,
         isVerified: user.is_verified,
       },
+      hasActiveSubscription,
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -572,6 +591,17 @@ export const googleAuth = async (req, res) => {
         [user.id]
       );
 
+      // Check subscription status
+      const subscriptionResult = await client.query(
+        `SELECT * FROM subscriptions 
+         WHERE user_id = $1 
+         AND status = 'active' 
+         AND (plan != 'free' OR whop_membership_id IS NOT NULL)
+         ORDER BY created_at DESC LIMIT 1`,
+        [user.id]
+      );
+      const hasActiveSubscription = subscriptionResult.rows.length > 0 || user.subscription_status === 'active';
+
       await client.query('COMMIT');
 
       // Generate JWT token
@@ -593,7 +623,8 @@ export const googleAuth = async (req, res) => {
           isVerified: user.is_verified,
           profilePicture: user.profile_picture || picture
         },
-        isNewUser: false
+        isNewUser: false,
+        hasActiveSubscription
       });
     }
 

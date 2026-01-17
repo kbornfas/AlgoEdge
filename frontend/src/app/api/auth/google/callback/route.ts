@@ -92,8 +92,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Redirect based on whether user is new or existing
-    const redirectUrl = authData.isNewUser ? '/auth/pricing' : '/dashboard';
+    // Redirect based on subscription status:
+    // - New users → pricing page
+    // - Existing users with active subscription → dashboard
+    // - Existing users without subscription → pricing page
+    let redirectUrl = '/auth/pricing';
+    if (!authData.isNewUser && authData.hasActiveSubscription) {
+      redirectUrl = '/dashboard';
+    }
     const response = NextResponse.redirect(new URL(redirectUrl, request.url));
 
     // Set token in a secure cookie

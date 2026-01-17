@@ -104,8 +104,12 @@ export default function LoginPage() {
       localStorage.removeItem('pendingUser');
       localStorage.removeItem('pendingEmail');
 
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Redirect based on subscription status
+      if (data.hasActiveSubscription) {
+        router.push('/dashboard');
+      } else {
+        router.push('/auth/pricing');
+      }
     } catch (err) {
       console.error('Login error:', err);
       setError('Network error. Please try again.');
