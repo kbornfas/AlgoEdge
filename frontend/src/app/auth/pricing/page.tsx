@@ -103,7 +103,7 @@ const plans: PlanType[] = [
   {
     id: 'quarterly',
     name: 'Quarterly',
-    price: 129,
+    price: 149,
     period: '/quarterly',
     duration: '90 days of access',
     features: [

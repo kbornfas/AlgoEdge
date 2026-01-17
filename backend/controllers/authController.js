@@ -152,7 +152,7 @@ export const login = async (req, res) => {
       `SELECT * FROM subscriptions 
        WHERE user_id = $1 
        AND status = 'active' 
-       AND (plan != 'free' OR whop_membership_id IS NOT NULL)
+       AND plan != 'free'
        ORDER BY created_at DESC LIMIT 1`,
       [user.id]
     );
@@ -599,7 +599,7 @@ export const googleAuth = async (req, res) => {
         `SELECT * FROM subscriptions 
          WHERE user_id = $1 
          AND status = 'active' 
-         AND (plan != 'free' OR whop_membership_id IS NOT NULL)
+         AND plan != 'free'
          ORDER BY created_at DESC LIMIT 1`,
         [user.id]
       );
