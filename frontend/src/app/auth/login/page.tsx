@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation';
 import CTACard from '@/components/CTACard';
 import AuthBackground from '@/components/AuthBackground';
 import ThemeToggle from '@/components/ThemeToggle';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 // Instagram icon component
 const InstagramIcon = () => (
@@ -232,7 +233,19 @@ export default function LoginPage() {
                 {loading ? <CircularProgress size={24} /> : 'Sign In'}
               </Button>
 
-              <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 2 }}>
+              {/* Divider */}
+              <Box sx={{ display: 'flex', alignItems: 'center', my: 2 }}>
+                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+                <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
+                  or
+                </Typography>
+                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+              </Box>
+
+              {/* Google Sign In */}
+              <GoogleSignInButton mode="signin" />
+
+              <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 3 }}>
                 Don&apos;t have an account?{' '}
                 <MuiLink component={Link} href="/auth/register" underline="hover">
                   Sign up

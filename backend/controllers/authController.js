@@ -592,16 +592,59 @@ export const googleAuth = async (req, res) => {
           role: user.role,
           isVerified: user.is_verified,
           profilePicture: user.profile_picture || picture
-        }
+        },
+        isNewUser: false
       });
     }
 
-    // No existing user with this email - don't allow new registration via Google
-    // User must register with email/password first
-    await client.query('ROLLBACK');
-    return res.status(404).json({
-      error: 'No account found with this email. Please register first.',
-      requiresRegistration: true
+    // New user - create account via Google
+    const username = email.split('@')[0] + '_' + Math.random().toString(36).substring(2, 6);
+    
+    const result = await client.query(
+      `INSERT INTO users (
+        username, email, google_id, first_name, last_name, 
+        profile_picture, is_verified, is_active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, username, email, role, is_verified`,
+      [username, email, googleId, firstName, lastName, picture, true, true]
+    );
+
+    const newUser = result.rows[0];
+
+    // Create default subscription
+    await client.query(
+      'INSERT INTO subscriptions (user_id, plan, status) VALUES ($1, $2, $3)',
+      [newUser.id, 'free', 'active']
+    );
+
+    // Create default settings
+    await client.query(
+      'INSERT INTO user_settings (user_id) VALUES ($1)',
+      [newUser.id]
+    );
+
+    await client.query('COMMIT');
+
+    // Generate JWT token
+    const token = generateToken(newUser.id);
+
+    // Audit log
+    auditLog(newUser.id, 'GOOGLE_REGISTRATION', { email, googleId }, req);
+
+    res.status(201).json({
+      message: 'Registration successful!',
+      token,
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email,
+        firstName,
+        lastName,
+        role: newUser.role,
+        isVerified: true,
+        profilePicture: picture
+      },
+      isNewUser: true
     });
   } catch (error) {
     await client.query('ROLLBACK');

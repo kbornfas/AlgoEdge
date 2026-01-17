@@ -87,20 +87,14 @@ export async function GET(request: NextRequest) {
     const authData = await authResponse.json();
 
     if (!authResponse.ok) {
-      // Handle specific error cases
-      if (authData.requiresRegistration) {
-        // User doesn't exist - redirect to register page
-        return NextResponse.redirect(
-          new URL('/auth/register?error=' + encodeURIComponent('No account found with this email. Please register first.'), request.url)
-        );
-      }
       return NextResponse.redirect(
         new URL(`/auth/login?error=${encodeURIComponent(authData.error || 'Authentication failed')}`, request.url)
       );
     }
 
-    // Successful login - redirect to dashboard (or pricing if no subscription)
-    const response = NextResponse.redirect(new URL('/dashboard', request.url));
+    // Redirect based on whether user is new or existing
+    const redirectUrl = authData.isNewUser ? '/auth/pricing' : '/dashboard';
+    const response = NextResponse.redirect(new URL(redirectUrl, request.url));
 
     // Set token in a secure cookie
     response.cookies.set('auth_token', authData.token, {
