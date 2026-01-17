@@ -107,7 +107,7 @@ export const login = async (req, res) => {
 
     // Get user
     const result = await pool.query(
-      `SELECT id, username, email, password_hash, two_fa_enabled, two_fa_secret, is_verified
+      `SELECT id, username, email, password_hash, two_fa_enabled, two_fa_secret, is_verified, role
        FROM users WHERE username = $1 OR email = $1`,
       [username]
     );
