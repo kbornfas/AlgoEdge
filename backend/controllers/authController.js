@@ -555,36 +555,22 @@ export const googleAuth = async (req, res) => {
     );
 
     if (user.rows.length > 0) {
-      // Existing user - update Google ID if needed
+      // Existing user - allow sign in
       user = user.rows[0];
 
-      // Check if account is rejected
-      if (user.approval_status === 'rejected') {
-        await client.query('ROLLBACK');
-        return res.status(403).json({
-          error: 'Your account has been rejected',
-          isRejected: true,
-          rejectionReason: user.rejection_reason
-        });
-      }
-
-      // Check if account requires activation
-      if (!user.is_active && user.approval_status !== 'approved') {
-        await client.query('ROLLBACK');
-        return res.status(403).json({
-          error: 'Account pending approval',
-          requiresActivation: true,
-          isVerified: user.is_verified
-        });
-      }
-
-      // Update Google ID if not set
+      // Update Google ID if not set (linking Google to existing account)
       if (!user.google_id) {
         await client.query(
           'UPDATE users SET google_id = $1, profile_picture = COALESCE(profile_picture, $2) WHERE id = $3',
           [googleId, picture, user.id]
         );
       }
+
+      // Update last login
+      await client.query(
+        'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
+        [user.id]
+      );
 
       await client.query('COMMIT');
 
@@ -610,56 +596,12 @@ export const googleAuth = async (req, res) => {
       });
     }
 
-    // New user - create account
-    const username = email.split('@')[0] + '_' + Math.random().toString(36).substring(2, 6);
-    
-    const result = await client.query(
-      `INSERT INTO users (
-        username, email, google_id, first_name, last_name, 
-        profile_picture, is_verified, is_active, approval_status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING id, username, email, role, is_verified, is_active, approval_status`,
-      [username, email, googleId, firstName, lastName, picture, true, false, 'pending']
-    );
-
-    const newUser = result.rows[0];
-
-    // Create default subscription
-    await client.query(
-      'INSERT INTO subscriptions (user_id, plan, status) VALUES ($1, $2, $3)',
-      [newUser.id, 'free', 'active']
-    );
-
-    // Create default settings
-    await client.query(
-      'INSERT INTO user_settings (user_id) VALUES ($1)',
-      [newUser.id]
-    );
-
-    await client.query('COMMIT');
-
-    // Generate JWT token
-    const token = generateToken(newUser.id);
-
-    // Audit log
-    auditLog(newUser.id, 'GOOGLE_REGISTRATION', { email, googleId }, req);
-
-    res.status(201).json({
-      message: 'Registration successful! Your account is pending approval.',
-      token,
-      user: {
-        id: newUser.id,
-        username: newUser.username,
-        email: newUser.email,
-        firstName,
-        lastName,
-        role: newUser.role,
-        isVerified: true,
-        isActive: newUser.is_active,
-        approvalStatus: newUser.approval_status,
-        profilePicture: picture
-      },
-      requiresActivation: !newUser.is_active
+    // No existing user with this email - don't allow new registration via Google
+    // User must register with email/password first
+    await client.query('ROLLBACK');
+    return res.status(404).json({
+      error: 'No account found with this email. Please register first.',
+      requiresRegistration: true
     });
   } catch (error) {
     await client.query('ROLLBACK');

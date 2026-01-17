@@ -88,15 +88,10 @@ export async function GET(request: NextRequest) {
 
     if (!authResponse.ok) {
       // Handle specific error cases
-      if (authData.requiresActivation) {
-        // For new users - redirect to pricing page
+      if (authData.requiresRegistration) {
+        // User doesn't exist - redirect to register page
         return NextResponse.redirect(
-          new URL('/auth/pricing', request.url)
-        );
-      }
-      if (authData.isRejected) {
-        return NextResponse.redirect(
-          new URL('/auth/login?error=Your account has been rejected. Please contact support.', request.url)
+          new URL('/auth/register?error=' + encodeURIComponent('No account found with this email. Please register first.'), request.url)
         );
       }
       return NextResponse.redirect(
@@ -104,37 +99,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if this is a new registration (signup) - redirect to pricing page
-    if (state === 'signup' || authData.requiresActivation || !authData.user?.isActive) {
-      // Store token temporarily for after payment
-      const response = NextResponse.redirect(new URL('/auth/pricing', request.url));
-      
-      // Set token in cookie so user can be identified
-      response.cookies.set('pending_auth_token', authData.token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 24 * 60 * 60, // 24 hours
-        path: '/',
-      });
-
-      // Store user info for display on payment page
-      response.cookies.set('pending_user', JSON.stringify({
-        email: authData.user.email,
-        firstName: authData.user.firstName,
-        lastName: authData.user.lastName,
-      }), {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 24 * 60 * 60,
-        path: '/',
-      });
-
-      return response;
-    }
-
-    // Existing approved user - redirect to dashboard
+    // Successful login - redirect to dashboard (or pricing if no subscription)
     const response = NextResponse.redirect(new URL('/dashboard', request.url));
 
     // Set token in a secure cookie
