@@ -163,7 +163,10 @@ export const login = async (req, res) => {
       [user.id]
     );
     const userStatus = userStatusResult.rows[0]?.subscription_status;
-    const hasActiveSubscription = subscriptionResult.rows.length > 0 || userStatus === 'active';
+    
+    // Admin bypass - always has access
+    const isAdmin = user.email === process.env.ADMIN_EMAIL || user.role === 'admin';
+    const hasActiveSubscription = isAdmin || subscriptionResult.rows.length > 0 || userStatus === 'active';
 
     // Generate token
     const token = generateToken(user.id);
@@ -600,7 +603,10 @@ export const googleAuth = async (req, res) => {
          ORDER BY created_at DESC LIMIT 1`,
         [user.id]
       );
-      const hasActiveSubscription = subscriptionResult.rows.length > 0 || user.subscription_status === 'active';
+      
+      // Admin bypass - always has access
+      const isAdmin = user.email === process.env.ADMIN_EMAIL || user.role === 'admin';
+      const hasActiveSubscription = isAdmin || subscriptionResult.rows.length > 0 || user.subscription_status === 'active';
 
       await client.query('COMMIT');
 
