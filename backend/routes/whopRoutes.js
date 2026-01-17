@@ -1,6 +1,6 @@
 import express from 'express';
 import { handleWebhook, getSubscriptionStatus, verifyMembership, activateSubscription } from '../controllers/whopController.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -8,10 +8,10 @@ const router = express.Router();
 router.post('/webhook', express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }), handleWebhook);
 
 // Protected routes
-router.get('/subscription/status', authenticateToken, getSubscriptionStatus);
-router.get('/membership/:membershipId/verify', authenticateToken, verifyMembership);
+router.get('/subscription/status', authenticate, getSubscriptionStatus);
+router.get('/membership/:membershipId/verify', authenticate, verifyMembership);
 
 // Admin routes
-router.post('/subscription/activate', authenticateToken, activateSubscription);
+router.post('/subscription/activate', authenticate, activateSubscription);
 
 export default router;
