@@ -164,9 +164,12 @@ export const login = async (req, res) => {
     );
     const userStatus = userStatusResult.rows[0]?.subscription_status;
     
-    // Admin bypass - always has access
-    const isAdmin = user.email === process.env.ADMIN_EMAIL || user.role === 'admin';
+    // Admin bypass - always has access (case-insensitive email comparison)
+    const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
+    const isAdmin = user.email?.toLowerCase() === adminEmail || user.role === 'admin';
     const hasActiveSubscription = isAdmin || subscriptionResult.rows.length > 0 || userStatus === 'active';
+    
+    console.log('Login check:', { email: user.email, adminEmail, isAdmin, role: user.role, hasActiveSubscription });
 
     // Generate token
     const token = generateToken(user.id);
