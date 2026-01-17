@@ -103,7 +103,7 @@ const plans: PlanType[] = [
   {
     id: 'quarterly',
     name: 'Quarterly',
-    price: 149,
+    price: 129,
     period: '/quarterly',
     duration: '90 days of access',
     features: [
@@ -358,7 +358,7 @@ export default function PricingPage() {
                     height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
-                    bgcolor: 'rgba(30, 41, 59, 0.9)',
+                    bgcolor: plan.recommended ? 'rgba(16, 40, 30, 0.95)' : 'rgba(20, 25, 35, 0.95)',
                     backdropFilter: 'blur(10px)',
                     border: plan.recommended ? '2px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)',
                     borderRadius: 3,
@@ -366,8 +366,8 @@ export default function PricingPage() {
                     transition: 'all 0.3s ease',
                     '&:hover': {
                       transform: 'translateY(-8px)',
-                      borderColor: '#10b981',
-                      boxShadow: '0 12px 40px rgba(16, 185, 129, 0.2)',
+                      borderColor: plan.recommended ? '#10b981' : 'rgba(255, 255, 255, 0.3)',
+                      boxShadow: plan.recommended ? '0 12px 40px rgba(16, 185, 129, 0.3)' : '0 12px 40px rgba(0, 0, 0, 0.3)',
                     },
                   }}
                 >
@@ -467,16 +467,16 @@ export default function PricingPage() {
                         mb: 3,
                         py: 1,
                         px: 2,
-                        border: plan.recommended ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(255, 255, 255, 0.2)',
+                        border: '1px solid rgba(16, 185, 129, 0.5)',
                         borderRadius: 2,
                         display: 'inline-block',
                         mx: 'auto',
-                        bgcolor: plan.recommended ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                        bgcolor: 'rgba(16, 185, 129, 0.1)',
                       }}
                     >
                       <Typography
                         variant="body2"
-                        sx={{ color: plan.recommended ? '#10b981' : 'rgba(255, 255, 255, 0.9)', fontWeight: plan.recommended ? 600 : 400 }}
+                        sx={{ color: '#10b981', fontWeight: 600 }}
                       >
                         {plan.duration}
                       </Typography>
@@ -489,23 +489,24 @@ export default function PricingPage() {
                       onClick={() => handleSelectPlan(plan)}
                       disabled={loading}
                       sx={{
-                        bgcolor: '#10b981',
+                        bgcolor: plan.recommended ? '#10b981' : 'rgba(50, 60, 75, 0.9)',
                         color: 'white',
                         fontWeight: 600,
                         py: 1.5,
                         fontSize: '1rem',
                         borderRadius: 2,
                         textTransform: 'none',
+                        border: plan.recommended ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
                         '&:hover': {
-                          bgcolor: '#059669',
-                          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+                          bgcolor: plan.recommended ? '#059669' : 'rgba(70, 80, 95, 0.9)',
+                          boxShadow: plan.recommended ? '0 4px 12px rgba(16, 185, 129, 0.4)' : '0 4px 12px rgba(0, 0, 0, 0.3)',
                         },
                         '&:disabled': {
-                          bgcolor: 'rgba(16, 185, 129, 0.5)',
+                          bgcolor: plan.recommended ? 'rgba(16, 185, 129, 0.5)' : 'rgba(50, 60, 75, 0.5)',
                         },
                       }}
                     >
-                      Get Started →
+                      Get Access Now →
                     </Button>
                   </CardContent>
                 </Card>
