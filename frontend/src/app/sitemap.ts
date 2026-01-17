@@ -30,7 +30,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.5,
     },
     {
-      url: `${baseUrl}/auth/payment-instructions`,
+      url: `${baseUrl}/auth/pricing`,
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.6,

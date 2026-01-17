@@ -89,9 +89,9 @@ export async function GET(request: NextRequest) {
     if (!authResponse.ok) {
       // Handle specific error cases
       if (authData.requiresActivation) {
-        // For new users - redirect to payment instructions page
+        // For new users - redirect to pricing page
         return NextResponse.redirect(
-          new URL('/auth/payment-instructions', request.url)
+          new URL('/auth/pricing', request.url)
         );
       }
       if (authData.isRejected) {
@@ -104,10 +104,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if this is a new registration (signup) - redirect to payment instructions
+    // Check if this is a new registration (signup) - redirect to pricing page
     if (state === 'signup' || authData.requiresActivation || !authData.user?.isActive) {
       // Store token temporarily for after payment
-      const response = NextResponse.redirect(new URL('/auth/payment-instructions', request.url));
+      const response = NextResponse.redirect(new URL('/auth/pricing', request.url));
       
       // Set token in cookie so user can be identified
       response.cookies.set('pending_auth_token', authData.token, {

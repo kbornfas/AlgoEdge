@@ -113,11 +113,11 @@ export default function VerifyOTPPage() {
         localStorage.setItem('pendingUser', JSON.stringify(user));
       }
 
-      setSuccess('Email verified successfully! Redirecting to payment instructions...');
+      setSuccess('Email verified successfully! Redirecting to pricing...');
       
-      // Redirect to WhatsApp for payment instructions after 2 seconds
+      // Redirect to pricing page after 2 seconds
       setTimeout(() => {
-        router.push('/auth/payment-instructions');
+        router.push('/auth/pricing');
       }, 2000);
     } catch (err) {
       setError('Network error. Please try again.');

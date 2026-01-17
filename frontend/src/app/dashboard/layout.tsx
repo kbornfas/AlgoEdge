@@ -34,6 +34,7 @@ import {
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
+import SubscriptionGuard from '@/components/SubscriptionGuard';
 
 const drawerWidth = 260;
 
@@ -139,7 +140,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <SubscriptionGuard>
+      <Box sx={{ display: 'flex' }}>
       <AppBar
         position="fixed"
         sx={{
@@ -231,5 +233,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {children}
       </Box>
     </Box>
+    </SubscriptionGuard>
   );
 }
