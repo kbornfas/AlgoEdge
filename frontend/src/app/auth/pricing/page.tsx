@@ -273,7 +273,7 @@ export default function PricingPage() {
                   Membership
                 </Typography>
                 <Typography sx={{ fontWeight: 600, color: 'white' }}>
-                  Trial Version (Indicator Locked)
+                  Trial Version (Restricted Access)
                 </Typography>
               </Box>
               <Button
