@@ -158,20 +158,18 @@ export default function PricingPage() {
         const userData = JSON.parse(decodeURIComponent(pendingUserCookie.split('=')[1]));
         setUserEmail(userData.email || '');
         setUserName(userData.firstName || '');
+        return; // User data found, don't redirect
       } catch (e) {
         console.error('Failed to parse pending user data');
       }
-    } else {
-      // Check if user is in localStorage (regular sign-up)
-      const pendingUserStr = localStorage.getItem('pendingUser');
-      const pendingEmail = localStorage.getItem('pendingEmail');
-      
-      if (!pendingUserStr && !pendingEmail) {
-        router.push('/auth/register');
-        return;
-      }
-
-      if (pendingUserStr) {
+    }
+    
+    // Check if user is in localStorage (regular sign-up)
+    const pendingUserStr = localStorage.getItem('pendingUser');
+    const pendingEmail = localStorage.getItem('pendingEmail');
+    
+    if (pendingUserStr) {
+      try {
         const user = JSON.parse(pendingUserStr);
         if (!user.isVerified) {
           router.push('/auth/verify-otp');
@@ -179,10 +177,19 @@ export default function PricingPage() {
         }
         setUserEmail(user.email || '');
         setUserName(user.firstName || user.username || '');
-      } else if (pendingEmail) {
-        setUserEmail(pendingEmail);
+        return;
+      } catch (e) {
+        console.error('Failed to parse pending user data');
       }
     }
+    
+    if (pendingEmail) {
+      setUserEmail(pendingEmail);
+      return;
+    }
+    
+    // No user info found - redirect to register
+    router.push('/auth/register');
   }, [router]);
 
   const handlePaymentMethodChange = (
