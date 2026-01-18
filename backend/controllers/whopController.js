@@ -4,6 +4,7 @@ import crypto from 'crypto';
 // Whop webhook secret - should be set in environment variables
 const WHOP_WEBHOOK_SECRET = process.env.WHOP_WEBHOOK_SECRET;
 const WHOP_API_KEY = process.env.WHOP_API_KEY;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 /**
  * Verify Whop webhook signature
@@ -295,6 +296,18 @@ const verifyMembership = async (req, res) => {
 const getSubscriptionStatus = async (req, res) => {
   try {
     const userId = req.user.id;
+    const userEmail = req.user.email;
+
+    // Admin bypass - always return active for admin users
+    if (ADMIN_EMAIL && userEmail && userEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      console.log(`Admin bypass for subscription status: ${userEmail}`);
+      return res.json({
+        status: 'active',
+        plan: 'admin',
+        expiresAt: null,
+        isActive: true,
+      });
+    }
 
     const result = await pool.query(
       `SELECT u.subscription_status, u.subscription_plan, u.subscription_expires_at,
