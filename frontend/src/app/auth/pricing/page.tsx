@@ -133,63 +133,82 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check for logged-in user first (from localStorage token)
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-    
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        setUserEmail(user.email || '');
-        setUserName(user.firstName || user.username || '');
-        return; // User is logged in, don't redirect
-      } catch (e) {
-        console.error('Failed to parse user data');
-      }
-    }
-    
-    // Check for Google sign-up user first (from cookies)
-    const pendingUserCookie = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('pending_user='));
-    
-    if (pendingUserCookie) {
-      try {
-        const userData = JSON.parse(decodeURIComponent(pendingUserCookie.split('=')[1]));
-        setUserEmail(userData.email || '');
-        setUserName(userData.firstName || '');
-        return; // User data found, don't redirect
-      } catch (e) {
-        console.error('Failed to parse pending user data');
-      }
-    }
-    
-    // Check if user is in localStorage (regular sign-up)
-    const pendingUserStr = localStorage.getItem('pendingUser');
-    const pendingEmail = localStorage.getItem('pendingEmail');
-    
-    if (pendingUserStr) {
-      try {
-        const user = JSON.parse(pendingUserStr);
-        if (!user.isVerified) {
-          router.push('/auth/verify-otp');
-          return;
+    const checkUserAndSubscription = async () => {
+      // Check for logged-in user first (from localStorage token)
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      
+      if (token && userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          setUserEmail(user.email || '');
+          setUserName(user.firstName || user.username || '');
+          
+          // Check if user already has an active subscription - redirect to dashboard
+          const response = await fetch('/api/subscription/status', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.isActive || data.status === 'active') {
+              router.push('/dashboard');
+              return;
+            }
+          }
+          return; // User is logged in but no subscription, stay on pricing
+        } catch (e) {
+          console.error('Failed to parse user data or check subscription');
         }
-        setUserEmail(user.email || '');
-        setUserName(user.firstName || user.username || '');
-        return;
-      } catch (e) {
-        console.error('Failed to parse pending user data');
       }
-    }
+      
+      // Check for Google sign-up user first (from cookies)
+      const pendingUserCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('pending_user='));
+      
+      if (pendingUserCookie) {
+        try {
+          const userData = JSON.parse(decodeURIComponent(pendingUserCookie.split('=')[1]));
+          setUserEmail(userData.email || '');
+          setUserName(userData.firstName || '');
+          return; // User data found, don't redirect
+        } catch (e) {
+          console.error('Failed to parse pending user data');
+        }
+      }
+      
+      // Check if user is in localStorage (regular sign-up)
+      const pendingUserStr = localStorage.getItem('pendingUser');
+      const pendingEmail = localStorage.getItem('pendingEmail');
+      
+      if (pendingUserStr) {
+        try {
+          const user = JSON.parse(pendingUserStr);
+          if (!user.isVerified) {
+            router.push('/auth/verify-otp');
+            return;
+          }
+          setUserEmail(user.email || '');
+          setUserName(user.firstName || user.username || '');
+          return;
+        } catch (e) {
+          console.error('Failed to parse pending user data');
+        }
+      }
+      
+      if (pendingEmail) {
+        setUserEmail(pendingEmail);
+        return;
+      }
+      
+      // No user info found - redirect to register
+      router.push('/auth/register');
+    };
     
-    if (pendingEmail) {
-      setUserEmail(pendingEmail);
-      return;
-    }
-    
-    // No user info found - redirect to register
-    router.push('/auth/register');
+    checkUserAndSubscription();
   }, [router]);
 
   const handlePaymentMethodChange = (
