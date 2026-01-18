@@ -108,7 +108,7 @@ export default function SubscriptionGuard({ children }: SubscriptionGuardProps) 
                     Trial Version (Restricted Access)
                   </Typography>
                   <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)' }}>
-                    Subscribe to unlock full access to all features and trading tools
+                    Subscribe to unlock the automated trading bot and all premium features
                   </Typography>
                 </Box>
               </Box>
@@ -149,7 +149,7 @@ export default function SubscriptionGuard({ children }: SubscriptionGuardProps) 
               Access Restricted
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500, mx: 'auto' }}>
-              You&apos;re currently on the trial version. To access the dashboard, trading tools, and all premium features, please subscribe to one of our plans.
+              You&apos;re currently on the trial version. To access the automated trading bot, real-time signals, and all premium features, please subscribe to one of our plans.
             </Typography>
             
             <Alert severity="info" sx={{ mb: 4, maxWidth: 500, mx: 'auto', textAlign: 'left' }}>
@@ -157,11 +157,11 @@ export default function SubscriptionGuard({ children }: SubscriptionGuardProps) 
                 <strong>What you&apos;ll get with a subscription:</strong>
               </Typography>
               <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
-                <li>Full access to trading indicator</li>
-                <li>Video guides and tutorials</li>
-                <li>Real-time trading signals</li>
-                <li>Priority customer support</li>
-                <li>MT5 integration</li>
+                <li>Fully Automated Trading Bot</li>
+                <li>Real-time Trading Signals</li>
+                <li>Multi-pair Support (Forex & Crypto)</li>
+                <li>Risk Management Tools</li>
+                <li>24/7 Automated Trading</li>
               </ul>
             </Alert>
 
