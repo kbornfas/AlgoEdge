@@ -150,7 +150,12 @@ const startServer = async () => {
     setupRoutes(app);
     setupErrorHandlers(app);
 
-    // await initDatabase();
+    // Initialize database and run migrations
+    try {
+      await initDatabase();
+    } catch (dbError) {
+      console.log('ℹ️ Database init note:', dbError.message);
+    }
 
     initializeWebSocket(server);
 

@@ -240,6 +240,16 @@ export const initDatabase = async () => {
 
     await client.query('COMMIT');
     console.log('✅ Database initialized successfully');
+    
+    // Run migrations to add missing columns to existing tables
+    try {
+      await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code VARCHAR(10)');
+      await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code_expires TIMESTAMP');
+      await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code_attempts INTEGER DEFAULT 0');
+      console.log('✅ Migrations applied successfully');
+    } catch (migrationError) {
+      console.log('ℹ️ Migration note:', migrationError.message);
+    }
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ Error initializing database:', error);
