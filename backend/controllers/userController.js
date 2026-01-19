@@ -2,7 +2,8 @@
 export const listAllUsers = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, username, email, full_name, phone, country, timezone, is_verified, two_fa_enabled, created_at, is_blocked
+      `SELECT id, username, email, full_name, phone, country, timezone, is_verified, two_fa_enabled, created_at, is_blocked,
+              subscription_status, subscription_plan, subscription_expires_at
        FROM users
        ORDER BY created_at DESC`
     );

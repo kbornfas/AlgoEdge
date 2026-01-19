@@ -224,20 +224,6 @@ export const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_verification_codes_expires ON verification_codes(expires_at);
     `);
 
-    // Insert default trading robots
-    await client.query(`
-      INSERT INTO trading_robots (id, name, description, strategy, timeframe, risk_level, win_rate)
-      VALUES 
-        ('algoedge_1_0', 'AlgoEdge 1.0', 'Triple EMA + RSI System', 'Trend Following', 'M15', 'Medium', 72.0),
-        ('ea888', 'EA888', 'Ichimoku Cloud Breakout', 'Breakout', 'M30', 'High', 68.0),
-        ('poverty_killer', 'Poverty Killer', 'Aggressive Momentum Strategy', 'Momentum', 'H1', 'High', 76.0),
-        ('golden_sniper', 'Golden Sniper', 'Fibonacci + Stochastic', 'Precision Entry', 'M15', 'Medium', 70.0),
-        ('scalp_master_pro', 'Scalp Master Pro', 'High-Frequency Scalping', 'Scalping', 'M5', 'Medium', 65.0),
-        ('trend_dominator', 'Trend Dominator', 'ADX + Parabolic SAR', 'Trend Riding', 'H4', 'Low', 74.0),
-        ('profit_maximizer', 'Profit Maximizer', 'Donchian Channel + RSI', 'Breakout', 'H1', 'Medium', 69.0)
-      ON CONFLICT (id) DO NOTHING;
-    `);
-
     await client.query('COMMIT');
     console.log('✅ Database initialized successfully');
     
