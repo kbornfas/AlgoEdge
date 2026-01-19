@@ -246,6 +246,12 @@ export const initDatabase = async () => {
       await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code VARCHAR(10)');
       await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code_expires TIMESTAMP');
       await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code_attempts INTEGER DEFAULT 0');
+      await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS whop_user_id VARCHAR(255)');
+      await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(50) DEFAULT \'trial\'');
+      await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_plan VARCHAR(50)');
+      await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMP');
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_users_whop_user_id ON users(whop_user_id)');
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_users_subscription_status ON users(subscription_status)');
       console.log('✅ Migrations applied successfully');
     } catch (migrationError) {
       console.log('ℹ️ Migration note:', migrationError.message);

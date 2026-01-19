@@ -23,45 +23,59 @@ export default function PaymentSuccessPage() {
   const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
-    // Verify the subscription status
+    // Poll for subscription status with retries
     const verifySubscription = async () => {
-      try {
-        // Wait a moment for webhook to process
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      const maxAttempts = 10;
+      const delayMs = 2000; // 2 seconds between attempts
+      
+      const token = localStorage.getItem('token');
+      
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        console.log(`Checking subscription status (attempt ${attempt}/${maxAttempts})...`);
+        
+        try {
+          // Wait before checking (give webhook time to process)
+          await new Promise(resolve => setTimeout(resolve, delayMs));
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-          // Try to get token from pending auth
-          const pendingToken = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('pending_auth_token='));
-          
-          if (!pendingToken) {
+          if (!token) {
+            // No token means user might not be logged in
+            // They paid via Whop and need to login to access
+            console.log('No auth token found - payment completed, user needs to login');
             setVerifying(false);
-            setVerified(true); // Assume success, webhook will update
+            setVerified(true); // Assume payment worked, they'll see dashboard after login
             return;
           }
-        }
 
-        // Check subscription status
-        const response = await fetch('/api/subscription/status', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+          // Check subscription status
+          const response = await fetch('/api/subscription/status', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
 
-        if (response.ok) {
-          const data = await response.json();
-          setVerified(data.isActive || data.status === 'active');
-        } else {
-          // Even if check fails, assume success (webhook will handle it)
-          setVerified(true);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.isActive || data.status === 'active') {
+              console.log('Subscription verified as active!');
+              setVerified(true);
+              setVerifying(false);
+              return;
+            }
+          }
+          
+          // If not active yet, continue polling
+          if (attempt === maxAttempts) {
+            console.log('Max attempts reached - assuming payment success');
+            setVerified(true);
+            setVerifying(false);
+          }
+        } catch (err) {
+          console.error('Error checking subscription:', err);
+          if (attempt === maxAttempts) {
+            setVerified(true); // Assume success on error
+            setVerifying(false);
+          }
         }
-      } catch (err) {
-        console.error('Error verifying subscription:', err);
-        setVerified(true); // Assume success
-      } finally {
-        setVerifying(false);
       }
     };
 

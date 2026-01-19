@@ -35,5 +35,30 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.6,
     },
+    // Blog pages - SEO optimized content
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: currentDate,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/blog/best-xauusd-strategy-2026`,
+      lastModified: '2026-01-15T00:00:00Z',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/how-to-automate-mt5-trading`,
+      lastModified: '2026-01-12T00:00:00Z',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/best-forex-bots-for-beginners`,
+      lastModified: '2026-01-10T00:00:00Z',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
   ];
 }

@@ -8,7 +8,10 @@ const GA_MEASUREMENT_ID = "G-N3C6NNCLVL";
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#1a237e',
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: '#0a0f1a',
+  colorScheme: 'dark',
 };
 
 export const metadata: Metadata = {

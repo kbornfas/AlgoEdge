@@ -99,6 +99,7 @@ const handleMembershipValid = async (data) => {
 
     const userEmail = user?.email;
     const whopUserId = user?.id;
+    const userName = user?.username || user?.name || userEmail?.split('@')[0] || 'user';
 
     if (!userEmail) {
       console.error('No email in Whop membership data');
@@ -136,17 +137,38 @@ const handleMembershipValid = async (data) => {
     }
 
     // Find user by email
-    const userResult = await pool.query(
+    let userResult = await pool.query(
       'SELECT id FROM users WHERE email = $1',
       [userEmail.toLowerCase()]
     );
 
-    if (userResult.rows.length === 0) {
-      console.error(`User not found for email: ${userEmail}`);
-      return;
-    }
+    let userId;
 
-    const userId = userResult.rows[0].id;
+    if (userResult.rows.length === 0) {
+      // AUTO-CREATE USER if they don't exist (paid via Whop without registering first)
+      console.log(`Creating new user for Whop customer: ${userEmail}`);
+      
+      const username = userName + '_' + Math.random().toString(36).substring(2, 6);
+      
+      const newUserResult = await pool.query(
+        `INSERT INTO users (username, email, is_verified, is_active, whop_user_id)
+         VALUES ($1, $2, true, true, $3)
+         RETURNING id`,
+        [username, userEmail.toLowerCase(), whopUserId]
+      );
+      
+      userId = newUserResult.rows[0].id;
+      
+      // Create default user settings
+      await pool.query(
+        'INSERT INTO user_settings (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING',
+        [userId]
+      );
+      
+      console.log(`Created new user ${userId} for ${userEmail}`);
+    } else {
+      userId = userResult.rows[0].id;
+    }
 
     // Update or create subscription record
     const existingSubscription = await pool.query(

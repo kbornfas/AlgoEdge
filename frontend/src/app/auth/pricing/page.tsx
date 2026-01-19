@@ -265,11 +265,20 @@ export default function PricingPage() {
     
     // If checkout URL is set, redirect to it with user's email
     if (baseCheckoutUrl && baseCheckoutUrl !== '' && baseCheckoutUrl !== '#') {
-      // Append email as query parameter for Whop to pre-fill and match the user
+      // Build checkout URL with email and redirect parameters
       const separator = baseCheckoutUrl.includes('?') ? '&' : '?';
-      const checkoutUrl = userEmail 
-        ? `${baseCheckoutUrl}${separator}email=${encodeURIComponent(userEmail)}`
-        : baseCheckoutUrl;
+      const successRedirect = `${window.location.origin}/auth/payment-success`;
+      
+      let checkoutUrl = baseCheckoutUrl;
+      
+      // Add email parameter for Whop to pre-fill and match the user
+      if (userEmail) {
+        checkoutUrl += `${separator}email=${encodeURIComponent(userEmail)}`;
+      }
+      
+      // Add redirect URL for after payment completes
+      const nextSeparator = checkoutUrl.includes('?') ? '&' : '?';
+      checkoutUrl += `${nextSeparator}redirect_url=${encodeURIComponent(successRedirect)}`;
       
       window.location.href = checkoutUrl;
     } else {

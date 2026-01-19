@@ -244,6 +244,330 @@ const StickyWhatsAppButton = ({ whatsappUrl }: { whatsappUrl: string }) => {
   );
 };
 
+// Live Stats Component - Simulated real-time stats for social proof
+const LiveStatsBar = () => {
+  const [stats, setStats] = useState({
+    signalsToday: 47,
+    usersOnline: 234,
+    tradesExecuted: 1892,
+    totalProfit: 127450,
+    winRate: 78.5,
+  });
+
+  // Simulate real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStats(prev => ({
+        signalsToday: prev.signalsToday + (Math.random() > 0.7 ? 1 : 0),
+        usersOnline: Math.max(180, Math.min(350, prev.usersOnline + Math.floor(Math.random() * 7) - 3)),
+        tradesExecuted: prev.tradesExecuted + (Math.random() > 0.5 ? Math.floor(Math.random() * 3) + 1 : 0),
+        totalProfit: prev.totalProfit + (Math.random() > 0.6 ? Math.floor(Math.random() * 150) + 50 : 0),
+        winRate: Math.max(75, Math.min(82, prev.winRate + (Math.random() - 0.5) * 0.3)),
+      }));
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const statItems = [
+    { 
+      label: 'Signals Today', 
+      value: stats.signalsToday.toString(), 
+      icon: '📊',
+      color: '#10b981',
+      bgColor: 'rgba(16, 185, 129, 0.15)',
+      borderColor: 'rgba(16, 185, 129, 0.4)',
+      pulse: true,
+    },
+    { 
+      label: 'Users Online', 
+      value: stats.usersOnline.toString(), 
+      icon: '🟢',
+      color: '#22c55e',
+      bgColor: 'rgba(34, 197, 94, 0.15)',
+      borderColor: 'rgba(34, 197, 94, 0.4)',
+      pulse: true,
+    },
+    { 
+      label: 'Trades Today', 
+      value: stats.tradesExecuted.toLocaleString(), 
+      icon: '📈',
+      color: '#3b82f6',
+      bgColor: 'rgba(59, 130, 246, 0.15)',
+      borderColor: 'rgba(59, 130, 246, 0.4)',
+    },
+    { 
+      label: 'Total Profit', 
+      value: `$${stats.totalProfit.toLocaleString()}`, 
+      icon: '💰',
+      color: '#fbbf24',
+      bgColor: 'rgba(251, 191, 36, 0.15)',
+      borderColor: 'rgba(251, 191, 36, 0.4)',
+    },
+    { 
+      label: 'Win Rate', 
+      value: `${stats.winRate.toFixed(1)}%`, 
+      icon: '🎯',
+      color: '#ec4899',
+      bgColor: 'rgba(236, 72, 153, 0.15)',
+      borderColor: 'rgba(236, 72, 153, 0.4)',
+    },
+  ];
+
+  return (
+    <Box
+      sx={{
+        width: '100%',
+        py: { xs: 2, md: 3 },
+        px: { xs: 1, md: 0 },
+        position: 'relative',
+        overflowX: { xs: 'auto', md: 'visible' },
+        WebkitOverflowScrolling: 'touch',
+        '&::-webkit-scrollbar': { display: 'none' },
+        msOverflowStyle: 'none',
+        scrollbarWidth: 'none',
+      }}
+    >
+      <Container maxWidth="lg" sx={{ px: { xs: 0, md: 3 } }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { 
+              xs: 'repeat(2, 1fr)', 
+              sm: 'repeat(3, 1fr)', 
+              md: 'repeat(5, 1fr)' 
+            },
+            gap: { xs: 1, sm: 1.5, md: 2 },
+            justifyItems: 'center',
+          }}
+        >
+          {statItems.map((stat, index) => (
+            <Box
+              key={index}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: { xs: 0.75, md: 1.5 },
+                px: { xs: 1.5, sm: 2, md: 2.5 },
+                py: { xs: 1, sm: 1.25, md: 1.5 },
+                borderRadius: { xs: 3, md: 50 },
+                bgcolor: stat.bgColor,
+                border: `1px solid ${stat.borderColor}`,
+                backdropFilter: 'blur(10px)',
+                transition: 'all 0.3s ease',
+                cursor: 'default',
+                width: '100%',
+                maxWidth: { xs: '100%', md: 'auto' },
+                minWidth: { xs: 'auto', md: 140 },
+                justifyContent: { xs: 'center', md: 'flex-start' },
+                // Hide last item on very small screens for even grid
+                '&:nth-of-type(5)': {
+                  gridColumn: { xs: '1 / -1', sm: 'auto' },
+                  maxWidth: { xs: '50%', sm: '100%' },
+                  mx: { xs: 'auto', sm: 0 },
+                },
+                '@media (hover: hover)': {
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: `0 8px 24px ${stat.bgColor}`,
+                    borderColor: stat.color,
+                  },
+                },
+              }}
+            >
+              {/* Pulse animation for live indicators */}
+              {stat.pulse && (
+                <Box
+                  sx={{
+                    width: { xs: 6, md: 8 },
+                    height: { xs: 6, md: 8 },
+                    borderRadius: '50%',
+                    bgcolor: stat.color,
+                    boxShadow: `0 0 8px ${stat.color}`,
+                    flexShrink: 0,
+                    animation: 'pulse 2s ease-in-out infinite',
+                    '@keyframes pulse': {
+                      '0%, 100%': { opacity: 1, transform: 'scale(1)' },
+                      '50%': { opacity: 0.5, transform: 'scale(1.3)' },
+                    },
+                  }}
+                />
+              )}
+              <Typography sx={{ fontSize: { xs: '1rem', md: '1.3rem' }, flexShrink: 0 }}>
+                {stat.icon}
+              </Typography>
+              <Box sx={{ textAlign: 'left', minWidth: 0 }}>
+                <Typography
+                  sx={{
+                    fontSize: { xs: '0.85rem', sm: '0.95rem', md: '1.1rem' },
+                    fontWeight: 700,
+                    color: stat.color,
+                    lineHeight: 1,
+                    fontFamily: 'monospace',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {stat.value}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.7rem' },
+                    color: 'text.secondary',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.3px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {stat.label}
+                </Typography>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      </Container>
+    </Box>
+  );
+};
+
+// Recent Activity Popup - Shows simulated recent purchases/sign-ups
+const RecentActivityPopup = () => {
+  const [visible, setVisible] = useState(false);
+  const [currentActivity, setCurrentActivity] = useState(0);
+
+  const activities = [
+    { name: 'John D.', location: 'New York, USA', action: 'just subscribed', plan: 'Monthly', time: '2 mins ago', flag: '🇺🇸' },
+    { name: 'Ahmed K.', location: 'Dubai, UAE', action: 'just started trading', plan: '', time: '5 mins ago', flag: '🇦🇪' },
+    { name: 'Sarah M.', location: 'London, UK', action: 'earned +$847', plan: 'today', time: '8 mins ago', flag: '🇬🇧' },
+    { name: 'Pierre L.', location: 'Paris, France', action: 'just subscribed', plan: 'Quarterly', time: '12 mins ago', flag: '🇫🇷' },
+    { name: 'Michael R.', location: 'Sydney, AUS', action: 'just signed up', plan: '', time: '15 mins ago', flag: '🇦🇺' },
+    { name: 'Chen W.', location: 'Singapore', action: 'earned +$1,234', plan: 'this week', time: '18 mins ago', flag: '🇸🇬' },
+    { name: 'David O.', location: 'Lagos, Nigeria', action: 'just subscribed', plan: 'Weekly', time: '23 mins ago', flag: '🇳🇬' },
+    { name: 'Maria S.', location: 'Toronto, CAN', action: 'just started trading', plan: '', time: '27 mins ago', flag: '🇨🇦' },
+    { name: 'James T.', location: 'Nairobi, Kenya', action: 'earned +$456', plan: 'today', time: '32 mins ago', flag: '🇰🇪' },
+    { name: 'Anna P.', location: 'Berlin, GER', action: 'just subscribed', plan: 'Monthly', time: '38 mins ago', flag: '🇩🇪' },
+  ];
+
+  useEffect(() => {
+    // Show popup every 8-15 seconds
+    const showPopup = () => {
+      setVisible(true);
+      
+      // Hide after 5 seconds
+      setTimeout(() => {
+        setVisible(false);
+        // Move to next activity
+        setCurrentActivity(prev => (prev + 1) % activities.length);
+      }, 5000);
+    };
+
+    // Initial delay before first popup (3 seconds)
+    const initialTimeout = setTimeout(showPopup, 3000);
+
+    // Then show every 8-15 seconds
+    const interval = setInterval(showPopup, 8000 + Math.random() * 7000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, [activities.length]);
+
+  const activity = activities[currentActivity];
+
+  return (
+    <Box
+      sx={{
+        position: 'fixed',
+        bottom: { xs: 70, sm: 80, md: 100 },
+        left: { xs: 8, sm: 16, md: 24 },
+        right: { xs: 8, sm: 'auto' },
+        zIndex: 999,
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateX(0) translateY(0)' : 'translateX(0) translateY(120%)',
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        maxWidth: { xs: 'calc(100% - 16px)', sm: 300, md: 320 },
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: { xs: 1, sm: 1.5 },
+          bgcolor: 'rgba(30, 41, 59, 0.98)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: 2,
+          p: { xs: 1.25, sm: 1.5 },
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+        }}
+      >
+        {/* Avatar/Flag */}
+        <Box
+          sx={{
+            width: 44,
+            height: 44,
+            borderRadius: '50%',
+            bgcolor: 'rgba(16, 185, 129, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.5rem',
+            flexShrink: 0,
+          }}
+        >
+          {activity.flag}
+        </Box>
+        
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography
+            sx={{
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              color: 'white',
+              lineHeight: 1.3,
+            }}
+          >
+            {activity.name} from {activity.location}
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: '0.8rem',
+              color: activity.action.includes('earned') ? '#10b981' : 'text.secondary',
+              fontWeight: activity.action.includes('earned') ? 600 : 400,
+            }}
+          >
+            {activity.action} {activity.plan && <span style={{ color: '#10b981' }}>{activity.plan}</span>}
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: '0.7rem',
+              color: 'text.disabled',
+            }}
+          >
+            {activity.time}
+          </Typography>
+        </Box>
+
+        {/* Verified badge */}
+        <Box
+          sx={{
+            width: 20,
+            height: 20,
+            borderRadius: '50%',
+            bgcolor: '#10b981',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <CheckCircle2 size={14} color="white" />
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
 export default function Home() {
   const whatsappUrl = process.env.NEXT_PUBLIC_WHATSAPP_URL || 'https://wa.me/';
   const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://www.instagram.com/__.kip.chirchir._?igsh=MTc4MWI0MWU3YmNnaQ%3D%3D&utm_source=qr';
@@ -255,6 +579,9 @@ export default function Home() {
       
       {/* Sticky WhatsApp Button */}
       <StickyWhatsAppButton whatsappUrl={whatsappUrl} />
+      
+      {/* Recent Activity Popup - Social Proof */}
+      <RecentActivityPopup />
       
       {/* Hero Section - Above the Fold */}
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 10 }}>
@@ -357,7 +684,14 @@ export default function Home() {
               Login
             </Button>
           </Stack>
+        </Box>
+      </Container>
 
+      {/* Live Stats Bar - Social Proof */}
+      <LiveStatsBar />
+
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 10 }}>
+        <Box sx={{ py: { xs: 4, md: 6 }, textAlign: 'center' }}>
           {/* Ready to Start CTA Section */}
           <Box
             sx={{
@@ -390,95 +724,83 @@ export default function Home() {
               Secure your bot and start trading today.
             </Typography>
 
-            {/* Main CTA Buttons */}
+            {/* Social Links - CTA Style */}
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
-              spacing={2}
-              sx={{ justifyContent: 'center', mb: 3 }}
-            >
-              <Button
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                variant="contained"
-                size="large"
-                sx={{
-                  minWidth: 220,
-                  bgcolor: '#25D366',
-                  color: 'white',
-                  fontWeight: 700,
-                  fontSize: '1.1rem',
-                  py: 1.5,
-                  px: 4,
-                  gap: 1.5,
-                  '&:hover': {
-                    bgcolor: '#1da851',
-                    transform: 'translateY(-2px)',
-                  },
-                  transition: 'all 0.3s ease',
-                  textTransform: 'none',
-                  borderRadius: 50,
-                }}
-              >
-                <WhatsAppIcon />
-                Message on WhatsApp
-              </Button>
-              <Button
-                component={Link}
-                href="/auth/register"
-                variant="contained"
-                size="large"
-                sx={{
-                  minWidth: 220,
-                  bgcolor: '#10b981',
-                  color: 'white',
-                  fontWeight: 700,
-                  fontSize: '1.1rem',
-                  py: 1.5,
-                  px: 4,
-                  '&:hover': {
-                    bgcolor: '#059669',
-                    transform: 'translateY(-2px)',
-                  },
-                  transition: 'all 0.3s ease',
-                  textTransform: 'none',
-                  borderRadius: 50,
-                }}
-              >
-                Get Started Now
-              </Button>
-            </Stack>
-
-            {/* Social Links */}
-            <Stack
-              direction="row"
-              spacing={4}
-              sx={{ justifyContent: 'center', flexWrap: 'wrap', gap: 2 }}
+              spacing={{ xs: 1.5, sm: 2 }}
+              sx={{ 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                width: '100%',
+                flexWrap: 'wrap',
+                gap: { xs: 1.5, sm: 2 },
+              }}
             >
               <Button
                 href="https://t.me/+newQkIa06W1kNmMx"
                 target="_blank"
                 rel="noopener noreferrer"
-                startIcon={<Send size={18} style={{ color: '#0088cc' }} />}
+                variant="contained"
+                size="large"
+                startIcon={<Send size={20} />}
                 sx={{
-                  color: 'text.secondary',
+                  minWidth: { xs: '100%', sm: 340 },
+                  maxWidth: { xs: '100%', sm: 380 },
+                  bgcolor: '#0088cc',
+                  color: 'white',
+                  fontWeight: 700,
+                  fontSize: { xs: '0.9rem', sm: '1rem' },
+                  py: { xs: 1.5, sm: 1.75 },
+                  px: 3,
+                  whiteSpace: 'nowrap',
+                  '@media (hover: hover)': {
+                    '&:hover': {
+                      bgcolor: '#006699',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 24px rgba(0, 136, 204, 0.4)',
+                    },
+                  },
+                  '&:active': {
+                    transform: 'scale(0.98)',
+                  },
+                  transition: 'all 0.2s ease',
                   textTransform: 'none',
-                  fontSize: '0.9rem',
-                  '&:hover': { color: '#0088cc' },
+                  borderRadius: 50,
+                  boxShadow: '0 4px 12px rgba(0, 136, 204, 0.3)',
                 }}
               >
-                🎯 Join Telegram channel for AI Signals 🚀
+                🎯 Join Telegram for AI Signals 🚀
               </Button>
               <Button
                 href={instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                startIcon={<Instagram size={18} style={{ color: '#E4405F' }} />}
+                variant="contained"
+                size="large"
+                startIcon={<Instagram size={20} />}
                 sx={{
-                  color: 'text.secondary',
+                  minWidth: { xs: '100%', sm: 220 },
+                  maxWidth: { xs: '100%', sm: 260 },
+                  background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                  color: 'white',
+                  fontWeight: 700,
+                  fontSize: { xs: '0.9rem', sm: '1rem' },
+                  py: { xs: 1.5, sm: 1.75 },
+                  px: 3,
+                  '@media (hover: hover)': {
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #e6683c 0%, #dc2743 25%, #cc2366 50%, #bc1888 75%, #a01472 100%)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 24px rgba(225, 48, 108, 0.4)',
+                    },
+                  },
+                  '&:active': {
+                    transform: 'scale(0.98)',
+                  },
+                  transition: 'all 0.2s ease',
                   textTransform: 'none',
-                  fontSize: '1rem',
-                  '&:hover': { color: '#E4405F' },
+                  borderRadius: 50,
+                  boxShadow: '0 4px 12px rgba(225, 48, 108, 0.3)',
                 }}
               >
                 Follow Instagram
@@ -645,7 +967,7 @@ export default function Home() {
               color: '#10b981',
             }}
           >
-            See AlgoEdge's Real Results
+            See AlgoEdge&apos;s Real Results <Box component="span" sx={{ fontWeight: 400, fontSize: { xs: '1rem', md: '1.3rem' }, fontStyle: 'italic' }}>(Just a few examples)</Box>
           </Typography>
 
           {/* Grid for Videos and Images - 2x2 on mobile, 4 columns on desktop */}
@@ -1629,39 +1951,39 @@ export default function Home() {
       <Box
         component="footer"
         sx={{
-          mt: 12,
+          mt: { xs: 6, md: 12 },
           borderTop: '1px solid rgba(16, 185, 129, 0.2)',
           bgcolor: 'rgba(10, 15, 26, 0.9)',
           backdropFilter: 'blur(10px)',
         }}
       >
-        <Container maxWidth="lg">
+        <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 } }}>
           {/* Main Footer Content */}
           <Box
             sx={{
-              py: 4,
+              py: { xs: 3, md: 4 },
               display: 'flex',
-              flexDirection: { xs: 'column', md: 'row' },
-              justifyContent: 'space-between',
-              alignItems: { xs: 'flex-start', md: 'center' },
+              flexDirection: 'column',
+              alignItems: { xs: 'center', md: 'flex-start' },
               gap: 3,
             }}
           >
             {/* Brand Section */}
-            <Box sx={{ maxWidth: { xs: '100%', md: '50%' } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
+            <Box sx={{ maxWidth: { xs: '100%', md: '50%' }, textAlign: { xs: 'center', md: 'left' } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5, justifyContent: { xs: 'center', md: 'flex-start' } }}>
                 <Box
                   component="img"
                   src="/images/logo.png"
                   alt="AlgoEdge Logo"
-                  sx={{ width: 48, height: 48, objectFit: 'contain' }}
+                  sx={{ width: { xs: 40, md: 48 }, height: { xs: 40, md: 48 }, objectFit: 'contain' }}
                 />
                 <Typography 
                   variant="h6" 
                   sx={{ 
                     fontWeight: 700, 
                     color: 'white',
-                    letterSpacing: '0.5px'
+                    letterSpacing: '0.5px',
+                    fontSize: { xs: '1.1rem', md: '1.25rem' }
                   }}
                 >
                   AlgoEdge
@@ -1671,7 +1993,8 @@ export default function Home() {
                 variant="body2" 
                 sx={{ 
                   color: 'rgba(255,255,255,0.7)',
-                  lineHeight: 1.6
+                  lineHeight: 1.6,
+                  fontSize: { xs: '0.85rem', md: '0.875rem' }
                 }}
               >
                 Automated precious metals trading with advanced risk management. Trade XAUUSD & XAGUSD 24/7 with institutional-grade strategies and account protection.
@@ -1684,10 +2007,12 @@ export default function Home() {
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: 1.5,
-                p: 2,
+                p: { xs: 1.5, md: 2 },
                 borderRadius: 2,
                 bgcolor: 'rgba(16, 185, 129, 0.1)',
                 border: '1px solid rgba(16, 185, 129, 0.3)',
+                width: { xs: '100%', sm: 'auto' },
+                justifyContent: { xs: 'center', sm: 'flex-start' },
               }}
             >
               <Box
@@ -1740,12 +2065,70 @@ export default function Home() {
           {/* Copyright Bar */}
           <Box
             sx={{
-              py: 3,
+              py: { xs: 2, md: 3 },
               borderTop: '1px solid rgba(255,255,255,0.1)',
               textAlign: 'center',
             }}
           >
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 1 }}>
+            {/* Quick Links */}
+            <Stack 
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={{ xs: 0.5, sm: 1 }}
+              sx={{ 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                mb: 2, 
+                flexWrap: 'wrap', 
+                gap: { xs: 0.5, sm: 1 } 
+              }}
+            >
+              <Button
+                component={Link}
+                href="/blog"
+                sx={{ 
+                  color: 'rgba(255,255,255,0.7)', 
+                  textTransform: 'none',
+                  fontSize: { xs: '0.9rem', sm: '0.875rem' },
+                  py: { xs: 1, sm: 0.5 },
+                  px: { xs: 2, sm: 1.5 },
+                  minHeight: 44, // Touch-friendly
+                  '&:hover': { color: '#00c853' }
+                }}
+              >
+                📚 Blog & Guides
+              </Button>
+              <Button
+                component={Link}
+                href="/auth/pricing"
+                sx={{ 
+                  color: 'rgba(255,255,255,0.7)', 
+                  textTransform: 'none',
+                  fontSize: { xs: '0.9rem', sm: '0.875rem' },
+                  py: { xs: 1, sm: 0.5 },
+                  px: { xs: 2, sm: 1.5 },
+                  minHeight: 44,
+                  '&:hover': { color: '#00c853' }
+                }}
+              >
+                💰 Pricing
+              </Button>
+              <Button
+                component={Link}
+                href="/auth/register"
+                sx={{ 
+                  color: 'rgba(255,255,255,0.7)', 
+                  textTransform: 'none',
+                  fontSize: { xs: '0.9rem', sm: '0.875rem' },
+                  py: { xs: 1, sm: 0.5 },
+                  px: { xs: 2, sm: 1.5 },
+                  minHeight: 44,
+                  '&:hover': { color: '#00c853' }
+                }}
+              >
+                🚀 Get Started
+              </Button>
+            </Stack>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
               © {new Date().getFullYear()} AlgoEdge. All rights reserved.
             </Typography>
             <Typography 
