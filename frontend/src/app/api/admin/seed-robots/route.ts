@@ -100,9 +100,21 @@ const tradingRobots = [
   },
 ];
 
+// The ONLY 8 robot IDs that should exist
+const VALID_ROBOT_IDS = [
+  'ema-pullback',
+  'break-retest',
+  'liquidity-sweep',
+  'london-breakout',
+  'order-block',
+  'vwap-reversion',
+  'fib-continuation',
+  'rsi-divergence',
+];
+
 /**
  * GET /api/admin/seed-robots
- * Seeds all 12 trading robots - one-time setup
+ * Cleans up old robots and seeds only the 8 correct trading robots
  */
 export async function GET(req: NextRequest) {
   try {
@@ -114,6 +126,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // STEP 1: Delete ALL robots that are NOT in our valid list
+    const deleteResult = await prisma.tradingRobot.deleteMany({
+      where: {
+        id: {
+          notIn: VALID_ROBOT_IDS,
+        },
+      },
+    });
+    
+    console.log(`Deleted ${deleteResult.count} old/invalid robots`);
+
+    // STEP 2: Upsert the 8 correct robots
     const results = [];
     
     for (const robot of tradingRobots) {
@@ -127,7 +151,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Successfully seeded ${results.length} trading robots`,
+      message: `Cleaned up ${deleteResult.count} old robots. Seeded ${results.length} trading robots.`,
+      deletedCount: deleteResult.count,
       robots: results,
     });
   } catch (error) {
