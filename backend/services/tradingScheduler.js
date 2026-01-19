@@ -3399,17 +3399,19 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
   // ================================================================
   // BOT-SPECIFIC ALIGNMENT CHECK
   // Each bot has specific strategies that MUST confirm its signals
-  // This ensures high-probability entries based on strategy confluence
+  // NO GLOBAL REQUIREMENT - Only bot-specific alignment matters
   // ================================================================
   const buySignals = signals.filter(s => s.type === 'buy');
   const sellSignals = signals.filter(s => s.type === 'sell');
-  const minStrategies = RISK_CONFIG.MIN_STRATEGIES_REQUIRED;
+  
+  // Use bot-specific minAlignments instead of global MIN_STRATEGIES_REQUIRED
+  const minStrategies = botConfig?.minAlignments || 2;
   
   // Sort agreeing signals by weighted confidence
   buySignals.sort((a, b) => b.weightedConfidence - a.weightedConfidence);
   sellSignals.sort((a, b) => b.weightedConfidence - a.weightedConfidence);
   
-  console.log(`  📊 ${symbol}: ${buySignals.length} BUY signals, ${sellSignals.length} SELL signals (need ${minStrategies}+ agreeing)`);
+  console.log(`  📊 ${symbol}: ${buySignals.length} BUY signals, ${sellSignals.length} SELL signals (bot needs ${minStrategies} alignment)`);
   
   let bestSignal = null;
   let confluenceCount = 0;
@@ -3421,8 +3423,8 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
   // ================================================================
   const checkBotAlignment = (agreeing, direction) => {
     if (!botConfig || !botConfig.minAlignments || !botConfig.alignWith) {
-      // No specific alignment requirements - use general confluence
-      return { passed: agreeing.length >= minStrategies, reason: 'general confluence' };
+      // No specific alignment requirements - need at least 2 strategies agreeing
+      return { passed: agreeing.length >= 2, reason: 'general confluence (2+)', alignmentCount: agreeing.length, minRequired: 2, confirmingStrategies: agreeing.map(s => s.strategyName) };
     }
     
     const minRequired = botConfig.minAlignments;
@@ -3478,50 +3480,49 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
     };
   };
   
-  // ONLY trade if enough strategies agree on the same direction
-  if (buySignals.length >= minStrategies) {
+  // Check BUY signals with bot-specific alignment
+  if (buySignals.length > 0) {
     // Check bot-specific alignment
     const alignment = checkBotAlignment(buySignals, 'BUY');
     
-    if (!alignment.passed) {
-      console.log(`  ⏸️ ${symbol}: BUY confluence present but BOT ALIGNMENT NOT MET - waiting for required strategies`);
-      return null;
+    if (alignment.passed) {
+      // Bot alignment confirmed - can trade
+      confluenceCount = buySignals.length;
+      allAgreeingSignals = buySignals;
+      bestSignal = buySignals[0]; // Already sorted - first is highest weighted confidence
+      
+      // Calculate average weighted confidence of all agreeing strategies
+      const avgWeighted = buySignals.reduce((sum, s) => sum + s.weightedConfidence, 0) / buySignals.length;
+      
+      bestSignal.reason = `🔥ALIGNMENT(${alignment.alignmentCount}/${alignment.minRequired}): ` + 
+        `[${alignment.confirmingStrategies.join('+')}] ` + bestSignal.reason;
+      console.log(`  ✅ ${symbol}: BOT ALIGNMENT MET for BUY - TOP: ${bestSignal.strategyName} (${bestSignal.weightedConfidence.toFixed(1)})`);
     }
-    
-    // Multiple buy signals - CONFLUENCE CONFIRMED
-    confluenceCount = buySignals.length;
-    allAgreeingSignals = buySignals;
-    bestSignal = buySignals[0]; // Already sorted - first is highest weighted confidence
-    
-    // Calculate average weighted confidence of all agreeing strategies
-    const avgWeighted = buySignals.reduce((sum, s) => sum + s.weightedConfidence, 0) / buySignals.length;
-    
-    bestSignal.reason = `🔥ALIGNMENT(${alignment.alignmentCount}/${alignment.minRequired})+CONFLUENCE(${buySignals.length}/${signals.length}): ` + 
-      `[${alignment.confirmingStrategies.join('+')}] ` + bestSignal.reason;
-    console.log(`  ✅ ${symbol}: ${buySignals.length} strategies agree on BUY - TOP: ${bestSignal.strategyName} (${bestSignal.weightedConfidence.toFixed(1)})`);
-  } else if (sellSignals.length >= minStrategies) {
+  }
+  
+  // Check SELL signals with bot-specific alignment (only if no buy signal passed)
+  if (!bestSignal && sellSignals.length > 0) {
     // Check bot-specific alignment
     const alignment = checkBotAlignment(sellSignals, 'SELL');
     
-    if (!alignment.passed) {
-      console.log(`  ⏸️ ${symbol}: SELL confluence present but BOT ALIGNMENT NOT MET - waiting for required strategies`);
-      return null;
+    if (alignment.passed) {
+      // Bot alignment confirmed - can trade
+      confluenceCount = sellSignals.length;
+      allAgreeingSignals = sellSignals;
+      bestSignal = sellSignals[0]; // Already sorted - first is highest weighted confidence
+      
+      // Calculate average weighted confidence
+      const avgWeighted = sellSignals.reduce((sum, s) => sum + s.weightedConfidence, 0) / sellSignals.length;
+      
+      bestSignal.reason = `🔥ALIGNMENT(${alignment.alignmentCount}/${alignment.minRequired}): ` + 
+        `[${alignment.confirmingStrategies.join('+')}] ` + bestSignal.reason;
+      console.log(`  ✅ ${symbol}: BOT ALIGNMENT MET for SELL - TOP: ${bestSignal.strategyName} (${bestSignal.weightedConfidence.toFixed(1)})`);
     }
-    
-    // Multiple sell signals - CONFLUENCE CONFIRMED  
-    confluenceCount = sellSignals.length;
-    allAgreeingSignals = sellSignals;
-    bestSignal = sellSignals[0]; // Already sorted - first is highest weighted confidence
-    
-    // Calculate average weighted confidence
-    const avgWeighted = sellSignals.reduce((sum, s) => sum + s.weightedConfidence, 0) / sellSignals.length;
-    
-    bestSignal.reason = `🔥ALIGNMENT(${alignment.alignmentCount}/${alignment.minRequired})+CONFLUENCE(${sellSignals.length}/${signals.length}): ` + 
-      `[${alignment.confirmingStrategies.join('+')}] ` + bestSignal.reason;
-    console.log(`  ✅ ${symbol}: ${sellSignals.length} strategies agree on SELL - TOP: ${bestSignal.strategyName} (${bestSignal.weightedConfidence.toFixed(1)})`);
-  } else {
-    // NOT ENOUGH STRATEGIES AGREE - DO NOT TRADE
-    console.log(`  ⏸️ ${symbol}: Only ${Math.max(buySignals.length, sellSignals.length)} strategy(s) agree - WAITING for ${minStrategies}+ confluence`);
+  }
+  
+  // No alignment met - wait for setup
+  if (!bestSignal) {
+    console.log(`  ⏸️ ${symbol}: BOT ALIGNMENT NOT MET - waiting for ${minStrategies} confirming strategies`);
     return null;
   }
   
@@ -3540,11 +3541,11 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
     lotMultiplier = RISK_CONFIG.LOT_MULTIPLIER_4_STRATS;
     console.log(`  ⭐ ${symbol}: HIGH CONFLUENCE (${confluenceCount} strategies) - ${lotMultiplier}x lot multiplier`);
   } else {
-    console.log(`  ✅ ${symbol}: CONFLUENCE MET (${confluenceCount} strategies) - ${lotMultiplier}x base lot`);
+    console.log(`  ✅ ${symbol}: ALIGNMENT MET (${confluenceCount} strategies) - ${lotMultiplier}x base lot`);
   }
   
   // Boost confidence based on number of agreeing strategies (+5% per extra strategy beyond minimum)
-  const confluenceBonus = (confluenceCount - minStrategies) * 5;
+  const confluenceBonus = Math.max(0, (confluenceCount - minStrategies) * 5);
   bestSignal.confidence = Math.min(95, bestSignal.confidence + confluenceBonus);
   
   console.log(`  🎯 ${symbol}: BEST SIGNAL = ${bestSignal.type.toUpperCase()} via ${bestSignal.strategyName} (${bestSignal.confidence}%)`);
