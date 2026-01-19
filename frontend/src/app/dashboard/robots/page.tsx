@@ -707,19 +707,11 @@ export default function RobotsPage() {
                 }
               }}
             >
-              Stop All & Close Trades
+              Stop All
             </Button>
           }
         >
-          <strong>{runningRobots.size} robot(s) running in background:</strong>{' '}
-          {Array.from(runningRobots).map(id => {
-            const robot = robots.find(r => r.id === id);
-            return robot?.name || id;
-          }).join(', ')}
-          <br />
-          <Typography variant="caption" sx={{ mt: 0.5, display: 'block' }}>
-            Trading continues even when you close the browser. Click &quot;Stop All&quot; to stop trading and close all positions.
-          </Typography>
+          <strong>{runningRobots.size} robot(s) running</strong>
         </Alert>
       )}
 
