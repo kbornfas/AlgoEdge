@@ -103,235 +103,260 @@ const RISK_CONFIG = {
 };
 
 // =========================================================================
-// BOT CONFIGURATION - 8 Core Strategies
-// Each bot uses a specific proven strategy with STRICT SL/TP rules
+// BOT CONFIGURATION - 8 Core Strategies with Alignment Requirements
+// Each bot requires specific strategy alignments before trading
+// ALIGNMENT = Multiple strategies must agree for high-probability entries
 // =========================================================================
 const BOT_CONFIG = {
   // =====================================================================
-  // EMA 200 PULLBACK PRO - High Win Rate Trend Strategy
-  // Uses EMA200/50 alignment with RSI neutral zone pullback entries
-  // RULES: SL below swing (10-20 pips), TP 1:2 or 1:3 R:R
+  // BOT 1: EMA 200 PULLBACK PRO - High Win Rate Trend Strategy
+  // ALIGNMENT: 2 out of 3 (Break & Retest + RSI Divergence confirm pullback)
+  // Risk: Medium | Trade Frequency: Good
   // =====================================================================
   'ema-pullback': {
     canTrade: true,
     strategy: 'ema_pullback',
     description: 'EMA200/50 trend + pullback with RSI 40-60 neutral zone',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],  // PRECIOUS METALS ONLY
+    allowedPairs: ['XAUUSD', 'XAGUSD'],
     timeframes: ['m5', 'm15', 'h1', 'h4'],
     maxLotSize: 0.5,
     maxPositions: 3,
-    cooldownMs: 180000,         // 3 min cooldown
-    takeProfitPips: 45,         // 1:2 R:R
-    stopLossPips: 20,           // Below recent swing
-    goldTPPips: 350,            // Gold: $3.50 TP
-    goldSLPips: 150,            // Gold: $1.50 SL
-    silverTPPips: 50,           // Silver: 50 ticks TP
-    silverSLPips: 25,           // Silver: 25 ticks SL
+    cooldownMs: 180000,
+    goldTPPips: 350,
+    goldSLPips: 150,
+    silverTPPips: 50,
+    silverSLPips: 25,
     riskRewardMin: 2.0,
+    // ALIGNMENT REQUIREMENTS
+    minAlignments: 2,           // Need 2 out of 3 strategies to agree
+    alignWith: ['break-retest', 'rsi-divergence', 'order-block'],
+    alignmentExplanation: 'Break & Retest + RSI Divergence confirm pullback entry',
+    riskLevel: 'MEDIUM',
     rules: {
-      needsEMA200Above: true,   // Price above EMA200 for buy
-      needsEMA50Above200: true, // EMA50 above EMA200 for buy
-      rsiNeutral: [40, 60],     // RSI between 40-60
-      needsPullback: true,      // Price pulls back to EMA50
-      confirmationCandle: true, // Bullish/bearish candle close
+      needsEMA200Above: true,
+      needsEMA50Above200: true,
+      rsiNeutral: [40, 60],
+      needsPullback: true,
+      confirmationCandle: true,
     }
   },
   
   // =====================================================================
-  // BREAK & RETEST - Institutional Favorite
-  // Trades breakouts with confirmed retests
-  // RULES: SL behind retest zone, TP at next structure level
+  // BOT 2: BREAK & RETEST - Institutional Favorite
+  // ALIGNMENT: 2 out of 3 (EMA Trend + VWAP/Order Block confirm breakout)
+  // Risk: Medium-High | Reliability: High
   // =====================================================================
   'break-retest': {
     canTrade: true,
     strategy: 'break_retest',
     description: 'Breakout + retest of support/resistance levels',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],  // PRECIOUS METALS ONLY
+    allowedPairs: ['XAUUSD', 'XAGUSD'],
     timeframes: ['m5', 'm15', 'h1'],
     maxLotSize: 0.5,
     maxPositions: 3,
-    cooldownMs: 300000,         // 5 min cooldown
-    takeProfitPips: 50,         // Next structure level
-    stopLossPips: 25,           // Behind retest zone
-    goldTPPips: 400,            // Gold: $4.00 TP
-    goldSLPips: 200,            // Gold: $2.00 SL
-    silverTPPips: 60,           // Silver: 60 ticks TP
-    silverSLPips: 30,           // Silver: 30 ticks SL
+    cooldownMs: 300000,
+    goldTPPips: 400,
+    goldSLPips: 200,
+    silverTPPips: 60,
+    silverSLPips: 30,
     riskRewardMin: 2.0,
+    // ALIGNMENT REQUIREMENTS
+    minAlignments: 2,           // Need 2 out of 3 strategies to agree
+    alignWith: ['ema-pullback', 'vwap-reversion', 'order-block'],
+    alignmentExplanation: 'EMA 200 Trend + VWAP/Order Block confirm breakout',
+    riskLevel: 'MEDIUM_HIGH',
     rules: {
-      needsBreakout: true,      // Price breaks S/R
-      needsRetest: true,        // Wait for price to retest
-      confirmationCandle: true, // Bullish/bearish confirmation
-      volumeFilter: false,      // Optional volume spike
+      needsBreakout: true,
+      needsRetest: true,
+      confirmationCandle: true,
+      volumeFilter: false,
     }
   },
   
   // =====================================================================
-  // LIQUIDITY SWEEP SMC - Smart Money Concept
-  // Detects liquidity sweeps + market structure shifts
-  // RULES: SL at sweep wick, TP at opposite liquidity
+  // BOT 3: LIQUIDITY SWEEP SMC - Smart Money Concept
+  // ALIGNMENT: 3 out of 3 (EMA Trend + S/R + VWAP confirm sweep)
+  // Risk: Low | Win Rate: HIGH | Trade Frequency: Fewer trades
   // =====================================================================
   'liquidity-sweep': {
     canTrade: true,
     strategy: 'liquidity_sweep',
     description: 'SMC liquidity sweep + market structure shift',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],  // PRECIOUS METALS ONLY
+    allowedPairs: ['XAUUSD', 'XAGUSD'],
     timeframes: ['m5', 'm15'],
     maxLotSize: 0.4,
     maxPositions: 3,
-    cooldownMs: 180000,         // 3 min cooldown
-    takeProfitPips: 40,         // Opposite liquidity
-    stopLossPips: 20,           // At sweep wick
-    goldTPPips: 300,            // Gold: $3.00 TP
-    goldSLPips: 150,            // Gold: $1.50 SL
-    silverTPPips: 45,           // Silver: 45 ticks TP
-    silverSLPips: 22,           // Silver: 22 ticks SL
+    cooldownMs: 180000,
+    goldTPPips: 300,
+    goldSLPips: 150,
+    silverTPPips: 45,
+    silverSLPips: 22,
     riskRewardMin: 2.0,
+    // ALIGNMENT REQUIREMENTS - STRICTEST (requires ALL 3)
+    minAlignments: 3,           // Need ALL 3 strategies to agree
+    alignWith: ['ema-pullback', 'order-block', 'vwap-reversion'],
+    alignmentExplanation: 'EMA Trend + Support/Resistance + VWAP confirm sweep',
+    riskLevel: 'LOW',
     rules: {
       needsSwingHLDetection: true,
-      needsLiquiditySweep: true, // Price sweeps prev low/high
-      needsStructureShift: true, // Strong reversal candle
-      pullbackEntry: true,       // Enter on pullback
+      needsLiquiditySweep: true,
+      needsStructureShift: true,
+      pullbackEntry: true,
     }
   },
   
   // =====================================================================
-  // LONDON SESSION BREAKOUT
-  // Trades Asian range breakouts during London session (08:00-11:00 GMT)
-  // RULES: SL at mid range, TP 2x range
+  // BOT 4: LONDON SESSION BREAKOUT
+  // ALIGNMENT: 2 out of 3 (Break & Retest + RSI confirm breakout)
+  // Risk: Medium | Avoids false London breakouts
   // =====================================================================
   'london-breakout': {
     canTrade: true,
     strategy: 'london_breakout',
     description: 'Asian range breakout during London session',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],  // PRECIOUS METALS ONLY
+    allowedPairs: ['XAUUSD', 'XAGUSD'],
     timeframes: ['m5', 'm15', 'm30'],
     maxLotSize: 0.4,
     maxPositions: 2,
-    cooldownMs: 600000,         // 10 min cooldown
-    takeProfitPips: 40,         // 2x Asian range
-    stopLossPips: 20,           // Mid range
-    goldTPPips: 300,            // Gold: $3.00 TP
-    goldSLPips: 150,            // Gold: $1.50 SL
-    silverTPPips: 45,           // Silver: 45 ticks TP
-    silverSLPips: 22,           // Silver: 22 ticks SL
+    cooldownMs: 600000,
+    goldTPPips: 300,
+    goldSLPips: 150,
+    silverTPPips: 45,
+    silverSLPips: 22,
     riskRewardMin: 2.0,
+    // ALIGNMENT REQUIREMENTS
+    minAlignments: 2,           // Need 2 out of 3 strategies to agree
+    alignWith: ['break-retest', 'rsi-divergence', 'ema-pullback'],
+    alignmentExplanation: 'Break & Retest + RSI confirm breakout, avoids false breakouts',
+    riskLevel: 'MEDIUM',
     rules: {
-      sessionFilter: ['london'],// Only trade London session
-      timeWindow: { start: 8, end: 11 }, // 08:00-11:00 GMT
-      asianRangeBreak: true,    // Break above/below Asian high/low
+      sessionFilter: ['london'],
+      timeWindow: { start: 8, end: 11 },
+      asianRangeBreak: true,
     }
   },
   
   // =====================================================================
-  // ORDER BLOCK TRADER
-  // Identifies institutional order blocks on H1, entries on M5
-  // RULES: SL at OB boundary, TP at liquidity target
+  // BOT 5: ORDER BLOCK TRADER - Institutional SMC
+  // ALIGNMENT: 3 out of 3 (EMA Trend + S/R + RSI Divergence)
+  // Risk: LOW | Probability: VERY HIGH | Trade Frequency: Low
   // =====================================================================
   'order-block': {
     canTrade: true,
     strategy: 'order_block',
     description: 'Institutional order block identification + rejection',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],  // PRECIOUS METALS ONLY
+    allowedPairs: ['XAUUSD', 'XAGUSD'],
     timeframes: ['m5', 'm15', 'h1'],
     maxLotSize: 0.5,
     maxPositions: 3,
-    cooldownMs: 300000,         // 5 min cooldown
-    takeProfitPips: 45,         // Liquidity target
-    stopLossPips: 22,           // OB boundary
-    goldTPPips: 350,            // Gold: $3.50 TP
-    goldSLPips: 175,            // Gold: $1.75 SL
-    silverTPPips: 52,           // Silver: 52 ticks TP
-    silverSLPips: 26,           // Silver: 26 ticks SL
+    cooldownMs: 300000,
+    goldTPPips: 350,
+    goldSLPips: 175,
+    silverTPPips: 52,
+    silverSLPips: 26,
     riskRewardMin: 2.0,
+    // ALIGNMENT REQUIREMENTS - STRICTEST (requires ALL 3)
+    minAlignments: 3,           // Need ALL 3 strategies to agree
+    alignWith: ['ema-pullback', 'break-retest', 'rsi-divergence'],
+    alignmentExplanation: 'EMA Trend + S/R + RSI Divergence = very high probability',
+    riskLevel: 'LOW',
     rules: {
-      needsOrderBlock: true,    // Detect bullish/bearish OB
-      needsRejection: true,     // Price rejects from OB
-      confirmationCandle: true, // Rejection candle pattern
+      needsOrderBlock: true,
+      needsRejection: true,
+      confirmationCandle: true,
     }
   },
   
   // =====================================================================
-  // VWAP MEAN REVERSION
-  // Mean reversion using VWAP deviations + RSI extremes
-  // RULES: SL beyond VWAP deviation, TP at VWAP
+  // BOT 6: VWAP MEAN REVERSION
+  // ALIGNMENT: 2 out of 3 (EMA Trend + RSI/BB confirms oversold/overbought)
+  // Risk: Medium | Win Rate: Medium-High
   // =====================================================================
   'vwap-reversion': {
     canTrade: true,
     strategy: 'vwap_reversion',
     description: 'VWAP mean reversion with RSI confirmation',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],  // PRECIOUS METALS ONLY
+    allowedPairs: ['XAUUSD', 'XAGUSD'],
     timeframes: ['m5', 'm15', 'm30'],
     maxLotSize: 0.4,
     maxPositions: 3,
-    cooldownMs: 180000,         // 3 min cooldown
-    takeProfitPips: 30,         // Return to VWAP
-    stopLossPips: 18,           // Beyond deviation
-    goldTPPips: 250,            // Gold: $2.50 TP
-    goldSLPips: 150,            // Gold: $1.50 SL
-    silverTPPips: 38,           // Silver: 38 ticks TP
-    silverSLPips: 22,           // Silver: 22 ticks SL
+    cooldownMs: 180000,
+    goldTPPips: 250,
+    goldSLPips: 150,
+    silverTPPips: 38,
+    silverSLPips: 22,
     riskRewardMin: 1.5,
+    // ALIGNMENT REQUIREMENTS
+    minAlignments: 2,           // Need 2 out of 3 strategies to agree
+    alignWith: ['ema-pullback', 'rsi-divergence', 'fib-continuation'],
+    alignmentExplanation: 'EMA Trend + RSI/Bollinger Band confirms oversold/overbought',
+    riskLevel: 'MEDIUM',
     rules: {
-      needsVWAPDeviation: true, // Price below/above VWAP
-      needsRSIExtreme: true,    // RSI oversold/overbought
-      confirmationCandle: true, // Reversal candle
+      needsVWAPDeviation: true,
+      needsRSIExtreme: true,
+      confirmationCandle: true,
     }
   },
   
   // =====================================================================
-  // FIBONACCI CONTINUATION
-  // Trend continuation at Fib 50-61.8% retracement
-  // RULES: SL below Fib 78.6%, TP at trend continuation
+  // BOT 7: FIBONACCI CONTINUATION
+  // ALIGNMENT: 2 out of 3 (EMA Trend + Break & Retest + RSI Divergence)
+  // Risk: Medium | Balance of win rate & trade frequency
   // =====================================================================
   'fib-continuation': {
     canTrade: true,
     strategy: 'fibonacci_continuation',
     description: 'Fibonacci 50-61.8% retracement continuation',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],  // PRECIOUS METALS ONLY
+    allowedPairs: ['XAUUSD', 'XAGUSD'],
     timeframes: ['m15', 'h1', 'h4'],
     maxLotSize: 0.5,
     maxPositions: 3,
-    cooldownMs: 300000,         // 5 min cooldown
-    takeProfitPips: 50,         // Trend extension
-    stopLossPips: 25,           // Below Fib 78.6%
-    goldTPPips: 400,            // Gold: $4.00 TP
-    goldSLPips: 200,            // Gold: $2.00 SL
-    silverTPPips: 60,           // Silver: 60 ticks TP
-    silverSLPips: 30,           // Silver: 30 ticks SL
+    cooldownMs: 300000,
+    goldTPPips: 400,
+    goldSLPips: 200,
+    silverTPPips: 60,
+    silverSLPips: 30,
     riskRewardMin: 2.0,
+    // ALIGNMENT REQUIREMENTS
+    minAlignments: 2,           // Need 2 out of 3 strategies to agree
+    alignWith: ['ema-pullback', 'break-retest', 'rsi-divergence'],
+    alignmentExplanation: 'EMA Trend + Break & Retest + RSI Divergence confirm fib level',
+    riskLevel: 'MEDIUM',
     rules: {
-      needsTrend: true,         // Established trend
-      fibLevels: [0.5, 0.618],  // 50-61.8% retracement
-      needsRejection: true,     // Rejection candle at fib
+      needsTrend: true,
+      fibLevels: [0.5, 0.618],
+      needsRejection: true,
     }
   },
   
   // =====================================================================
-  // RSI DIVERGENCE REVERSAL
-  // Catches reversals using RSI divergence patterns
-  // RULES: SL at recent extreme, TP at structure level
+  // BOT 8: RSI DIVERGENCE REVERSAL
+  // ALIGNMENT: 3 out of 3 (EMA Trend + S/R + Break & Retest)
+  // Risk: LOW | Catches high-probability reversals
   // =====================================================================
   'rsi-divergence': {
     canTrade: true,
     strategy: 'rsi_divergence',
     description: 'RSI divergence reversal patterns',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],  // PRECIOUS METALS ONLY
+    allowedPairs: ['XAUUSD', 'XAGUSD'],
     timeframes: ['m15', 'h1', 'h4'],
     maxLotSize: 0.4,
     maxPositions: 3,
-    cooldownMs: 300000,         // 5 min cooldown
-    takeProfitPips: 45,         // Structure level
-    stopLossPips: 22,           // Recent extreme
-    goldTPPips: 350,            // Gold: $3.50 TP
-    goldSLPips: 175,            // Gold: $1.75 SL
-    silverTPPips: 52,           // Silver: 52 ticks TP
-    silverSLPips: 26,           // Silver: 26 ticks SL
+    cooldownMs: 300000,
+    goldTPPips: 350,
+    goldSLPips: 175,
+    silverTPPips: 52,
+    silverSLPips: 26,
     riskRewardMin: 2.0,
+    // ALIGNMENT REQUIREMENTS - STRICTEST (requires ALL 3)
+    minAlignments: 3,           // Need ALL 3 strategies to agree
+    alignWith: ['ema-pullback', 'order-block', 'break-retest'],
+    alignmentExplanation: 'EMA Trend + Support/Resistance + Break & Retest confirm reversal',
+    riskLevel: 'LOW',
     rules: {
-      needsBullishDiv: true,    // Price LL + RSI HL
-      needsBearishDiv: true,    // Price HH + RSI LH
-      confirmationCandle: true, // Reversal confirmation
+      needsBullishDiv: true,
+      needsBearishDiv: true,
+      confirmationCandle: true,
     }
   },
 };
@@ -3372,8 +3397,9 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
   });
   
   // ================================================================
-  // CONFLUENCE REQUIRED - Only trade when 3+ strategies agree
-  // Higher confluence = bigger lots and more positions
+  // BOT-SPECIFIC ALIGNMENT CHECK
+  // Each bot has specific strategies that MUST confirm its signals
+  // This ensures high-probability entries based on strategy confluence
   // ================================================================
   const buySignals = signals.filter(s => s.type === 'buy');
   const sellSignals = signals.filter(s => s.type === 'sell');
@@ -3389,8 +3415,79 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
   let confluenceCount = 0;
   let allAgreeingSignals = [];
   
+  // ================================================================
+  // BOT-SPECIFIC ALIGNMENT VALIDATION
+  // Check if bot's required alignment strategies are confirming
+  // ================================================================
+  const checkBotAlignment = (agreeing, direction) => {
+    if (!botConfig || !botConfig.minAlignments || !botConfig.alignWith) {
+      // No specific alignment requirements - use general confluence
+      return { passed: agreeing.length >= minStrategies, reason: 'general confluence' };
+    }
+    
+    const minRequired = botConfig.minAlignments;
+    const alignStrategies = botConfig.alignWith || [];
+    
+    // Map strategy names to check names (handles naming differences)
+    const strategyNameMap = {
+      'ema-pullback': ['EMA200-Pullback', 'ema', 'pullback'],
+      'break-retest': ['Break-Retest', 'break', 'retest'],
+      'liquidity-sweep': ['Liquidity-Sweep', 'liquidity', 'sweep', 'smc'],
+      'london-breakout': ['London-Breakout', 'london', 'session'],
+      'order-block': ['Order-Block', 'order', 'block'],
+      'vwap-reversion': ['VWAP-Reversion', 'vwap', 'reversion'],
+      'fib-continuation': ['Fibonacci', 'fib', 'fibonacci'],
+      'rsi-divergence': ['RSI-Divergence', 'rsi', 'divergence'],
+    };
+    
+    // Find which required alignment strategies are confirming
+    const confirmingStrategies = [];
+    for (const requiredStrategy of alignStrategies) {
+      const aliases = strategyNameMap[requiredStrategy] || [requiredStrategy];
+      const found = agreeing.find(s => 
+        aliases.some(alias => 
+          s.strategyName.toLowerCase().includes(alias.toLowerCase())
+        )
+      );
+      if (found) {
+        confirmingStrategies.push({ required: requiredStrategy, found: found.strategyName });
+      }
+    }
+    
+    const alignmentCount = confirmingStrategies.length;
+    const passed = alignmentCount >= minRequired;
+    
+    if (passed) {
+      console.log(`  🎯 BOT ALIGNMENT MET: ${alignmentCount}/${minRequired} required strategies confirming`);
+      console.log(`     Confirming: ${confirmingStrategies.map(c => c.found).join(', ')}`);
+      console.log(`     Explanation: ${botConfig.alignmentExplanation}`);
+    } else {
+      console.log(`  ⏸️ BOT ALIGNMENT NOT MET: Only ${alignmentCount}/${minRequired} strategies confirming`);
+      console.log(`     Found: ${confirmingStrategies.map(c => c.found).join(', ') || 'none'}`);
+      console.log(`     Needed: ${alignStrategies.join(', ')}`);
+    }
+    
+    return { 
+      passed, 
+      alignmentCount,
+      minRequired,
+      confirmingStrategies: confirmingStrategies.map(c => c.found),
+      reason: passed ? 
+        `BOT ALIGNMENT (${alignmentCount}/${minRequired}): ${confirmingStrategies.map(c => c.found).join('+')}` :
+        `Need ${minRequired - alignmentCount} more alignment strategies`
+    };
+  };
+  
   // ONLY trade if enough strategies agree on the same direction
   if (buySignals.length >= minStrategies) {
+    // Check bot-specific alignment
+    const alignment = checkBotAlignment(buySignals, 'BUY');
+    
+    if (!alignment.passed) {
+      console.log(`  ⏸️ ${symbol}: BUY confluence present but BOT ALIGNMENT NOT MET - waiting for required strategies`);
+      return null;
+    }
+    
     // Multiple buy signals - CONFLUENCE CONFIRMED
     confluenceCount = buySignals.length;
     allAgreeingSignals = buySignals;
@@ -3399,10 +3496,18 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
     // Calculate average weighted confidence of all agreeing strategies
     const avgWeighted = buySignals.reduce((sum, s) => sum + s.weightedConfidence, 0) / buySignals.length;
     
-    bestSignal.reason = `🔥CONFLUENCE(${buySignals.length}/${signals.length} strategies, avg:${avgWeighted.toFixed(0)}): ` + 
-      buySignals.map(s => `${s.strategyName}(${s.weightedConfidence.toFixed(0)})`).join('+') + ' ' + bestSignal.reason;
+    bestSignal.reason = `🔥ALIGNMENT(${alignment.alignmentCount}/${alignment.minRequired})+CONFLUENCE(${buySignals.length}/${signals.length}): ` + 
+      `[${alignment.confirmingStrategies.join('+')}] ` + bestSignal.reason;
     console.log(`  ✅ ${symbol}: ${buySignals.length} strategies agree on BUY - TOP: ${bestSignal.strategyName} (${bestSignal.weightedConfidence.toFixed(1)})`);
   } else if (sellSignals.length >= minStrategies) {
+    // Check bot-specific alignment
+    const alignment = checkBotAlignment(sellSignals, 'SELL');
+    
+    if (!alignment.passed) {
+      console.log(`  ⏸️ ${symbol}: SELL confluence present but BOT ALIGNMENT NOT MET - waiting for required strategies`);
+      return null;
+    }
+    
     // Multiple sell signals - CONFLUENCE CONFIRMED  
     confluenceCount = sellSignals.length;
     allAgreeingSignals = sellSignals;
@@ -3411,8 +3516,8 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
     // Calculate average weighted confidence
     const avgWeighted = sellSignals.reduce((sum, s) => sum + s.weightedConfidence, 0) / sellSignals.length;
     
-    bestSignal.reason = `🔥CONFLUENCE(${sellSignals.length}/${signals.length} strategies, avg:${avgWeighted.toFixed(0)}): ` + 
-      sellSignals.map(s => `${s.strategyName}(${s.weightedConfidence.toFixed(0)})`).join('+') + ' ' + bestSignal.reason;
+    bestSignal.reason = `🔥ALIGNMENT(${alignment.alignmentCount}/${alignment.minRequired})+CONFLUENCE(${sellSignals.length}/${signals.length}): ` + 
+      `[${alignment.confirmingStrategies.join('+')}] ` + bestSignal.reason;
     console.log(`  ✅ ${symbol}: ${sellSignals.length} strategies agree on SELL - TOP: ${bestSignal.strategyName} (${bestSignal.weightedConfidence.toFixed(1)})`);
   } else {
     // NOT ENOUGH STRATEGIES AGREE - DO NOT TRADE
