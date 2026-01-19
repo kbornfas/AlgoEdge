@@ -572,6 +572,69 @@ export default function RobotsPage() {
     }
   };
 
+  // Get unique gradient colors for each robot
+  const getRobotGradient = (robotId: string, isRunning: boolean) => {
+    const gradients: Record<string, { bg: string; border: string; glow: string }> = {
+      'ema-pullback': {
+        bg: isRunning 
+          ? 'linear-gradient(135deg, #1a5f3c 0%, #0d3320 50%, #0a2818 100%)'
+          : 'linear-gradient(135deg, #1a2f38 0%, #0f1a1f 100%)',
+        border: isRunning ? '#10b981' : '#2dd4bf',
+        glow: '0 0 20px rgba(16, 185, 129, 0.3)',
+      },
+      'break-retest': {
+        bg: isRunning
+          ? 'linear-gradient(135deg, #4c1d95 0%, #2e1065 50%, #1e0a43 100%)'
+          : 'linear-gradient(135deg, #2d1b4e 0%, #1a0f2e 100%)',
+        border: isRunning ? '#a855f7' : '#8b5cf6',
+        glow: '0 0 20px rgba(168, 85, 247, 0.3)',
+      },
+      'liquidity-sweep': {
+        bg: isRunning
+          ? 'linear-gradient(135deg, #1e3a5f 0%, #0c1929 50%, #06101a 100%)'
+          : 'linear-gradient(135deg, #1e3a5f 0%, #0f1d2d 100%)',
+        border: isRunning ? '#3b82f6' : '#60a5fa',
+        glow: '0 0 20px rgba(59, 130, 246, 0.3)',
+      },
+      'london-breakout': {
+        bg: isRunning
+          ? 'linear-gradient(135deg, #7c2d12 0%, #431407 50%, #2a0d04 100%)'
+          : 'linear-gradient(135deg, #3d1e12 0%, #1f0f09 100%)',
+        border: isRunning ? '#f97316' : '#fb923c',
+        glow: '0 0 20px rgba(249, 115, 22, 0.3)',
+      },
+      'order-block': {
+        bg: isRunning
+          ? 'linear-gradient(135deg, #be185d 0%, #701a45 50%, #4a112e 100%)'
+          : 'linear-gradient(135deg, #4a1942 0%, #2d0f28 100%)',
+        border: isRunning ? '#ec4899' : '#f472b6',
+        glow: '0 0 20px rgba(236, 72, 153, 0.3)',
+      },
+      'vwap-reversion': {
+        bg: isRunning
+          ? 'linear-gradient(135deg, #0e7490 0%, #064e5e 50%, #033540 100%)'
+          : 'linear-gradient(135deg, #134e5e 0%, #0a2a33 100%)',
+        border: isRunning ? '#06b6d4' : '#22d3ee',
+        glow: '0 0 20px rgba(6, 182, 212, 0.3)',
+      },
+      'fib-continuation': {
+        bg: isRunning
+          ? 'linear-gradient(135deg, #a16207 0%, #6b4106 50%, #422903 100%)'
+          : 'linear-gradient(135deg, #4a3728 0%, #2d1f16 100%)',
+        border: isRunning ? '#eab308' : '#facc15',
+        glow: '0 0 20px rgba(234, 179, 8, 0.3)',
+      },
+      'rsi-divergence': {
+        bg: isRunning
+          ? 'linear-gradient(135deg, #dc2626 0%, #7f1d1d 50%, #4a1111 100%)'
+          : 'linear-gradient(135deg, #3d1c1c 0%, #1f0f0f 100%)',
+        border: isRunning ? '#ef4444' : '#f87171',
+        glow: '0 0 20px rgba(239, 68, 68, 0.3)',
+      },
+    };
+    return gradients[robotId] || gradients['ema-pullback'];
+  };
+
   // Calculate total P/L - use live account profit first, fallback to trade calculation
   const calculatedPL = trades.reduce((sum, trade) => sum + (trade.profit || 0), 0);
   const totalPL = accountProfit !== 0 ? accountProfit : calculatedPL;
@@ -690,16 +753,25 @@ export default function RobotsPage() {
           };
           const isStarting = startingRobots.has(robot.id);
           const isRunning = runningRobots.has(robot.id);
+          const gradient = getRobotGradient(robot.id, isRunning);
 
           return (
-            <Grid item xs={12} md={6} lg={4} key={robot.id}>
+            <Grid item xs={12} md={6} lg={3} key={robot.id}>
               <Card 
                 sx={{ 
                   height: '100%',
-                  border: isRunning ? '2px solid' : '1px solid',
-                  borderColor: isRunning ? 'success.main' : 'divider',
+                  background: gradient.bg,
+                  border: '1px solid',
+                  borderColor: gradient.border,
                   position: 'relative',
                   overflow: 'visible',
+                  boxShadow: isRunning ? gradient.glow : 'none',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: gradient.glow,
+                    transform: 'translateY(-4px)',
+                    borderColor: gradient.border,
+                  },
                 }}
               >
                 {isRunning && (
@@ -708,16 +780,17 @@ export default function RobotsPage() {
                       position: 'absolute',
                       top: -10,
                       right: 16,
-                      bgcolor: 'success.main',
+                      background: `linear-gradient(135deg, ${gradient.border}, ${gradient.border}dd)`,
                       color: 'white',
                       px: 2,
                       py: 0.5,
-                      borderRadius: 1,
+                      borderRadius: 2,
                       fontSize: '0.75rem',
                       fontWeight: 'bold',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 0.5,
+                      boxShadow: `0 4px 15px ${gradient.border}66`,
                     }}
                   >
                     <Box
@@ -734,7 +807,7 @@ export default function RobotsPage() {
                         },
                       }}
                     />
-                    RUNNING
+                    LIVE
                   </Box>
                 )}
                 
@@ -746,12 +819,13 @@ export default function RobotsPage() {
                         width: 48,
                         height: 48,
                         borderRadius: 2,
-                        bgcolor: `${getRiskColor(robot.riskLevel || 'Medium')}.main`,
+                        background: `linear-gradient(135deg, ${gradient.border}44, ${gradient.border}22)`,
+                        border: `1px solid ${gradient.border}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         mr: 2,
-                        color: 'white',
+                        color: gradient.border,
                       }}
                     >
                       {getStrategyIcon(robot.strategy || 'Default')}
@@ -776,14 +850,22 @@ export default function RobotsPage() {
                     <Chip 
                       label={`Win Rate: ${robot.winRate || 75}%`}
                       size="small"
-                      color="success"
-                      variant="outlined"
                       icon={<TrendingUp size={14} />}
+                      sx={{
+                        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1))',
+                        border: '1px solid rgba(16, 185, 129, 0.5)',
+                        color: '#10b981',
+                        '& .MuiChip-icon': { color: '#10b981' },
+                      }}
                     />
                     <Chip 
                       label={robot.riskLevel || 'Medium'}
                       size="small"
-                      color={getRiskColor(robot.riskLevel || 'Medium')}
+                      sx={{
+                        background: `linear-gradient(135deg, ${gradient.border}33, ${gradient.border}11)`,
+                        border: `1px solid ${gradient.border}88`,
+                        color: gradient.border,
+                      }}
                     />
                   </Box>
 
@@ -797,12 +879,20 @@ export default function RobotsPage() {
                         key={tf}
                         label={tf}
                         size="small"
-                        variant={config.selectedTimeframe === tf ? 'filled' : 'outlined'}
-                        color={config.selectedTimeframe === tf ? 'primary' : 'default'}
                         onClick={() => !isRunning && handleTimeframeChange(robot.id, tf)}
                         sx={{ 
                           cursor: isRunning ? 'not-allowed' : 'pointer',
                           fontWeight: config.selectedTimeframe === tf ? 'bold' : 'normal',
+                          background: config.selectedTimeframe === tf 
+                            ? `linear-gradient(135deg, ${gradient.border}, ${gradient.border}cc)`
+                            : 'rgba(255,255,255,0.05)',
+                          border: `1px solid ${config.selectedTimeframe === tf ? gradient.border : 'rgba(255,255,255,0.2)'}`,
+                          color: config.selectedTimeframe === tf ? 'white' : 'rgba(255,255,255,0.7)',
+                          '&:hover': {
+                            background: config.selectedTimeframe === tf 
+                              ? `linear-gradient(135deg, ${gradient.border}, ${gradient.border}cc)`
+                              : 'rgba(255,255,255,0.1)',
+                          },
                         }}
                       />
                     ))}
@@ -818,16 +908,24 @@ export default function RobotsPage() {
                         key={pair}
                         label={pair}
                         size="small"
-                        variant="outlined"
-                        sx={{ fontSize: '0.7rem' }}
+                        sx={{ 
+                          fontSize: '0.7rem',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          color: 'rgba(255,255,255,0.8)',
+                        }}
                       />
                     ))}
                     {(robot.pairs || []).length > 4 && (
                       <Chip 
                         label={`+${robot.pairs.length - 4}`}
                         size="small"
-                        variant="outlined"
-                        sx={{ fontSize: '0.7rem' }}
+                        sx={{ 
+                          fontSize: '0.7rem',
+                          background: `${gradient.border}22`,
+                          border: `1px solid ${gradient.border}44`,
+                          color: gradient.border,
+                        }}
                       />
                     )}
                   </Box>
@@ -848,29 +946,67 @@ export default function RobotsPage() {
                       { value: 5, label: '5%' },
                     ]}
                     disabled={isRunning}
-                    sx={{ mb: 2 }}
+                    sx={{ 
+                      mb: 2,
+                      color: gradient.border,
+                      '& .MuiSlider-thumb': {
+                        background: gradient.border,
+                        '&:hover, &.Mui-focusVisible': {
+                          boxShadow: `0 0 10px ${gradient.border}`,
+                        },
+                      },
+                      '& .MuiSlider-track': {
+                        background: `linear-gradient(90deg, ${gradient.border}, ${gradient.border}cc)`,
+                        border: 'none',
+                      },
+                      '& .MuiSlider-rail': {
+                        background: 'rgba(255,255,255,0.15)',
+                      },
+                      '& .MuiSlider-markLabel': {
+                        color: 'rgba(255,255,255,0.5)',
+                        fontSize: '0.7rem',
+                      },
+                    }}
                   />
 
                   {/* Action Buttons */}
                   <Box display="flex" gap={1}>
                     {isRunning ? (
                       <Button
-                        variant="outlined"
-                        color="error"
+                        variant="contained"
                         fullWidth
                         onClick={() => stopRobot(robot)}
                         startIcon={<Square size={16} />}
+                        sx={{
+                          background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                          border: '1px solid #ef4444',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                            boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)',
+                          },
+                        }}
                       >
                         Stop Robot
                       </Button>
                     ) : (
                       <Button
                         variant="contained"
-                        color="primary"
                         fullWidth
                         onClick={() => startRobot(robot)}
                         disabled={isStarting}
                         startIcon={isStarting ? <CircularProgress size={16} color="inherit" /> : <Play size={16} />}
+                        sx={{
+                          background: `linear-gradient(135deg, ${gradient.border} 0%, ${gradient.border}cc 100%)`,
+                          border: `1px solid ${gradient.border}`,
+                          '&:hover': {
+                            background: `linear-gradient(135deg, ${gradient.border}ee 0%, ${gradient.border} 100%)`,
+                            boxShadow: `0 4px 15px ${gradient.border}66`,
+                          },
+                          '&:disabled': {
+                            background: 'rgba(255,255,255,0.1)',
+                            color: 'rgba(255,255,255,0.5)',
+                          },
+                        }}
                       >
                         {isStarting ? 'Starting...' : 'Start Robot'}
                       </Button>
