@@ -1,83 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { generateNumericCode, OTP_LENGTH, OTP_EXPIRATION_MINUTES } from '@/lib/auth';
-import { sendOTPEmail } from '@/lib/email';
-import { z } from 'zod';
-
-const sendOTPSchema = z.object({
-  email: z.string().email(),
-});
 
 /**
  * POST /api/auth/otp/send
- * Send OTP verification code to user's email
- * Used during registration email verification
+ * Proxy to backend to send OTP verification code
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email } = sendOTPSchema.parse(body);
-
-    // Check if user exists (must exist to send OTP)
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true, email: true, username: true, isVerified: true },
+    
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    
+    const response = await fetch(`${backendUrl}/api/auth/send-verification-code`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: body.email,
+        type: 'email', // Use email verification
+      }),
     });
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
+    const data = await response.json();
 
-    // If already verified, don't send OTP
-    if (user.isVerified) {
-      return NextResponse.json(
-        { error: 'Email already verified' },
-        { status: 400 }
-      );
-    }
-
-    // Generate OTP code with configured length
-    const code = generateNumericCode(OTP_LENGTH);
-    const expiresAt = new Date(Date.now() + OTP_EXPIRATION_MINUTES * 60 * 1000);
-
-    // Store OTP in VerificationCode table
-    await prisma.verificationCode.upsert({
-      where: {
-        email_type: {
-          email: user.email,
-          type: 'registration_otp',
-        },
-      },
-      update: {
-        code,
-        expiresAt,
-        used: false,
-      },
-      create: {
-        email: user.email,
-        code,
-        type: 'registration_otp',
-        expiresAt,
-      },
-    });
-
-    // Send OTP email
-    try {
-      await sendOTPEmail(user.email, user.username, code);
-    } catch (emailError) {
-      console.error('Failed to send OTP email:', emailError);
-      return NextResponse.json(
-        { error: 'Failed to send verification email. Please try again.' },
-        { status: 500 }
-      );
+    if (!response.ok) {
+      return NextResponse.json(data, { status: response.status });
     }
 
     return NextResponse.json({
       message: 'Verification code sent successfully',
-      email: user.email,
+      email: body.email,
+    });
+  } catch (error) {
+    console.error('Send OTP error:', error);
+    return NextResponse.json(
+      { error: 'Failed to send verification code. Please try again.' },
+      { status: 500 }
+    );
+  }
+}
     });
   } catch (error) {
     console.error('Send OTP error:', error);

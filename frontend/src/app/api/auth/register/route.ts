@@ -1,113 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { hashPassword, generateToken, PASSWORD_MIN_LENGTH } from '@/lib/auth';
-import { handleApiError } from '@/lib/api-errors';
-import { z } from 'zod';
-
-// Subscription constants
-const DEFAULT_SUBSCRIPTION_PLAN = 'standard';
-const DEFAULT_SUBSCRIPTION_STATUS = 'pending';
-
-// Validation schema for registration - Updated to require first and last name
-const registerSchema = z.object({
-  firstName: z.string().min(1).max(50),
-  lastName: z.string().min(1).max(50),
-  email: z.string().email(),
-  password: z.string().min(PASSWORD_MIN_LENGTH),
-  phone: z.string().optional(),
-  country: z.string().optional(),
-});
 
 /**
  * POST /api/auth/register
- * Register a new user account
- * Step 1 of onboarding flow: Create account, then redirect to OTP verification
+ * Proxy to backend authentication
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
-    // Validate input
-    const validatedData = registerSchema.parse(body);
-
-    // Create username from first and last name
-    const baseUsername = `${validatedData.firstName.toLowerCase()}${validatedData.lastName.toLowerCase()}`.replace(/[^a-z0-9]/g, '');
-    let username = baseUsername;
-    let counter = 1;
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     
-    // Ensure username is unique
-    while (await prisma.user.findUnique({ where: { username } })) {
-      username = `${baseUsername}${counter}`;
-      counter++;
+    // Create username from first and last name
+    const username = `${body.firstName?.toLowerCase() || ''}${body.lastName?.toLowerCase() || ''}`.replace(/[^a-z0-9]/g, '') || body.email?.split('@')[0];
+    
+    const response = await fetch(`${backendUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: username,
+        email: body.email,
+        password: body.password,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return NextResponse.json(data, { status: response.status });
     }
 
-    // Check if email already registered
-    const existingUser = await prisma.user.findUnique({
-      where: { email: validatedData.email },
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'Email already registered' },
-        { status: 400 }
-      );
-    }
-
-    // Hash password
-    const passwordHash = await hashPassword(validatedData.password);
-
-    // Create full name from first and last name
-    const fullName = `${validatedData.firstName} ${validatedData.lastName}`;
-
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        username,
-        email: validatedData.email,
-        passwordHash,
-        fullName,
-        phone: validatedData.phone,
-        country: validatedData.country,
-        isVerified: false, // Will be verified via OTP
-        approvalStatus: 'pending', // Requires admin approval after payment
-      },
-    });
-
-    // Create subscription record
-    await prisma.subscription.create({
-      data: {
-        userId: user.id,
-        plan: DEFAULT_SUBSCRIPTION_PLAN,
-        status: DEFAULT_SUBSCRIPTION_STATUS,
-      },
-    });
-
-    // Create default user settings
-    await prisma.userSettings.create({
-      data: {
-        userId: user.id,
-      },
-    });
-
-    // Don't send verification email - will send OTP instead when user requests it
-    // Verification email sending removed - using OTP flow instead
-    // DO NOT return a token - user must verify email and wait for admin approval
-
-    return NextResponse.json(
-      {
-        message: 'Registration successful. Please verify your email with OTP.',
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          isVerified: user.isVerified,
-          requiresOTP: true, // Signal frontend to show OTP page
-        },
-      },
-      { status: 201 }
-    );
+    return NextResponse.json(data, { status: 201 });
   } catch (error) {
     console.error('Registration error:', error);
-    return handleApiError(error, 'Registration');
+    return NextResponse.json(
+      { error: 'Registration failed. Please try again.' },
+      { status: 500 }
+    );
   }
 }

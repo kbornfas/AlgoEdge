@@ -111,13 +111,24 @@ export async function GET(request: NextRequest) {
       path: '/',
     });
 
-    // Also set a non-httpOnly cookie for client-side access
-    response.cookies.set('user_data', JSON.stringify({
+    // Also set a non-httpOnly cookie for client-side access (token for localStorage sync)
+    response.cookies.set('pending_token', authData.token, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60, // Short-lived - just for client sync
+      path: '/',
+    });
+
+    // Set user data cookie for client-side access
+    response.cookies.set('pending_user', JSON.stringify({
       id: authData.user.id,
       email: authData.user.email,
+      username: authData.user.username,
       firstName: authData.user.firstName,
       lastName: authData.user.lastName,
       role: authData.user.role,
+      isVerified: authData.user.isVerified,
     }), {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',

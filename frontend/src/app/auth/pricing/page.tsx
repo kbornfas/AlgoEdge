@@ -134,6 +134,34 @@ export default function PricingPage() {
 
   useEffect(() => {
     const checkUserAndSubscription = async () => {
+      // First, sync any pending token from cookies to localStorage (from Google OAuth)
+      const pendingTokenCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('pending_token='));
+      const pendingUserCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('pending_user='));
+      
+      if (pendingTokenCookie && pendingUserCookie) {
+        try {
+          const pendingToken = pendingTokenCookie.split('=')[1];
+          const userData = JSON.parse(decodeURIComponent(pendingUserCookie.split('=')[1]));
+          
+          // Save to localStorage
+          localStorage.setItem('token', pendingToken);
+          localStorage.setItem('user', JSON.stringify(userData));
+          
+          // Clear the pending cookies
+          document.cookie = 'pending_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          
+          setUserEmail(userData.email || '');
+          setUserName(userData.firstName || userData.username || '');
+          return; // User data synced, stay on pricing
+        } catch (e) {
+          console.error('Failed to sync pending user data from cookies');
+        }
+      }
+      
       // Check for logged-in user first (from localStorage token)
       const token = localStorage.getItem('token');
       const userStr = localStorage.getItem('user');
@@ -164,11 +192,7 @@ export default function PricingPage() {
         }
       }
       
-      // Check for Google sign-up user first (from cookies)
-      const pendingUserCookie = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('pending_user='));
-      
+      // Check for Google sign-up user (from cookies without token - fallback)
       if (pendingUserCookie) {
         try {
           const userData = JSON.parse(decodeURIComponent(pendingUserCookie.split('=')[1]));
