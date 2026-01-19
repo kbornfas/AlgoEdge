@@ -170,12 +170,14 @@ export default function LoginPage() {
               </Alert>
             )}
 
-            <Box component="form" onSubmit={handleSubmit}>
+            <Box component="form" onSubmit={handleSubmit} autoComplete="on">
               <TextField
                 fullWidth
                 label="Email"
                 name="email"
+                id="email"
                 type="email"
+                autoComplete="username"
                 value={formData.email}
                 onChange={handleChange}
                 required
@@ -187,7 +189,9 @@ export default function LoginPage() {
                 fullWidth
                 label="Password"
                 name="password"
+                id="password"
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 value={formData.password}
                 onChange={handleChange}
                 required
@@ -199,6 +203,7 @@ export default function LoginPage() {
                       <IconButton
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
+                        tabIndex={-1}
                       >
                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                       </IconButton>
@@ -212,13 +217,14 @@ export default function LoginPage() {
                   fullWidth
                   label="2FA Code"
                   name="twoFactorCode"
+                  id="twoFactorCode"
                   value={formData.twoFactorCode}
                   onChange={handleChange}
                   required
                   disabled={loading}
                   placeholder="Enter 6-digit code"
                   sx={{ mb: 2 }}
-                  inputProps={{ maxLength: 6 }}
+                  inputProps={{ maxLength: 6, inputMode: 'numeric', autoComplete: 'one-time-code' }}
                 />
               )}
 

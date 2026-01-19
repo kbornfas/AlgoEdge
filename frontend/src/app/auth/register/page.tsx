@@ -162,13 +162,15 @@ export default function RegisterPage() {
               </Alert>
             )}
 
-            <Box component="form" onSubmit={handleSubmit}>
+            <Box component="form" onSubmit={handleSubmit} autoComplete="on">
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
                     label="First Name"
                     name="firstName"
+                    id="firstName"
+                    autoComplete="given-name"
                     value={formData.firstName}
                     onChange={handleChange}
                     required
@@ -181,6 +183,8 @@ export default function RegisterPage() {
                     fullWidth
                     label="Last Name"
                     name="lastName"
+                    id="lastName"
+                    autoComplete="family-name"
                     value={formData.lastName}
                     onChange={handleChange}
                     required
@@ -193,7 +197,9 @@ export default function RegisterPage() {
                     fullWidth
                     label="Email"
                     name="email"
+                    id="email"
                     type="email"
+                    autoComplete="email"
                     value={formData.email}
                     onChange={handleChange}
                     required
@@ -206,7 +212,9 @@ export default function RegisterPage() {
                     fullWidth
                     label="Password"
                     name="password"
+                    id="password"
                     type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
                     value={formData.password}
                     onChange={handleChange}
                     required
@@ -218,6 +226,7 @@ export default function RegisterPage() {
                           <IconButton
                             onClick={() => setShowPassword(!showPassword)}
                             edge="end"
+                            tabIndex={-1}
                           >
                             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                           </IconButton>
@@ -232,7 +241,9 @@ export default function RegisterPage() {
                     fullWidth
                     label="Confirm Password"
                     name="confirmPassword"
+                    id="confirmPassword"
                     type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     required

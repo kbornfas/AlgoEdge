@@ -98,11 +98,14 @@ export default function AdminLogin() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} autoComplete="on">
             <TextField
               fullWidth
               label="Admin Email"
+              name="email"
+              id="admin-email"
               type="email"
+              autoComplete="username"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
@@ -119,7 +122,10 @@ export default function AdminLogin() {
             <TextField
               fullWidth
               label="Admin Password"
+              name="password"
+              id="admin-password"
               type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
@@ -135,6 +141,7 @@ export default function AdminLogin() {
                     <IconButton
                       onClick={() => setShowPassword(!showPassword)}
                       edge="end"
+                      tabIndex={-1}
                     >
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </IconButton>
