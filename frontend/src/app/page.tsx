@@ -2200,54 +2200,6 @@ export default function Home() {
           </Grid>
         </Box>
 
-        {/* Trust and Guarantee Section */}
-        <Box sx={{ py: 6 }}>
-          <Card
-            sx={{
-              maxWidth: '900px',
-              mx: 'auto',
-              p: { xs: 3, md: 5 },
-              bgcolor: 'rgba(16, 185, 129, 0.1)',
-              backdropFilter: 'blur(10px)',
-              border: '3px solid #10b981',
-              borderRadius: 4,
-              textAlign: 'center',
-            }}
-          >
-            <Shield size={72} color="#10b981" style={{ marginBottom: 24 }} />
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: 700,
-                mb: 3,
-                color: '#10b981',
-                fontSize: { xs: '1.75rem', md: '2.125rem' },
-              }}
-            >
-              100% Risk-Free 7-Day Money-Back Guarantee
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: { xs: '1rem', md: '1.2rem' },
-                color: 'text.primary',
-                mb: 2,
-                lineHeight: 1.8,
-              }}
-            >
-              Try AlgoEdge completely risk-free. If you're not satisfied with the platform or results within 7 days, we'll refund your money—no questions asked.
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: { xs: '1rem', md: '1.1rem' },
-                color: 'text.secondary',
-                fontStyle: 'italic',
-              }}
-            >
-              We're confident in our system and stand behind it 100%.
-            </Typography>
-          </Card>
-        </Box>
-
         {/* Features Section - Moved to Bottom */}
         <Box sx={{ py: 8 }}>
           <Typography
