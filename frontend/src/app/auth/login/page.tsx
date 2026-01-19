@@ -218,7 +218,7 @@ export default function LoginPage() {
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
                 <MuiLink
                   component={Link}
-                  href="/auth/reset-password"
+                  href="/auth/forgot-password"
                   variant="body2"
                   underline="hover"
                 >

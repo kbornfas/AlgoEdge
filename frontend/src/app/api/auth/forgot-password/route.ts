@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * POST /api/auth/reset-password
- * Proxy to backend to reset password with verification code
+ * POST /api/auth/forgot-password
+ * Proxy to backend to request password reset code
  */
 export async function POST(req: NextRequest) {
   try {
@@ -10,15 +10,13 @@ export async function POST(req: NextRequest) {
     
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     
-    const response = await fetch(`${backendUrl}/api/auth/reset-password`, {
+    const response = await fetch(`${backendUrl}/api/auth/request-password-reset`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         email: body.email,
-        code: body.code,
-        newPassword: body.newPassword,
       }),
     });
 
@@ -30,11 +28,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Reset password error:', error);
+    console.error('Forgot password error:', error);
     return NextResponse.json(
-      { error: 'Failed to reset password. Please try again.' },
+      { error: 'Failed to send reset code. Please try again.' },
       { status: 500 }
     );
   }
 }
-
