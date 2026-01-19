@@ -4,6 +4,26 @@ import { verifyToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
+// IDs of old/deprecated robots to exclude
+const DEPRECATED_ROBOT_IDS = [
+  'algoedge_1_0',
+  'ea888',
+  'poverty_killer',
+  'golden_sniper',
+  'scalp_master_pro',
+  'trend_dominator',
+  'profit_maximizer',
+  // Alternative naming formats
+  'algoedge-1-0',
+  'AlgoEdge 1.0',
+  'EA888',
+  'Poverty Killer',
+  'Golden Sniper',
+  'Scalp Master Pro',
+  'Trend Dominator',
+  'Profit Maximizer',
+];
+
 /**
  * GET /api/user/robots
  * Get user's available trading robots and their status
@@ -38,9 +58,14 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Get ALL available robots from database
+    // Get ALL available robots from database, excluding deprecated ones
     const availableRobots = await prisma.tradingRobot.findMany({
-      where: { isActive: true },
+      where: { 
+        isActive: true,
+        id: {
+          notIn: DEPRECATED_ROBOT_IDS,
+        },
+      },
     });
 
     // Get user's robot configurations (this tells us which are enabled/running)

@@ -5,6 +5,25 @@ import { verifyToken } from '@/lib/auth';
 // Mark as dynamic route since it uses authentication headers
 export const dynamic = 'force-dynamic';
 
+// IDs of old/deprecated robots to exclude
+const DEPRECATED_ROBOT_IDS = [
+  'algoedge_1_0',
+  'ea888',
+  'poverty_killer',
+  'golden_sniper',
+  'scalp_master_pro',
+  'trend_dominator',
+  'profit_maximizer',
+  'algoedge-1-0',
+  'AlgoEdge 1.0',
+  'EA888',
+  'Poverty Killer',
+  'Golden Sniper',
+  'Scalp Master Pro',
+  'Trend Dominator',
+  'Profit Maximizer',
+];
+
 /**
  * GET /api/robots
  * Get all available trading robots with user configurations
@@ -24,9 +43,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Get all active robots
+    // Get all active robots, excluding deprecated ones
     const robots = await prisma.tradingRobot.findMany({
-      where: { isActive: true },
+      where: { 
+        isActive: true,
+        id: {
+          notIn: DEPRECATED_ROBOT_IDS,
+        },
+      },
       orderBy: [
         { timeframe: 'asc' },
         { winRate: 'desc' },
