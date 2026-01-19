@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     
-    const response = await fetch(${backendUrl}/api/auth/send-verification-code, {
+    const response = await fetch(`${backendUrl}/api/auth/send-verification-code`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
