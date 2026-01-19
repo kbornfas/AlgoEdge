@@ -453,6 +453,69 @@ export default function DashboardPage() {
                 <Grid container spacing={2}>
                   {robots.map((robot: any) => {
                     const isRunning = robot.status === 'running';
+                    
+                    // Unique color for each robot
+                    const robotColors: Record<string, { gradient: string; border: string; glow: string }> = {
+                      'ema-pullback': { 
+                        gradient: isRunning 
+                          ? 'linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%)'
+                          : 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)',
+                        border: '#10b981', 
+                        glow: '0 0 20px rgba(16, 185, 129, 0.4)' 
+                      },
+                      'break-retest': { 
+                        gradient: isRunning
+                          ? 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 50%, #5b21b6 100%)'
+                          : 'linear-gradient(135deg, #4c1d95 0%, #2e1065 100%)',
+                        border: '#a855f7', 
+                        glow: '0 0 20px rgba(168, 85, 247, 0.4)' 
+                      },
+                      'liquidity-sweep': { 
+                        gradient: isRunning
+                          ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%)'
+                          : 'linear-gradient(135deg, #1e3a8a 0%, #172554 100%)',
+                        border: '#3b82f6', 
+                        glow: '0 0 20px rgba(59, 130, 246, 0.4)' 
+                      },
+                      'london-breakout': { 
+                        gradient: isRunning
+                          ? 'linear-gradient(135deg, #ea580c 0%, #dc2626 50%, #b91c1c 100%)'
+                          : 'linear-gradient(135deg, #7c2d12 0%, #431407 100%)',
+                        border: '#f97316', 
+                        glow: '0 0 20px rgba(249, 115, 22, 0.4)' 
+                      },
+                      'order-block': { 
+                        gradient: isRunning
+                          ? 'linear-gradient(135deg, #db2777 0%, #be185d 50%, #9d174d 100%)'
+                          : 'linear-gradient(135deg, #831843 0%, #500724 100%)',
+                        border: '#ec4899', 
+                        glow: '0 0 20px rgba(236, 72, 153, 0.4)' 
+                      },
+                      'vwap-reversion': { 
+                        gradient: isRunning
+                          ? 'linear-gradient(135deg, #0891b2 0%, #0e7490 50%, #155e75 100%)'
+                          : 'linear-gradient(135deg, #164e63 0%, #083344 100%)',
+                        border: '#06b6d4', 
+                        glow: '0 0 20px rgba(6, 182, 212, 0.4)' 
+                      },
+                      'fib-continuation': { 
+                        gradient: isRunning
+                          ? 'linear-gradient(135deg, #ca8a04 0%, #a16207 50%, #854d0e 100%)'
+                          : 'linear-gradient(135deg, #713f12 0%, #422006 100%)',
+                        border: '#eab308', 
+                        glow: '0 0 20px rgba(234, 179, 8, 0.4)' 
+                      },
+                      'rsi-divergence': { 
+                        gradient: isRunning
+                          ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)'
+                          : 'linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%)',
+                        border: '#ef4444', 
+                        glow: '0 0 20px rgba(239, 68, 68, 0.4)' 
+                      },
+                    };
+                    
+                    const colors = robotColors[robot.id] || robotColors['ema-pullback'];
+                    
                     return (
                       <Grid item xs={12} sm={6} md={3} key={robot.id}>
                         <Box
@@ -460,9 +523,14 @@ export default function DashboardPage() {
                             p: 2,
                             borderRadius: 2,
                             border: '1px solid',
-                            borderColor: isRunning ? 'success.main' : 'divider',
-                            bgcolor: isRunning ? 'success.main' : 'background.paper',
-                            transition: 'all 0.2s',
+                            borderColor: colors.border,
+                            background: colors.gradient,
+                            transition: 'all 0.3s ease',
+                            boxShadow: isRunning ? colors.glow : 'none',
+                            '&:hover': {
+                              transform: 'translateY(-2px)',
+                              boxShadow: colors.glow,
+                            },
                           }}
                         >
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
@@ -470,8 +538,9 @@ export default function DashboardPage() {
                               variant="body2" 
                               sx={{ 
                                 fontWeight: 600, 
-                                color: isRunning ? 'white' : 'text.primary',
-                                fontSize: '0.8rem',
+                                color: 'white',
+                                fontSize: '0.85rem',
+                                textShadow: '0 1px 2px rgba(0,0,0,0.3)',
                               }}
                             >
                               {robot.name}
@@ -482,15 +551,17 @@ export default function DashboardPage() {
                               sx={{
                                 height: 20,
                                 fontSize: '0.65rem',
-                                bgcolor: isRunning ? 'rgba(255,255,255,0.2)' : 'grey.200',
-                                color: isRunning ? 'white' : 'text.secondary',
+                                fontWeight: 'bold',
+                                bgcolor: isRunning ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
+                                color: 'white',
+                                border: `1px solid ${isRunning ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)'}`,
                               }}
                             />
                           </Box>
                           <Typography 
                             variant="caption" 
                             sx={{ 
-                              color: isRunning ? 'rgba(255,255,255,0.8)' : 'text.secondary',
+                              color: 'rgba(255,255,255,0.8)',
                               display: 'block',
                               mb: 1.5,
                               lineHeight: 1.3,
@@ -500,22 +571,26 @@ export default function DashboardPage() {
                             {robot.strategy || 'AI Strategy'}
                           </Typography>
                           <Button
-                            variant={isRunning ? 'outlined' : 'contained'}
+                            variant="contained"
                             size="small"
                             fullWidth
                             onClick={() => isRunning ? stopRobot(robot.id) : startRobot(robot.id)}
                             startIcon={isRunning ? <Square size={12} /> : <Play size={12} />}
                             sx={{
                               height: 28,
-                              fontSize: '0.7rem',
-                              ...(isRunning && {
-                                borderColor: 'white',
-                                color: 'white',
-                                '&:hover': {
-                                  borderColor: 'white',
-                                  bgcolor: 'rgba(255,255,255,0.1)',
-                                },
-                              }),
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              background: isRunning 
+                                ? 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)'
+                                : `linear-gradient(135deg, ${colors.border} 0%, ${colors.border}cc 100%)`,
+                              border: `1px solid ${isRunning ? 'rgba(255,255,255,0.3)' : colors.border}`,
+                              color: 'white',
+                              '&:hover': {
+                                background: isRunning 
+                                  ? 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.1) 100%)'
+                                  : `linear-gradient(135deg, ${colors.border}ee 0%, ${colors.border} 100%)`,
+                                boxShadow: `0 4px 12px ${colors.border}66`,
+                              },
                             }}
                           >
                             {isRunning ? 'Stop' : 'Start'}
