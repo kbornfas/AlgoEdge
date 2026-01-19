@@ -113,7 +113,7 @@ export const login = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(404).json({ error: 'No account found with this email. Please register first.', notFound: true });
     }
 
     const user = result.rows[0];
@@ -121,7 +121,7 @@ export const login = async (req, res) => {
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Incorrect password. Please try again.' });
     }
 
     // Check 2FA

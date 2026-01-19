@@ -78,6 +78,9 @@ export default function LoginPage() {
         if (data.requires2FA) {
           setRequires2FA(true);
           setError('');
+        } else if (data.notFound) {
+          // Account doesn't exist
+          setError('No account found with this email. Please create an account first.');
         } else if (data.requiresActivation) {
           if (!data.isVerified) {
             setError('Please verify your email address. Check your inbox for the verification code.');
