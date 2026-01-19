@@ -228,8 +228,9 @@ export default function PricingPage() {
         return;
       }
       
-      // No user info found - redirect to register
-      router.push('/auth/register');
+      // No user info found - stay on pricing page anyway (don't redirect to register)
+      // Users coming from login or directly visiting the page should see pricing
+      // They can register/login from here if needed
     };
     
     checkUserAndSubscription();
