@@ -15,8 +15,9 @@ import {
   AlertTitle,
   Skeleton,
   CircularProgress,
+  IconButton,
 } from '@mui/material';
-import { TrendingUp, TrendingDown, DollarSign, Activity, Users, AlertCircle, Upload, Link as LinkIcon, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, Users, AlertCircle, Upload, Link as LinkIcon, RefreshCw, Play, Square } from 'lucide-react';
 import Link from 'next/link';
 
 interface MT5Account {
@@ -132,6 +133,58 @@ export default function DashboardPage() {
 
   const handleRefresh = () => {
     fetchAllData(true);
+  };
+
+  // Start a robot
+  const startRobot = async (robotId: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    try {
+      const response = await fetch(`/api/user/robots/${robotId}/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ timeframe: 'H1', riskPercent: 1 }),
+      });
+      
+      if (response.ok) {
+        // Update local state immediately
+        setRobots(prev => prev.map(r => 
+          r.id.toString() === robotId ? { ...r, status: 'running' as const } : r
+        ));
+        setActiveRobots(prev => prev + 1);
+      }
+    } catch (err) {
+      console.error('Failed to start robot:', err);
+    }
+  };
+
+  // Stop a robot
+  const stopRobot = async (robotId: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    try {
+      const response = await fetch(`/api/user/robots/${robotId}/stop`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        // Update local state immediately
+        setRobots(prev => prev.map(r => 
+          r.id.toString() === robotId ? { ...r, status: 'stopped' as const } : r
+        ));
+        setActiveRobots(prev => Math.max(0, prev - 1));
+      }
+    } catch (err) {
+      console.error('Failed to stop robot:', err);
+    }
   };
 
   const getTimeAgo = (dateString: string) => {
@@ -358,16 +411,29 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       <Grid container spacing={3}>
-        {/* Trading Robots Section */}
-        <Grid item xs={12} md={6}>
+        {/* Trading Robots Section - Full Width */}
+        <Grid item xs={12}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                Trading Robots
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Manage your automated trading bots
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Trading Robots
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Manage your automated trading bots - {activeRobots} of {robots.length} running
+                  </Typography>
+                </Box>
+                <Button
+                  component={Link}
+                  href="/dashboard/robots"
+                  variant="outlined"
+                  size="small"
+                  disabled={!isAccountConnected}
+                >
+                  Advanced Settings
+                </Button>
+              </Box>
               
               {!isAccountConnected ? (
                 <Alert severity="info" sx={{ mb: 2 }}>
@@ -376,46 +442,96 @@ export default function DashboardPage() {
                   </Typography>
                 </Alert>
               ) : loading ? (
-                <Box>
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} height={60} sx={{ mb: 1 }} />
+                <Grid container spacing={2}>
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                    <Grid item xs={12} sm={6} md={3} key={i}>
+                      <Skeleton height={80} />
+                    </Grid>
                   ))}
-                </Box>
+                </Grid>
               ) : robots.length > 0 ? (
-                <Box sx={{ mb: 2 }}>
-                  {robots.slice(0, 3).map((robot) => (
-                    <Box key={robot.id} sx={{ mb: 2 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                        <Typography variant="body2">{robot.name}</Typography>
-                        <Chip
-                          label={robot.status}
-                          size="small"
-                          color={robot.status === 'running' ? 'success' : 'default'}
-                        />
-                      </Box>
-                      <LinearProgress
-                        variant="determinate"
-                        value={robot.status === 'running' ? 75 : 0}
-                        color={robot.status === 'running' ? 'primary' : 'inherit'}
-                      />
-                    </Box>
-                  ))}
-                </Box>
+                <Grid container spacing={2}>
+                  {robots.map((robot: any) => {
+                    const isRunning = robot.status === 'running';
+                    return (
+                      <Grid item xs={12} sm={6} md={3} key={robot.id}>
+                        <Box
+                          sx={{
+                            p: 2,
+                            borderRadius: 2,
+                            border: '1px solid',
+                            borderColor: isRunning ? 'success.main' : 'divider',
+                            bgcolor: isRunning ? 'success.main' : 'background.paper',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontWeight: 600, 
+                                color: isRunning ? 'white' : 'text.primary',
+                                fontSize: '0.8rem',
+                              }}
+                            >
+                              {robot.name}
+                            </Typography>
+                            <Chip
+                              label={isRunning ? 'ON' : 'OFF'}
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: '0.65rem',
+                                bgcolor: isRunning ? 'rgba(255,255,255,0.2)' : 'grey.200',
+                                color: isRunning ? 'white' : 'text.secondary',
+                              }}
+                            />
+                          </Box>
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              color: isRunning ? 'rgba(255,255,255,0.8)' : 'text.secondary',
+                              display: 'block',
+                              mb: 1.5,
+                              lineHeight: 1.3,
+                              minHeight: 32,
+                            }}
+                          >
+                            {robot.strategy || 'AI Strategy'}
+                          </Typography>
+                          <Button
+                            variant={isRunning ? 'outlined' : 'contained'}
+                            size="small"
+                            fullWidth
+                            onClick={() => isRunning ? stopRobot(robot.id) : startRobot(robot.id)}
+                            startIcon={isRunning ? <Square size={12} /> : <Play size={12} />}
+                            sx={{
+                              height: 28,
+                              fontSize: '0.7rem',
+                              ...(isRunning && {
+                                borderColor: 'white',
+                                color: 'white',
+                                '&:hover': {
+                                  borderColor: 'white',
+                                  bgcolor: 'rgba(255,255,255,0.1)',
+                                },
+                              }),
+                            }}
+                          >
+                            {isRunning ? 'Stop' : 'Start'}
+                          </Button>
+                        </Box>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
               ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  No robots configured yet.
-                </Typography>
+                <Alert severity="warning">
+                  <Typography variant="body2">
+                    No robots available. Please refresh the page or contact support.
+                  </Typography>
+                </Alert>
               )}
-              
-              <Button
-                component={Link}
-                href="/dashboard/robots"
-                variant="contained"
-                fullWidth
-                disabled={!isAccountConnected}
-              >
-                Manage Robots
-              </Button>
             </CardContent>
           </Card>
         </Grid>
