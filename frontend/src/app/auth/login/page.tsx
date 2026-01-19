@@ -106,6 +106,10 @@ export default function LoginPage() {
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.removeItem('pendingUser');
       localStorage.removeItem('pendingEmail');
+      
+      // Clear any stale Google OAuth cookies to prevent email mixing
+      document.cookie = 'pending_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie = 'pending_user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 
       // Redirect based on subscription status
       if (data.hasActiveSubscription) {

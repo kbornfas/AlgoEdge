@@ -2,30 +2,46 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Google OAuth callback handler
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const code = searchParams.get('code');
-  const error = searchParams.get('error');
-  const state = searchParams.get('state'); // 'signin' or 'signup'
-
-  // Handle OAuth errors
-  if (error) {
-    console.error('Google OAuth error:', error);
-    return NextResponse.redirect(
-      new URL(`/auth/login?error=${encodeURIComponent('Google sign-in was cancelled or failed')}`, request.url)
-    );
-  }
-
-  if (!code) {
-    return NextResponse.redirect(
-      new URL('/auth/login?error=No authorization code received', request.url)
-    );
-  }
-
   try {
+    const searchParams = request.nextUrl.searchParams;
+    const code = searchParams.get('code');
+    const error = searchParams.get('error');
+    const state = searchParams.get('state'); // 'signin' or 'signup'
+
+    // Handle OAuth errors from Google
+    if (error) {
+      console.error('Google OAuth error:', error);
+      return NextResponse.redirect(
+        new URL(`/auth/login?error=${encodeURIComponent('Google sign-in was cancelled or failed')}`, request.url)
+      );
+    }
+
+    if (!code) {
+      return NextResponse.redirect(
+        new URL('/auth/login?error=No authorization code received', request.url)
+      );
+    }
+
+    // Check if required environment variables are set
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    
+    if (!clientId || !clientSecret) {
+      console.error('Google OAuth: Missing environment variables', { 
+        hasClientId: !!clientId, 
+        hasClientSecret: !!clientSecret 
+      });
+      return NextResponse.redirect(
+        new URL('/auth/login?error=Google sign-in is not configured properly. Please contact support.', request.url)
+      );
+    }
+
     // Exchange code for tokens
     // Use the same redirect_uri that was used to initiate the OAuth flow
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
     const redirectUri = `${appUrl}/api/auth/google/callback`;
+    
+    console.log('Google OAuth: Exchanging code for tokens', { redirectUri, hasCode: !!code });
     
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -34,8 +50,8 @@ export async function GET(request: NextRequest) {
       },
       body: new URLSearchParams({
         code,
-        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '',
-        client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+        client_id: clientId,
+        client_secret: clientSecret,
         redirect_uri: redirectUri,
         grant_type: 'authorization_code',
       }),
@@ -69,6 +85,8 @@ export async function GET(request: NextRequest) {
 
     // Send to backend for authentication/registration
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    console.log('Google OAuth: Sending to backend', { backendUrl, email: googleUser.email });
+    
     const authResponse = await fetch(`${backendUrl}/api/auth/google`, {
       method: 'POST',
       headers: {
@@ -87,6 +105,7 @@ export async function GET(request: NextRequest) {
     const authData = await authResponse.json();
 
     if (!authResponse.ok) {
+      console.error('Backend auth failed:', authData);
       return NextResponse.redirect(
         new URL(`/auth/login?error=${encodeURIComponent(authData.error || 'Authentication failed')}`, request.url)
       );
@@ -140,8 +159,10 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('Google OAuth callback error:', error);
+    // Return a redirect to login with error instead of throwing
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.redirect(
-      new URL('/auth/login?error=An unexpected error occurred during sign-in', request.url)
+      new URL(`/auth/login?error=${encodeURIComponent('Sign-in failed: ' + errorMessage)}`, request.url)
     );
   }
 }

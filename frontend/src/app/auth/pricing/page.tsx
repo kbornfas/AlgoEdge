@@ -151,8 +151,9 @@ export default function PricingPage() {
           localStorage.setItem('token', pendingToken);
           localStorage.setItem('user', JSON.stringify(userData));
           
-          // Clear the pending cookies
+          // Clear BOTH pending cookies to prevent stale data
           document.cookie = 'pending_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          document.cookie = 'pending_user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
           
           setUserEmail(userData.email || '');
           setUserName(userData.firstName || userData.username || '');
@@ -160,6 +161,14 @@ export default function PricingPage() {
         } catch (e) {
           console.error('Failed to sync pending user data from cookies');
         }
+      }
+      
+      // Always clear stale pending cookies if we have a valid token in localStorage
+      // This prevents old Google OAuth data from overriding current user
+      const existingToken = localStorage.getItem('token');
+      if (existingToken && pendingUserCookie) {
+        document.cookie = 'pending_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = 'pending_user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       }
       
       // Check for logged-in user first (from localStorage token)
@@ -192,10 +201,15 @@ export default function PricingPage() {
         }
       }
       
-      // Check for Google sign-up user (from cookies without token - fallback)
-      if (pendingUserCookie) {
+      // Re-check for pending_user cookie (in case it wasn't cleared above)
+      // Only use this if we DON'T have a valid token (i.e., user not logged in)
+      const currentPendingUserCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('pending_user='));
+      
+      if (currentPendingUserCookie && !token) {
         try {
-          const userData = JSON.parse(decodeURIComponent(pendingUserCookie.split('=')[1]));
+          const userData = JSON.parse(decodeURIComponent(currentPendingUserCookie.split('=')[1]));
           setUserEmail(userData.email || '');
           setUserName(userData.firstName || '');
           return; // User data found, don't redirect
