@@ -1555,6 +1555,400 @@ export default function Home() {
           </Box>
         </Box>
 
+        {/* ═══════════════════════════════════════════════════════════════════════
+            PRICING PACKAGES - Compact Colorful Subscription Tiers
+        ═══════════════════════════════════════════════════════════════════════ */}
+        <Box sx={{ py: 5, position: 'relative' }} id="pricing">
+          <Typography
+            variant="h3"
+            align="center"
+            sx={{
+              fontWeight: 800,
+              mb: 1.5,
+              fontSize: { xs: '1.75rem', md: '2.25rem' },
+              background: 'linear-gradient(135deg, #10b981 0%, #22c55e 50%, #fbbf24 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            Choose Your Plan
+          </Typography>
+          <Typography
+            align="center"
+            sx={{
+              mb: 1,
+              fontSize: { xs: '0.9rem', md: '1rem' },
+              color: 'text.secondary',
+            }}
+          >
+            Start with our proven trading system today
+          </Typography>
+          
+          {/* Account creation notice */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 0.75,
+              mb: 3,
+              py: 1,
+              px: 2,
+              bgcolor: 'rgba(251, 191, 36, 0.1)',
+              border: '1px solid rgba(251, 191, 36, 0.3)',
+              borderRadius: 2,
+              maxWidth: '420px',
+              mx: 'auto',
+            }}
+          >
+            <Zap size={16} color="#fbbf24" />
+            <Typography sx={{ fontSize: '0.8rem', color: '#fbbf24', fontWeight: 500 }}>
+              Create an account first, then choose your plan at checkout
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <Grid container spacing={{ xs: 1.5, md: 2 }} sx={{ maxWidth: '900px', px: { xs: 1.5, md: 0 }, justifyContent: 'center' }}>
+            {/* WEEKLY PLAN */}
+            <Grid item xs={12} md={4}>
+              <Card
+                sx={{
+                  height: '100%',
+                  position: 'relative',
+                  overflow: 'visible',
+                  borderRadius: 3,
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 41, 59, 0.9) 100%)',
+                  border: '2px solid rgba(59, 130, 246, 0.4)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    borderColor: '#3b82f6',
+                    boxShadow: '0 12px 30px rgba(59, 130, 246, 0.25)',
+                  },
+                }}
+              >
+                <CardContent sx={{ p: { xs: 2, md: 2.5 }, textAlign: 'center' }}>
+                  {/* Plan Icon */}
+                  <Box
+                    sx={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: 1.5,
+                      boxShadow: '0 4px 16px rgba(59, 130, 246, 0.4)',
+                    }}
+                  >
+                    <Zap size={24} color="white" />
+                  </Box>
+                  
+                  <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: '#3b82f6', mb: 0.5 }}>
+                    Weekly
+                  </Typography>
+                  
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography component="span" sx={{ fontSize: '2.25rem', fontWeight: 800, color: 'white' }}>
+                      $19
+                    </Typography>
+                    <Typography component="span" sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>
+                      /week
+                    </Typography>
+                  </Box>
+                  
+                  <Typography sx={{ color: 'text.secondary', mb: 2, fontSize: '0.8rem' }}>
+                    Perfect for trying out our system
+                  </Typography>
+                  
+                  <Stack spacing={0.75} sx={{ mb: 2.5, textAlign: 'left' }}>
+                    {['Full Bot Access', 'All 7 Strategies', 'Real-time Signals', 'Performance Dashboard', 'Email Support', 'Cancel Anytime'].map((feature, i) => (
+                      <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CheckCircle2 size={14} color="#3b82f6" />
+                        <Typography sx={{ color: 'text.primary', fontSize: '0.8rem' }}>{feature}</Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                  
+                  <Button
+                    component={Link}
+                    href="/auth/register"
+                    variant="outlined"
+                    fullWidth
+                    sx={{
+                      py: 1,
+                      borderColor: '#3b82f6',
+                      color: '#3b82f6',
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      borderWidth: 2,
+                      borderRadius: 2,
+                      '&:hover': {
+                        borderColor: '#3b82f6',
+                        bgcolor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                      },
+                    }}
+                  >
+                    Get Started
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* MONTHLY PLAN - MOST POPULAR */}
+            <Grid item xs={12} md={4}>
+              <Card
+                sx={{
+                  height: '100%',
+                  position: 'relative',
+                  overflow: 'visible',
+                  borderRadius: 3,
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(30, 41, 59, 0.95) 100%)',
+                  border: '2px solid #10b981',
+                  transform: { md: 'scale(1.03)' },
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 12px 40px rgba(16, 185, 129, 0.25)',
+                  '&:hover': {
+                    transform: { xs: 'translateY(-4px)', md: 'scale(1.05)' },
+                    boxShadow: '0 16px 50px rgba(16, 185, 129, 0.35)',
+                  },
+                }}
+              >
+                {/* Most Popular Badge */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: -12,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                    color: '#000',
+                    px: 2,
+                    py: 0.5,
+                    borderRadius: 50,
+                    fontWeight: 700,
+                    fontSize: '0.7rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                    boxShadow: '0 4px 12px rgba(251, 191, 36, 0.4)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  🔥 Most Popular
+                </Box>
+                
+                <CardContent sx={{ p: { xs: 2, md: 2.5 }, textAlign: 'center', pt: { xs: 3, md: 3.5 } }}>
+                  {/* Plan Icon */}
+                  <Box
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: 1.5,
+                      boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
+                    }}
+                  >
+                    <TrendingUp size={28} color="white" />
+                  </Box>
+                  
+                  <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: '#10b981', mb: 0.5 }}>
+                    Monthly
+                  </Typography>
+                  
+                  <Box sx={{ mb: 0.5 }}>
+                    <Typography component="span" sx={{ fontSize: '2.5rem', fontWeight: 800, color: 'white' }}>
+                      $49
+                    </Typography>
+                    <Typography component="span" sx={{ fontSize: '1rem', color: 'text.secondary' }}>
+                      /month
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ bgcolor: 'rgba(16, 185, 129, 0.2)', borderRadius: 50, px: 1.5, py: 0.25, mb: 2, display: 'inline-block' }}>
+                    <Typography sx={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 600 }}>
+                      Save 37% vs Weekly
+                    </Typography>
+                  </Box>
+                  
+                  <Stack spacing={0.75} sx={{ mb: 2.5, textAlign: 'left' }}>
+                    {['Full Bot Access', 'All 7 Strategies', 'Priority Trade Execution', 'Advanced Analytics', '24/7 Support', 'Dedicated Account Manager'].map((feature, i) => (
+                      <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CheckCircle2 size={14} color="#10b981" />
+                        <Typography sx={{ color: 'text.primary', fontSize: '0.8rem', fontWeight: i === 5 ? 600 : 400 }}>{feature}</Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                  
+                  <Button
+                    component={Link}
+                    href="/auth/register"
+                    variant="contained"
+                    fullWidth
+                    sx={{
+                      py: 1.25,
+                      bgcolor: '#10b981',
+                      color: 'white',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      borderRadius: 2,
+                      boxShadow: '0 4px 16px rgba(16, 185, 129, 0.4)',
+                      '&:hover': {
+                        bgcolor: '#059669',
+                        boxShadow: '0 8px 24px rgba(16, 185, 129, 0.5)',
+                      },
+                    }}
+                  >
+                    Get Started Now
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* QUARTERLY PLAN */}
+            <Grid item xs={12} md={4}>
+              <Card
+                sx={{
+                  height: '100%',
+                  position: 'relative',
+                  overflow: 'visible',
+                  borderRadius: 3,
+                  background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(30, 41, 59, 0.9) 100%)',
+                  border: '2px solid rgba(168, 85, 247, 0.4)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    borderColor: '#a855f7',
+                    boxShadow: '0 12px 30px rgba(168, 85, 247, 0.25)',
+                  },
+                }}
+              >
+                {/* Best Value Badge */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: -10,
+                    right: 12,
+                    background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
+                    color: 'white',
+                    px: 1.5,
+                    py: 0.35,
+                    borderRadius: 50,
+                    fontWeight: 700,
+                    fontSize: '0.65rem',
+                    textTransform: 'uppercase',
+                    boxShadow: '0 4px 10px rgba(168, 85, 247, 0.4)',
+                  }}
+                >
+                  💎 Best Value
+                </Box>
+                
+                <CardContent sx={{ p: { xs: 2, md: 2.5 }, textAlign: 'center' }}>
+                  {/* Plan Icon */}
+                  <Box
+                    sx={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: 1.5,
+                      boxShadow: '0 4px 16px rgba(168, 85, 247, 0.4)',
+                    }}
+                  >
+                    <Award size={24} color="white" />
+                  </Box>
+                  
+                  <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: '#a855f7', mb: 0.5 }}>
+                    Quarterly
+                  </Typography>
+                  
+                  <Box sx={{ mb: 0.5 }}>
+                    <Typography component="span" sx={{ fontSize: '2.25rem', fontWeight: 800, color: 'white' }}>
+                      $149
+                    </Typography>
+                    <Typography component="span" sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>
+                      /3 months
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ bgcolor: 'rgba(168, 85, 247, 0.2)', borderRadius: 50, px: 1.5, py: 0.25, mb: 2, display: 'inline-block' }}>
+                    <Typography sx={{ color: '#a855f7', fontSize: '0.75rem', fontWeight: 600 }}>
+                      Save 49% vs Weekly
+                    </Typography>
+                  </Box>
+                  
+                  <Stack spacing={0.75} sx={{ mb: 2.5, textAlign: 'left' }}>
+                    {['Full Bot Access', 'VIP Signal Priority', 'Custom Risk Settings', 'Exclusive Strategies', 'Priority 24/7 Support', '1-on-1 Consultation'].map((feature, i) => (
+                      <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CheckCircle2 size={14} color="#a855f7" />
+                        <Typography sx={{ color: 'text.primary', fontSize: '0.8rem', fontWeight: i >= 4 ? 600 : 400 }}>{feature}</Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                  
+                  <Button
+                    component={Link}
+                    href="/auth/register"
+                    variant="outlined"
+                    fullWidth
+                    sx={{
+                      py: 1,
+                      borderColor: '#a855f7',
+                      color: '#a855f7',
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      borderWidth: 2,
+                      borderRadius: 2,
+                      '&:hover': {
+                        borderColor: '#a855f7',
+                        bgcolor: 'rgba(168, 85, 247, 0.1)',
+                        borderWidth: 2,
+                      },
+                    }}
+                  >
+                    Get Started
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+          </Box>
+
+          {/* Money-back guarantee note */}
+          <Box sx={{ textAlign: 'center', mt: 3 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              justifyContent="center"
+              sx={{
+                bgcolor: 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                borderRadius: 50,
+                px: 2,
+                py: 1,
+                display: 'inline-flex',
+              }}
+            >
+              <Shield size={16} color="#10b981" />
+              <Typography sx={{ color: 'text.primary', fontSize: '0.85rem', fontWeight: 500 }}>
+                7-Day Money-Back Guarantee • No Questions Asked
+              </Typography>
+            </Stack>
+          </Box>
+        </Box>
+
         {/* How It Works Section */}
         <Box sx={{ py: 6 }}>
           <Typography
