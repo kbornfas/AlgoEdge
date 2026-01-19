@@ -98,10 +98,12 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   category: "Finance",
   verification: {
-    // Add your verification codes here when you get them
-    // google: "your-google-verification-code",
-    // yandex: "your-yandex-verification-code",
-    // bing: "your-bing-verification-code",
+    google: "ADD_YOUR_GOOGLE_VERIFICATION_CODE_HERE",
+    // Get this from Google Search Console: https://search.google.com/search-console
+    // 1. Add property > URL prefix > https://algoedgehub.com
+    // 2. Choose "HTML tag" verification method
+    // 3. Copy the content value (looks like: "abc123xyz...")
+    // 4. Replace ADD_YOUR_GOOGLE_VERIFICATION_CODE_HERE with that value
   },
 };
 
