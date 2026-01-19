@@ -108,11 +108,12 @@ const tradingRobots = [
  */
 export async function GET(req: NextRequest) {
   try {
-    // Check for admin secret in query params
+    // Check for admin secret in query params - use a simple known token
     const { searchParams } = new URL(req.url);
     const secret = searchParams.get('secret');
     
-    if (secret !== process.env.JWT_SECRET) {
+    // Use a hardcoded admin secret for seeding - change after use
+    if (secret !== 'SEED_ROBOTS_2026_ALGOEDGE') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
