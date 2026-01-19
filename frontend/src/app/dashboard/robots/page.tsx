@@ -229,11 +229,11 @@ export default function RobotsPage() {
       };
     });
     setRobotConfigs(configs);
-    // Sync runningRobots with database state
+    // Sync runningRobots with database state - this is the source of truth
     setRunningRobots(enabledRobotIds);
   }, []);
 
-  // Fetch robots from API - sync running state from database
+  // Fetch robots from API - DATABASE IS THE SOURCE OF TRUTH for running state
   const fetchRobots = useCallback(async () => {
     try {
       const response = await fetch('/api/user/robots', {
@@ -243,21 +243,23 @@ export default function RobotsPage() {
         const data = await response.json();
         const robotList = data.robots || [];
         
-        // Get enabled robots from database response
+        // Get enabled robots from database response - THIS IS THE SOURCE OF TRUTH
         const enabledRobotIds = new Set<string>(
           robotList
             .filter((r: any) => r.status === 'running')
             .map((r: any) => r.id)
         );
         
-        // Always use default robots for full data (timeframes, pairs, winRate, etc)
-        // but merge with API status (running/stopped)
+        // Always use default robots for full UI data (timeframes, pairs, winRate, etc)
+        // but merge with database status (running/stopped)
         const defaultRobots = getDefaultRobots();
         const mergedRobots = defaultRobots.map(defaultRobot => {
           const apiRobot = robotList.find((r: any) => r.id === defaultRobot.id);
+          // CRITICAL: Use database status as the source of truth
+          const isRunning = apiRobot?.status === 'running';
           return {
             ...defaultRobot,
-            status: apiRobot?.status || 'stopped',
+            status: isRunning ? 'running' : 'stopped',
             isAssigned: !!apiRobot,
           };
         });
@@ -424,7 +426,8 @@ export default function RobotsPage() {
     }));
   };
 
-  // Start a robot
+  // Start a robot - sets isEnabled=true in database
+  // The backend trading scheduler will then start executing trades for this robot
   const startRobot = async (robot: Robot) => {
     const config = robotConfigs[robot.id];
     if (!config) return;
@@ -447,7 +450,7 @@ export default function RobotsPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // Mark robot as running
+        // IMMEDIATELY mark robot as running in local state
         setRunningRobots(prev => new Set(prev).add(robot.id));
         setRobotConfigs(prev => ({
           ...prev,
@@ -456,13 +459,22 @@ export default function RobotsPage() {
             isRunning: true,
           },
         }));
+        
+        // Update robots array to show running status
+        setRobots(prev => prev.map(r => 
+          r.id === robot.id ? { ...r, status: 'running' } : r
+        ));
 
         // Show success message - trading is handled by backend
         setSuccess(`✅ ${robot.name} is now running! Trading will continue in the background even if you close the browser.`);
 
-        // Refresh data
+        // Refresh trades only (not robots, to prevent state override)
         fetchTrades();
-        fetchRobots();
+        
+        // After 2 seconds, sync with database to confirm state
+        setTimeout(() => {
+          fetchRobots();
+        }, 2000);
       } else {
         setError(data.error || 'Failed to start robot');
       }
@@ -478,7 +490,7 @@ export default function RobotsPage() {
     }
   };
 
-  // Stop a robot - this also closes all open trades for this robot
+  // Stop a robot - sets isEnabled=false and closes all open trades for this robot
   const stopRobot = async (robot: Robot) => {
     try {
       setError(null);
@@ -490,7 +502,7 @@ export default function RobotsPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // Remove from running robots
+        // IMMEDIATELY remove from running robots in local state
         setRunningRobots(prev => {
           const newSet = new Set(prev);
           newSet.delete(robot.id);
@@ -504,6 +516,11 @@ export default function RobotsPage() {
           },
         }));
         
+        // Update robots array to show stopped status
+        setRobots(prev => prev.map(r => 
+          r.id === robot.id ? { ...r, status: 'stopped' } : r
+        ));
+        
         const tradesClosed = data.tradesClosed || 0;
         if (tradesClosed > 0) {
           setSuccess(`${robot.name} stopped. ${tradesClosed} trade(s) closed.`);
@@ -511,9 +528,13 @@ export default function RobotsPage() {
           setSuccess(`${robot.name} stopped.`);
         }
         
-        // Refresh data
+        // Refresh trades only
         fetchTrades();
-        fetchRobots();
+        
+        // After 2 seconds, sync with database
+        setTimeout(() => {
+          fetchRobots();
+        }, 2000);
       } else {
         setError(data.error || 'Failed to stop robot');
       }

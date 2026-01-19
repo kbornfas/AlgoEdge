@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/user/robots
  * Get user's available trading robots and their status
+ * The database is the SINGLE SOURCE OF TRUTH for robot running state
  */
 export async function GET(req: NextRequest) {
   try {
@@ -37,42 +38,44 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Get user's robot configurations
-    const userRobots = await prisma.userRobotConfig.findMany({
-      where: { userId: decoded.userId },
-      include: {
-        robot: true,
-      },
+    // Get ALL available robots from database
+    const availableRobots = await prisma.tradingRobot.findMany({
+      where: { isActive: true },
     });
 
-    // Get all available robots if user has none assigned
-    if (userRobots.length === 0) {
-      const availableRobots = await prisma.tradingRobot.findMany({
-        where: { isActive: true },
-      });
+    // Get user's robot configurations (this tells us which are enabled/running)
+    const userRobots = await prisma.userRobotConfig.findMany({
+      where: { userId: decoded.userId },
+    });
 
-      return NextResponse.json({
-        robots: availableRobots.map((robot) => ({
-          id: robot.id,
-          name: robot.name,
-          description: robot.description,
-          status: 'stopped',
-          profit: 0,
-          isAssigned: false,
-        })),
-      });
-    }
+    // Create a map of user's robot configs for quick lookup
+    const userRobotMap = new Map(
+      userRobots.map((ur) => [ur.robotId, ur])
+    );
+
+    // Return ALL robots with their status based on database isEnabled field
+    const robotsWithStatus = availableRobots.map((robot) => {
+      const userConfig = userRobotMap.get(robot.id);
+      return {
+        id: robot.id,
+        name: robot.name,
+        description: robot.description,
+        strategy: robot.strategy,
+        timeframe: robot.timeframe,
+        timeframes: robot.timeframes,
+        pairs: robot.pairs,
+        riskLevel: robot.riskLevel,
+        winRate: robot.winRate,
+        // CRITICAL: status is determined by database isEnabled field
+        status: userConfig?.isEnabled === true ? 'running' : 'stopped',
+        isAssigned: !!userConfig,
+        settings: userConfig?.settings || null,
+      };
+    });
 
     return NextResponse.json({
-      robots: userRobots.map((ur) => ({
-        id: ur.robot.id,
-        name: ur.robot.name,
-        description: ur.robot.description,
-        status: ur.isEnabled ? 'running' : 'stopped',
-        profit: 0,
-        isAssigned: true,
-        settings: ur.settings,
-      })),
+      robots: robotsWithStatus,
+      mt5Connected: true,
     });
   } catch (error) {
     console.error('Get robots error:', error);
