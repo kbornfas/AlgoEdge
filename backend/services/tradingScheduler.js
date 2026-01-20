@@ -334,7 +334,7 @@ const EQUITY_PROTECTION_CONFIG = {
   
   // PROFIT PROTECTION (Don't give back profits)
   PEAK_EQUITY_TRAIL: true,                // Track peak equity
-  PEAK_DRAWDOWN_LIMIT: 0.05,              // Allow 5% drawdown from peak before action
+  PEAK_DRAWDOWN_LIMIT: 0.50,              // Allow 50% drawdown from peak before action
   PROTECT_PROFIT_ABOVE: 0.03,             // Start protecting when up 3% from start
   
   // CORRELATION LIMITS
