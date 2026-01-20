@@ -1989,7 +1989,9 @@ function getDailyStartBalance(accountId, currentBalance) {
 /**
  * Check if we can open more trades based on risk exposure
  * NO POSITION LIMITS - Always trade strong signals
- * Only protect against catastrophic losses
+ * Only protect against catastrophic losses (stop out protection)
+ * 
+ * NOTE: Daily loss limit has been DISABLED
  */
 function canOpenMoreTrades(balance, equity, openPositionsCount, currentProfitLoss, signalConfidence = 50, accountId = null) {
   // Don't trade if no balance info
@@ -1997,19 +1999,7 @@ function canOpenMoreTrades(balance, equity, openPositionsCount, currentProfitLos
     return { canTrade: false, reason: 'Account balance too low or unknown' };
   }
   
-  // ================================================================
-  // DAILY LOSS LIMIT - Only stop if down 20% today (catastrophic)
-  // ================================================================
-  if (accountId && equity) {
-    const dailyStartBalance = getDailyStartBalance(accountId, balance);
-    const dailyPL = equity - dailyStartBalance;
-    const dailyPLPercent = (dailyPL / dailyStartBalance) * 100;
-    
-    if (dailyPL < -(dailyStartBalance * RISK_CONFIG.DAILY_LOSS_LIMIT)) {
-      console.log(`  🛑 DAILY LOSS LIMIT HIT: Down $${Math.abs(dailyPL).toFixed(2)} (${dailyPLPercent.toFixed(1)}%) today`);
-      return { canTrade: false, reason: `Daily loss limit hit (${dailyPLPercent.toFixed(1)}%)` };
-    }
-  }
+  // Daily loss limit DISABLED - no daily restrictions
   
   // Get dynamic position limits based on account balance
   const { target, max } = getPositionLimits(balance);
@@ -2464,12 +2454,16 @@ async function executeTrade(connection, accountId, robotId, userId, robotName, s
 
 /**
  * Create a forced signal based on momentum when no good signals found
+ * Uses structure-based SL/TP for better risk management
  */
 function createForcedSignal(candles, symbol, riskLevel = 'medium') {
-  if (!candles || candles.length < 10) return null;
+  if (!candles || candles.length < 20) return null;
   
   const currentPrice = candles[candles.length - 1].close;
-  const atr = calculateATR(candles, 7);
+  const highs = candles.map(c => c.high);
+  const lows = candles.map(c => c.low);
+  const atr = calculateATR(candles, 14);
+  const pipSize = getPipSize(symbol);
   if (atr === 0) return null;
   
   // Quick momentum check
@@ -2477,26 +2471,70 @@ function createForcedSignal(candles, symbol, riskLevel = 'medium') {
   const bullish = recent.filter(c => c.close > c.open).length;
   const isBuy = bullish >= 3;
   
-  const riskMultipliers = {
-    low: { sl: 2.5, tp: 3.5, volume: 0.01 },
-    medium: { sl: 2.0, tp: 3.0, volume: 0.05 },
-    high: { sl: 1.5, tp: 2.5, volume: 0.10 },
-    aggressive: { sl: 1.2, tp: 2.0, volume: 0.15 }
+  // Find recent swing highs and lows for structure-based SL/TP
+  const lookback = Math.min(15, candles.length - 5);
+  const recentHighs = highs.slice(-lookback);
+  const recentLows = lows.slice(-lookback);
+  const swingHigh = Math.max(...recentHighs);
+  const swingLow = Math.min(...recentLows);
+  const slBuffer = atr * 0.3;
+  
+  let stopLoss, takeProfit, slPips, tpPips;
+  
+  if (isBuy) {
+    // BUY: SL below recent swing low, TP at recent swing high or 2.5x risk
+    stopLoss = swingLow - slBuffer;
+    const slDistance = currentPrice - stopLoss;
+    takeProfit = swingHigh;
+    const tpDistance = takeProfit - currentPrice;
+    // Ensure minimum 1:2 RR
+    if (tpDistance < slDistance * 2) {
+      takeProfit = currentPrice + (slDistance * 2.5);
+    }
+    slPips = Math.round(slDistance / pipSize);
+    tpPips = Math.round((takeProfit - currentPrice) / pipSize);
+  } else {
+    // SELL: SL above recent swing high, TP at recent swing low or 2.5x risk
+    stopLoss = swingHigh + slBuffer;
+    const slDistance = stopLoss - currentPrice;
+    takeProfit = swingLow;
+    const tpDistance = currentPrice - takeProfit;
+    // Ensure minimum 1:2 RR
+    if (tpDistance < slDistance * 2) {
+      takeProfit = currentPrice - (slDistance * 2.5);
+    }
+    slPips = Math.round(slDistance / pipSize);
+    tpPips = Math.round((currentPrice - takeProfit) / pipSize);
+  }
+  
+  const riskVolumes = {
+    low: 0.01,
+    medium: 0.05,
+    high: 0.10,
+    aggressive: 0.15
   };
   
-  const risk = riskMultipliers[riskLevel] || riskMultipliers.medium;
-  
-  return {
+  // Create initial signal
+  let signal = {
     symbol,
     type: isBuy ? 'buy' : 'sell',
     entryPrice: currentPrice,
-    stopLoss: isBuy ? currentPrice - (atr * risk.sl) : currentPrice + (atr * risk.sl),
-    takeProfit: isBuy ? currentPrice + (atr * risk.tp) : currentPrice - (atr * risk.tp),
-    volume: risk.volume,
+    stopLoss,
+    takeProfit,
+    slPips,
+    tpPips,
+    volume: riskVolumes[riskLevel] || riskVolumes.medium,
     confidence: 50,
-    reason: `FORCED: Momentum ${isBuy ? 'bullish' : 'bearish'} (${bullish}/5 candles)`,
+    strategy: 'forced_momentum',
+    timeframe: 'm15', // Default to intraday for forced signals
+    reason: `FORCED: Momentum ${isBuy ? 'bullish' : 'bearish'} (${bullish}/5 candles) | SL@SwingLow TP@SwingHigh`,
     atr
   };
+  
+  // Validate and adjust SL/TP for trade type
+  signal = validateAndAdjustSLTP(signal, symbol, atr, pipSize, candles);
+  
+  return signal;
 }
 
 // PRECIOUS METALS ONLY - Optimized for Gold and Silver
@@ -4586,6 +4624,239 @@ function analyzeRSIDivergence(candles, symbol, botConfig = null) {
   return signal;
 }
 
+// =========================================================================
+// 🎯 SMART SL/TP VALIDATION AND ADJUSTMENT
+// =========================================================================
+// Determines trade type based on strategy timeframe and adjusts SL/TP
+// to be realistic and achievable based on current market conditions
+// =========================================================================
+
+const TRADE_TYPE_CONFIG = {
+  // SCALP: M1-M5 timeframes - Quick trades, tight levels
+  scalp: {
+    timeframes: ['m1', 'm5'],
+    minSlPips: { XAUUSD: 80, XAGUSD: 30, DEFAULT: 15 },      // Minimum SL to avoid noise
+    maxSlPips: { XAUUSD: 250, XAGUSD: 80, DEFAULT: 40 },     // Max SL for scalps
+    minTpPips: { XAUUSD: 100, XAGUSD: 40, DEFAULT: 20 },     // Minimum viable TP
+    maxTpPips: { XAUUSD: 500, XAGUSD: 150, DEFAULT: 80 },    // Max realistic TP for scalp
+    maxRR: 3.0,                                               // Max risk-reward for scalp
+    minRR: 1.5,                                               // Min acceptable RR
+    strategies: ['EMA-Pullback', 'VWAP-Reversion'],
+  },
+  
+  // INTRADAY: M15-M30 timeframes - Medium trades
+  intraday: {
+    timeframes: ['m15', 'm30'],
+    minSlPips: { XAUUSD: 120, XAGUSD: 40, DEFAULT: 20 },     // Wider SL for structure
+    maxSlPips: { XAUUSD: 400, XAGUSD: 120, DEFAULT: 60 },    // Max SL for intraday
+    minTpPips: { XAUUSD: 200, XAGUSD: 60, DEFAULT: 30 },     // Achievable TP
+    maxTpPips: { XAUUSD: 1000, XAGUSD: 300, DEFAULT: 120 },  // Max realistic TP
+    maxRR: 4.0,                                               // Higher RR possible
+    minRR: 1.5,
+    strategies: ['Break-Retest', 'Liquidity-Sweep', 'London-Breakout'],
+  },
+  
+  // SWING: H1-H4 timeframes - Larger moves, wider levels
+  swing: {
+    timeframes: ['h1', 'h4', 'd1'],
+    minSlPips: { XAUUSD: 200, XAGUSD: 60, DEFAULT: 30 },     // Wide SL for swing
+    maxSlPips: { XAUUSD: 800, XAGUSD: 250, DEFAULT: 100 },   // Max SL for swings
+    minTpPips: { XAUUSD: 400, XAGUSD: 120, DEFAULT: 50 },    // Larger TP targets
+    maxTpPips: { XAUUSD: 2500, XAGUSD: 800, DEFAULT: 250 },  // Big moves possible
+    maxRR: 5.0,                                               // Highest RR for swings
+    minRR: 2.0,                                               // Higher min RR for patience
+    strategies: ['Order-Block', 'RSI-Divergence', 'Fibonacci'],
+  },
+};
+
+/**
+ * Determine trade type based on strategy name or timeframe
+ */
+function getTradeType(strategyName, timeframe) {
+  // Check by strategy name first
+  for (const [type, config] of Object.entries(TRADE_TYPE_CONFIG)) {
+    if (config.strategies && config.strategies.includes(strategyName)) {
+      return type;
+    }
+  }
+  
+  // Fallback to timeframe
+  const tf = (timeframe || 'm15').toLowerCase();
+  for (const [type, config] of Object.entries(TRADE_TYPE_CONFIG)) {
+    if (config.timeframes.includes(tf)) {
+      return type;
+    }
+  }
+  
+  return 'intraday'; // Default
+}
+
+/**
+ * Validate and adjust SL/TP to be realistic based on trade type
+ * @param {object} signal - The trading signal with SL/TP
+ * @param {string} symbol - Trading symbol
+ * @param {number} atr - Current ATR value
+ * @param {number} pipSize - Pip size for the symbol
+ * @param {array} candles - Recent candle data for structure analysis
+ * @returns {object} - Adjusted signal with validated SL/TP
+ */
+function validateAndAdjustSLTP(signal, symbol, atr, pipSize, candles) {
+  if (!signal || !signal.stopLoss || !signal.takeProfit) return signal;
+  
+  const currentPrice = signal.entryPrice;
+  const isBuy = signal.type === 'buy';
+  const strategyName = signal.strategy || 'ensemble';
+  
+  // Determine trade type
+  const tradeType = getTradeType(strategyName, signal.timeframe);
+  const config = TRADE_TYPE_CONFIG[tradeType];
+  
+  // Get symbol-specific limits
+  const symbolKey = symbol.includes('XAU') || symbol.includes('GOLD') ? 'XAUUSD' : 
+                    symbol.includes('XAG') || symbol.includes('SILVER') ? 'XAGUSD' : 'DEFAULT';
+  
+  const minSlPips = config.minSlPips[symbolKey];
+  const maxSlPips = config.maxSlPips[symbolKey];
+  const minTpPips = config.minTpPips[symbolKey];
+  const maxTpPips = config.maxTpPips[symbolKey];
+  
+  // Calculate current SL/TP distances
+  let slDistance = isBuy ? currentPrice - signal.stopLoss : signal.stopLoss - currentPrice;
+  let tpDistance = isBuy ? signal.takeProfit - currentPrice : currentPrice - signal.takeProfit;
+  
+  let slPips = Math.round(slDistance / pipSize);
+  let tpPips = Math.round(tpDistance / pipSize);
+  
+  let adjusted = false;
+  let adjustments = [];
+  
+  // ================================================================
+  // SL VALIDATION - Not too tight, not too wide
+  // ================================================================
+  
+  // SL too tight - will get stopped out by noise
+  if (slPips < minSlPips) {
+    const newSlDistance = minSlPips * pipSize;
+    signal.stopLoss = isBuy ? currentPrice - newSlDistance : currentPrice + newSlDistance;
+    slDistance = newSlDistance;
+    slPips = minSlPips;
+    adjusted = true;
+    adjustments.push(`SL widened from ${Math.round(slPips)}→${minSlPips} pips (avoid noise)`);
+  }
+  
+  // SL too wide for trade type
+  if (slPips > maxSlPips) {
+    const newSlDistance = maxSlPips * pipSize;
+    signal.stopLoss = isBuy ? currentPrice - newSlDistance : currentPrice + newSlDistance;
+    slDistance = newSlDistance;
+    slPips = maxSlPips;
+    adjusted = true;
+    adjustments.push(`SL tightened from ${Math.round(slPips)}→${maxSlPips} pips (${tradeType} trade)`);
+  }
+  
+  // ================================================================
+  // TP VALIDATION - Achievable targets based on trade type
+  // ================================================================
+  
+  // TP too close - not worth the risk
+  if (tpPips < minTpPips) {
+    const newTpDistance = minTpPips * pipSize;
+    signal.takeProfit = isBuy ? currentPrice + newTpDistance : currentPrice - newTpDistance;
+    tpDistance = newTpDistance;
+    tpPips = minTpPips;
+    adjusted = true;
+    adjustments.push(`TP extended from ${Math.round(tpPips)}→${minTpPips} pips (min viable)`);
+  }
+  
+  // TP too far - unattainable for trade type
+  if (tpPips > maxTpPips) {
+    const newTpDistance = maxTpPips * pipSize;
+    signal.takeProfit = isBuy ? currentPrice + newTpDistance : currentPrice - newTpDistance;
+    tpDistance = newTpDistance;
+    tpPips = maxTpPips;
+    adjusted = true;
+    adjustments.push(`TP reduced from ${Math.round(tpPips)}→${maxTpPips} pips (realistic ${tradeType})`);
+  }
+  
+  // ================================================================
+  // RISK-REWARD VALIDATION
+  // ================================================================
+  const rr = tpDistance / slDistance;
+  
+  // RR too low - adjust TP to meet minimum
+  if (rr < config.minRR) {
+    const newTpDistance = slDistance * config.minRR;
+    if (newTpDistance / pipSize <= maxTpPips) {
+      signal.takeProfit = isBuy ? currentPrice + newTpDistance : currentPrice - newTpDistance;
+      tpDistance = newTpDistance;
+      tpPips = Math.round(newTpDistance / pipSize);
+      adjusted = true;
+      adjustments.push(`TP adjusted for min ${config.minRR}:1 RR`);
+    }
+  }
+  
+  // RR too high - might be unrealistic, cap it
+  if (rr > config.maxRR) {
+    const newTpDistance = slDistance * config.maxRR;
+    signal.takeProfit = isBuy ? currentPrice + newTpDistance : currentPrice - newTpDistance;
+    tpDistance = newTpDistance;
+    tpPips = Math.round(newTpDistance / pipSize);
+    adjusted = true;
+    adjustments.push(`TP capped at ${config.maxRR}:1 RR (realistic)`);
+  }
+  
+  // ================================================================
+  // STRUCTURE VALIDATION - Check if TP is at/near structure level
+  // ================================================================
+  if (candles && candles.length > 20) {
+    const highs = candles.map(c => c.high);
+    const lows = candles.map(c => c.low);
+    const lookback = Math.min(30, candles.length - 5);
+    
+    const recentHigh = Math.max(...highs.slice(-lookback));
+    const recentLow = Math.min(...lows.slice(-lookback));
+    
+    if (isBuy) {
+      // For buys, check if TP is way above any recent structure
+      if (signal.takeProfit > recentHigh * 1.02) { // More than 2% above recent high
+        // Cap TP at recent high + buffer
+        const structureTP = recentHigh + (atr * 0.5);
+        if (structureTP > currentPrice && (structureTP - currentPrice) >= slDistance * config.minRR) {
+          signal.takeProfit = structureTP;
+          tpPips = Math.round((structureTP - currentPrice) / pipSize);
+          adjusted = true;
+          adjustments.push(`TP aligned to structure high @${structureTP.toFixed(2)}`);
+        }
+      }
+    } else {
+      // For sells, check if TP is way below any recent structure
+      if (signal.takeProfit < recentLow * 0.98) { // More than 2% below recent low
+        // Cap TP at recent low - buffer
+        const structureTP = recentLow - (atr * 0.5);
+        if (structureTP < currentPrice && (currentPrice - structureTP) >= slDistance * config.minRR) {
+          signal.takeProfit = structureTP;
+          tpPips = Math.round((currentPrice - structureTP) / pipSize);
+          adjusted = true;
+          adjustments.push(`TP aligned to structure low @${structureTP.toFixed(2)}`);
+        }
+      }
+    }
+  }
+  
+  // Update signal with final values
+  signal.slPips = slPips;
+  signal.tpPips = tpPips;
+  signal.tradeType = tradeType;
+  
+  if (adjusted) {
+    console.log(`  🔧 SL/TP ADJUSTED (${tradeType.toUpperCase()} trade):`);
+    adjustments.forEach(adj => console.log(`     → ${adj}`));
+    console.log(`     Final: SL=${slPips} pips, TP=${tpPips} pips, RR=${(tpPips/slPips).toFixed(2)}:1`);
+  }
+  
+  return signal;
+}
+
 /**
  * =========================================================================
  * MULTI-STRATEGY ENSEMBLE ANALYZER
@@ -4828,20 +5099,53 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null, accoun
   const weightedConfidence = totalScore; // Use total weighted score as confidence metric
   
   // ================================================================
-  // BUILD FINAL SIGNAL WITH SL/TP
+  // BUILD FINAL SIGNAL WITH SL/TP (STRUCTURE-BASED)
   // ================================================================
   let stopLoss = bestSignal.stopLoss;
   let takeProfit = bestSignal.takeProfit;
   let slPips = bestSignal.slPips;
   let tpPips = bestSignal.tpPips;
   
-  // Fallback SL/TP if strategy didn't calculate
+  // Fallback SL/TP using market structure if strategy didn't calculate
   if (!stopLoss || !takeProfit) {
     const isBuy = direction === 'buy';
-    slPips = Math.round((atr * 1.5) / pipSize);
-    tpPips = Math.round((atr * 3) / pipSize);
-    stopLoss = isBuy ? currentPrice - (slPips * pipSize) : currentPrice + (slPips * pipSize);
-    takeProfit = isBuy ? currentPrice + (tpPips * pipSize) : currentPrice - (tpPips * pipSize);
+    const highs = candles.map(c => c.high);
+    const lows = candles.map(c => c.low);
+    
+    // Find recent swing highs and lows for structure-based SL/TP
+    const lookback = Math.min(20, candles.length - 5);
+    const recentHighs = highs.slice(-lookback);
+    const recentLows = lows.slice(-lookback);
+    const swingHigh = Math.max(...recentHighs);
+    const swingLow = Math.min(...recentLows);
+    const slBuffer = atr * 0.3;
+    
+    if (isBuy) {
+      // BUY: SL below recent swing low, TP at recent swing high or 2.5x risk
+      stopLoss = swingLow - slBuffer;
+      const slDistance = currentPrice - stopLoss;
+      takeProfit = swingHigh;
+      const tpDistance = takeProfit - currentPrice;
+      // Ensure minimum 1:2 RR
+      if (tpDistance < slDistance * 2) {
+        takeProfit = currentPrice + (slDistance * 2.5);
+      }
+      slPips = Math.round(slDistance / pipSize);
+      tpPips = Math.round((takeProfit - currentPrice) / pipSize);
+    } else {
+      // SELL: SL above recent swing high, TP at recent swing low or 2.5x risk
+      stopLoss = swingHigh + slBuffer;
+      const slDistance = stopLoss - currentPrice;
+      takeProfit = swingLow;
+      const tpDistance = currentPrice - takeProfit;
+      // Ensure minimum 1:2 RR
+      if (tpDistance < slDistance * 2) {
+        takeProfit = currentPrice - (slDistance * 2.5);
+      }
+      slPips = Math.round(slDistance / pipSize);
+      tpPips = Math.round((currentPrice - takeProfit) / pipSize);
+    }
+    console.log(`  📐 FALLBACK SL/TP from structure: SL=${stopLoss.toFixed(5)}, TP=${takeProfit.toFixed(5)}`);
   }
   
   const reason = `ENSEMBLE[${strategyCount}/${strategies.length}]: ${alignedStrategies.map(s => s.name).join('+')} | Score=${totalScore.toFixed(2)} | ${bestSignal.reason || ''}`;
@@ -4858,7 +5162,8 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null, accoun
     sellScore,
   });
   
-  return {
+  // Build initial signal
+  let finalSignal = {
     symbol,
     type: direction,
     entryPrice: currentPrice,
@@ -4869,7 +5174,8 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null, accoun
     weightedScore: totalScore,
     reason,
     atr,
-    strategy: 'ensemble',
+    strategy: bestSignal.strategy || 'ensemble',
+    timeframe: bestSignal.timeframe || alignedStrategies[0].config?.timeframe || 'm15',
     slPips,
     tpPips,
     strategyCount,
@@ -4877,6 +5183,13 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null, accoun
     buyScore,
     sellScore,
   };
+  
+  // ================================================================
+  // VALIDATE AND ADJUST SL/TP FOR TRADE TYPE
+  // ================================================================
+  finalSignal = validateAndAdjustSLTP(finalSignal, symbol, atr, pipSize, candles);
+  
+  return finalSignal;
 }
 
 // Track open positions with their strategy for smart management
