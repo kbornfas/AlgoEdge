@@ -4633,38 +4633,41 @@ function analyzeRSIDivergence(candles, symbol, botConfig = null) {
 
 const TRADE_TYPE_CONFIG = {
   // SCALP: M1-M5 timeframes - Quick trades, tight levels
+  // For Gold: 1 pip = $0.10, so 150 pips = $15 SL (reasonable for scalp)
   scalp: {
     timeframes: ['m1', 'm5'],
-    minSlPips: { XAUUSD: 80, XAGUSD: 30, DEFAULT: 15 },      // Minimum SL to avoid noise
-    maxSlPips: { XAUUSD: 250, XAGUSD: 80, DEFAULT: 40 },     // Max SL for scalps
-    minTpPips: { XAUUSD: 100, XAGUSD: 40, DEFAULT: 20 },     // Minimum viable TP
-    maxTpPips: { XAUUSD: 500, XAGUSD: 150, DEFAULT: 80 },    // Max realistic TP for scalp
+    minSlPips: { XAUUSD: 150, XAGUSD: 50, DEFAULT: 15 },      // Min SL: Gold=$15, Silver=$0.50
+    maxSlPips: { XAUUSD: 350, XAGUSD: 100, DEFAULT: 40 },     // Max SL: Gold=$35, Silver=$1.00
+    minTpPips: { XAUUSD: 200, XAGUSD: 60, DEFAULT: 20 },      // Min TP: Gold=$20, Silver=$0.60
+    maxTpPips: { XAUUSD: 600, XAGUSD: 180, DEFAULT: 80 },     // Max TP: Gold=$60, Silver=$1.80
     maxRR: 3.0,                                               // Max risk-reward for scalp
-    minRR: 1.5,                                               // Min acceptable RR
+    minRR: 1.2,                                               // Min acceptable RR
     strategies: ['EMA-Pullback', 'VWAP-Reversion'],
   },
   
   // INTRADAY: M15-M30 timeframes - Medium trades
+  // For Gold: Needs wider SL to survive normal intraday swings
   intraday: {
     timeframes: ['m15', 'm30'],
-    minSlPips: { XAUUSD: 120, XAGUSD: 40, DEFAULT: 20 },     // Wider SL for structure
-    maxSlPips: { XAUUSD: 400, XAGUSD: 120, DEFAULT: 60 },    // Max SL for intraday
-    minTpPips: { XAUUSD: 200, XAGUSD: 60, DEFAULT: 30 },     // Achievable TP
-    maxTpPips: { XAUUSD: 1000, XAGUSD: 300, DEFAULT: 120 },  // Max realistic TP
+    minSlPips: { XAUUSD: 200, XAGUSD: 70, DEFAULT: 20 },      // Min SL: Gold=$20, Silver=$0.70
+    maxSlPips: { XAUUSD: 500, XAGUSD: 150, DEFAULT: 60 },     // Max SL: Gold=$50, Silver=$1.50
+    minTpPips: { XAUUSD: 300, XAGUSD: 100, DEFAULT: 30 },     // Min TP: Gold=$30, Silver=$1.00
+    maxTpPips: { XAUUSD: 1200, XAGUSD: 400, DEFAULT: 120 },   // Max TP: Gold=$120, Silver=$4.00
     maxRR: 4.0,                                               // Higher RR possible
     minRR: 1.5,
     strategies: ['Break-Retest', 'Liquidity-Sweep', 'London-Breakout'],
   },
   
   // SWING: H1-H4 timeframes - Larger moves, wider levels
+  // For Gold: $30-100 daily moves are normal, need room to breathe
   swing: {
     timeframes: ['h1', 'h4', 'd1'],
-    minSlPips: { XAUUSD: 200, XAGUSD: 60, DEFAULT: 30 },     // Wide SL for swing
-    maxSlPips: { XAUUSD: 800, XAGUSD: 250, DEFAULT: 100 },   // Max SL for swings
-    minTpPips: { XAUUSD: 400, XAGUSD: 120, DEFAULT: 50 },    // Larger TP targets
-    maxTpPips: { XAUUSD: 2500, XAGUSD: 800, DEFAULT: 250 },  // Big moves possible
+    minSlPips: { XAUUSD: 300, XAGUSD: 100, DEFAULT: 30 },     // Min SL: Gold=$30, Silver=$1.00
+    maxSlPips: { XAUUSD: 1000, XAGUSD: 300, DEFAULT: 100 },   // Max SL: Gold=$100, Silver=$3.00
+    minTpPips: { XAUUSD: 500, XAGUSD: 150, DEFAULT: 50 },     // Min TP: Gold=$50, Silver=$1.50
+    maxTpPips: { XAUUSD: 3000, XAGUSD: 1000, DEFAULT: 250 },  // Max TP: Gold=$300 (big swing)
     maxRR: 5.0,                                               // Highest RR for swings
-    minRR: 2.0,                                               // Higher min RR for patience
+    minRR: 1.5,                                               // Reasonable min RR
     strategies: ['Order-Block', 'RSI-Divergence', 'Fibonacci'],
   },
 };
@@ -4806,16 +4809,59 @@ function validateAndAdjustSLTP(signal, symbol, atr, pipSize, candles) {
   }
   
   // ================================================================
-  // STRUCTURE VALIDATION - Check if TP is at/near structure level
+  // STRUCTURE VALIDATION - SL must be beyond structure, TP at structure
   // ================================================================
   if (candles && candles.length > 20) {
     const highs = candles.map(c => c.high);
     const lows = candles.map(c => c.low);
-    const lookback = Math.min(30, candles.length - 5);
     
-    const recentHigh = Math.max(...highs.slice(-lookback));
-    const recentLow = Math.min(...lows.slice(-lookback));
+    // Find SIGNIFICANT swing points (look at more candles for proper structure)
+    const structureLookback = Math.min(50, candles.length - 5);
+    const recentHigh = Math.max(...highs.slice(-structureLookback));
+    const recentLow = Math.min(...lows.slice(-structureLookback));
     
+    // ================================================================
+    // SL STRUCTURE CHECK - SL must be BEYOND recent swing high/low
+    // ================================================================
+    if (isBuy) {
+      // For BUY: SL must be BELOW the recent swing low
+      if (signal.stopLoss > recentLow) {
+        // SL is above recent low - will get stopped out on normal retracement
+        const structureSL = recentLow - (atr * 0.3); // Below swing low + buffer
+        const newSlDistance = currentPrice - structureSL;
+        const newSlPips = Math.round(newSlDistance / pipSize);
+        
+        // Only adjust if within max SL limits
+        if (newSlPips <= maxSlPips) {
+          signal.stopLoss = structureSL;
+          slDistance = newSlDistance;
+          slPips = newSlPips;
+          adjusted = true;
+          adjustments.push(`SL moved below swing low: ${recentLow.toFixed(4)} → SL@${structureSL.toFixed(4)}`);
+        }
+      }
+    } else {
+      // For SELL: SL must be ABOVE the recent swing high
+      if (signal.stopLoss < recentHigh) {
+        // SL is below recent high - will get stopped out on normal retracement
+        const structureSL = recentHigh + (atr * 0.3); // Above swing high + buffer
+        const newSlDistance = structureSL - currentPrice;
+        const newSlPips = Math.round(newSlDistance / pipSize);
+        
+        // Only adjust if within max SL limits
+        if (newSlPips <= maxSlPips) {
+          signal.stopLoss = structureSL;
+          slDistance = newSlDistance;
+          slPips = newSlPips;
+          adjusted = true;
+          adjustments.push(`SL moved above swing high: ${recentHigh.toFixed(4)} → SL@${structureSL.toFixed(4)}`);
+        }
+      }
+    }
+    
+    // ================================================================
+    // TP STRUCTURE CHECK - TP should align with structure levels
+    // ================================================================
     if (isBuy) {
       // For buys, check if TP is way above any recent structure
       if (signal.takeProfit > recentHigh * 1.02) { // More than 2% above recent high
@@ -4839,6 +4885,23 @@ function validateAndAdjustSLTP(signal, symbol, atr, pipSize, candles) {
           adjusted = true;
           adjustments.push(`TP aligned to structure low @${structureTP.toFixed(2)}`);
         }
+      }
+    }
+    
+    // ================================================================
+    // FINAL RR CHECK after structure adjustments
+    // ================================================================
+    tpDistance = isBuy ? signal.takeProfit - currentPrice : currentPrice - signal.takeProfit;
+    const finalRR = tpDistance / slDistance;
+    
+    if (finalRR < config.minRR) {
+      // RR is too low after structure adjustment - extend TP
+      const newTpDistance = slDistance * config.minRR;
+      if (newTpDistance / pipSize <= maxTpPips) {
+        signal.takeProfit = isBuy ? currentPrice + newTpDistance : currentPrice - newTpDistance;
+        tpPips = Math.round(newTpDistance / pipSize);
+        adjusted = true;
+        adjustments.push(`TP extended for ${config.minRR}:1 RR after structure adjustment`);
       }
     }
   }
