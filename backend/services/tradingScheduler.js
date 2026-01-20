@@ -83,9 +83,9 @@ function httpsRequest(url, options = {}) {
 // =========================================================================
 // MULTI-STRATEGY ENSEMBLE TRADING ENGINE
 // =========================================================================
-// All 8 strategies run every evaluation cycle
-// Trades executed based on weighted confidence and aligned strategy counts
-// Fixed multi-position scaling logic with 5 initial + scale-in to 10 max
+// All 8 strategies run on DIFFERENT TIMEFRAMES for maximum coverage
+// Each strategy is optimized for its specific timeframe characteristics
+// This ensures capturing moves from scalping (M1) to swing trading (H4)
 // =========================================================================
 
 const ENSEMBLE_CONFIG = {
@@ -93,37 +93,149 @@ const ENSEMBLE_CONFIG = {
   STRATEGY_WEIGHTS: {
     'EMA-Pullback': 1.3,
     'Break-Retest': 1.2,
-    'Liquidity-Sweep': 1.5,
-    'London-Breakout': 1.0,
-    'Order-Block': 1.4,
-    'VWAP-Reversion': 1.1,
-    'Fibonacci': 1.0,
-    'RSI-Divergence': 1.2,
+    'Liquidity-Sweep': 1.5,              // Highest - best for Gold reversals
+    'London-Breakout': 1.1,              // Boosted - session breakouts work well
+    'Order-Block': 1.4,                  // High - institutional levels are reliable
+    'VWAP-Reversion': 1.0,               // Reduced - M1 is noisy
+    'Fibonacci': 1.2,                    // Boosted - H4 swings are profitable
+    'RSI-Divergence': 1.3,               // Boosted - divergences catch reversals
   },
   
-  // TRADE ELIGIBILITY RULES (OPTIMIZED FOR EXECUTION + QUALITY)
+  // TRADE ELIGIBILITY RULES (OPTIMIZED FOR PROFIT)
   MIN_STRATEGIES_ALIGNED: 2,              // At least 2 strategies must align
-  MIN_SCORE_DIFFERENCE: 1.0,              // Weighted score must exceed opposite by 1.0 (was 1.5)
-  SINGLE_STRONG_THRESHOLD: 2.5,           // Single strategy with weight >= 1.4 and conf >= 80 can trade
+  MIN_SCORE_DIFFERENCE: 0.8,              // Lowered to 0.8 to catch more trades
+  SINGLE_STRONG_THRESHOLD: 2.0,           // Allow single strong strategy at 2.0 weight
   
-  // POSITION SCALING
-  INITIAL_POSITIONS: 5,                   // Open 5 positions on initial entry
-  MAX_POSITIONS_PER_SYMBOL: 10,           // Maximum 10 positions per symbol
-  SCALE_IN_CONFIDENCE_INCREMENT: 1.0,     // Add 1 position per +1.0 confidence increase
+  // POSITION SCALING (CONSERVATIVE START, AGGRESSIVE SCALE-IN)
+  INITIAL_POSITIONS: 2,                   // Start with 2 positions (was 5)
+  MAX_POSITIONS_PER_SYMBOL: 6,            // Cap at 6 per symbol (was 10)
+  SCALE_IN_CONFIDENCE_INCREMENT: 0.8,     // Scale in faster when confident
   
   // PRICE SPACING
-  ATR_SPACING_MULTIPLIER: 0.5,            // New entries must be ATR(14) × 0.5 away
+  ATR_SPACING_MULTIPLIER: 0.3,            // Tighter spacing for more entries
   
-  // RISK LIMITS
-  MAX_RISK_PER_SYMBOL: 0.05,              // 5% max risk per symbol
-  MAX_TOTAL_EXPOSURE: 0.30,               // 30% max total exposure
+  // RISK LIMITS (BALANCED FOR GOLD)
+  MAX_RISK_PER_SYMBOL: 0.04,              // 4% max risk per symbol (was 5%)
+  MAX_TOTAL_EXPOSURE: 0.20,               // 20% max total (was 30%)
   
   // CONFLICT PROTECTION
-  SCORE_CONVERGENCE_THRESHOLD: 0.8,       // Suspend if scores within 0.8 (was 1.5)
+  SCORE_CONVERGENCE_THRESHOLD: 0.6,       // Tighter threshold for cleaner signals
   
-  // CONFIDENCE REQUIREMENTS
-  MIN_STRATEGY_CONFIDENCE: 60,            // Individual strategy must have 60%+ confidence
+  // CONFIDENCE REQUIREMENTS (HIGHER QUALITY)
+  MIN_STRATEGY_CONFIDENCE: 68,            // Raised from 60% to 68%
 };
+
+// =========================================================================
+// 📊 MULTI-TIMEFRAME STRATEGY CONFIGURATION (OPTIMIZED FOR GOLD)
+// Each strategy operates on a specific timeframe to capture different moves
+// Gold moves $10-50+ per day - we need to capture these swings
+// =========================================================================
+const STRATEGY_TIMEFRAMES = {
+  // =========================================================================
+  // SCALPING STRATEGIES (M5) - Quick entries, ride momentum
+  // =========================================================================
+  'EMA-Pullback': {
+    timeframe: 'm5',                      // 5-minute - Quick pullback entries
+    candlesNeeded: 100,
+    description: 'Fast EMA pullbacks on M5 for momentum entries',
+    slMultiplier: 1.2,                    // Slightly wider for Gold volatility
+    tpMultiplier: 2.0,                    // 2 R:R - let winners run
+    maxHoldingPeriod: 45,                 // 45 minutes max hold
+    tradingHours: { start: 7, end: 21 },  // Active hours UTC
+  },
+  
+  'VWAP-Reversion': {
+    timeframe: 'm5',                      // Changed from M1 to M5 (less noise)
+    candlesNeeded: 150,
+    description: 'VWAP mean reversion on M5 for cleaner signals',
+    slMultiplier: 1.0,                    // Tight SL
+    tpMultiplier: 1.8,                    // 1.8 R:R
+    maxHoldingPeriod: 30,                 // 30 minutes max
+    tradingHours: { start: 8, end: 20 },  // High volume hours only
+  },
+  
+  // =========================================================================
+  // INTRADAY STRATEGIES (M15-M30) - Core profit generators
+  // =========================================================================
+  'Break-Retest': {
+    timeframe: 'm15',                     // 15-minute - Structure breaks
+    candlesNeeded: 80,
+    description: 'Break and retest of key levels on M15',
+    slMultiplier: 1.5,                    // Medium SL
+    tpMultiplier: 3.0,                    // 3 R:R - these setups trend well
+    maxHoldingPeriod: 180,                // 3 hours max
+    tradingHours: { start: 6, end: 22 },
+  },
+  
+  'Liquidity-Sweep': {
+    timeframe: 'm15',                     // 15-minute - Liquidity grabs
+    candlesNeeded: 100,
+    description: 'Liquidity sweep reversals - HIGH WIN RATE setup',
+    slMultiplier: 1.0,                    // Tight SL below sweep wick
+    tpMultiplier: 3.5,                    // 3.5 R:R for reversals
+    maxHoldingPeriod: 240,                // 4 hours max - let it run
+    tradingHours: { start: 7, end: 21 },
+  },
+  
+  'London-Breakout': {
+    timeframe: 'm30',                     // 30-minute - Session breakouts
+    candlesNeeded: 50,
+    description: 'London/NY session breakout - captures big moves',
+    slMultiplier: 1.5,                    // Range-based SL
+    tpMultiplier: 3.0,                    // 3 R:R - breakouts run
+    maxHoldingPeriod: 300,                // 5 hours (full session)
+    tradingHours: { start: 7, end: 16 },  // Extended to NY overlap
+  },
+  
+  // =========================================================================
+  // DAY TRADING STRATEGIES (H1) - Larger moves, high probability
+  // =========================================================================
+  'Order-Block': {
+    timeframe: 'h1',                      // 1-hour - Institutional levels
+    candlesNeeded: 100,
+    description: 'Order block entries - where smart money trades',
+    slMultiplier: 1.8,                    // Below/above order block
+    tpMultiplier: 4.0,                    // 4 R:R - these are high quality
+    maxHoldingPeriod: 600,                // 10 hours max
+    tradingHours: { start: 0, end: 24 },  // 24/7 monitoring
+  },
+  
+  'RSI-Divergence': {
+    timeframe: 'h1',                      // 1-hour - Momentum divergences
+    candlesNeeded: 80,
+    description: 'RSI divergence - catch trend exhaustion',
+    slMultiplier: 2.0,                    // Wider SL for reversals
+    tpMultiplier: 3.5,                    // 3.5 R:R
+    maxHoldingPeriod: 480,                // 8 hours max
+    tradingHours: { start: 0, end: 24 },
+  },
+  
+  // =========================================================================
+  // SWING TRADING STRATEGIES (H4) - Big picture, biggest winners
+  // =========================================================================
+  'Fibonacci': {
+    timeframe: 'h4',                      // 4-hour - Fib retracements
+    candlesNeeded: 100,
+    description: 'Fibonacci swing entries - catches $20-50 moves',
+    slMultiplier: 2.0,                    // Wide SL for swing
+    tpMultiplier: 5.0,                    // 5 R:R - MAXIMUM PROFIT POTENTIAL
+    maxHoldingPeriod: 2880,               // 48 hours max - let big moves run
+    tradingHours: { start: 0, end: 24 },  // Always monitoring
+  },
+};
+
+// Evaluation intervals per timeframe (how often to check for signals)
+const TIMEFRAME_EVALUATION_INTERVALS = {
+  'm1': 60 * 1000,                        // Every 1 minute
+  'm5': 2 * 60 * 1000,                    // Every 2 minutes
+  'm15': 5 * 60 * 1000,                   // Every 5 minutes
+  'm30': 10 * 60 * 1000,                  // Every 10 minutes
+  'h1': 15 * 60 * 1000,                   // Every 15 minutes
+  'h4': 30 * 60 * 1000,                   // Every 30 minutes
+};
+
+// Track last evaluation time per strategy
+const lastStrategyEvaluation = new Map();
 
 const RISK_CONFIG = {
   // ACCOUNT PROTECTION
@@ -134,6 +246,297 @@ const RISK_CONFIG = {
   MIN_LOT_SIZE: 0.01,
   PREVENT_HEDGING: true,                  // Never open opposite positions
 };
+
+// =========================================================================
+// 🛡️ EMERGENCY DRAWDOWN KILL-SWITCH CONFIGURATION
+// Automatically stops ALL trading when drawdown thresholds are exceeded
+// =========================================================================
+const KILL_SWITCH_CONFIG = {
+  // DRAWDOWN THRESHOLDS (% of account)
+  SOFT_DRAWDOWN: 0.10,                    // 10% - Warning level, reduce position sizes
+  HARD_DRAWDOWN: 0.15,                    // 15% - Stop new trades
+  EMERGENCY_DRAWDOWN: 0.20,               // 20% - CLOSE ALL positions immediately
+  
+  // TIME-BASED RECOVERY
+  COOLDOWN_AFTER_SOFT: 30 * 60 * 1000,    // 30 min cooldown after soft drawdown
+  COOLDOWN_AFTER_HARD: 60 * 60 * 1000,    // 1 hour cooldown after hard drawdown
+  COOLDOWN_AFTER_EMERGENCY: 4 * 60 * 60 * 1000, // 4 hours after emergency
+  
+  // SESSION PROTECTION
+  MAX_LOSSES_PER_SESSION: 5,              // Max consecutive losses before pause
+  SESSION_RESET_HOURS: 4,                 // Hours before session loss count resets
+  
+  // RECOVERY MODE
+  RECOVERY_LOT_REDUCTION: 0.5,            // Use 50% lot size after recovery
+  RECOVERY_TRADES_REQUIRED: 3,            // Win 3 trades before normal sizing
+};
+
+// =========================================================================
+// 📈 PARTIAL PROFIT CONFIGURATION
+// Take partial profits at key levels to lock in gains
+// =========================================================================
+const PARTIAL_PROFIT_CONFIG = {
+  // PARTIAL CLOSE LEVELS (% of position to close at each ATR milestone)
+  LEVELS: [
+    { atr: 1.0, closePercent: 0.33, moveSlTo: 'breakeven' },  // +1 ATR: Close 33%, SL to BE
+    { atr: 1.5, closePercent: 0.33, moveSlTo: '+0.5atr' },    // +1.5 ATR: Close 33%, SL to +0.5 ATR
+    { atr: 2.5, closePercent: 0.34, moveSlTo: '+1.5atr' },    // +2.5 ATR: Close remaining, SL to +1.5 ATR
+  ],
+  
+  // MINIMUM REQUIREMENTS
+  MIN_PROFIT_DOLLARS: 5,                  // Don't partial close if < $5 profit
+  MIN_LOT_AFTER_PARTIAL: 0.01,            // Minimum lot to keep after partial
+  
+  // TIME-BASED PARTIALS
+  ENABLE_TIME_PARTIALS: true,             // Close partials if in profit before news/session end
+  TIME_PARTIAL_PERCENT: 0.50,             // Close 50% before high-impact events
+};
+
+// =========================================================================
+// 🎯 SMART TRAILING STOP CONFIGURATION
+// Dynamic trailing that adapts to market volatility and momentum
+// =========================================================================
+const TRAILING_STOP_CONFIG = {
+  // ACTIVATION THRESHOLDS
+  ACTIVATE_AFTER_ATR: 1.0,                // Start trailing after 1 ATR profit
+  ACTIVATE_AFTER_PIPS: {
+    'XAUUSD': 150,                         // Gold: Trail after 150 pips ($15/lot)
+    'XAGUSD': 50,                          // Silver: Trail after 50 pips
+    'DEFAULT': 30,                         // Forex: Trail after 30 pips
+  },
+  
+  // TRAILING DISTANCE (adapts to volatility)
+  BASE_TRAIL_ATR: 0.5,                    // Base trail distance: 0.5 ATR
+  MIN_TRAIL_PIPS: { 'XAUUSD': 80, 'XAGUSD': 25, 'DEFAULT': 15 },
+  MAX_TRAIL_PIPS: { 'XAUUSD': 300, 'XAGUSD': 100, 'DEFAULT': 50 },
+  
+  // MOMENTUM ADJUSTMENT
+  STRONG_MOMENTUM_TIGHTEN: 0.8,           // Tighten trail to 80% in strong momentum
+  WEAK_MOMENTUM_WIDEN: 1.3,               // Widen trail to 130% in weak momentum
+  
+  // STEP SIZE
+  TRAIL_STEP_PIPS: { 'XAUUSD': 50, 'XAGUSD': 20, 'DEFAULT': 10 }, // Min movement to update trail
+};
+
+// =========================================================================
+// 💎 EQUITY PROTECTION SYSTEM
+// Multi-layer protection to preserve account equity
+// =========================================================================
+const EQUITY_PROTECTION_CONFIG = {
+  // EQUITY-BASED LIMITS
+  MIN_EQUITY_PERCENT: 0.70,               // Stop trading if equity < 70% of balance
+  MARGIN_LEVEL_WARNING: 200,              // Warning at 200% margin level
+  MARGIN_LEVEL_CRITICAL: 150,             // Critical at 150% margin level
+  
+  // FLOATING P&L LIMITS
+  MAX_FLOATING_LOSS_PERCENT: 0.15,        // Max 15% floating loss
+  CLOSE_WORST_AT: 0.12,                   // Close worst position at 12% floating loss
+  
+  // PROFIT PROTECTION (Don't give back profits)
+  PEAK_EQUITY_TRAIL: true,                // Track peak equity
+  PEAK_DRAWDOWN_LIMIT: 0.05,              // Allow 5% drawdown from peak before action
+  PROTECT_PROFIT_ABOVE: 0.03,             // Start protecting when up 3% from start
+  
+  // CORRELATION LIMITS
+  MAX_SAME_DIRECTION_POSITIONS: 8,        // Max positions in same direction
+  MAX_CORRELATED_EXPOSURE: 0.20,          // Max 20% exposure to correlated pairs
+};
+
+// =========================================================================
+// 📊 SIGNAL ANALYTICS TRACKING
+// Track strategy performance for optimization
+// =========================================================================
+const signalAnalytics = {
+  totalSignals: 0,
+  signalsByStrategy: {},
+  signalsBySymbol: {},
+  tradeResults: [],
+  dailyStats: new Map(),
+  strategyWinRates: {},
+  lastReset: new Date(),
+};
+
+// =========================================================================
+// 🚀 PROFIT MAXIMIZATION CONFIGURATION
+// Features designed to catch big moves and maximize gains
+// =========================================================================
+const PROFIT_MAXIMIZATION_CONFIG = {
+  // =======================================================================
+  // 📈 HIGHER TIMEFRAME TREND FILTER (OPTIMIZED)
+  // Only trade in direction of H4 trend (catch the big moves)
+  // =======================================================================
+  HTF_TREND_FILTER: {
+    ENABLED: true,
+    TIMEFRAME: 'h4',                        // Use H4 for trend direction
+    EMA_PERIOD: 50,                         // 50 EMA for trend
+    REQUIRED_CANDLES_ABOVE: 2,              // Reduced to 2 (faster entry on trend)
+    BONUS_CONFIDENCE: 20,                   // Boosted to +20% when aligned
+    ALLOW_COUNTER_TREND: true,              // Allow counter-trend (reversals pay!)
+    COUNTER_TREND_MIN_CONFIDENCE: 80,       // Lowered to 80% for reversals
+  },
+  
+  // =======================================================================
+  // ⏰ SESSION-BASED CONFIDENCE BOOST (AGGRESSIVE)
+  // Trade more aggressively during high-volume sessions
+  // =======================================================================
+  SESSION_BOOST: {
+    ENABLED: true,
+    SESSIONS: {
+      // London/NY Overlap (12:00-16:00 UTC) - HIGHEST VOLUME - MAX AGGRESSION
+      LONDON_NY_OVERLAP: { start: 12, end: 16, boost: 25, maxRisk: 1.5 },
+      // London Session (07:00-12:00 UTC) - HIGH VOLUME  
+      LONDON: { start: 7, end: 12, boost: 18, maxRisk: 1.3 },
+      // NY Session (12:00-21:00 UTC) - HIGH VOLUME
+      NEW_YORK: { start: 12, end: 21, boost: 15, maxRisk: 1.25 },
+      // Asian Session (23:00-07:00 UTC) - LOWER VOLUME (still trade)
+      ASIAN: { start: 23, end: 7, boost: 5, maxRisk: 0.9 },
+    },
+    // Slight reduction in low-volume sessions (don't miss moves!)
+    LOW_VOLUME_REDUCTION: 0.7,              // 70% size in Asian session (was 50%)
+  },
+  
+  // =======================================================================
+  // 🎯 EXTENDED TAKE PROFIT RUNNER (AGGRESSIVE)
+  // Keep portion of position for big moves (never miss a runner)
+  // =======================================================================
+  TP_RUNNER: {
+    ENABLED: true,
+    RUNNER_PERCENT: 0.35,                   // Boosted to 35% runner (was 25%)
+    RUNNER_SL_METHOD: 'trail',              // 'trail' or 'breakeven'
+    RUNNER_TRAIL_ATR: 1.2,                  // Tighter trail at 1.2 ATR (was 1.5)
+    MAX_RUNNER_DURATION_HOURS: 48,          // Extended to 48 hours for swing
+    // Extended TP targets for runner - AMBITIOUS
+    EXTENDED_TP_MULTIPLIERS: [4.0, 7.0, 12.0], // Runner targets: 4x, 7x, 12x
+  },
+  
+  // =======================================================================
+  // 🔄 RE-ENTRY LOGIC (PROFIT-FOCUSED)
+  // Get back in after stop-out if trend continues
+  // =======================================================================
+  REENTRY: {
+    ENABLED: true,
+    WAIT_CANDLES_AFTER_SL: 2,               // Faster re-entry: 2 candles (was 3)
+    REQUIRE_NEW_SIGNAL: true,               // Need fresh strategy signal
+    MIN_CONFIDENCE_FOR_REENTRY: 65,         // Lowered to 65% for more re-entries
+    MAX_REENTRIES_PER_DIRECTION: 3,         // Allow 3 re-entries (was 2)
+    REENTRY_COOLDOWN_MINUTES: 20,           // Faster: 20 min cooldown (was 30)
+    REDUCE_SIZE_ON_REENTRY: 0.8,            // 80% size on re-entry (was 70%)
+  },
+  
+  // =======================================================================
+  // 💥 MOMENTUM EXPLOSION DETECTION (AGGRESSIVE)
+  // Catch breakouts and explosive moves early
+  // =======================================================================
+  MOMENTUM_EXPLOSION: {
+    ENABLED: true,
+    // Volume spike detection
+    VOLUME_SPIKE_MULTIPLIER: 1.8,           // Lowered to 1.8x (catch more)
+    // Price movement detection
+    CANDLE_SIZE_ATR_MULTIPLIER: 1.3,        // Lowered to 1.3x ATR (more sensitive)
+    // Entry on explosion
+    ENTER_ON_EXPLOSION: true,               // Auto-enter on detected explosion
+    EXPLOSION_POSITION_MULTIPLIER: 1.8,     // Boosted to 1.8x on explosions
+    // Confirmation
+    REQUIRE_CLOSE_ABOVE_HIGH: true,         // Must close above previous high
+    MIN_CONSECUTIVE_CLOSES: 2,              // 2+ candles in same direction
+  },
+  
+  // =======================================================================
+  // 🔒 PROFIT LOCK SYSTEM  
+  // Never turn a winner into a loser
+  // =======================================================================
+  PROFIT_LOCK: {
+    ENABLED: true,
+    // Move to breakeven thresholds (FASTER)
+    BREAKEVEN_TRIGGER_ATR: 0.5,             // Move SL to BE at 0.5 ATR (was 0.7)
+    BREAKEVEN_BUFFER_PIPS: { 'XAUUSD': 20, 'XAGUSD': 8, 'DEFAULT': 2 },
+    // Lock-in profit thresholds (TIGHTER LOCKS)
+    LOCK_TRIGGERS: [
+      { profitATR: 0.8, lockPercent: 0.30 },  // +0.8 ATR: Lock 30% (was 1.0/25%)
+      { profitATR: 1.2, lockPercent: 0.45 },  // +1.2 ATR: Lock 45% (was 1.5/40%)
+      { profitATR: 1.8, lockPercent: 0.60 },  // +1.8 ATR: Lock 60% (was 2.0/60%)
+      { profitATR: 2.5, lockPercent: 0.75 },  // +2.5 ATR: Lock 75% (was 3.0/75%)
+    ],
+    // Time-based profit lock
+    LOCK_BEFORE_SESSION_END: true,          // Tighten before session close
+    SESSION_END_LOCK_PERCENT: 0.60,         // Lock 60% before session ends (was 50%)
+  },
+  
+  // =======================================================================
+  // 📊 DYNAMIC POSITION SIZING
+  // Size based on confidence and market conditions
+  // =======================================================================
+  DYNAMIC_SIZING: {
+    ENABLED: true,
+    BASE_LOT_SIZE: 0.01,
+    // Confidence-based multipliers (AGGRESSIVE)
+    CONFIDENCE_TIERS: [
+      { minConfidence: 90, multiplier: 2.5 },  // 90%+ = 2.5x size (was 2.0)
+      { minConfidence: 80, multiplier: 1.8 },  // 80%+ = 1.8x size (was 1.5)
+      { minConfidence: 70, multiplier: 1.3 },  // 70%+ = 1.3x size (was 1.2)
+      { minConfidence: 60, multiplier: 1.0 },  // 60%+ = 1x size (base)
+    ],
+    // Volatility adjustment
+    HIGH_VOLATILITY_REDUCTION: 0.8,         // Only reduce 20% in high vol (was 30%)
+    LOW_VOLATILITY_INCREASE: 1.5,           // Increase 50% in low vol (was 30%)
+    // Winning streak bonus (ride the hot hand)
+    WINNING_STREAK_BONUS: 0.15,             // +15% per consecutive win (was 10%)
+    MAX_WINNING_STREAK_BONUS: 0.75,         // Cap at +75% bonus (was 50%)
+    // Losing streak protection
+    LOSING_STREAK_REDUCTION: 0.10,          // Only -10% per loss (was 15%)
+    MIN_AFTER_LOSING_STREAK: 0.6,           // Min 60% of base (was 50%)
+  },
+  
+  // =======================================================================
+  // 🌊 TREND STRENGTH FILTER (PROFIT-OPTIMIZED)
+  // Only trade strong trends, avoid choppy markets
+  // =======================================================================
+  TREND_STRENGTH: {
+    ENABLED: true,
+    ADX_PERIOD: 14,
+    MIN_ADX_FOR_TREND: 22,                  // Lowered from 25 (catch more trends)
+    STRONG_TREND_ADX: 35,                   // Lowered from 40 (more "strong" trades)
+    RANGING_ADX: 18,                        // Lowered from 20 (be more aggressive)
+    // Boost in strong trends
+    STRONG_TREND_CONFIDENCE_BOOST: 20,      // Boosted to +20% (was 15%)
+    // Reduce in ranging markets
+    RANGING_MARKET_REDUCTION: 0.6,          // 60% size in ranging (was 50%)
+    AVOID_RANGING: false,                   // Changed to false - still trade ranging!
+  },
+};
+
+// Track re-entry state per symbol
+const reentryState = new Map(); // symbol -> { lastSLTime, direction, reentryCount, lastReentryTime }
+
+// Track profit runner positions
+const runnerPositions = new Map(); // positionId -> { originalTP, runnerLevel, startTime }
+
+// Track winning/losing streaks per symbol
+const streakState = new Map(); // symbol -> { consecutiveWins, consecutiveLosses, lastResult }
+
+// Higher timeframe candle cache (separate from regular candle cache)
+const htfCandleCache = new Map(); // symbol_h4 -> { candles, timestamp }
+const HTF_CACHE_TTL = 15 * 60 * 1000; // 15 minutes for H4 candles
+
+// Kill switch state tracking
+const killSwitchState = {
+  isActive: false,
+  level: null,                            // 'soft', 'hard', or 'emergency'
+  triggeredAt: null,
+  recoveryMode: false,
+  recoveryWins: 0,
+  consecutiveLosses: 0,
+  sessionLossCount: 0,
+  sessionStartTime: new Date(),
+  peakEquity: 0,
+  dailyStartEquity: 0,
+};
+
+// Track partial profit state per position
+const partialProfitState = new Map(); // positionId -> { level1Closed, level2Closed, level3Closed }
+
+// Track trailing stop state per position
+const trailingStopState = new Map(); // positionId -> { activated, lastTrailPrice, trailDistance }
 
 // =========================================================================
 // SYMBOL STATE TRACKING - Per-symbol position management
@@ -172,6 +575,1199 @@ function resetSymbolState(symbol) {
 }
 
 // =========================================================================
+// 🛡️ EMERGENCY DRAWDOWN KILL-SWITCH IMPLEMENTATION
+// =========================================================================
+
+/**
+ * Check and update kill switch state based on current account status
+ * @returns {object} { canTrade: boolean, level: string|null, reason: string }
+ */
+function checkKillSwitch(balance, equity, dailyStartBalance) {
+  const now = Date.now();
+  
+  // Initialize daily start equity if not set
+  if (killSwitchState.dailyStartEquity === 0) {
+    killSwitchState.dailyStartEquity = balance;
+    killSwitchState.peakEquity = equity;
+  }
+  
+  // Update peak equity
+  if (equity > killSwitchState.peakEquity) {
+    killSwitchState.peakEquity = equity;
+  }
+  
+  // Calculate drawdown metrics
+  const dailyDrawdown = (dailyStartBalance - equity) / dailyStartBalance;
+  const peakDrawdown = (killSwitchState.peakEquity - equity) / killSwitchState.peakEquity;
+  const currentDrawdown = Math.max(dailyDrawdown, peakDrawdown);
+  
+  // Check if currently in cooldown
+  if (killSwitchState.isActive && killSwitchState.triggeredAt) {
+    let cooldownPeriod = 0;
+    switch (killSwitchState.level) {
+      case 'soft': cooldownPeriod = KILL_SWITCH_CONFIG.COOLDOWN_AFTER_SOFT; break;
+      case 'hard': cooldownPeriod = KILL_SWITCH_CONFIG.COOLDOWN_AFTER_HARD; break;
+      case 'emergency': cooldownPeriod = KILL_SWITCH_CONFIG.COOLDOWN_AFTER_EMERGENCY; break;
+    }
+    
+    if (now - killSwitchState.triggeredAt < cooldownPeriod) {
+      const remainingMin = Math.ceil((cooldownPeriod - (now - killSwitchState.triggeredAt)) / 60000);
+      return { 
+        canTrade: false, 
+        level: killSwitchState.level,
+        reason: `Kill switch active (${killSwitchState.level}) - ${remainingMin}min remaining`,
+        closeAll: killSwitchState.level === 'emergency'
+      };
+    } else {
+      // Cooldown expired - enter recovery mode
+      killSwitchState.isActive = false;
+      killSwitchState.recoveryMode = true;
+      killSwitchState.recoveryWins = 0;
+      console.log('  🔄 Kill switch cooldown expired - entering RECOVERY MODE');
+    }
+  }
+  
+  // Check session loss count
+  const sessionHours = (now - killSwitchState.sessionStartTime.getTime()) / (1000 * 60 * 60);
+  if (sessionHours >= KILL_SWITCH_CONFIG.SESSION_RESET_HOURS) {
+    killSwitchState.sessionLossCount = 0;
+    killSwitchState.sessionStartTime = new Date();
+  }
+  
+  // EMERGENCY: 20%+ drawdown - CLOSE EVERYTHING
+  if (currentDrawdown >= KILL_SWITCH_CONFIG.EMERGENCY_DRAWDOWN) {
+    killSwitchState.isActive = true;
+    killSwitchState.level = 'emergency';
+    killSwitchState.triggeredAt = now;
+    console.log(`  🚨 EMERGENCY KILL SWITCH: ${(currentDrawdown * 100).toFixed(1)}% drawdown - CLOSING ALL POSITIONS`);
+    recordAnalytics('kill_switch', { level: 'emergency', drawdown: currentDrawdown });
+    return { 
+      canTrade: false, 
+      level: 'emergency',
+      reason: `EMERGENCY: ${(currentDrawdown * 100).toFixed(1)}% drawdown`,
+      closeAll: true
+    };
+  }
+  
+  // HARD: 15%+ drawdown - Stop new trades
+  if (currentDrawdown >= KILL_SWITCH_CONFIG.HARD_DRAWDOWN) {
+    killSwitchState.isActive = true;
+    killSwitchState.level = 'hard';
+    killSwitchState.triggeredAt = now;
+    console.log(`  ⛔ HARD KILL SWITCH: ${(currentDrawdown * 100).toFixed(1)}% drawdown - NO NEW TRADES`);
+    recordAnalytics('kill_switch', { level: 'hard', drawdown: currentDrawdown });
+    return { 
+      canTrade: false, 
+      level: 'hard',
+      reason: `HARD STOP: ${(currentDrawdown * 100).toFixed(1)}% drawdown`,
+      closeAll: false
+    };
+  }
+  
+  // SOFT: 10%+ drawdown - Reduce sizing
+  if (currentDrawdown >= KILL_SWITCH_CONFIG.SOFT_DRAWDOWN) {
+    console.log(`  ⚠️ SOFT KILL SWITCH: ${(currentDrawdown * 100).toFixed(1)}% drawdown - REDUCED SIZING`);
+    return { 
+      canTrade: true, 
+      level: 'soft',
+      reason: `Soft limit: ${(currentDrawdown * 100).toFixed(1)}% drawdown`,
+      lotMultiplier: 0.5,
+      closeAll: false
+    };
+  }
+  
+  // Check consecutive losses
+  if (killSwitchState.consecutiveLosses >= KILL_SWITCH_CONFIG.MAX_LOSSES_PER_SESSION) {
+    console.log(`  ⏸️ ${killSwitchState.consecutiveLosses} consecutive losses - pausing trading`);
+    return {
+      canTrade: false,
+      level: 'session_losses',
+      reason: `${killSwitchState.consecutiveLosses} consecutive losses`,
+      closeAll: false
+    };
+  }
+  
+  // Recovery mode - reduced sizing
+  if (killSwitchState.recoveryMode) {
+    if (killSwitchState.recoveryWins >= KILL_SWITCH_CONFIG.RECOVERY_TRADES_REQUIRED) {
+      killSwitchState.recoveryMode = false;
+      console.log('  ✅ Recovery complete - returning to normal trading');
+    } else {
+      return {
+        canTrade: true,
+        level: 'recovery',
+        reason: `Recovery mode: ${killSwitchState.recoveryWins}/${KILL_SWITCH_CONFIG.RECOVERY_TRADES_REQUIRED} wins`,
+        lotMultiplier: KILL_SWITCH_CONFIG.RECOVERY_LOT_REDUCTION,
+        closeAll: false
+      };
+    }
+  }
+  
+  return { canTrade: true, level: null, reason: 'Normal trading', closeAll: false };
+}
+
+/**
+ * Update kill switch state when a trade closes
+ */
+function updateKillSwitchOnClose(profit, symbol = null, wasStopLoss = false, direction = null) {
+  if (profit >= 0) {
+    killSwitchState.consecutiveLosses = 0;
+    if (killSwitchState.recoveryMode) {
+      killSwitchState.recoveryWins++;
+    }
+  } else {
+    killSwitchState.consecutiveLosses++;
+    killSwitchState.sessionLossCount++;
+    
+    // Record stop loss for re-entry tracking
+    if (wasStopLoss && symbol && direction) {
+      recordStopLoss(symbol, direction);
+    }
+  }
+  
+  // Update streak tracking
+  if (symbol) {
+    updateStreak(symbol, profit);
+  }
+}
+
+// =========================================================================
+// 📈 PARTIAL PROFIT IMPLEMENTATION
+// =========================================================================
+
+/**
+ * Check and execute partial profit taking for a position
+ * @returns {object} { action: string, closeVolume: number, newSL: number }
+ */
+function checkPartialProfit(position, currentPrice, atr, pipSize) {
+  const positionId = String(position.id);
+  const openPrice = position.openPrice;
+  const volume = position.volume;
+  const isBuy = position.type === 'buy' || position.type === 'POSITION_TYPE_BUY';
+  
+  // Initialize state if not exists
+  if (!partialProfitState.has(positionId)) {
+    partialProfitState.set(positionId, {
+      level1Closed: false,
+      level2Closed: false,
+      level3Closed: false,
+      originalVolume: volume,
+    });
+  }
+  
+  const state = partialProfitState.get(positionId);
+  const priceDiff = isBuy ? currentPrice - openPrice : openPrice - currentPrice;
+  const profitInATR = atr > 0 ? priceDiff / atr : 0;
+  const profitDollars = position.profit || (priceDiff * volume * 100000); // Approximate
+  
+  // Skip if profit too small
+  if (profitDollars < PARTIAL_PROFIT_CONFIG.MIN_PROFIT_DOLLARS) {
+    return { action: 'none' };
+  }
+  
+  // Check each level
+  for (let i = 0; i < PARTIAL_PROFIT_CONFIG.LEVELS.length; i++) {
+    const level = PARTIAL_PROFIT_CONFIG.LEVELS[i];
+    const levelKey = `level${i + 1}Closed`;
+    
+    if (!state[levelKey] && profitInATR >= level.atr) {
+      const closeVolume = Math.round(state.originalVolume * level.closePercent * 100) / 100;
+      const remainingVolume = Math.round((volume - closeVolume) * 100) / 100;
+      
+      // Don't close if remaining would be below minimum
+      if (remainingVolume < PARTIAL_PROFIT_CONFIG.MIN_LOT_AFTER_PARTIAL && i < PARTIAL_PROFIT_CONFIG.LEVELS.length - 1) {
+        continue;
+      }
+      
+      // Calculate new SL based on level config
+      let newSL = null;
+      if (level.moveSlTo === 'breakeven') {
+        newSL = openPrice;
+      } else if (level.moveSlTo.startsWith('+')) {
+        const atrMultiple = parseFloat(level.moveSlTo.replace('+', '').replace('atr', ''));
+        newSL = isBuy ? openPrice + (atr * atrMultiple) : openPrice - (atr * atrMultiple);
+      }
+      
+      state[levelKey] = true;
+      partialProfitState.set(positionId, state);
+      
+      console.log(`  💰 PARTIAL PROFIT Level ${i + 1}: Close ${closeVolume} lots at ${profitInATR.toFixed(2)} ATR profit`);
+      recordAnalytics('partial_profit', { level: i + 1, atr: profitInATR, closeVolume });
+      
+      return {
+        action: 'partial_close',
+        closeVolume: closeVolume,
+        newSL: newSL,
+        level: i + 1,
+        profitATR: profitInATR,
+      };
+    }
+  }
+  
+  return { action: 'none' };
+}
+
+// =========================================================================
+// 🎯 SMART TRAILING STOP IMPLEMENTATION
+// =========================================================================
+
+/**
+ * Calculate and update smart trailing stop for a position
+ * @returns {object} { shouldUpdate: boolean, newSL: number }
+ */
+function calculateSmartTrailingStop(position, currentPrice, atr, pipSize, symbol, candles) {
+  const positionId = String(position.id);
+  const openPrice = position.openPrice;
+  const currentSL = position.stopLoss;
+  const isBuy = position.type === 'buy' || position.type === 'POSITION_TYPE_BUY';
+  
+  // Get symbol-specific config
+  const symbolKey = symbol.includes('XAU') ? 'XAUUSD' : symbol.includes('XAG') ? 'XAGUSD' : 'DEFAULT';
+  const activatePips = TRAILING_STOP_CONFIG.ACTIVATE_AFTER_PIPS[symbolKey];
+  const minTrailPips = TRAILING_STOP_CONFIG.MIN_TRAIL_PIPS[symbolKey];
+  const maxTrailPips = TRAILING_STOP_CONFIG.MAX_TRAIL_PIPS[symbolKey];
+  const trailStepPips = TRAILING_STOP_CONFIG.TRAIL_STEP_PIPS[symbolKey];
+  
+  // Calculate current profit
+  const priceDiff = isBuy ? currentPrice - openPrice : openPrice - currentPrice;
+  const profitPips = priceDiff / pipSize;
+  const profitInATR = atr > 0 ? priceDiff / atr : 0;
+  
+  // Initialize state if not exists
+  if (!trailingStopState.has(positionId)) {
+    trailingStopState.set(positionId, {
+      activated: false,
+      lastTrailPrice: null,
+      trailDistance: minTrailPips * pipSize,
+      bestPrice: currentPrice,
+    });
+  }
+  
+  const state = trailingStopState.get(positionId);
+  
+  // Update best price
+  if (isBuy && currentPrice > state.bestPrice) {
+    state.bestPrice = currentPrice;
+  } else if (!isBuy && currentPrice < state.bestPrice) {
+    state.bestPrice = currentPrice;
+  }
+  
+  // Check activation
+  if (!state.activated) {
+    const shouldActivate = profitPips >= activatePips || profitInATR >= TRAILING_STOP_CONFIG.ACTIVATE_AFTER_ATR;
+    if (shouldActivate) {
+      state.activated = true;
+      state.lastTrailPrice = currentPrice;
+      console.log(`  🎯 TRAILING STOP ACTIVATED: ${profitPips.toFixed(0)} pips profit (${profitInATR.toFixed(2)} ATR)`);
+    } else {
+      return { shouldUpdate: false };
+    }
+  }
+  
+  // Calculate momentum for dynamic trail distance
+  let momentumMultiplier = 1.0;
+  if (candles && candles.length >= 5) {
+    const recentCandles = candles.slice(-5);
+    const favorableCount = isBuy 
+      ? recentCandles.filter(c => c.close > c.open).length
+      : recentCandles.filter(c => c.close < c.open).length;
+    
+    if (favorableCount >= 4) {
+      // Strong momentum - tighten trail
+      momentumMultiplier = TRAILING_STOP_CONFIG.STRONG_MOMENTUM_TIGHTEN;
+    } else if (favorableCount <= 1) {
+      // Weak momentum - widen trail
+      momentumMultiplier = TRAILING_STOP_CONFIG.WEAK_MOMENTUM_WIDEN;
+    }
+  }
+  
+  // Calculate dynamic trail distance
+  let trailDistance = atr * TRAILING_STOP_CONFIG.BASE_TRAIL_ATR * momentumMultiplier;
+  trailDistance = Math.max(minTrailPips * pipSize, Math.min(maxTrailPips * pipSize, trailDistance));
+  state.trailDistance = trailDistance;
+  
+  // Calculate new SL
+  let newSL;
+  if (isBuy) {
+    newSL = state.bestPrice - trailDistance;
+    // Only update if new SL is higher than current
+    if (currentSL && newSL <= currentSL) {
+      trailingStopState.set(positionId, state);
+      return { shouldUpdate: false };
+    }
+    // Check minimum step
+    if (state.lastTrailPrice && (state.bestPrice - state.lastTrailPrice) < (trailStepPips * pipSize)) {
+      trailingStopState.set(positionId, state);
+      return { shouldUpdate: false };
+    }
+  } else {
+    newSL = state.bestPrice + trailDistance;
+    // Only update if new SL is lower than current
+    if (currentSL && newSL >= currentSL) {
+      trailingStopState.set(positionId, state);
+      return { shouldUpdate: false };
+    }
+    // Check minimum step
+    if (state.lastTrailPrice && (state.lastTrailPrice - state.bestPrice) < (trailStepPips * pipSize)) {
+      trailingStopState.set(positionId, state);
+      return { shouldUpdate: false };
+    }
+  }
+  
+  state.lastTrailPrice = state.bestPrice;
+  trailingStopState.set(positionId, state);
+  
+  const trailPips = Math.round(trailDistance / pipSize);
+  console.log(`  📍 SMART TRAIL: SL → ${newSL.toFixed(5)} (trail: ${trailPips} pips, momentum: ${momentumMultiplier.toFixed(2)}x)`);
+  recordAnalytics('trailing_stop', { newSL, trailPips, momentum: momentumMultiplier });
+  
+  return { shouldUpdate: true, newSL };
+}
+
+// =========================================================================
+// 💎 EQUITY PROTECTION IMPLEMENTATION
+// =========================================================================
+
+/**
+ * Check equity protection rules and return required actions
+ * @returns {object} { canTrade: boolean, closeWorst: boolean, reason: string }
+ */
+function checkEquityProtection(balance, equity, marginLevel, positions) {
+  const equityPercent = equity / balance;
+  const floatingPL = equity - balance;
+  const floatingPLPercent = floatingPL / balance;
+  
+  // Check minimum equity
+  if (equityPercent < EQUITY_PROTECTION_CONFIG.MIN_EQUITY_PERCENT) {
+    console.log(`  🛡️ EQUITY PROTECTION: Equity ${(equityPercent * 100).toFixed(1)}% < ${(EQUITY_PROTECTION_CONFIG.MIN_EQUITY_PERCENT * 100)}%`);
+    return {
+      canTrade: false,
+      closeWorst: true,
+      reason: `Equity too low: ${(equityPercent * 100).toFixed(1)}%`,
+    };
+  }
+  
+  // Check margin level
+  if (marginLevel && marginLevel < EQUITY_PROTECTION_CONFIG.MARGIN_LEVEL_CRITICAL) {
+    console.log(`  🛡️ MARGIN CRITICAL: ${marginLevel}% < ${EQUITY_PROTECTION_CONFIG.MARGIN_LEVEL_CRITICAL}%`);
+    return {
+      canTrade: false,
+      closeWorst: true,
+      reason: `Margin level critical: ${marginLevel}%`,
+    };
+  }
+  
+  if (marginLevel && marginLevel < EQUITY_PROTECTION_CONFIG.MARGIN_LEVEL_WARNING) {
+    console.log(`  ⚠️ MARGIN WARNING: ${marginLevel}%`);
+  }
+  
+  // Check floating loss
+  if (floatingPLPercent < -EQUITY_PROTECTION_CONFIG.MAX_FLOATING_LOSS_PERCENT) {
+    console.log(`  🛡️ FLOATING LOSS: ${(floatingPLPercent * 100).toFixed(1)}% exceeds limit`);
+    return {
+      canTrade: false,
+      closeWorst: true,
+      reason: `Floating loss ${(floatingPLPercent * 100).toFixed(1)}% exceeds ${(EQUITY_PROTECTION_CONFIG.MAX_FLOATING_LOSS_PERCENT * 100)}%`,
+    };
+  }
+  
+  // Close worst position at threshold
+  if (floatingPLPercent < -EQUITY_PROTECTION_CONFIG.CLOSE_WORST_AT && positions && positions.length > 1) {
+    // Find worst position
+    const worstPosition = positions.reduce((worst, pos) => 
+      (!worst || (pos.profit < worst.profit)) ? pos : worst, null);
+    
+    if (worstPosition && worstPosition.profit < 0) {
+      console.log(`  🛡️ CLOSING WORST: Position ${worstPosition.id} at $${worstPosition.profit.toFixed(2)}`);
+      return {
+        canTrade: true,
+        closeWorst: true,
+        worstPositionId: worstPosition.id,
+        reason: `Closing worst position to protect equity`,
+      };
+    }
+  }
+  
+  // Peak equity drawdown protection
+  if (EQUITY_PROTECTION_CONFIG.PEAK_EQUITY_TRAIL && killSwitchState.peakEquity > 0) {
+    const profitFromStart = (equity - killSwitchState.dailyStartEquity) / killSwitchState.dailyStartEquity;
+    const drawdownFromPeak = (killSwitchState.peakEquity - equity) / killSwitchState.peakEquity;
+    
+    if (profitFromStart > EQUITY_PROTECTION_CONFIG.PROTECT_PROFIT_ABOVE && 
+        drawdownFromPeak > EQUITY_PROTECTION_CONFIG.PEAK_DRAWDOWN_LIMIT) {
+      console.log(`  🛡️ PROFIT PROTECTION: Giving back ${(drawdownFromPeak * 100).toFixed(1)}% from peak`);
+      return {
+        canTrade: false,
+        closeWorst: false,
+        reason: `Protecting profits - ${(drawdownFromPeak * 100).toFixed(1)}% drawdown from peak`,
+      };
+    }
+  }
+  
+  // Check same-direction limits
+  if (positions && positions.length > 0) {
+    const buyCount = positions.filter(p => p.type === 'buy' || p.type === 'POSITION_TYPE_BUY').length;
+    const sellCount = positions.length - buyCount;
+    
+    if (buyCount > EQUITY_PROTECTION_CONFIG.MAX_SAME_DIRECTION_POSITIONS ||
+        sellCount > EQUITY_PROTECTION_CONFIG.MAX_SAME_DIRECTION_POSITIONS) {
+      return {
+        canTrade: false,
+        closeWorst: false,
+        reason: `Max same-direction positions reached (Buy: ${buyCount}, Sell: ${sellCount})`,
+      };
+    }
+  }
+  
+  return { canTrade: true, closeWorst: false, reason: 'Equity healthy' };
+}
+
+// =========================================================================
+// 📊 SIGNAL ANALYTICS IMPLEMENTATION
+// =========================================================================
+
+/**
+ * Record analytics event
+ */
+function recordAnalytics(eventType, data) {
+  const now = new Date();
+  const dateKey = now.toISOString().split('T')[0];
+  
+  // Initialize daily stats if needed
+  if (!signalAnalytics.dailyStats.has(dateKey)) {
+    signalAnalytics.dailyStats.set(dateKey, {
+      signals: 0,
+      trades: 0,
+      wins: 0,
+      losses: 0,
+      profit: 0,
+      byStrategy: {},
+    });
+  }
+  
+  const dailyStats = signalAnalytics.dailyStats.get(dateKey);
+  
+  switch (eventType) {
+    case 'signal':
+      signalAnalytics.totalSignals++;
+      dailyStats.signals++;
+      
+      // Track by strategy
+      const strategy = data.strategy || 'unknown';
+      signalAnalytics.signalsByStrategy[strategy] = (signalAnalytics.signalsByStrategy[strategy] || 0) + 1;
+      
+      // Track by symbol
+      const symbol = data.symbol || 'unknown';
+      signalAnalytics.signalsBySymbol[symbol] = (signalAnalytics.signalsBySymbol[symbol] || 0) + 1;
+      break;
+      
+    case 'trade_open':
+      dailyStats.trades++;
+      if (!dailyStats.byStrategy[data.strategy]) {
+        dailyStats.byStrategy[data.strategy] = { trades: 0, wins: 0, losses: 0, profit: 0 };
+      }
+      dailyStats.byStrategy[data.strategy].trades++;
+      break;
+      
+    case 'trade_close':
+      if (data.profit >= 0) {
+        dailyStats.wins++;
+        if (dailyStats.byStrategy[data.strategy]) {
+          dailyStats.byStrategy[data.strategy].wins++;
+        }
+      } else {
+        dailyStats.losses++;
+        if (dailyStats.byStrategy[data.strategy]) {
+          dailyStats.byStrategy[data.strategy].losses++;
+        }
+      }
+      dailyStats.profit += data.profit;
+      if (dailyStats.byStrategy[data.strategy]) {
+        dailyStats.byStrategy[data.strategy].profit += data.profit;
+      }
+      
+      // Update win rate tracking
+      const strat = data.strategy || 'unknown';
+      if (!signalAnalytics.strategyWinRates[strat]) {
+        signalAnalytics.strategyWinRates[strat] = { wins: 0, total: 0 };
+      }
+      signalAnalytics.strategyWinRates[strat].total++;
+      if (data.profit >= 0) {
+        signalAnalytics.strategyWinRates[strat].wins++;
+      }
+      
+      // Store in trade results (keep last 100)
+      signalAnalytics.tradeResults.push({
+        time: now,
+        strategy: data.strategy,
+        symbol: data.symbol,
+        profit: data.profit,
+        duration: data.duration,
+      });
+      if (signalAnalytics.tradeResults.length > 100) {
+        signalAnalytics.tradeResults.shift();
+      }
+      break;
+      
+    case 'kill_switch':
+    case 'partial_profit':
+    case 'trailing_stop':
+      // Log special events
+      console.log(`  📊 ANALYTICS [${eventType}]:`, JSON.stringify(data));
+      break;
+  }
+  
+  signalAnalytics.dailyStats.set(dateKey, dailyStats);
+}
+
+/**
+ * Get analytics summary for dashboard
+ */
+function getAnalyticsSummary() {
+  const now = new Date();
+  const dateKey = now.toISOString().split('T')[0];
+  const todayStats = signalAnalytics.dailyStats.get(dateKey) || { signals: 0, trades: 0, wins: 0, losses: 0, profit: 0 };
+  
+  // Calculate strategy win rates
+  const strategyPerformance = {};
+  for (const [strategy, stats] of Object.entries(signalAnalytics.strategyWinRates)) {
+    strategyPerformance[strategy] = {
+      winRate: stats.total > 0 ? (stats.wins / stats.total * 100).toFixed(1) + '%' : 'N/A',
+      totalTrades: stats.total,
+    };
+  }
+  
+  return {
+    totalSignals: signalAnalytics.totalSignals,
+    today: {
+      signals: todayStats.signals,
+      trades: todayStats.trades,
+      winRate: todayStats.trades > 0 ? ((todayStats.wins / todayStats.trades) * 100).toFixed(1) + '%' : 'N/A',
+      profit: todayStats.profit.toFixed(2),
+    },
+    signalsByStrategy: signalAnalytics.signalsByStrategy,
+    signalsBySymbol: signalAnalytics.signalsBySymbol,
+    strategyPerformance,
+    killSwitchStatus: {
+      active: killSwitchState.isActive,
+      level: killSwitchState.level,
+      recoveryMode: killSwitchState.recoveryMode,
+      consecutiveLosses: killSwitchState.consecutiveLosses,
+    },
+    lastUpdated: now.toISOString(),
+  };
+}
+
+/**
+ * Reset daily analytics (called at midnight)
+ */
+function resetDailyAnalytics() {
+  killSwitchState.dailyStartEquity = 0;
+  killSwitchState.consecutiveLosses = 0;
+  killSwitchState.sessionLossCount = 0;
+  killSwitchState.sessionStartTime = new Date();
+  console.log('  📊 Daily analytics reset');
+}
+
+// =========================================================================
+// 🚀 PROFIT MAXIMIZATION IMPLEMENTATION
+// =========================================================================
+
+/**
+ * Get current trading session info and boosts
+ */
+function getSessionInfo() {
+  const now = new Date();
+  const utcHour = now.getUTCHours();
+  
+  const sessions = PROFIT_MAXIMIZATION_CONFIG.SESSION_BOOST.SESSIONS;
+  let currentSession = null;
+  let boost = 0;
+  let maxRisk = 1.0;
+  
+  // London/NY Overlap takes priority
+  if (utcHour >= sessions.LONDON_NY_OVERLAP.start && utcHour < sessions.LONDON_NY_OVERLAP.end) {
+    currentSession = 'LONDON_NY_OVERLAP';
+    boost = sessions.LONDON_NY_OVERLAP.boost;
+    maxRisk = sessions.LONDON_NY_OVERLAP.maxRisk;
+  }
+  // London session
+  else if (utcHour >= sessions.LONDON.start && utcHour < sessions.LONDON.end) {
+    currentSession = 'LONDON';
+    boost = sessions.LONDON.boost;
+    maxRisk = sessions.LONDON.maxRisk;
+  }
+  // NY session
+  else if (utcHour >= sessions.NEW_YORK.start && utcHour < sessions.NEW_YORK.end) {
+    currentSession = 'NEW_YORK';
+    boost = sessions.NEW_YORK.boost;
+    maxRisk = sessions.NEW_YORK.maxRisk;
+  }
+  // Asian session (wraps around midnight)
+  else if (utcHour >= sessions.ASIAN.start || utcHour < sessions.ASIAN.end) {
+    currentSession = 'ASIAN';
+    boost = sessions.ASIAN.boost;
+    maxRisk = sessions.ASIAN.maxRisk;
+  }
+  
+  return {
+    session: currentSession,
+    confidenceBoost: PROFIT_MAXIMIZATION_CONFIG.SESSION_BOOST.ENABLED ? boost : 0,
+    riskMultiplier: maxRisk,
+    isHighVolume: currentSession === 'LONDON_NY_OVERLAP' || currentSession === 'LONDON' || currentSession === 'NEW_YORK',
+    isLowVolume: currentSession === 'ASIAN',
+  };
+}
+
+/**
+ * Check higher timeframe trend alignment
+ */
+async function checkHTFTrendAlignment(account, symbol, proposedDirection) {
+  if (!PROFIT_MAXIMIZATION_CONFIG.HTF_TREND_FILTER.ENABLED) {
+    return { aligned: true, boost: 0, reason: 'HTF filter disabled' };
+  }
+  
+  try {
+    // Check cache first
+    const cacheKey = `${symbol}_h4`;
+    const cached = htfCandleCache.get(cacheKey);
+    let h4Candles;
+    
+    if (cached && Date.now() - cached.timestamp < HTF_CACHE_TTL) {
+      h4Candles = cached.candles;
+    } else if (account) {
+      // Fetch H4 candles
+      h4Candles = await account.getHistoricalCandles(symbol, '4h', undefined, 60);
+      htfCandleCache.set(cacheKey, { candles: h4Candles, timestamp: Date.now() });
+    }
+    
+    if (!h4Candles || h4Candles.length < 50) {
+      return { aligned: true, boost: 0, reason: 'Insufficient H4 data' };
+    }
+    
+    // Calculate H4 EMA
+    const closes = h4Candles.map(c => c.close);
+    const ema = calculateEMA(closes, PROFIT_MAXIMIZATION_CONFIG.HTF_TREND_FILTER.EMA_PERIOD);
+    const currentEMA = ema[ema.length - 1];
+    const currentPrice = closes[closes.length - 1];
+    
+    // Check how many recent candles are above/below EMA
+    const requiredCandles = PROFIT_MAXIMIZATION_CONFIG.HTF_TREND_FILTER.REQUIRED_CANDLES_ABOVE;
+    const recentCloses = closes.slice(-requiredCandles);
+    const recentEMA = ema.slice(-requiredCandles);
+    
+    const aboveCount = recentCloses.filter((c, i) => c > recentEMA[i]).length;
+    const belowCount = recentCloses.filter((c, i) => c < recentEMA[i]).length;
+    
+    // Determine H4 trend
+    let htfTrend = 'neutral';
+    if (aboveCount >= requiredCandles) htfTrend = 'bullish';
+    if (belowCount >= requiredCandles) htfTrend = 'bearish';
+    
+    // Check alignment
+    const isBuy = proposedDirection === 'buy';
+    const aligned = (isBuy && htfTrend === 'bullish') || (!isBuy && htfTrend === 'bearish');
+    const counterTrend = (isBuy && htfTrend === 'bearish') || (!isBuy && htfTrend === 'bullish');
+    
+    if (aligned) {
+      console.log(`  ✅ HTF ALIGNED: ${proposedDirection.toUpperCase()} with ${htfTrend} H4 trend`);
+      return {
+        aligned: true,
+        boost: PROFIT_MAXIMIZATION_CONFIG.HTF_TREND_FILTER.BONUS_CONFIDENCE,
+        reason: `H4 trend ${htfTrend} - aligned`,
+        htfTrend,
+      };
+    }
+    
+    if (counterTrend && !PROFIT_MAXIMIZATION_CONFIG.HTF_TREND_FILTER.ALLOW_COUNTER_TREND) {
+      console.log(`  ❌ HTF BLOCKED: ${proposedDirection.toUpperCase()} against ${htfTrend} H4 trend`);
+      return {
+        aligned: false,
+        boost: 0,
+        reason: `H4 trend ${htfTrend} - counter-trend blocked`,
+        htfTrend,
+      };
+    }
+    
+    // Neutral trend - allow with no boost
+    return {
+      aligned: true,
+      boost: 0,
+      reason: `H4 trend neutral`,
+      htfTrend,
+    };
+  } catch (err) {
+    console.log(`  ⚠️ HTF check failed: ${err.message}`);
+    return { aligned: true, boost: 0, reason: 'HTF check error' };
+  }
+}
+
+/**
+ * Calculate ADX for trend strength
+ */
+function calculateADX(candles, period = 14) {
+  if (!candles || candles.length < period * 2) return 0;
+  
+  const highs = candles.map(c => c.high);
+  const lows = candles.map(c => c.low);
+  const closes = candles.map(c => c.close);
+  
+  // Calculate +DM, -DM, and TR
+  const plusDM = [];
+  const minusDM = [];
+  const tr = [];
+  
+  for (let i = 1; i < candles.length; i++) {
+    const highDiff = highs[i] - highs[i - 1];
+    const lowDiff = lows[i - 1] - lows[i];
+    
+    plusDM.push(highDiff > lowDiff && highDiff > 0 ? highDiff : 0);
+    minusDM.push(lowDiff > highDiff && lowDiff > 0 ? lowDiff : 0);
+    
+    const trueRange = Math.max(
+      highs[i] - lows[i],
+      Math.abs(highs[i] - closes[i - 1]),
+      Math.abs(lows[i] - closes[i - 1])
+    );
+    tr.push(trueRange);
+  }
+  
+  // Smooth with EMA
+  const smoothedPlusDM = calculateEMA(plusDM, period);
+  const smoothedMinusDM = calculateEMA(minusDM, period);
+  const smoothedTR = calculateEMA(tr, period);
+  
+  // Calculate +DI and -DI
+  const plusDI = [];
+  const minusDI = [];
+  const dx = [];
+  
+  for (let i = 0; i < smoothedTR.length; i++) {
+    const pdi = smoothedTR[i] > 0 ? (smoothedPlusDM[i] / smoothedTR[i]) * 100 : 0;
+    const mdi = smoothedTR[i] > 0 ? (smoothedMinusDM[i] / smoothedTR[i]) * 100 : 0;
+    plusDI.push(pdi);
+    minusDI.push(mdi);
+    
+    const diSum = pdi + mdi;
+    const diDiff = Math.abs(pdi - mdi);
+    dx.push(diSum > 0 ? (diDiff / diSum) * 100 : 0);
+  }
+  
+  // ADX is smoothed DX
+  const adx = calculateEMA(dx, period);
+  return adx.length > 0 ? adx[adx.length - 1] : 0;
+}
+
+/**
+ * Check trend strength and filter
+ */
+function checkTrendStrength(candles) {
+  if (!PROFIT_MAXIMIZATION_CONFIG.TREND_STRENGTH.ENABLED) {
+    return { canTrade: true, boost: 0, sizeMultiplier: 1.0, reason: 'Trend filter disabled' };
+  }
+  
+  const adx = calculateADX(candles, PROFIT_MAXIMIZATION_CONFIG.TREND_STRENGTH.ADX_PERIOD);
+  
+  // Strong trend - boost confidence
+  if (adx >= PROFIT_MAXIMIZATION_CONFIG.TREND_STRENGTH.STRONG_TREND_ADX) {
+    console.log(`  💪 STRONG TREND: ADX=${adx.toFixed(1)}`);
+    return {
+      canTrade: true,
+      boost: PROFIT_MAXIMIZATION_CONFIG.TREND_STRENGTH.STRONG_TREND_CONFIDENCE_BOOST,
+      sizeMultiplier: 1.2,
+      reason: `Strong trend ADX=${adx.toFixed(1)}`,
+      adx,
+    };
+  }
+  
+  // Normal trending
+  if (adx >= PROFIT_MAXIMIZATION_CONFIG.TREND_STRENGTH.MIN_ADX_FOR_TREND) {
+    return {
+      canTrade: true,
+      boost: 5,
+      sizeMultiplier: 1.0,
+      reason: `Trending ADX=${adx.toFixed(1)}`,
+      adx,
+    };
+  }
+  
+  // Ranging market - reduce or avoid
+  if (adx < PROFIT_MAXIMIZATION_CONFIG.TREND_STRENGTH.RANGING_ADX) {
+    if (PROFIT_MAXIMIZATION_CONFIG.TREND_STRENGTH.AVOID_RANGING) {
+      console.log(`  ⚠️ RANGING MARKET: ADX=${adx.toFixed(1)} - avoiding`);
+      return {
+        canTrade: false,
+        boost: 0,
+        sizeMultiplier: PROFIT_MAXIMIZATION_CONFIG.TREND_STRENGTH.RANGING_MARKET_REDUCTION,
+        reason: `Ranging market ADX=${adx.toFixed(1)}`,
+        adx,
+      };
+    }
+  }
+  
+  return { canTrade: true, boost: 0, sizeMultiplier: 1.0, reason: `ADX=${adx.toFixed(1)}`, adx };
+}
+
+/**
+ * Detect momentum explosion (breakout/spike)
+ */
+function detectMomentumExplosion(candles, atr) {
+  if (!PROFIT_MAXIMIZATION_CONFIG.MOMENTUM_EXPLOSION.ENABLED || !candles || candles.length < 10) {
+    return { isExplosion: false };
+  }
+  
+  const config = PROFIT_MAXIMIZATION_CONFIG.MOMENTUM_EXPLOSION;
+  const recentCandles = candles.slice(-5);
+  const prevCandles = candles.slice(-15, -5);
+  
+  // Calculate average candle size
+  const avgCandleSize = prevCandles.reduce((sum, c) => sum + Math.abs(c.close - c.open), 0) / prevCandles.length;
+  const lastCandle = recentCandles[recentCandles.length - 1];
+  const lastCandleSize = Math.abs(lastCandle.close - lastCandle.open);
+  
+  // Check for large candle (explosion)
+  const isBigCandle = lastCandleSize > atr * config.CANDLE_SIZE_ATR_MULTIPLIER;
+  
+  // Check for consecutive closes in same direction
+  const bullishCount = recentCandles.filter(c => c.close > c.open).length;
+  const bearishCount = recentCandles.filter(c => c.close < c.open).length;
+  const consecutiveDirection = bullishCount >= config.MIN_CONSECUTIVE_CLOSES ? 'buy' : 
+                               bearishCount >= config.MIN_CONSECUTIVE_CLOSES ? 'sell' : null;
+  
+  // Check if closing above/below previous highs/lows
+  const prevHigh = Math.max(...prevCandles.map(c => c.high));
+  const prevLow = Math.min(...prevCandles.map(c => c.low));
+  const breakoutUp = lastCandle.close > prevHigh;
+  const breakoutDown = lastCandle.close < prevLow;
+  
+  // Volume check (if available)
+  let volumeSpike = false;
+  if (lastCandle.tickVolume && prevCandles[0].tickVolume) {
+    const avgVolume = prevCandles.reduce((sum, c) => sum + (c.tickVolume || 0), 0) / prevCandles.length;
+    volumeSpike = lastCandle.tickVolume > avgVolume * config.VOLUME_SPIKE_MULTIPLIER;
+  }
+  
+  // Detect explosion
+  if ((isBigCandle || breakoutUp || breakoutDown) && consecutiveDirection) {
+    const direction = breakoutUp ? 'buy' : breakoutDown ? 'sell' : consecutiveDirection;
+    console.log(`  💥 MOMENTUM EXPLOSION: ${direction.toUpperCase()} - BigCandle=${isBigCandle}, Breakout=${breakoutUp || breakoutDown}, Volume=${volumeSpike}`);
+    
+    return {
+      isExplosion: true,
+      direction,
+      sizeMultiplier: config.EXPLOSION_POSITION_MULTIPLIER,
+      reason: `Momentum explosion detected - ${isBigCandle ? 'large candle' : ''} ${breakoutUp ? 'breakout up' : ''} ${breakoutDown ? 'breakout down' : ''}`.trim(),
+    };
+  }
+  
+  return { isExplosion: false };
+}
+
+/**
+ * Calculate dynamic position size based on confidence and conditions
+ */
+function calculateDynamicLotSize(baseSize, confidence, symbol, candles) {
+  if (!PROFIT_MAXIMIZATION_CONFIG.DYNAMIC_SIZING.ENABLED) {
+    return baseSize;
+  }
+  
+  const config = PROFIT_MAXIMIZATION_CONFIG.DYNAMIC_SIZING;
+  let multiplier = 1.0;
+  
+  // Confidence-based multiplier
+  for (const tier of config.CONFIDENCE_TIERS) {
+    if (confidence >= tier.minConfidence) {
+      multiplier = tier.multiplier;
+      break;
+    }
+  }
+  
+  // Session adjustment
+  const sessionInfo = getSessionInfo();
+  if (sessionInfo.isLowVolume) {
+    multiplier *= config.LOW_VOLATILITY_INCREASE; // Actually reduce in low volume
+    multiplier *= PROFIT_MAXIMIZATION_CONFIG.SESSION_BOOST.LOW_VOLUME_REDUCTION;
+  }
+  
+  // Streak adjustment
+  const streak = streakState.get(symbol);
+  if (streak) {
+    if (streak.consecutiveWins > 0) {
+      const bonus = Math.min(streak.consecutiveWins * config.WINNING_STREAK_BONUS, config.MAX_WINNING_STREAK_BONUS);
+      multiplier *= (1 + bonus);
+    }
+    if (streak.consecutiveLosses > 0) {
+      const reduction = Math.min(streak.consecutiveLosses * config.LOSING_STREAK_REDUCTION, 1 - config.MIN_AFTER_LOSING_STREAK);
+      multiplier *= (1 - reduction);
+    }
+  }
+  
+  // Calculate final size (round to 0.01)
+  const finalSize = Math.max(0.01, Math.round(baseSize * multiplier * 100) / 100);
+  
+  console.log(`  📊 DYNAMIC SIZE: base=${baseSize} × ${multiplier.toFixed(2)} = ${finalSize} (conf=${confidence}%)`);
+  return finalSize;
+}
+
+/**
+ * Check and handle re-entry after stop loss
+ */
+function checkReentryEligibility(symbol, direction, currentTime) {
+  if (!PROFIT_MAXIMIZATION_CONFIG.REENTRY.ENABLED) {
+    return { eligible: true, sizeMultiplier: 1.0 };
+  }
+  
+  const state = reentryState.get(symbol);
+  if (!state) {
+    return { eligible: true, sizeMultiplier: 1.0 };
+  }
+  
+  const config = PROFIT_MAXIMIZATION_CONFIG.REENTRY;
+  const timeSinceSL = (currentTime - state.lastSLTime) / (1000 * 60); // Minutes
+  
+  // Check cooldown
+  if (timeSinceSL < config.REENTRY_COOLDOWN_MINUTES) {
+    console.log(`  ⏳ REENTRY COOLDOWN: ${timeSinceSL.toFixed(0)}/${config.REENTRY_COOLDOWN_MINUTES} minutes`);
+    return { eligible: false, reason: 'Cooldown active' };
+  }
+  
+  // Check if same direction as stop loss
+  if (direction === state.direction) {
+    // Check re-entry count
+    if (state.reentryCount >= config.MAX_REENTRIES_PER_DIRECTION) {
+      console.log(`  ❌ MAX REENTRIES: ${state.reentryCount}/${config.MAX_REENTRIES_PER_DIRECTION} in ${direction}`);
+      return { eligible: false, reason: 'Max re-entries reached' };
+    }
+    
+    console.log(`  🔄 REENTRY ${state.reentryCount + 1}/${config.MAX_REENTRIES_PER_DIRECTION}: ${direction.toUpperCase()}`);
+    return { 
+      eligible: true, 
+      sizeMultiplier: config.REDUCE_SIZE_ON_REENTRY,
+      isReentry: true,
+    };
+  }
+  
+  // Different direction - reset state
+  reentryState.delete(symbol);
+  return { eligible: true, sizeMultiplier: 1.0 };
+}
+
+/**
+ * Record stop loss for re-entry tracking
+ */
+function recordStopLoss(symbol, direction) {
+  const state = reentryState.get(symbol) || { reentryCount: 0 };
+  
+  if (state.direction === direction) {
+    state.reentryCount++;
+  } else {
+    state.reentryCount = 0;
+  }
+  
+  state.direction = direction;
+  state.lastSLTime = Date.now();
+  state.lastReentryTime = null;
+  
+  reentryState.set(symbol, state);
+  console.log(`  📝 STOP LOSS RECORDED: ${symbol} ${direction.toUpperCase()} (reentry count: ${state.reentryCount})`);
+}
+
+/**
+ * Check and update profit lock (move SL to lock in profit)
+ */
+function checkProfitLock(position, currentPrice, atr, pipSize) {
+  if (!PROFIT_MAXIMIZATION_CONFIG.PROFIT_LOCK.ENABLED) {
+    return { shouldUpdate: false };
+  }
+  
+  const config = PROFIT_MAXIMIZATION_CONFIG.PROFIT_LOCK;
+  const openPrice = position.openPrice;
+  const currentSL = position.stopLoss;
+  const isBuy = position.type === 'buy' || position.type === 'POSITION_TYPE_BUY';
+  const symbol = position.symbol || 'DEFAULT';
+  const symbolKey = symbol.includes('XAU') ? 'XAUUSD' : symbol.includes('XAG') ? 'XAGUSD' : 'DEFAULT';
+  
+  // Calculate profit in ATR
+  const priceDiff = isBuy ? currentPrice - openPrice : openPrice - currentPrice;
+  const profitInATR = atr > 0 ? priceDiff / atr : 0;
+  
+  // Check breakeven trigger
+  if (profitInATR >= config.BREAKEVEN_TRIGGER_ATR) {
+    const bufferPips = config.BREAKEVEN_BUFFER_PIPS[symbolKey];
+    const bePrice = isBuy ? openPrice + (bufferPips * pipSize) : openPrice - (bufferPips * pipSize);
+    
+    // Only update if new SL is better
+    const shouldUpdate = isBuy ? bePrice > currentSL : bePrice < currentSL;
+    
+    if (shouldUpdate) {
+      console.log(`  🔒 PROFIT LOCK (BE): Moving SL to ${bePrice.toFixed(5)} (+${bufferPips} pips buffer)`);
+      return {
+        shouldUpdate: true,
+        newSL: bePrice,
+        reason: `Breakeven lock at ${profitInATR.toFixed(2)} ATR`,
+      };
+    }
+  }
+  
+  // Check lock triggers
+  for (const trigger of config.LOCK_TRIGGERS) {
+    if (profitInATR >= trigger.profitATR) {
+      const lockAmount = priceDiff * trigger.lockPercent;
+      const newSL = isBuy ? openPrice + lockAmount : openPrice - lockAmount;
+      
+      // Only update if new SL is better than current
+      const shouldUpdate = isBuy ? newSL > currentSL : newSL < currentSL;
+      
+      if (shouldUpdate) {
+        const lockedProfit = (lockAmount / pipSize).toFixed(0);
+        console.log(`  🔒 PROFIT LOCK (${(trigger.lockPercent * 100)}%): Locking ${lockedProfit} pips at ${profitInATR.toFixed(2)} ATR`);
+        return {
+          shouldUpdate: true,
+          newSL: newSL,
+          reason: `Lock ${(trigger.lockPercent * 100)}% profit at ${trigger.profitATR} ATR`,
+        };
+      }
+    }
+  }
+  
+  return { shouldUpdate: false };
+}
+
+/**
+ * Setup runner position (keep portion for extended moves)
+ */
+function setupRunner(position, originalTP, atr) {
+  if (!PROFIT_MAXIMIZATION_CONFIG.TP_RUNNER.ENABLED) {
+    return null;
+  }
+  
+  const positionId = String(position.id);
+  
+  // Check if runner already exists
+  if (runnerPositions.has(positionId)) {
+    return runnerPositions.get(positionId);
+  }
+  
+  const config = PROFIT_MAXIMIZATION_CONFIG.TP_RUNNER;
+  const runnerInfo = {
+    originalTP,
+    runnerLevel: 0,
+    startTime: Date.now(),
+    targetMultipliers: config.EXTENDED_TP_MULTIPLIERS,
+  };
+  
+  runnerPositions.set(positionId, runnerInfo);
+  console.log(`  🏃 RUNNER SETUP: Position ${positionId} - keeping ${(config.RUNNER_PERCENT * 100)}% for extended targets`);
+  
+  return runnerInfo;
+}
+
+/**
+ * Update streak tracking on trade close
+ */
+function updateStreak(symbol, profit) {
+  const state = streakState.get(symbol) || { consecutiveWins: 0, consecutiveLosses: 0, lastResult: null };
+  
+  if (profit >= 0) {
+    state.consecutiveWins++;
+    state.consecutiveLosses = 0;
+    state.lastResult = 'win';
+  } else {
+    state.consecutiveLosses++;
+    state.consecutiveWins = 0;
+    state.lastResult = 'loss';
+  }
+  
+  streakState.set(symbol, state);
+  console.log(`  📈 STREAK UPDATE: ${symbol} - Wins: ${state.consecutiveWins}, Losses: ${state.consecutiveLosses}`);
+  
+  return state;
+}
+
+/**
+ * Apply all profit maximization filters to a signal
+ */
+async function applyProfitMaximizationFilters(signal, account, candles) {
+  let finalConfidence = signal.confidence || 60;
+  let finalLotMultiplier = 1.0;
+  let blocked = false;
+  let reasons = [];
+  
+  // 1. Session boost
+  const sessionInfo = getSessionInfo();
+  finalConfidence += sessionInfo.confidenceBoost;
+  if (sessionInfo.confidenceBoost > 0) {
+    reasons.push(`Session(+${sessionInfo.confidenceBoost})`);
+  }
+  if (sessionInfo.isLowVolume) {
+    finalLotMultiplier *= PROFIT_MAXIMIZATION_CONFIG.SESSION_BOOST.LOW_VOLUME_REDUCTION;
+    reasons.push(`LowVolume(×${PROFIT_MAXIMIZATION_CONFIG.SESSION_BOOST.LOW_VOLUME_REDUCTION})`);
+  }
+  
+  // 2. Higher timeframe trend filter
+  const htfResult = await checkHTFTrendAlignment(account, signal.symbol, signal.type);
+  if (!htfResult.aligned) {
+    blocked = true;
+    reasons.push(`HTF_BLOCKED(${htfResult.htfTrend})`);
+  } else {
+    finalConfidence += htfResult.boost;
+    if (htfResult.boost > 0) {
+      reasons.push(`HTF(+${htfResult.boost})`);
+    }
+  }
+  
+  // 3. Trend strength filter (ADX)
+  const trendResult = checkTrendStrength(candles);
+  if (!trendResult.canTrade) {
+    blocked = true;
+    reasons.push(`RANGING(ADX=${trendResult.adx?.toFixed(0)})`);
+  } else {
+    finalConfidence += trendResult.boost;
+    finalLotMultiplier *= trendResult.sizeMultiplier;
+    if (trendResult.boost > 0) {
+      reasons.push(`Trend(+${trendResult.boost})`);
+    }
+  }
+  
+  // 4. Momentum explosion detection
+  const momentumResult = detectMomentumExplosion(candles, signal.atr);
+  if (momentumResult.isExplosion && momentumResult.direction === signal.type) {
+    finalConfidence += 15;
+    finalLotMultiplier *= momentumResult.sizeMultiplier;
+    reasons.push(`EXPLOSION(×${momentumResult.sizeMultiplier})`);
+  }
+  
+  // 5. Re-entry check
+  const reentryResult = checkReentryEligibility(signal.symbol, signal.type, Date.now());
+  if (!reentryResult.eligible) {
+    blocked = true;
+    reasons.push(`REENTRY_BLOCKED(${reentryResult.reason})`);
+  } else if (reentryResult.isReentry) {
+    finalLotMultiplier *= reentryResult.sizeMultiplier;
+    reasons.push(`REENTRY(×${reentryResult.sizeMultiplier})`);
+  }
+  
+  // Cap confidence at 99
+  finalConfidence = Math.min(99, finalConfidence);
+  
+  console.log(`  🚀 PROFIT MAX: ${signal.symbol} ${signal.type.toUpperCase()} - conf=${finalConfidence}%, lot×${finalLotMultiplier.toFixed(2)}, blocked=${blocked}`);
+  if (reasons.length > 0) {
+    console.log(`     Factors: ${reasons.join(', ')}`);
+  }
+  
+  return {
+    blocked,
+    finalConfidence,
+    lotMultiplier: finalLotMultiplier,
+    sessionInfo,
+    htfTrend: htfResult.htfTrend,
+    adx: trendResult.adx,
+    isExplosion: momentumResult.isExplosion,
+    reasons,
+  };
+}
+
+// =========================================================================
 // SIMPLIFIED BOT CONFIGURATION - All bots use ensemble engine
 // =========================================================================
 const BOT_CONFIG = {
@@ -202,9 +1798,20 @@ function canBotTrade(robotId, robotName) {
 
 // =========================================================================
 // CANDLE CACHE - Reduces API calls to avoid rate limiting
+// Multi-timeframe aware caching with different TTLs per timeframe
 // =========================================================================
 const candleCache = new Map();
-const CANDLE_CACHE_TTL = 30000; // 30 seconds cache
+const CANDLE_CACHE_TTL = 30000; // 30 seconds default cache
+
+// Timeframe-specific cache TTLs (higher timeframes can cache longer)
+const TIMEFRAME_CACHE_TTL = {
+  'm1': 30 * 1000,    // 30 seconds
+  'm5': 60 * 1000,    // 1 minute
+  'm15': 2 * 60 * 1000, // 2 minutes
+  'm30': 5 * 60 * 1000, // 5 minutes
+  'h1': 10 * 60 * 1000, // 10 minutes
+  'h4': 30 * 60 * 1000, // 30 minutes
+};
 
 // =========================================================================
 // ACCOUNT DATA CACHE - Prevents rate limiting on getPositions/getAccountInfo
@@ -915,8 +2522,18 @@ async function executeTradeViaMetaApi(connection, accountId, robotId, userId, si
         tpPips: signal.tpPips,
         symbol: signal.symbol,
         type: signal.type,
+        openTime: new Date(),
       });
       console.log(`  📝 Tracking position ${positionId} with strategy: ${signal.strategy}`);
+      
+      // 📊 Record trade open analytics
+      recordAnalytics('trade_open', {
+        strategy: signal.strategy,
+        symbol: signal.symbol,
+        type: signal.type,
+        confidence: signal.confidence,
+        volume: signal.volume,
+      });
     }
     
     return tradeResult.rows[0];
@@ -3105,7 +4722,7 @@ function analyzeRSIDivergence(candles, symbol, botConfig = null) {
  * 8. RSI Divergence Reversal (1.2)
  * =========================================================================
  */
-function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
+function analyzeWithMultipleStrategies(candles, symbol, botConfig = null, account = null, allTimeframeCandles = null) {
   if (!candles || candles.length < 60) return null;
   
   const isGold = isGoldSymbol(symbol);
@@ -3124,27 +4741,29 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
   }
   
   // ================================================================
-  // FIXED STRATEGY WEIGHTS (from ENSEMBLE_CONFIG)
+  // MULTI-TIMEFRAME STRATEGY DEFINITIONS
+  // Each strategy runs on its OWN timeframe for optimal signal detection
   // ================================================================
   const strategies = [
-    { name: 'EMA-Pullback', fn: analyzeEMA200Pullback, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['EMA-Pullback'] },
-    { name: 'Break-Retest', fn: analyzeBreakAndRetest, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['Break-Retest'] },
-    { name: 'Liquidity-Sweep', fn: analyzeLiquiditySweep, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['Liquidity-Sweep'] },
-    { name: 'London-Breakout', fn: analyzeLondonBreakout, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['London-Breakout'] },
-    { name: 'Order-Block', fn: analyzeOrderBlock, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['Order-Block'] },
-    { name: 'VWAP-Reversion', fn: analyzeVWAPReversion, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['VWAP-Reversion'] },
-    { name: 'Fibonacci', fn: analyzeFibonacciContinuation, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['Fibonacci'] },
-    { name: 'RSI-Divergence', fn: analyzeRSIDivergence, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['RSI-Divergence'] },
+    { name: 'EMA-Pullback', fn: analyzeEMA200Pullback, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['EMA-Pullback'], config: STRATEGY_TIMEFRAMES['EMA-Pullback'] },
+    { name: 'Break-Retest', fn: analyzeBreakAndRetest, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['Break-Retest'], config: STRATEGY_TIMEFRAMES['Break-Retest'] },
+    { name: 'Liquidity-Sweep', fn: analyzeLiquiditySweep, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['Liquidity-Sweep'], config: STRATEGY_TIMEFRAMES['Liquidity-Sweep'] },
+    { name: 'London-Breakout', fn: analyzeLondonBreakout, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['London-Breakout'], config: STRATEGY_TIMEFRAMES['London-Breakout'] },
+    { name: 'Order-Block', fn: analyzeOrderBlock, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['Order-Block'], config: STRATEGY_TIMEFRAMES['Order-Block'] },
+    { name: 'VWAP-Reversion', fn: analyzeVWAPReversion, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['VWAP-Reversion'], config: STRATEGY_TIMEFRAMES['VWAP-Reversion'] },
+    { name: 'Fibonacci', fn: analyzeFibonacciContinuation, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['Fibonacci'], config: STRATEGY_TIMEFRAMES['Fibonacci'] },
+    { name: 'RSI-Divergence', fn: analyzeRSIDivergence, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['RSI-Divergence'], config: STRATEGY_TIMEFRAMES['RSI-Divergence'] },
   ];
   
   const currentPrice = candles[candles.length - 1].close;
   const atr = calculateATR(candles, 14);
   const pipSize = getPipSize(symbol);
+  const currentHour = new Date().getUTCHours();
   
   // ================================================================
-  // RUN ALL 8 STRATEGIES - Collect signals
+  // RUN ALL 8 STRATEGIES ON THEIR RESPECTIVE TIMEFRAMES
   // ================================================================
-  console.log(`  🔍 ${symbol}: Running all 8 strategies...`);
+  console.log(`  🔍 ${symbol}: Running 8 strategies across multiple timeframes...`);
   
   const allSignals = [];
   let buyScore = 0;
@@ -3156,7 +4775,42 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
   
   for (const strategy of strategies) {
     try {
-      const signal = strategy.fn(candles, symbol, botConfig);
+      const stratConfig = strategy.config;
+      const stratTimeframe = stratConfig.timeframe;
+      
+      // Check if strategy should run based on trading hours
+      const tradingHours = stratConfig.tradingHours;
+      if (tradingHours && (currentHour < tradingHours.start || currentHour >= tradingHours.end)) {
+        console.log(`    ⏸️ ${strategy.name}: Outside trading hours (${tradingHours.start}-${tradingHours.end} UTC)`);
+        continue;
+      }
+      
+      // Check if it's time to evaluate this strategy (based on timeframe interval)
+      const evalKey = `${symbol}_${strategy.name}`;
+      const lastEval = lastStrategyEvaluation.get(evalKey) || 0;
+      const evalInterval = TIMEFRAME_EVALUATION_INTERVALS[stratTimeframe] || 60000;
+      
+      if (Date.now() - lastEval < evalInterval * 0.8) { // 80% of interval to avoid edge cases
+        // Use cached result if available and recent
+        continue;
+      }
+      lastStrategyEvaluation.set(evalKey, Date.now());
+      
+      // Get the correct timeframe candles for this strategy
+      let strategyCandles = candles; // Default to provided candles
+      
+      if (allTimeframeCandles && allTimeframeCandles[stratTimeframe]) {
+        strategyCandles = allTimeframeCandles[stratTimeframe];
+        console.log(`    📊 ${strategy.name} using ${stratTimeframe} candles (${strategyCandles.length} bars)`);
+      }
+      
+      // Ensure we have enough candles for this strategy
+      if (strategyCandles.length < stratConfig.candlesNeeded * 0.6) {
+        console.log(`    ⏭️ ${strategy.name}: Insufficient ${stratTimeframe} data (${strategyCandles.length}/${stratConfig.candlesNeeded})`);
+        continue;
+      }
+      
+      const signal = strategy.fn(strategyCandles, symbol, botConfig);
       
       if (signal && signal.type) {
         // Apply candle pattern boost
@@ -3175,23 +4829,29 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
           }
         }
         
+        // Store strategy-specific SL/TP multipliers with the signal
+        signal.slMultiplier = stratConfig.slMultiplier;
+        signal.tpMultiplier = stratConfig.tpMultiplier;
+        signal.maxHoldingPeriod = stratConfig.maxHoldingPeriod;
+        signal.sourceTimeframe = stratTimeframe;
+        
         const weighted = strategy.weight;
         
         if (signal.type === 'buy') {
           buyScore += weighted;
           buyCount++;
-          buyStrategies.push({ name: strategy.name, weight: weighted, confidence: signal.confidence, signal });
-          console.log(`    ✓ ${strategy.name}: BUY (weight: ${weighted}, conf: ${signal.confidence}%)`);
+          buyStrategies.push({ name: strategy.name, weight: weighted, confidence: signal.confidence, signal, timeframe: stratTimeframe });
+          console.log(`    ✓ ${strategy.name} [${stratTimeframe}]: BUY (weight: ${weighted}, conf: ${signal.confidence}%)`);
         } else if (signal.type === 'sell') {
           sellScore += weighted;
           sellCount++;
-          sellStrategies.push({ name: strategy.name, weight: weighted, confidence: signal.confidence, signal });
-          console.log(`    ✓ ${strategy.name}: SELL (weight: ${weighted}, conf: ${signal.confidence}%)`);
+          sellStrategies.push({ name: strategy.name, weight: weighted, confidence: signal.confidence, signal, timeframe: stratTimeframe });
+          console.log(`    ✓ ${strategy.name} [${stratTimeframe}]: SELL (weight: ${weighted}, conf: ${signal.confidence}%)`);
         }
         
-        allSignals.push({ ...signal, strategyName: strategy.name, weight: weighted });
+        allSignals.push({ ...signal, strategyName: strategy.name, weight: weighted, timeframe: stratTimeframe });
       } else {
-        console.log(`    ○ ${strategy.name}: NONE`);
+        console.log(`    ○ ${strategy.name} [${stratTimeframe}]: NONE`);
       }
     } catch (err) {
       console.log(`    ✗ ${strategy.name}: ERROR - ${err.message}`);
@@ -3303,6 +4963,18 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
   
   const reason = `ENSEMBLE[${strategyCount}/${strategies.length}]: ${alignedStrategies.map(s => s.name).join('+')} | Score=${totalScore.toFixed(2)} | ${bestSignal.reason || ''}`;
   
+  // 📊 Record signal analytics
+  recordAnalytics('signal', {
+    symbol,
+    strategy: 'ensemble',
+    type: direction,
+    confidence: avgConfidence,
+    strategyCount,
+    alignedStrategies: alignedStrategies.map(s => s.name),
+    buyScore,
+    sellScore,
+  });
+  
   return {
     symbol,
     type: direction,
@@ -3344,6 +5016,7 @@ function normalizeTimeframe(tf = 'm5') {
 
 /**
  * Fetch candle data via MetaAPI - WITH CACHING to avoid rate limits
+ * Uses timeframe-specific cache TTLs for optimal performance
  */
 async function fetchCandles(account, symbol, timeframe, count = 50) {
   if (!account) {
@@ -3351,10 +5024,12 @@ async function fetchCandles(account, symbol, timeframe, count = 50) {
     return null;
   }
   
-  // Check cache first
+  // Check cache first with timeframe-specific TTL
   const cacheKey = `${symbol}_${timeframe}_${count}`;
   const cached = candleCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CANDLE_CACHE_TTL) {
+  const cacheTTL = TIMEFRAME_CACHE_TTL[timeframe] || CANDLE_CACHE_TTL;
+  
+  if (cached && Date.now() - cached.timestamp < cacheTTL) {
     return cached.candles;
   }
   
@@ -3370,17 +5045,20 @@ async function fetchCandles(account, symbol, timeframe, count = 50) {
     // Cache the result
     candleCache.set(cacheKey, { candles, timestamp: Date.now() });
     
-    console.log(`  ✅ Got ${candles.length} real candles for ${symbol}`);
+    // Only log on first fetch or cache miss (not on every call)
+    if (!cached) {
+      console.log(`  ✅ Got ${candles.length} ${timeframe} candles for ${symbol}`);
+    }
     return candles;
   } catch (error) {
     // If rate limited, try to use cached data even if expired
     if (error.message?.includes('cpu credits') || error.message?.includes('rate limit')) {
-      console.log(`  ⚠️ Rate limited on ${symbol} - using cached data if available`);
+      console.log(`  ⚠️ Rate limited on ${symbol} ${timeframe} - using cached data if available`);
       if (cached) {
         return cached.candles;
       }
     }
-    console.log(`  ❌ Failed to fetch candles for ${symbol}: ${error.message} - skipping (no fake data)`);
+    console.log(`  ❌ Failed to fetch ${timeframe} candles for ${symbol}: ${error.message}`);
     return null;
   }
 }
@@ -3962,49 +5640,6 @@ function analyzeMarketForSwing(candles, symbol, riskLevel = 'medium', botConfig 
 }
 
 /**
- * Calculate ADX (Average Directional Index)
- */
-function calculateADX(candles, period = 14) {
-  if (candles.length < period * 2) return 20; // Default
-  
-  let sumDX = 0;
-  let plusDMSum = 0;
-  let minusDMSum = 0;
-  let trSum = 0;
-  
-  for (let i = 1; i < candles.length; i++) {
-    const high = candles[i].high;
-    const low = candles[i].low;
-    const prevHigh = candles[i-1].high;
-    const prevLow = candles[i-1].low;
-    const prevClose = candles[i-1].close;
-    
-    const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
-    const plusDM = high - prevHigh > prevLow - low ? Math.max(high - prevHigh, 0) : 0;
-    const minusDM = prevLow - low > high - prevHigh ? Math.max(prevLow - low, 0) : 0;
-    
-    if (i <= period) {
-      trSum += tr;
-      plusDMSum += plusDM;
-      minusDMSum += minusDM;
-    } else {
-      trSum = trSum - trSum/period + tr;
-      plusDMSum = plusDMSum - plusDMSum/period + plusDM;
-      minusDMSum = minusDMSum - minusDMSum/period + minusDM;
-    }
-    
-    if (i >= period) {
-      const plusDI = trSum > 0 ? (plusDMSum / trSum) * 100 : 0;
-      const minusDI = trSum > 0 ? (minusDMSum / trSum) * 100 : 0;
-      const dx = (plusDI + minusDI) > 0 ? Math.abs(plusDI - minusDI) / (plusDI + minusDI) * 100 : 0;
-      sumDX += dx;
-    }
-  }
-  
-  return sumDX / (candles.length - period);
-}
-
-/**
  * =========================================================================
  * SMART MARKET ANALYSIS - Only trade on real opportunities
  * =========================================================================
@@ -4473,7 +6108,151 @@ async function executeRobotTrade(robot) {
     // Calculate current P/L
     const currentProfitLoss = livePositions.reduce((sum, p) => sum + (p.profit || p.unrealizedProfit || 0), 0);
     
-    // Risk check: Can we open more trades?
+    // ================================================================
+    // 🛡️ KILL SWITCH CHECK - First line of defense
+    // ================================================================
+    const dailyStartBalance = getDailyStartBalance(accountId, accountInfo.balance);
+    const killSwitchCheck = checkKillSwitch(accountInfo.balance, accountInfo.equity, dailyStartBalance);
+    
+    if (!killSwitchCheck.canTrade) {
+      console.log(`  🛑 KILL SWITCH: ${killSwitchCheck.reason}`);
+      
+      // EMERGENCY: Close all positions
+      if (killSwitchCheck.closeAll && livePositions.length > 0) {
+        console.log(`  🚨 EMERGENCY CLOSE: Closing ${livePositions.length} positions`);
+        for (const pos of livePositions) {
+          try {
+            await connection.closePosition(pos.id);
+            console.log(`    ✅ Emergency closed: ${pos.symbol} ${pos.id}`);
+            updateKillSwitchOnClose(pos.profit || 0);
+          } catch (closeErr) {
+            console.log(`    ❌ Failed to close ${pos.id}: ${closeErr.message}`);
+          }
+        }
+      }
+      return;
+    }
+    
+    // Apply lot multiplier from kill switch (recovery/soft mode)
+    const killSwitchLotMultiplier = killSwitchCheck.lotMultiplier || 1.0;
+    if (killSwitchLotMultiplier < 1.0) {
+      console.log(`  ⚠️ ${killSwitchCheck.level?.toUpperCase()} MODE: Lot size reduced to ${(killSwitchLotMultiplier * 100)}%`);
+    }
+    
+    // ================================================================
+    // 💎 EQUITY PROTECTION CHECK
+    // ================================================================
+    const equityCheck = checkEquityProtection(
+      accountInfo.balance, 
+      accountInfo.equity, 
+      accountInfo.marginLevel,
+      livePositions
+    );
+    
+    if (!equityCheck.canTrade) {
+      console.log(`  🛡️ EQUITY PROTECTION: ${equityCheck.reason}`);
+      
+      // Close worst position if required
+      if (equityCheck.closeWorst && equityCheck.worstPositionId) {
+        try {
+          await connection.closePosition(equityCheck.worstPositionId);
+          console.log(`    ✅ Closed worst position: ${equityCheck.worstPositionId}`);
+        } catch (closeErr) {
+          console.log(`    ❌ Failed to close worst: ${closeErr.message}`);
+        }
+      }
+      return;
+    }
+    
+    // ================================================================
+    // 📈 PARTIAL PROFIT & TRAILING STOP MANAGEMENT
+    // ================================================================
+    if (livePositions.length > 0) {
+      console.log(`  🔄 Managing ${livePositions.length} open positions...`);
+      
+      for (const position of livePositions) {
+        try {
+          const posSymbol = position.symbol;
+          const pipSize = getPipSize(posSymbol);
+          
+          // Get candles for position management
+          const account = await getAccount(metaApiAccountId, accountId);
+          if (!account) continue;
+          
+          const candles = await fetchCandles(account, posSymbol, 'm15', 50);
+          if (!candles || candles.length < 20) continue;
+          
+          const atr = calculateATR(candles, 14);
+          const currentPrice = candles[candles.length - 1].close;
+          
+          // ================================================================
+          // 🔒 CHECK PROFIT LOCK FIRST (Never turn winners into losers)
+          // ================================================================
+          const profitLockResult = checkProfitLock(position, currentPrice, atr, pipSize);
+          if (profitLockResult.shouldUpdate && profitLockResult.newSL) {
+            try {
+              await connection.modifyPosition(position.id, profitLockResult.newSL, position.takeProfit);
+              console.log(`    🔒 PROFIT LOCK: SL → ${profitLockResult.newSL.toFixed(5)} (${profitLockResult.reason})`);
+              recordAnalytics('profit_lock', { 
+                positionId: position.id, 
+                symbol: posSymbol, 
+                newSL: profitLockResult.newSL 
+              });
+            } catch (lockErr) {
+              if (!lockErr.message?.includes('same value')) {
+                console.log(`    ⚠️ Profit lock failed: ${lockErr.message}`);
+              }
+            }
+          }
+          
+          // Check partial profit
+          const partialResult = checkPartialProfit(position, currentPrice, atr, pipSize);
+          if (partialResult.action === 'partial_close' && partialResult.closeVolume > 0) {
+            try {
+              // Close partial volume
+              await connection.closePositionPartially(position.id, partialResult.closeVolume);
+              console.log(`    💰 Partial close Level ${partialResult.level}: ${partialResult.closeVolume} lots at ${partialResult.profitATR.toFixed(2)} ATR`);
+              
+              // Update SL if specified
+              if (partialResult.newSL && position.takeProfit) {
+                await connection.modifyPosition(position.id, partialResult.newSL, position.takeProfit);
+                console.log(`    📍 SL updated to ${partialResult.newSL.toFixed(5)}`);
+              }
+              
+              // Setup runner if this was the last partial
+              if (partialResult.level === 3) {
+                setupRunner(position, position.takeProfit, atr);
+              }
+            } catch (partialErr) {
+              // closePositionPartially might not be available, try alternative
+              if (partialErr.message?.includes('not a function') || partialErr.message?.includes('closePositionPartially')) {
+                console.log(`    ⚠️ Partial close not supported, skipping`);
+              } else {
+                console.log(`    ⚠️ Partial close failed: ${partialErr.message}`);
+              }
+            }
+          }
+          
+          // Check smart trailing stop
+          const trailResult = calculateSmartTrailingStop(position, currentPrice, atr, pipSize, posSymbol, candles);
+          if (trailResult.shouldUpdate && trailResult.newSL) {
+            try {
+              await connection.modifyPosition(position.id, trailResult.newSL, position.takeProfit);
+              console.log(`    🎯 Trail updated: SL → ${trailResult.newSL.toFixed(5)}`);
+            } catch (trailErr) {
+              if (!trailErr.message?.includes('same value')) {
+                console.log(`    ⚠️ Trail update failed: ${trailErr.message}`);
+              }
+            }
+          }
+          
+        } catch (posErr) {
+          console.log(`    ⚠️ Position management error: ${posErr.message}`);
+        }
+      }
+    }
+    
+    // Standard risk check: Can we open more trades?
     const riskCheck = canOpenMoreTrades(
       accountInfo.balance,
       accountInfo.equity,
@@ -4508,12 +6287,43 @@ async function executeRobotTrade(robot) {
     const pairsToScan = TRADING_PAIRS.filter(p => allowedPairs.includes(p));
     
     console.log(`  📋 Scanning ${pairsToScan.length} pairs for ${robotName}: ${pairsToScan.join(', ')}`);
-    console.log(`  ⚙️ Ensemble Engine: minAlign=${ENSEMBLE_CONFIG.MIN_STRATEGIES_ALIGNED}, scoreDiff=${ENSEMBLE_CONFIG.MIN_SCORE_DIFFERENCE}, maxPos=${ENSEMBLE_CONFIG.MAX_POSITIONS_PER_SYMBOL}`);
+    console.log(`  ⚙️ Multi-TF Ensemble: minAlign=${ENSEMBLE_CONFIG.MIN_STRATEGIES_ALIGNED}, scoreDiff=${ENSEMBLE_CONFIG.MIN_SCORE_DIFFERENCE}, maxPos=${ENSEMBLE_CONFIG.MAX_POSITIONS_PER_SYMBOL}`);
     
     for (const symbol of pairsToScan) {
       try {
-        // Get candle data
-        const candles = await fetchCandles(account, symbol, timeframe?.toLowerCase() || 'm15', 100);
+        // ================================================================
+        // FETCH CANDLES FOR ALL TIMEFRAMES (Multi-Timeframe Analysis)
+        // ================================================================
+        const allTimeframeCandles = {};
+        const timeframesToFetch = ['m1', 'm5', 'm15', 'm30', 'h1', 'h4'];
+        
+        console.log(`  📊 ${symbol}: Fetching multi-timeframe data...`);
+        
+        // Fetch candles for each timeframe in parallel
+        const candlePromises = timeframesToFetch.map(async (tf) => {
+          try {
+            const tfCandles = await fetchCandles(account, symbol, tf, 150);
+            return { tf, candles: tfCandles };
+          } catch (err) {
+            console.log(`    ⚠️ Failed to fetch ${tf} candles: ${err.message}`);
+            return { tf, candles: null };
+          }
+        });
+        
+        const candleResults = await Promise.all(candlePromises);
+        
+        for (const result of candleResults) {
+          if (result.candles && result.candles.length > 0) {
+            allTimeframeCandles[result.tf] = result.candles;
+          }
+        }
+        
+        // Log timeframe data availability
+        const tfStats = Object.entries(allTimeframeCandles).map(([tf, c]) => `${tf}:${c.length}`).join(', ');
+        console.log(`    📈 Timeframe data: ${tfStats}`);
+        
+        // Use M15 as the default/primary timeframe for general calculations
+        const candles = allTimeframeCandles['m15'] || allTimeframeCandles['m5'] || Object.values(allTimeframeCandles)[0];
         
         if (!candles || candles.length < 30) {
           skippedSymbols.push(`${symbol}(no candles)`);
@@ -4524,13 +6334,32 @@ async function executeRobotTrade(robot) {
         const atr = calculateATR(candles, 14);
         
         // ================================================================
-        // RUN ENSEMBLE STRATEGY ANALYZER
+        // RUN MULTI-TIMEFRAME ENSEMBLE STRATEGY ANALYZER
         // ================================================================
-        const signal = analyzeWithMultipleStrategies(candles, symbol, botConfig);
+        const signal = analyzeWithMultipleStrategies(candles, symbol, botConfig, account, allTimeframeCandles);
         
         if (!signal) {
           continue;
         }
+        
+        // ================================================================
+        // 🚀 APPLY PROFIT MAXIMIZATION FILTERS
+        // ================================================================
+        const profitMaxResult = await applyProfitMaximizationFilters(signal, account, candles);
+        
+        if (profitMaxResult.blocked) {
+          console.log(`  🚫 ${symbol}: BLOCKED by profit maximization filters - ${profitMaxResult.reasons.join(', ')}`);
+          skippedSymbols.push(`${symbol}(${profitMaxResult.reasons[0]})`);
+          continue;
+        }
+        
+        // Apply confidence boost and lot multiplier
+        signal.confidence = profitMaxResult.finalConfidence;
+        signal.profitMaxLotMultiplier = profitMaxResult.lotMultiplier;
+        signal.sessionInfo = profitMaxResult.sessionInfo;
+        signal.htfTrend = profitMaxResult.htfTrend;
+        signal.adx = profitMaxResult.adx;
+        signal.isExplosion = profitMaxResult.isExplosion;
         
         // ================================================================
         // GET SYMBOL STATE - Track positions and scaling
@@ -4659,12 +6488,18 @@ async function executeRobotTrade(robot) {
     // ================================================================
     let totalTradesOpened = 0;
     
-    for (const { symbol, signal, positionsToOpen, weightedScore, atr } of signals) {
+    for (const { symbol, signal, candles, positionsToOpen, weightedScore, atr } of signals) {
       const state = getSymbolState(symbol);
       const currentPrice = signal.entryPrice;
       
       console.log(`\n  📊 EXECUTING: ${symbol} ${signal.type.toUpperCase()}`);
       console.log(`     Score: ${weightedScore.toFixed(2)} | Strategies: ${signal.strategyCount} | Positions to open: ${positionsToOpen}`);
+      if (signal.sessionInfo) {
+        console.log(`     Session: ${signal.sessionInfo.session || 'N/A'} | HTF: ${signal.htfTrend || 'N/A'} | ADX: ${signal.adx?.toFixed(0) || 'N/A'}`);
+      }
+      if (signal.isExplosion) {
+        console.log(`     💥 MOMENTUM EXPLOSION DETECTED - Increased position size`);
+      }
       
       // Re-check risk before opening
       const currentPL = livePositions.reduce((sum, p) => sum + (p.profit || 0), 0);
@@ -4675,9 +6510,21 @@ async function executeRobotTrade(robot) {
         continue;
       }
       
-      // Calculate lot size per position
-      const lotSize = calculatePositionSize(accountInfo.balance, signal.slPips, symbol, signal.confidence, botConfig, 1.0);
-      signal.volume = lotSize;
+      // Calculate lot size per position with profit max multipliers
+      let baseLotSize = calculatePositionSize(accountInfo.balance, signal.slPips, symbol, signal.confidence, botConfig, 1.0);
+      
+      // Apply profit maximization multiplier (from session, trend, explosion, etc.)
+      const profitMaxMultiplier = signal.profitMaxLotMultiplier || 1.0;
+      baseLotSize = Math.round(baseLotSize * profitMaxMultiplier * 100) / 100;
+      
+      // Apply dynamic sizing based on confidence and streaks
+      const finalLotSize = calculateDynamicLotSize(baseLotSize, signal.confidence, symbol, candles);
+      
+      // Apply kill switch reduction if in soft/recovery mode
+      signal.volume = Math.round(finalLotSize * killSwitchLotMultiplier * 100) / 100;
+      signal.volume = Math.max(0.01, signal.volume); // Minimum 0.01 lot
+      
+      console.log(`     💰 Lot size: base=${baseLotSize} × profitMax=${profitMaxMultiplier.toFixed(2)} × dynamic → ${signal.volume}`);
       
       let positionsOpened = 0;
       
@@ -5224,3 +7071,144 @@ export function getTradingSchedulerStatus() {
     message: isRunning ? 'Trading scheduler is active' : 'Trading scheduler is stopped'
   };
 }
+
+// =========================================================================
+// 📊 SIGNAL ANALYTICS DASHBOARD API
+// =========================================================================
+
+/**
+ * Get full analytics dashboard data
+ */
+export function getAnalyticsDashboard() {
+  const summary = getAnalyticsSummary();
+  const sessionInfo = getSessionInfo();
+  
+  // Convert streak state to object for JSON
+  const streakData = {};
+  for (const [symbol, state] of streakState.entries()) {
+    streakData[symbol] = state;
+  }
+  
+  return {
+    ...summary,
+    protectionStatus: {
+      killSwitch: {
+        active: killSwitchState.isActive,
+        level: killSwitchState.level,
+        triggeredAt: killSwitchState.triggeredAt ? new Date(killSwitchState.triggeredAt).toISOString() : null,
+        recoveryMode: killSwitchState.recoveryMode,
+        recoveryProgress: killSwitchState.recoveryMode 
+          ? `${killSwitchState.recoveryWins}/${KILL_SWITCH_CONFIG.RECOVERY_TRADES_REQUIRED}` 
+          : null,
+      },
+      equity: {
+        peakEquity: killSwitchState.peakEquity,
+        dailyStartEquity: killSwitchState.dailyStartEquity,
+        consecutiveLosses: killSwitchState.consecutiveLosses,
+        sessionLossCount: killSwitchState.sessionLossCount,
+      },
+    },
+    profitMaximization: {
+      currentSession: sessionInfo.session,
+      confidenceBoost: sessionInfo.confidenceBoost,
+      riskMultiplier: sessionInfo.riskMultiplier,
+      isHighVolume: sessionInfo.isHighVolume,
+      isLowVolume: sessionInfo.isLowVolume,
+      htfTrendFilter: PROFIT_MAXIMIZATION_CONFIG.HTF_TREND_FILTER.ENABLED ? 'Active' : 'Disabled',
+      trendStrengthFilter: PROFIT_MAXIMIZATION_CONFIG.TREND_STRENGTH.ENABLED ? 'Active' : 'Disabled',
+      momentumExplosion: PROFIT_MAXIMIZATION_CONFIG.MOMENTUM_EXPLOSION.ENABLED ? 'Active' : 'Disabled',
+      profitLock: PROFIT_MAXIMIZATION_CONFIG.PROFIT_LOCK.ENABLED ? 'Active' : 'Disabled',
+      reentryLogic: PROFIT_MAXIMIZATION_CONFIG.REENTRY.ENABLED ? 'Active' : 'Disabled',
+      streaks: streakData,
+      runnersActive: runnerPositions.size,
+    },
+    config: {
+      killSwitch: {
+        softDrawdown: `${KILL_SWITCH_CONFIG.SOFT_DRAWDOWN * 100}%`,
+        hardDrawdown: `${KILL_SWITCH_CONFIG.HARD_DRAWDOWN * 100}%`,
+        emergencyDrawdown: `${KILL_SWITCH_CONFIG.EMERGENCY_DRAWDOWN * 100}%`,
+        maxLossesPerSession: KILL_SWITCH_CONFIG.MAX_LOSSES_PER_SESSION,
+      },
+      partialProfit: {
+        levels: PARTIAL_PROFIT_CONFIG.LEVELS,
+        minProfitDollars: PARTIAL_PROFIT_CONFIG.MIN_PROFIT_DOLLARS,
+      },
+      trailing: {
+        activateAfterATR: TRAILING_STOP_CONFIG.ACTIVATE_AFTER_ATR,
+        baseTrailATR: TRAILING_STOP_CONFIG.BASE_TRAIL_ATR,
+      },
+      equityProtection: {
+        minEquityPercent: `${EQUITY_PROTECTION_CONFIG.MIN_EQUITY_PERCENT * 100}%`,
+        maxFloatingLoss: `${EQUITY_PROTECTION_CONFIG.MAX_FLOATING_LOSS_PERCENT * 100}%`,
+        peakDrawdownLimit: `${EQUITY_PROTECTION_CONFIG.PEAK_DRAWDOWN_LIMIT * 100}%`,
+      },
+      profitMax: {
+        htfTimeframe: PROFIT_MAXIMIZATION_CONFIG.HTF_TREND_FILTER.TIMEFRAME,
+        htfEMAPeriod: PROFIT_MAXIMIZATION_CONFIG.HTF_TREND_FILTER.EMA_PERIOD,
+        minADXForTrend: PROFIT_MAXIMIZATION_CONFIG.TREND_STRENGTH.MIN_ADX_FOR_TREND,
+        strongTrendADX: PROFIT_MAXIMIZATION_CONFIG.TREND_STRENGTH.STRONG_TREND_ADX,
+        breakevenTriggerATR: PROFIT_MAXIMIZATION_CONFIG.PROFIT_LOCK.BREAKEVEN_TRIGGER_ATR,
+        maxReentries: PROFIT_MAXIMIZATION_CONFIG.REENTRY.MAX_REENTRIES_PER_DIRECTION,
+        reentryCooldownMin: PROFIT_MAXIMIZATION_CONFIG.REENTRY.REENTRY_COOLDOWN_MINUTES,
+      },
+      // Multi-Timeframe Strategy Configuration
+      strategyTimeframes: Object.entries(STRATEGY_TIMEFRAMES).map(([name, config]) => ({
+        strategy: name,
+        timeframe: config.timeframe,
+        description: config.description,
+        slMultiplier: config.slMultiplier,
+        tpMultiplier: config.tpMultiplier,
+        maxHoldingPeriod: `${config.maxHoldingPeriod} min`,
+        tradingHours: `${config.tradingHours.start}:00-${config.tradingHours.end}:00 UTC`,
+      })),
+    },
+    activePositions: {
+      partial: partialProfitState.size,
+      trailing: trailingStopState.size,
+      runners: runnerPositions.size,
+    },
+  };
+}
+
+/**
+ * Reset kill switch manually (admin only)
+ */
+export function resetKillSwitch() {
+  killSwitchState.isActive = false;
+  killSwitchState.level = null;
+  killSwitchState.triggeredAt = null;
+  killSwitchState.recoveryMode = false;
+  killSwitchState.recoveryWins = 0;
+  killSwitchState.consecutiveLosses = 0;
+  console.log('  🔄 Kill switch manually reset');
+  return { success: true, message: 'Kill switch reset' };
+}
+
+/**
+ * Get strategy performance breakdown
+ */
+export function getStrategyPerformance() {
+  const performance = {};
+  
+  for (const [strategy, stats] of Object.entries(signalAnalytics.strategyWinRates)) {
+    performance[strategy] = {
+      totalTrades: stats.total,
+      wins: stats.wins,
+      losses: stats.total - stats.wins,
+      winRate: stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) + '%' : 'N/A',
+      signals: signalAnalytics.signalsByStrategy[strategy] || 0,
+    };
+  }
+  
+  return performance;
+}
+
+/**
+ * Export all analytics functions
+ */
+export const analyticsAPI = {
+  getDashboard: getAnalyticsDashboard,
+  getPerformance: getStrategyPerformance,
+  resetKillSwitch: resetKillSwitch,
+  recordEvent: recordAnalytics,
+};

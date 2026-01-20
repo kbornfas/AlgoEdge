@@ -30,6 +30,7 @@ import {
   User,
   LogOut,
   Smartphone,
+  BarChart3,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -41,6 +42,7 @@ const drawerWidth = 260;
 const menuItems = [
   { text: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
   { text: 'Trading Robots', icon: PlayCircle, href: '/dashboard/robots' },
+  { text: 'Analytics', icon: BarChart3, href: '/dashboard/analytics' },
   { text: 'Trades', icon: History, href: '/dashboard/history' },
   { text: 'MT5 Connection', icon: TrendingUp, href: '/dashboard/mt5' },
   { text: 'Settings', icon: Settings, href: '/dashboard/settings' },

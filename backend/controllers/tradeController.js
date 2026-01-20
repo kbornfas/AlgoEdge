@@ -283,6 +283,42 @@ export const getRobots = async (req, res) => {
   }
 };
 
+// Get Signal Analytics Dashboard
+export const getSignalAnalytics = async (req, res) => {
+  try {
+    // Import dynamically to avoid circular dependency
+    const { analyticsAPI } = await import('../services/tradingScheduler.js');
+    
+    const dashboard = analyticsAPI.getDashboard();
+    const performance = analyticsAPI.getPerformance();
+    
+    res.json({
+      success: true,
+      dashboard,
+      strategyPerformance: performance,
+    });
+  } catch (error) {
+    console.error('Get signal analytics error:', error);
+    res.status(500).json({ error: 'Failed to get signal analytics' });
+  }
+};
+
+// Reset Kill Switch (Admin Only)
+export const resetKillSwitch = async (req, res) => {
+  try {
+    const { analyticsAPI } = await import('../services/tradingScheduler.js');
+    
+    const result = analyticsAPI.resetKillSwitch();
+    
+    auditLog(req.user.id, 'KILL_SWITCH_RESET', {}, req);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Reset kill switch error:', error);
+    res.status(500).json({ error: 'Failed to reset kill switch' });
+  }
+};
+
 export default {
   getTrades,
   getTradeStats,
@@ -291,4 +327,6 @@ export default {
   getRobots,
   listAllTrades,
   approveTransaction,
+  getSignalAnalytics,
+  resetKillSwitch,
 };

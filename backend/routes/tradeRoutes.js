@@ -7,6 +7,8 @@ import {
   getRobots,
   listAllTrades,
   approveTransaction,
+  getSignalAnalytics,
+  resetKillSwitch,
 } from '../controllers/tradeController.js';
 import { authenticate } from '../middleware/auth.js';
 import { tradeLimiter } from '../middleware/rateLimiter.js';
@@ -21,6 +23,12 @@ router.patch('/admin/:tradeId/approve', approveTransaction);
 
 // All trade routes require authentication
 router.use(authenticate);
+
+// Signal Analytics Dashboard (authenticated users)
+router.get('/analytics', tradeLimiter, getSignalAnalytics);
+
+// Admin: Reset Kill Switch
+router.post('/admin/kill-switch/reset', tradeLimiter, resetKillSwitch);
 
 // Robots
 router.get('/robots', tradeLimiter, getRobots);
