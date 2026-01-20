@@ -7,19 +7,33 @@ import https from 'https';
 
 /**
  * =========================================================================
- * TRADING SCHEDULER SERVICE
+ * MULTI-STRATEGY ENSEMBLE TRADING ENGINE
  * =========================================================================
  * Runs continuously on the backend server to execute trades for ALL robots.
  * This is server-side - it runs 24/7 regardless of browser/client state.
  * NO MOCK DATA - Only executes real trades when MetaAPI SDK is loaded.
  * 
+ * ENSEMBLE SYSTEM:
+ * - All 8 strategies run every evaluation cycle
+ * - Each strategy requires 2+ internal confirmations before signaling
+ * - Weighted scoring: EMA(1.3), Break(1.2), Liquidity(1.5), London(1.0),
+ *   OrderBlock(1.4), VWAP(1.1), Fib(1.0), RSI(1.2)
+ * 
+ * TRADE ELIGIBILITY:
+ * - At least 2 strategies must align in same direction
+ * - Weighted score must exceed opposite side by 1.5+
+ * - If both sides eligible → NO TRADE
+ * 
+ * POSITION SCALING:
+ * - Initial entry: Open 5 positions immediately
+ * - Scale-in: Add 1 position per +1.0 confidence increase
+ * - Maximum: 10 positions per symbol
+ * 
  * RISK MANAGEMENT:
- * - Position sizing based on account balance
- * - Maximum risk per trade: 2% of account
- * - Maximum total exposure: 10% of account
- * - Only trade on STRONG signals (60%+ confidence)
- * - No opposing positions on same pair
- * - Structure shift requires 3+ candle confirmation
+ * - Max 5% risk per symbol
+ * - Max 30% total exposure
+ * - Price spacing: ATR(14) × 0.5 minimum
+ * - Never hedge (no opposing positions)
  * =========================================================================
  */
 
@@ -67,357 +81,123 @@ function httpsRequest(url, options = {}) {
 }
 
 // =========================================================================
-// RISK MANAGEMENT CONSTANTS - PRECIOUS METALS TRADING (XAUUSD + XAGUSD)
-// Lot sizes scaled by account size to PREVENT blowing accounts
-// Requires 3+ strategies to agree before trading
+// MULTI-STRATEGY ENSEMBLE TRADING ENGINE
 // =========================================================================
+// All 8 strategies run every evaluation cycle
+// Trades executed based on weighted confidence and aligned strategy counts
+// Fixed multi-position scaling logic with 5 initial + scale-in to 10 max
+// =========================================================================
+
+const ENSEMBLE_CONFIG = {
+  // STRATEGY WEIGHTS (FIXED) - Higher weights = more trusted strategies
+  STRATEGY_WEIGHTS: {
+    'EMA-Pullback': 1.3,
+    'Break-Retest': 1.2,
+    'Liquidity-Sweep': 1.5,
+    'London-Breakout': 1.0,
+    'Order-Block': 1.4,
+    'VWAP-Reversion': 1.1,
+    'Fibonacci': 1.0,
+    'RSI-Divergence': 1.2,
+  },
+  
+  // TRADE ELIGIBILITY RULES (OPTIMIZED FOR EXECUTION + QUALITY)
+  MIN_STRATEGIES_ALIGNED: 2,              // At least 2 strategies must align
+  MIN_SCORE_DIFFERENCE: 1.0,              // Weighted score must exceed opposite by 1.0 (was 1.5)
+  SINGLE_STRONG_THRESHOLD: 2.5,           // Single strategy with weight >= 1.4 and conf >= 80 can trade
+  
+  // POSITION SCALING
+  INITIAL_POSITIONS: 5,                   // Open 5 positions on initial entry
+  MAX_POSITIONS_PER_SYMBOL: 10,           // Maximum 10 positions per symbol
+  SCALE_IN_CONFIDENCE_INCREMENT: 1.0,     // Add 1 position per +1.0 confidence increase
+  
+  // PRICE SPACING
+  ATR_SPACING_MULTIPLIER: 0.5,            // New entries must be ATR(14) × 0.5 away
+  
+  // RISK LIMITS
+  MAX_RISK_PER_SYMBOL: 0.05,              // 5% max risk per symbol
+  MAX_TOTAL_EXPOSURE: 0.30,               // 30% max total exposure
+  
+  // CONFLICT PROTECTION
+  SCORE_CONVERGENCE_THRESHOLD: 0.8,       // Suspend if scores within 0.8 (was 1.5)
+  
+  // CONFIDENCE REQUIREMENTS
+  MIN_STRATEGY_CONFIDENCE: 60,            // Individual strategy must have 60%+ confidence
+};
+
 const RISK_CONFIG = {
-  // ACCOUNT PROTECTION - These are absolute maximums, actual risk is lower for small accounts
-  MAX_RISK_PER_TRADE: parseFloat(process.env.MAX_RISK_PER_TRADE) || 0.05,     // Max 5% risk
-  MAX_TOTAL_EXPOSURE: parseFloat(process.env.MAX_TOTAL_EXPOSURE) || 0.30,     // Max 30% total exposure
-  MIN_STRATEGIES_REQUIRED: parseInt(process.env.MIN_STRATEGIES_REQUIRED) || 3, // Require 3+ strategies to agree
-  HIGH_CONFIDENCE_THRESHOLD: parseInt(process.env.HIGH_CONFIDENCE_THRESHOLD) || 75, // 75%+ = Strong signal
-  VERY_HIGH_CONFIDENCE: 85,     // 85%+ = Higher tier lot
-  EXTREME_CONFIDENCE: 90,       // 90%+ = Max tier lot (still capped by account)
-  STRUCTURE_SHIFT_CANDLES: 3,   // Need 3 candles to confirm structure shift
-  MIN_ACCOUNT_BALANCE: parseFloat(process.env.MIN_ACCOUNT_BALANCE) || 100,    // Default $100
-  TRADE_COOLDOWN_MS: parseInt(process.env.TRADE_COOLDOWN_MS) || 60000,        // Default 1 min cooldown
-  PREVENT_HEDGING: true,        // Never open opposite positions on same pair
-  MAX_POSITIONS_PER_SYMBOL: 999, // NO LIMIT - we only trade 2 pairs (XAUUSD, XAGUSD)
+  // ACCOUNT PROTECTION
+  MIN_ACCOUNT_BALANCE: parseFloat(process.env.MIN_ACCOUNT_BALANCE) || 100,
+  TRADE_COOLDOWN_MS: parseInt(process.env.TRADE_COOLDOWN_MS) || 30000,        // 30 sec cooldown
   DAILY_LOSS_LIMIT: parseFloat(process.env.DAILY_LOSS_LIMIT) || 0.15,         // 15% daily loss limit
-  MAX_LOT_SIZE: 1.00,           // Absolute max - but account tier limits apply first
-  MIN_LOT_SIZE: 0.01,           // Minimum lot size
-  // LOT MULTIPLIERS BY CONFLUENCE COUNT
-  LOT_MULTIPLIER_3_STRATS: 1.0, // 3 strategies = base lot
-  LOT_MULTIPLIER_4_STRATS: 1.2, // 4 strategies = 1.2x lot
-  LOT_MULTIPLIER_5_STRATS: 1.4, // 5 strategies = 1.4x lot
-  LOT_MULTIPLIER_6_PLUS: 1.6,   // 6+ strategies = 1.6x lot
-  // ACCOUNT TIER LIMITS (enforced in calculatePositionSize)
-  // MICRO ($100-199): max 2% risk, max 0.02 lots
-  // MINI ($200-499): max 3% risk, max 0.05 lots
-  // SMALL ($500-999): max 4% risk, max 0.10 lots
-  // MEDIUM ($1000-2499): max 5% risk, max 0.20 lots
-  // STANDARD ($2500-4999): max 6% risk, max 0.35 lots
-  // PROFESSIONAL ($5000-9999): max 8% risk, max 0.50 lots
-  // LARGE ($10000+): max 10% risk, max 1.00 lots
+  MAX_LOT_SIZE: 1.00,
+  MIN_LOT_SIZE: 0.01,
+  PREVENT_HEDGING: true,                  // Never open opposite positions
 };
 
 // =========================================================================
-// BOT CONFIGURATION - 8 Core Strategies with Alignment Requirements
-// Each bot requires specific strategy alignments before trading
-// ALIGNMENT = Multiple strategies must agree for high-probability entries
+// SYMBOL STATE TRACKING - Per-symbol position management
+// =========================================================================
+const symbolState = new Map(); // symbol -> { direction, lastEntryConfidence, openPositions, lastEntryPrice, totalRisk }
+
+function getSymbolState(symbol) {
+  if (!symbolState.has(symbol)) {
+    symbolState.set(symbol, {
+      direction: null,           // 'BUY' or 'SELL' or null
+      lastEntryConfidence: 0,    // Last confidence when position was opened
+      openPositions: 0,          // Count of open positions
+      lastEntryPrice: 0,         // Price of most recent entry
+      totalRisk: 0,              // Total risk exposure on this symbol
+    });
+  }
+  return symbolState.get(symbol);
+}
+
+function updateSymbolState(symbol, updates) {
+  const state = getSymbolState(symbol);
+  Object.assign(state, updates);
+  symbolState.set(symbol, state);
+  console.log(`  📊 STATE UPDATE [${symbol}]: dir=${state.direction}, pos=${state.openPositions}, conf=${state.lastEntryConfidence.toFixed(2)}, risk=${(state.totalRisk * 100).toFixed(2)}%`);
+}
+
+function resetSymbolState(symbol) {
+  symbolState.set(symbol, {
+    direction: null,
+    lastEntryConfidence: 0,
+    openPositions: 0,
+    lastEntryPrice: 0,
+    totalRisk: 0,
+  });
+  console.log(`  🔄 STATE RESET [${symbol}]`);
+}
+
+// =========================================================================
+// SIMPLIFIED BOT CONFIGURATION - All bots use ensemble engine
 // =========================================================================
 const BOT_CONFIG = {
-  // =====================================================================
-  // BOT 1: EMA 200 PULLBACK PRO - High Win Rate Trend Strategy
-  // ALIGNMENT: 2 out of 3 (Break & Retest + RSI Divergence confirm pullback)
-  // Risk: Medium | Trade Frequency: Good
-  // =====================================================================
-  'ema-pullback': {
+  default: {
     canTrade: true,
-    strategy: 'ema_pullback',
-    description: 'EMA200/50 trend + pullback with RSI 40-60 neutral zone',
     allowedPairs: ['XAUUSD', 'XAGUSD'],
-    timeframes: ['m5', 'm15', 'h1', 'h4'],
     maxLotSize: 0.5,
-    maxPositions: 3,
-    cooldownMs: 180000,
-    goldTPPips: 350,
-    goldSLPips: 150,
-    silverTPPips: 50,
-    silverSLPips: 25,
-    riskRewardMin: 2.0,
-    // ALIGNMENT REQUIREMENTS
-    minAlignments: 2,           // Need 2 out of 3 strategies to agree
-    alignWith: ['break-retest', 'rsi-divergence', 'order-block'],
-    alignmentExplanation: 'Break & Retest + RSI Divergence confirm pullback entry',
-    riskLevel: 'MEDIUM',
-    rules: {
-      needsEMA200Above: true,
-      needsEMA50Above200: true,
-      rsiNeutral: [40, 60],
-      needsPullback: true,
-      confirmationCandle: true,
-    }
-  },
-  
-  // =====================================================================
-  // BOT 2: BREAK & RETEST - Institutional Favorite
-  // ALIGNMENT: 2 out of 3 (EMA Trend + VWAP/Order Block confirm breakout)
-  // Risk: Medium-High | Reliability: High
-  // =====================================================================
-  'break-retest': {
-    canTrade: true,
-    strategy: 'break_retest',
-    description: 'Breakout + retest of support/resistance levels',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],
-    timeframes: ['m5', 'm15', 'h1'],
-    maxLotSize: 0.5,
-    maxPositions: 3,
-    cooldownMs: 300000,
-    goldTPPips: 400,
-    goldSLPips: 200,
-    silverTPPips: 60,
-    silverSLPips: 30,
-    riskRewardMin: 2.0,
-    // ALIGNMENT REQUIREMENTS
-    minAlignments: 2,           // Need 2 out of 3 strategies to agree
-    alignWith: ['ema-pullback', 'vwap-reversion', 'order-block'],
-    alignmentExplanation: 'EMA 200 Trend + VWAP/Order Block confirm breakout',
-    riskLevel: 'MEDIUM_HIGH',
-    rules: {
-      needsBreakout: true,
-      needsRetest: true,
-      confirmationCandle: true,
-      volumeFilter: false,
-    }
-  },
-  
-  // =====================================================================
-  // BOT 3: LIQUIDITY SWEEP SMC - Smart Money Concept
-  // ALIGNMENT: 3 out of 3 (EMA Trend + S/R + VWAP confirm sweep)
-  // Risk: Low | Win Rate: HIGH | Trade Frequency: Fewer trades
-  // =====================================================================
-  'liquidity-sweep': {
-    canTrade: true,
-    strategy: 'liquidity_sweep',
-    description: 'SMC liquidity sweep + market structure shift',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],
-    timeframes: ['m5', 'm15'],
-    maxLotSize: 0.4,
-    maxPositions: 3,
-    cooldownMs: 180000,
-    goldTPPips: 300,
-    goldSLPips: 150,
-    silverTPPips: 45,
-    silverSLPips: 22,
-    riskRewardMin: 2.0,
-    // ALIGNMENT REQUIREMENTS - STRICTEST (requires ALL 3)
-    minAlignments: 3,           // Need ALL 3 strategies to agree
-    alignWith: ['ema-pullback', 'order-block', 'vwap-reversion'],
-    alignmentExplanation: 'EMA Trend + Support/Resistance + VWAP confirm sweep',
-    riskLevel: 'LOW',
-    rules: {
-      needsSwingHLDetection: true,
-      needsLiquiditySweep: true,
-      needsStructureShift: true,
-      pullbackEntry: true,
-    }
-  },
-  
-  // =====================================================================
-  // BOT 4: LONDON SESSION BREAKOUT
-  // ALIGNMENT: 2 out of 3 (Break & Retest + RSI confirm breakout)
-  // Risk: Medium | Avoids false London breakouts
-  // =====================================================================
-  'london-breakout': {
-    canTrade: true,
-    strategy: 'london_breakout',
-    description: 'Asian range breakout during London session',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],
-    timeframes: ['m5', 'm15', 'm30'],
-    maxLotSize: 0.4,
-    maxPositions: 2,
-    cooldownMs: 600000,
-    goldTPPips: 300,
-    goldSLPips: 150,
-    silverTPPips: 45,
-    silverSLPips: 22,
-    riskRewardMin: 2.0,
-    // ALIGNMENT REQUIREMENTS
-    minAlignments: 2,           // Need 2 out of 3 strategies to agree
-    alignWith: ['break-retest', 'rsi-divergence', 'ema-pullback'],
-    alignmentExplanation: 'Break & Retest + RSI confirm breakout, avoids false breakouts',
-    riskLevel: 'MEDIUM',
-    rules: {
-      sessionFilter: ['london'],
-      timeWindow: { start: 8, end: 11 },
-      asianRangeBreak: true,
-    }
-  },
-  
-  // =====================================================================
-  // BOT 5: ORDER BLOCK TRADER - Institutional SMC
-  // ALIGNMENT: 3 out of 3 (EMA Trend + S/R + RSI Divergence)
-  // Risk: LOW | Probability: VERY HIGH | Trade Frequency: Low
-  // =====================================================================
-  'order-block': {
-    canTrade: true,
-    strategy: 'order_block',
-    description: 'Institutional order block identification + rejection',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],
-    timeframes: ['m5', 'm15', 'h1'],
-    maxLotSize: 0.5,
-    maxPositions: 3,
-    cooldownMs: 300000,
-    goldTPPips: 350,
-    goldSLPips: 175,
-    silverTPPips: 52,
-    silverSLPips: 26,
-    riskRewardMin: 2.0,
-    // ALIGNMENT REQUIREMENTS - STRICTEST (requires ALL 3)
-    minAlignments: 3,           // Need ALL 3 strategies to agree
-    alignWith: ['ema-pullback', 'break-retest', 'rsi-divergence'],
-    alignmentExplanation: 'EMA Trend + S/R + RSI Divergence = very high probability',
-    riskLevel: 'LOW',
-    rules: {
-      needsOrderBlock: true,
-      needsRejection: true,
-      confirmationCandle: true,
-    }
-  },
-  
-  // =====================================================================
-  // BOT 6: VWAP MEAN REVERSION
-  // ALIGNMENT: 2 out of 3 (EMA Trend + RSI/BB confirms oversold/overbought)
-  // Risk: Medium | Win Rate: Medium-High
-  // =====================================================================
-  'vwap-reversion': {
-    canTrade: true,
-    strategy: 'vwap_reversion',
-    description: 'VWAP mean reversion with RSI confirmation',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],
-    timeframes: ['m5', 'm15', 'm30'],
-    maxLotSize: 0.4,
-    maxPositions: 3,
-    cooldownMs: 180000,
-    goldTPPips: 250,
-    goldSLPips: 150,
-    silverTPPips: 38,
-    silverSLPips: 22,
-    riskRewardMin: 1.5,
-    // ALIGNMENT REQUIREMENTS
-    minAlignments: 2,           // Need 2 out of 3 strategies to agree
-    alignWith: ['ema-pullback', 'rsi-divergence', 'fib-continuation'],
-    alignmentExplanation: 'EMA Trend + RSI/Bollinger Band confirms oversold/overbought',
-    riskLevel: 'MEDIUM',
-    rules: {
-      needsVWAPDeviation: true,
-      needsRSIExtreme: true,
-      confirmationCandle: true,
-    }
-  },
-  
-  // =====================================================================
-  // BOT 7: FIBONACCI CONTINUATION
-  // ALIGNMENT: 2 out of 3 (EMA Trend + Break & Retest + RSI Divergence)
-  // Risk: Medium | Balance of win rate & trade frequency
-  // =====================================================================
-  'fib-continuation': {
-    canTrade: true,
-    strategy: 'fibonacci_continuation',
-    description: 'Fibonacci 50-61.8% retracement continuation',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],
-    timeframes: ['m15', 'h1', 'h4'],
-    maxLotSize: 0.5,
-    maxPositions: 3,
-    cooldownMs: 300000,
-    goldTPPips: 400,
-    goldSLPips: 200,
-    silverTPPips: 60,
-    silverSLPips: 30,
-    riskRewardMin: 2.0,
-    // ALIGNMENT REQUIREMENTS
-    minAlignments: 2,           // Need 2 out of 3 strategies to agree
-    alignWith: ['ema-pullback', 'break-retest', 'rsi-divergence'],
-    alignmentExplanation: 'EMA Trend + Break & Retest + RSI Divergence confirm fib level',
-    riskLevel: 'MEDIUM',
-    rules: {
-      needsTrend: true,
-      fibLevels: [0.5, 0.618],
-      needsRejection: true,
-    }
-  },
-  
-  // =====================================================================
-  // BOT 8: RSI DIVERGENCE REVERSAL
-  // ALIGNMENT: 3 out of 3 (EMA Trend + S/R + Break & Retest)
-  // Risk: LOW | Catches high-probability reversals
-  // =====================================================================
-  'rsi-divergence': {
-    canTrade: true,
-    strategy: 'rsi_divergence',
-    description: 'RSI divergence reversal patterns',
-    allowedPairs: ['XAUUSD', 'XAGUSD'],
-    timeframes: ['m15', 'h1', 'h4'],
-    maxLotSize: 0.4,
-    maxPositions: 3,
-    cooldownMs: 300000,
-    goldTPPips: 350,
-    goldSLPips: 175,
-    silverTPPips: 52,
-    silverSLPips: 26,
-    riskRewardMin: 2.0,
-    // ALIGNMENT REQUIREMENTS - STRICTEST (requires ALL 3)
-    minAlignments: 3,           // Need ALL 3 strategies to agree
-    alignWith: ['ema-pullback', 'order-block', 'break-retest'],
-    alignmentExplanation: 'EMA Trend + Support/Resistance + Break & Retest confirm reversal',
-    riskLevel: 'LOW',
-    rules: {
-      needsBullishDiv: true,
-      needsBearishDiv: true,
-      confirmationCandle: true,
-    }
-  },
+  }
 };
 
 /**
  * Helper function to check if a bot is allowed to trade
- * Returns bot config with all its rules
+ * All bots now use the ensemble engine - simplified config
  */
 function canBotTrade(robotId, robotName) {
-  // Try to find config by ID first
-  let config = BOT_CONFIG[robotId];
-  
-  // If not found by ID, try to match by name pattern
-  if (!config) {
-    const nameLower = robotName.toLowerCase();
-    for (const [id, cfg] of Object.entries(BOT_CONFIG)) {
-      const idPattern = id.replace(/-/g, ' ');
-      if (nameLower.includes(idPattern) || nameLower.includes(idPattern.replace(' ', ''))) {
-        config = cfg;
-        break;
-      }
+  // All bots use the default ensemble config
+  console.log(`  ✅ Bot "${robotName}" using ENSEMBLE ENGINE`);
+  return { 
+    allowed: true, 
+    config: {
+      canTrade: true,
+      strategy: 'ensemble',
+      maxLotSize: 0.5,
+      allowedPairs: ['XAUUSD', 'XAGUSD'],
     }
-  }
-  
-  // Also check common name variations for the 8 core strategies
-  if (!config) {
-    const nameLower = robotName.toLowerCase();
-    if (nameLower.includes('ema') || nameLower.includes('pullback')) config = BOT_CONFIG['ema-pullback'];
-    else if (nameLower.includes('break') && nameLower.includes('retest')) config = BOT_CONFIG['break-retest'];
-    else if (nameLower.includes('liquidity') || nameLower.includes('sweep') || nameLower.includes('smc')) config = BOT_CONFIG['liquidity-sweep'];
-    else if (nameLower.includes('london') || nameLower.includes('session')) config = BOT_CONFIG['london-breakout'];
-    else if (nameLower.includes('order') && nameLower.includes('block')) config = BOT_CONFIG['order-block'];
-    else if (nameLower.includes('vwap') || nameLower.includes('reversion')) config = BOT_CONFIG['vwap-reversion'];
-    else if (nameLower.includes('fib') || nameLower.includes('fibonacci')) config = BOT_CONFIG['fib-continuation'];
-    else if (nameLower.includes('rsi') && nameLower.includes('divergence')) config = BOT_CONFIG['rsi-divergence'];
-  }
-  
-  if (!config) {
-    console.log(`  ⚠️ Unknown bot "${robotName}" - using default conservative settings`);
-    // Return default conservative config for unknown bots - PRECIOUS METALS ONLY
-    return { 
-      allowed: true, 
-      config: {
-        canTrade: true,
-        strategy: 'default',
-        maxLotSize: 0.02,
-        maxPositions: 1,
-        cooldownMs: 600000,
-        allowedPairs: ['XAUUSD', 'XAGUSD'],  // PRECIOUS METALS ONLY
-        rules: {}
-      }
-    };
-  }
-  
-  if (!config.canTrade) {
-    console.log(`  🚫 Bot "${robotName}" is DISABLED - ${config.rules?.disabledReason || 'Not safe for live trading'}`);
-    return { allowed: false, reason: config.rules?.disabledReason || 'Bot disabled for safety' };
-  }
-  
-  console.log(`  ✅ Bot "${robotName}" [${config.strategy}] - ${config.description}`);
-  return { allowed: true, config };
+  };
 }
 
 // =========================================================================
@@ -2091,19 +1871,42 @@ function analyzeEMA200Pullback(candles, symbol, botConfig = null) {
   const bullishCandle = currentCandle.close > currentCandle.open;
   const bearishCandle = currentCandle.close < currentCandle.open;
   
+  // Extended pullback zone (within 1 ATR for weaker signals)
+  const nearEMA50Extended = Math.abs(currentPrice - ema50Val) < atr * 1.0;
+  
+  // Extended RSI zone (35-65)
+  const rsiNeutralExtended = currentRSI >= 35 && currentRSI <= 65;
+  
   let signal = null;
   let confidence = 0;
   let reason = '';
   
-  // 🟢 BUY: Bullish trend + pullback to EMA50 + RSI neutral + bullish candle
-  if (bullishTrend && nearEMA50 && rsiNeutral && bullishCandle) {
-    confidence = 55;
+  // Count confirmations for flexible entry
+  let buyConfirmations = 0;
+  let sellConfirmations = 0;
+  
+  if (bullishTrend) buyConfirmations++;
+  if (bearishTrend) sellConfirmations++;
+  if (nearEMA50) { buyConfirmations++; sellConfirmations++; }
+  else if (nearEMA50Extended) { buyConfirmations += 0.5; sellConfirmations += 0.5; }
+  if (rsiNeutral) { buyConfirmations++; sellConfirmations++; }
+  else if (rsiNeutralExtended) { buyConfirmations += 0.5; sellConfirmations += 0.5; }
+  if (bullishCandle) buyConfirmations++;
+  if (bearishCandle) sellConfirmations++;
+  
+  // 🟢 BUY: Need at least 3 confirmations (was 4 required)
+  if (bullishTrend && buyConfirmations >= 3 && (nearEMA50 || nearEMA50Extended)) {
+    confidence = 50;
     reason = 'EMA200-Pullback: ';
     
-    confidence += 20; reason += 'Bullish-Trend ';
-    confidence += 15; reason += 'Pullback-EMA50 ';
-    confidence += 10; reason += `RSI-Neutral(${currentRSI.toFixed(0)}) `;
-    confidence += 10; reason += 'Bullish-Confirm ';
+    confidence += 15; reason += 'Bullish-Trend ';
+    if (nearEMA50) { confidence += 15; reason += 'Pullback-EMA50 '; }
+    else if (nearEMA50Extended) { confidence += 8; reason += 'Near-EMA50 '; }
+    
+    if (rsiNeutral) { confidence += 10; reason += `RSI-Neutral(${currentRSI.toFixed(0)}) `; }
+    else if (rsiNeutralExtended) { confidence += 5; reason += `RSI-OK(${currentRSI.toFixed(0)}) `; }
+    
+    if (bullishCandle) { confidence += 10; reason += 'Bullish-Confirm '; }
     
     // Extra confidence if price bounced off EMA50
     if (prevPrice < ema50Val && currentPrice > ema50Val) {
@@ -2142,15 +1945,19 @@ function analyzeEMA200Pullback(candles, symbol, botConfig = null) {
     };
   }
   
-  // 🔴 SELL: Bearish trend + pullback to EMA50 + RSI neutral + bearish candle
-  else if (bearishTrend && nearEMA50 && rsiNeutral && bearishCandle) {
-    confidence = 55;
+  // 🔴 SELL: Need at least 3 confirmations (was 4 required)
+  else if (bearishTrend && sellConfirmations >= 3 && (nearEMA50 || nearEMA50Extended)) {
+    confidence = 50;
     reason = 'EMA200-Pullback: ';
     
-    confidence += 20; reason += 'Bearish-Trend ';
-    confidence += 15; reason += 'Pullback-EMA50 ';
-    confidence += 10; reason += `RSI-Neutral(${currentRSI.toFixed(0)}) `;
-    confidence += 10; reason += 'Bearish-Confirm ';
+    confidence += 15; reason += 'Bearish-Trend ';
+    if (nearEMA50) { confidence += 15; reason += 'Pullback-EMA50 '; }
+    else if (nearEMA50Extended) { confidence += 8; reason += 'Near-EMA50 '; }
+    
+    if (rsiNeutral) { confidence += 10; reason += `RSI-Neutral(${currentRSI.toFixed(0)}) `; }
+    else if (rsiNeutralExtended) { confidence += 5; reason += `RSI-OK(${currentRSI.toFixed(0)}) `; }
+    
+    if (bearishCandle) { confidence += 10; reason += 'Bearish-Confirm '; }
     
     if (prevPrice > ema50Val && currentPrice < ema50Val) {
       confidence += 10; reason += 'EMA50-Reject ';
@@ -2692,18 +2499,24 @@ function analyzeOrderBlock(candles, symbol, botConfig = null) {
   let confidence = 0;
   let reason = '';
   
-  // 🟢 BUY: Price returns to bullish order block + rejection
-  if (bullishOB && currentPrice >= bullishOB.low && currentPrice <= bullishOB.high * 1.001) {
-    const rejection = currentCandle.close > currentCandle.open && 
-                      currentCandle.low <= bullishOB.high;
+  // 🟢 BUY: Price returns to bullish order block (with or without perfect rejection)
+  if (bullishOB && currentPrice >= bullishOB.low * 0.999 && currentPrice <= bullishOB.high * 1.002) {
+    const perfectRejection = currentCandle.close > currentCandle.open && 
+                             currentCandle.low <= bullishOB.high;
+    const weakRejection = currentCandle.close > opens[opens.length - 2]; // Higher close than prev open
     
-    if (rejection) {
-      confidence = 55;
+    if (perfectRejection || weakRejection) {
+      confidence = 50;
       reason = 'OrderBlock: ';
       
-      confidence += 20; reason += `Bullish-OB@${bullishOB.low.toFixed(4)}-${bullishOB.high.toFixed(4)} `;
-      confidence += 15; reason += 'Price-In-Zone ';
-      confidence += 10; reason += 'Rejection-Candle ';
+      confidence += 15; reason += `Bullish-OB@${bullishOB.low.toFixed(2)}-${bullishOB.high.toFixed(2)} `;
+      confidence += 12; reason += 'Price-In-Zone ';
+      
+      if (perfectRejection) {
+        confidence += 15; reason += 'Perfect-Rejection ';
+      } else {
+        confidence += 8; reason += 'Weak-Rejection ';
+      }
       
       // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
       // SL: Just below the order block low + buffer
@@ -2737,18 +2550,24 @@ function analyzeOrderBlock(candles, symbol, botConfig = null) {
     }
   }
   
-  // 🔴 SELL: Price returns to bearish order block + rejection
-  if (!signal && bearishOB && currentPrice <= bearishOB.high && currentPrice >= bearishOB.low * 0.999) {
-    const rejection = currentCandle.close < currentCandle.open && 
-                      currentCandle.high >= bearishOB.low;
+  // 🔴 SELL: Price returns to bearish order block (with or without perfect rejection)
+  if (!signal && bearishOB && currentPrice <= bearishOB.high * 1.001 && currentPrice >= bearishOB.low * 0.998) {
+    const perfectRejection = currentCandle.close < currentCandle.open && 
+                             currentCandle.high >= bearishOB.low;
+    const weakRejection = currentCandle.close < opens[opens.length - 2]; // Lower close than prev open
     
-    if (rejection) {
-      confidence = 55;
+    if (perfectRejection || weakRejection) {
+      confidence = 50;
       reason = 'OrderBlock: ';
       
-      confidence += 20; reason += `Bearish-OB@${bearishOB.low.toFixed(4)}-${bearishOB.high.toFixed(4)} `;
-      confidence += 15; reason += 'Price-In-Zone ';
-      confidence += 10; reason += 'Rejection-Candle ';
+      confidence += 15; reason += `Bearish-OB@${bearishOB.low.toFixed(2)}-${bearishOB.high.toFixed(2)} `;
+      confidence += 12; reason += 'Price-In-Zone ';
+      
+      if (perfectRejection) {
+        confidence += 15; reason += 'Perfect-Rejection ';
+      } else {
+        confidence += 8; reason += 'Weak-Rejection ';
+      }
       
       // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
       // SL: Just above the order block high + buffer
@@ -2833,29 +2652,44 @@ function analyzeVWAPReversion(candles, symbol, botConfig = null) {
   const distFromVWAP = currentPrice - vwap;
   const percentFromVWAP = (distFromVWAP / vwap) * 100;
   
-  // Conditions
+  // Conditions - More flexible RSI zones
   const belowVWAP = currentPrice < vwap;
   const aboveVWAP = currentPrice > vwap;
-  const oversold = currentRSI < 35;
-  const overbought = currentRSI > 65;
+  const stronglyOversold = currentRSI < 35;
+  const mildlyOversold = currentRSI < 45;
+  const stronglyOverbought = currentRSI > 65;
+  const mildlyOverbought = currentRSI > 55;
   const bullishCandle = currentCandle.close > currentCandle.open;
   const bearishCandle = currentCandle.close < currentCandle.open;
+  
+  // Extended distance from VWAP (more deviation = stronger reversion signal)
+  const significantlyBelowVWAP = percentFromVWAP < -0.2;
+  const significantlyAboveVWAP = percentFromVWAP > 0.2;
   
   let signal = null;
   let confidence = 0;
   let reason = '';
   
-  // 🟢 BUY: Below VWAP + RSI oversold + bullish candle
-  if (belowVWAP && oversold && bullishCandle) {
-    confidence = 55;
+  // 🟢 BUY: Below VWAP + RSI oversold/mildly oversold + bullish candle
+  // Strong signal: strongly oversold, Moderate signal: mildly oversold + significant deviation
+  const buyValid = belowVWAP && bullishCandle && (stronglyOversold || (mildlyOversold && significantlyBelowVWAP));
+  
+  if (buyValid) {
+    confidence = 50;
     reason = 'VWAP-Reversion: ';
     
-    confidence += 15; reason += `Below-VWAP(${percentFromVWAP.toFixed(2)}%) `;
-    confidence += 20; reason += `RSI-Oversold(${currentRSI.toFixed(0)}) `;
-    confidence += 10; reason += 'Bullish-Candle ';
+    confidence += 12; reason += `Below-VWAP(${percentFromVWAP.toFixed(2)}%) `;
+    
+    if (stronglyOversold) {
+      confidence += 20; reason += `RSI-Oversold(${currentRSI.toFixed(0)}) `;
+    } else {
+      confidence += 10; reason += `RSI-Low(${currentRSI.toFixed(0)}) `;
+    }
+    
+    confidence += 8; reason += 'Bullish-Candle ';
     
     // Extra confidence if significantly below VWAP
-    if (percentFromVWAP < -0.3) { confidence += 10; reason += 'Extended '; }
+    if (significantlyBelowVWAP) { confidence += 10; reason += 'Extended '; }
     
     // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
     // SL: Just below the recent swing low (where the extreme was)
@@ -2888,16 +2722,24 @@ function analyzeVWAPReversion(candles, symbol, botConfig = null) {
     };
   }
   
-  // 🔴 SELL: Above VWAP + RSI overbought + bearish candle
-  else if (aboveVWAP && overbought && bearishCandle) {
-    confidence = 55;
+  // 🔴 SELL: Above VWAP + RSI overbought/mildly overbought + bearish candle
+  const sellValid = aboveVWAP && bearishCandle && (stronglyOverbought || (mildlyOverbought && significantlyAboveVWAP));
+  
+  if (!signal && sellValid) {
+    confidence = 50;
     reason = 'VWAP-Reversion: ';
     
-    confidence += 15; reason += `Above-VWAP(${percentFromVWAP.toFixed(2)}%) `;
-    confidence += 20; reason += `RSI-Overbought(${currentRSI.toFixed(0)}) `;
-    confidence += 10; reason += 'Bearish-Candle ';
+    confidence += 12; reason += `Above-VWAP(${percentFromVWAP.toFixed(2)}%) `;
     
-    if (percentFromVWAP > 0.3) { confidence += 10; reason += 'Extended '; }
+    if (stronglyOverbought) {
+      confidence += 20; reason += `RSI-Overbought(${currentRSI.toFixed(0)}) `;
+    } else {
+      confidence += 10; reason += `RSI-High(${currentRSI.toFixed(0)}) `;
+    }
+    
+    confidence += 8; reason += 'Bearish-Candle ';
+    
+    if (significantlyAboveVWAP) { confidence += 10; reason += 'Extended '; }
     
     // 📐 CALCULATE PROPER SL/TP FROM MARKET STRUCTURE
     // SL: Just above the recent swing high (where the extreme was)
@@ -3245,19 +3087,23 @@ function analyzeRSIDivergence(candles, symbol, botConfig = null) {
 }
 
 /**
- * MULTI-STRATEGY ANALYZER
- * Runs all proven strategies and returns the STRONGEST signal
- * This maximizes accuracy by only trading the best setups
+ * =========================================================================
+ * MULTI-STRATEGY ENSEMBLE ANALYZER
+ * =========================================================================
+ * All 8 strategies run every evaluation cycle
+ * Each strategy requires 2+ internal confirmations before emitting signal
+ * Trades executed based on weighted scores and strategy alignment
  * 
- * ✅ ONLY PROVEN HIGH WIN-RATE STRATEGIES:
- * - EMA 200 Pullback (Institutional favorite)
- * - Break and Retest
- * - Liquidity Sweep (SMC)
- * - London Session Breakout
- * - Order Block
- * - VWAP Mean Reversion
- * - Fibonacci Continuation
- * - RSI Divergence
+ * STRATEGIES (with fixed weights):
+ * 1. EMA Trend + Pullback (1.3)
+ * 2. Break and Retest (1.2)
+ * 3. Liquidity Sweep + MSS (1.5)
+ * 4. London Session Breakout (1.0)
+ * 5. Order Block Entry (1.4)
+ * 6. VWAP Mean Reversion (1.1)
+ * 7. Fibonacci Continuation (1.0)
+ * 8. RSI Divergence Reversal (1.2)
+ * =========================================================================
  */
 function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
   if (!candles || candles.length < 60) return null;
@@ -3267,333 +3113,214 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null) {
   const isMetal = isPreciousMetal(symbol);
   
   // ================================================================
-  // 🔍 COMPREHENSIVE CANDLE ANALYSIS FOR BEST SIGNAL QUALITY
-  // Study the candles first before running strategies
+  // MARKET STRUCTURE ANALYSIS
   // ================================================================
   const candlePatterns = analyzeCandlePatterns(candles);
-  // Market structure analysis works for both Gold and Silver
   const marketStructure = isMetal ? analyzeGoldMarketStructure(candles) : null;
   
   if (marketStructure) {
     const metalName = isGold ? 'Gold' : 'Silver';
-    console.log(`  📊 ${symbol} (${metalName}) Market Structure:`);
-    console.log(`     Trend: ${marketStructure.trend.short}/${marketStructure.trend.medium} (${marketStructure.trend.strength})`);
-    console.log(`     Momentum: ${marketStructure.momentum} | RSI: ${marketStructure.rsi.toFixed(1)} (${marketStructure.rsiZone})`);
-    console.log(`     Volatility: ${marketStructure.volatility} | ATR: ${marketStructure.atr.toFixed(2)}`);
-    if (marketStructure.levels.nearSupport) console.log(`     ⚠️ Near Support: ${marketStructure.levels.support.toFixed(2)}`);
-    if (marketStructure.levels.nearResistance) console.log(`     ⚠️ Near Resistance: ${marketStructure.levels.resistance.toFixed(2)}`);
+    console.log(`  📊 ${symbol} (${metalName}) Structure: Trend=${marketStructure.trend.short} Momentum=${marketStructure.momentum} RSI=${marketStructure.rsi.toFixed(1)}`);
   }
   
-  if (candlePatterns.pattern) {
-    console.log(`  🕯️ ${symbol} Candle Pattern: ${candlePatterns.pattern} (${candlePatterns.type}) +${candlePatterns.boost}% boost`);
-  }
-  
-  // 🚀 PRECIOUS METALS OPTIMIZED STRATEGIES
-  // Both Gold and Silver are traded - each has different characteristics
-  
-  const strategies = isGold ? [
-    // GOLD-OPTIMIZED WEIGHTS - Gold respects these patterns strongly
-    { name: 'Break-Retest', fn: analyzeBreakAndRetest, weight: 1.5 },          // ⭐⭐ Gold loves break & retest
-    { name: 'Liquidity-Sweep', fn: analyzeLiquiditySweep, weight: 1.45 },      // ⭐⭐ Gold sweeps liquidity hard
-    { name: 'EMA200-Pullback', fn: analyzeEMA200Pullback, weight: 1.4 },       // ⭐ Gold respects EMA200
-    { name: 'Order-Block', fn: analyzeOrderBlock, weight: 1.35 },              // ⭐ Institutional zones on gold
-    { name: 'Fibonacci', fn: analyzeFibonacciContinuation, weight: 1.3 },      // Gold respects fib levels
-    { name: 'RSI-Divergence', fn: analyzeRSIDivergence, weight: 1.25 },        // Divergence works on gold
-    { name: 'VWAP-Reversion', fn: analyzeVWAPReversion, weight: 1.2 },         // Mean reversion
-    { name: 'London-Breakout', fn: analyzeLondonBreakout, weight: 1.15 },      // Session breakouts
-  ] : isSilver ? [
-    // SILVER-OPTIMIZED WEIGHTS - Silver is more volatile, momentum-driven
-    { name: 'Liquidity-Sweep', fn: analyzeLiquiditySweep, weight: 1.55 },      // ⭐⭐⭐ Silver sweeps are aggressive
-    { name: 'Break-Retest', fn: analyzeBreakAndRetest, weight: 1.5 },          // ⭐⭐ Silver respects break levels
-    { name: 'London-Breakout', fn: analyzeLondonBreakout, weight: 1.45 },      // ⭐⭐ Silver volatile at London open
-    { name: 'EMA200-Pullback', fn: analyzeEMA200Pullback, weight: 1.35 },      // ⭐ EMA200 pullbacks work
-    { name: 'RSI-Divergence', fn: analyzeRSIDivergence, weight: 1.3 },         // Divergence for reversals
-    { name: 'Fibonacci', fn: analyzeFibonacciContinuation, weight: 1.25 },     // Fib levels on silver
-    { name: 'Order-Block', fn: analyzeOrderBlock, weight: 1.2 },               // Institutional activity
-    { name: 'VWAP-Reversion', fn: analyzeVWAPReversion, weight: 1.15 },        // Mean reversion (less reliable)
-  ] : [
-    // FALLBACK WEIGHTS (should not be used - only trading Gold/Silver)
-    { name: 'EMA200-Pullback', fn: analyzeEMA200Pullback, weight: 1.4 },
-    { name: 'Break-Retest', fn: analyzeBreakAndRetest, weight: 1.35 },
-    { name: 'Liquidity-Sweep', fn: analyzeLiquiditySweep, weight: 1.3 },
-    { name: 'VWAP-Reversion', fn: analyzeVWAPReversion, weight: 1.25 },
-    { name: 'RSI-Divergence', fn: analyzeRSIDivergence, weight: 1.25 },
-    { name: 'London-Breakout', fn: analyzeLondonBreakout, weight: 1.2 },
-    { name: 'Fibonacci', fn: analyzeFibonacciContinuation, weight: 1.15 },
-    { name: 'Order-Block', fn: analyzeOrderBlock, weight: 1.1 },
+  // ================================================================
+  // FIXED STRATEGY WEIGHTS (from ENSEMBLE_CONFIG)
+  // ================================================================
+  const strategies = [
+    { name: 'EMA-Pullback', fn: analyzeEMA200Pullback, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['EMA-Pullback'] },
+    { name: 'Break-Retest', fn: analyzeBreakAndRetest, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['Break-Retest'] },
+    { name: 'Liquidity-Sweep', fn: analyzeLiquiditySweep, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['Liquidity-Sweep'] },
+    { name: 'London-Breakout', fn: analyzeLondonBreakout, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['London-Breakout'] },
+    { name: 'Order-Block', fn: analyzeOrderBlock, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['Order-Block'] },
+    { name: 'VWAP-Reversion', fn: analyzeVWAPReversion, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['VWAP-Reversion'] },
+    { name: 'Fibonacci', fn: analyzeFibonacciContinuation, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['Fibonacci'] },
+    { name: 'RSI-Divergence', fn: analyzeRSIDivergence, weight: ENSEMBLE_CONFIG.STRATEGY_WEIGHTS['RSI-Divergence'] },
   ];
   
-  const signals = [];
   const currentPrice = candles[candles.length - 1].close;
   const atr = calculateATR(candles, 14);
   const pipSize = getPipSize(symbol);
   
-  // Run all strategies - collect ALL signals regardless of confidence
-  console.log(`  🔍 ${symbol}: Running ${strategies.length} strategies...`);
+  // ================================================================
+  // RUN ALL 8 STRATEGIES - Collect signals
+  // ================================================================
+  console.log(`  🔍 ${symbol}: Running all 8 strategies...`);
+  
+  const allSignals = [];
+  let buyScore = 0;
+  let sellScore = 0;
+  let buyCount = 0;
+  let sellCount = 0;
+  const buyStrategies = [];
+  const sellStrategies = [];
   
   for (const strategy of strategies) {
     try {
       const signal = strategy.fn(candles, symbol, botConfig);
-      if (signal) {
-        // Apply candle pattern boost if pattern confirms signal direction
-        let patternBoost = 0;
+      
+      if (signal && signal.type) {
+        // Apply candle pattern boost
         if (candlePatterns.pattern) {
           if ((signal.type === 'buy' && candlePatterns.type === 'bullish') ||
               (signal.type === 'sell' && candlePatterns.type === 'bearish')) {
-            patternBoost = candlePatterns.boost;
-            signal.confidence = Math.min(95, signal.confidence + patternBoost);
+            signal.confidence = Math.min(95, signal.confidence + candlePatterns.boost);
           }
         }
         
-        // Apply market structure confirmation boost
-        let structureBoost = 0;
+        // Apply market structure boost
         if (marketStructure) {
-          // Boost if signal aligns with trend
-          if ((signal.type === 'buy' && marketStructure.trend.aligned && marketStructure.trend.short === 'bullish') ||
-              (signal.type === 'sell' && marketStructure.trend.aligned && marketStructure.trend.short === 'bearish')) {
-            structureBoost = 5;
-            signal.confidence = Math.min(95, signal.confidence + structureBoost);
-          }
-          // Extra boost for trend + momentum alignment
-          if ((signal.type === 'buy' && marketStructure.momentum === 'bullish') ||
-              (signal.type === 'sell' && marketStructure.momentum === 'bearish')) {
-            structureBoost += 3;
-            signal.confidence = Math.min(95, signal.confidence + 3);
+          if ((signal.type === 'buy' && marketStructure.trend.short === 'bullish') ||
+              (signal.type === 'sell' && marketStructure.trend.short === 'bearish')) {
+            signal.confidence = Math.min(95, signal.confidence + 5);
           }
         }
         
-        const weighted = signal.confidence * strategy.weight;
-        const boostInfo = (patternBoost > 0 || structureBoost > 0) ? 
-          ` [+${patternBoost}pattern +${structureBoost}struct]` : '';
-        console.log(`    ✓ ${strategy.name}: ${signal.type.toUpperCase()} ${signal.confidence}% (weighted: ${weighted.toFixed(1)})${boostInfo}`);
-        signals.push({
-          ...signal,
-          strategyName: strategy.name,
-          weightedConfidence: weighted,
-          patternBoost,
-          structureBoost,
-          candlePattern: candlePatterns.pattern,
-        });
+        const weighted = strategy.weight;
+        
+        if (signal.type === 'buy') {
+          buyScore += weighted;
+          buyCount++;
+          buyStrategies.push({ name: strategy.name, weight: weighted, confidence: signal.confidence, signal });
+          console.log(`    ✓ ${strategy.name}: BUY (weight: ${weighted}, conf: ${signal.confidence}%)`);
+        } else if (signal.type === 'sell') {
+          sellScore += weighted;
+          sellCount++;
+          sellStrategies.push({ name: strategy.name, weight: weighted, confidence: signal.confidence, signal });
+          console.log(`    ✓ ${strategy.name}: SELL (weight: ${weighted}, conf: ${signal.confidence}%)`);
+        }
+        
+        allSignals.push({ ...signal, strategyName: strategy.name, weight: weighted });
+      } else {
+        console.log(`    ○ ${strategy.name}: NONE`);
       }
     } catch (err) {
-      // Strategy failed - skip it
+      console.log(`    ✗ ${strategy.name}: ERROR - ${err.message}`);
     }
   }
   
-  if (signals.length === 0) {
-    console.log(`  ⏸️ ${symbol}: No signals from any strategy - waiting for setup`);
+  // ================================================================
+  // DEBUG LOGGING - Strategy evaluation summary
+  // ================================================================
+  console.log(`  📊 ${symbol} ENSEMBLE SCORES:`);
+  console.log(`     BUY:  ${buyCount} strategies, score=${buyScore.toFixed(2)}`);
+  console.log(`     SELL: ${sellCount} strategies, score=${sellScore.toFixed(2)}`);
+  console.log(`     Diff: ${Math.abs(buyScore - sellScore).toFixed(2)}`);
+  
+  // ================================================================
+  // TRADE ELIGIBILITY CHECK (OPTIMIZED FOR EXECUTION + QUALITY)
+  // Primary: 2+ strategies align with score difference >= 1.0
+  // Fallback: Single high-weight strategy with 80%+ confidence
+  // ================================================================
+  const scoreDiff = Math.abs(buyScore - sellScore);
+  const minStrategies = ENSEMBLE_CONFIG.MIN_STRATEGIES_ALIGNED;
+  const minScoreDiff = ENSEMBLE_CONFIG.MIN_SCORE_DIFFERENCE;
+  
+  // Check for conflict (scores too close with signals on both sides)
+  if (scoreDiff < ENSEMBLE_CONFIG.SCORE_CONVERGENCE_THRESHOLD && buyCount > 0 && sellCount > 0) {
+    console.log(`  ⚠️ ${symbol}: CONFLICT - Scores converged (diff=${scoreDiff.toFixed(2)} < ${ENSEMBLE_CONFIG.SCORE_CONVERGENCE_THRESHOLD})`);
+    return null;
+  }
+  
+  // PRIMARY ELIGIBILITY: 2+ strategies aligned with score difference
+  let buyEligible = buyCount >= minStrategies && buyScore > sellScore + minScoreDiff;
+  let sellEligible = sellCount >= minStrategies && sellScore > buyScore + minScoreDiff;
+  
+  // FALLBACK: Single high-confidence strategy with weight >= 1.4
+  // This allows Liquidity-Sweep (1.5) or Order-Block (1.4) to trade alone if very confident
+  if (!buyEligible && !sellEligible) {
+    const highConfidenceBuy = buyStrategies.find(s => s.weight >= 1.4 && s.confidence >= 80);
+    const highConfidenceSell = sellStrategies.find(s => s.weight >= 1.4 && s.confidence >= 80);
+    
+    if (highConfidenceBuy && !highConfidenceSell && sellCount === 0) {
+      console.log(`  🎯 ${symbol}: HIGH-CONF BUY trigger - ${highConfidenceBuy.name} (${highConfidenceBuy.confidence}%)`);
+      buyEligible = true;
+    }
+    if (highConfidenceSell && !highConfidenceBuy && buyCount === 0) {
+      console.log(`  🎯 ${symbol}: HIGH-CONF SELL trigger - ${highConfidenceSell.name} (${highConfidenceSell.confidence}%)`);
+      sellEligible = true;
+    }
+  }
+  
+  // ADDITIONAL CHECK: If 3+ strategies align, reduce score diff requirement
+  if (!buyEligible && buyCount >= 3 && buyScore > sellScore + (minScoreDiff * 0.5)) {
+    console.log(`  🎯 ${symbol}: STRONG BUY alignment - ${buyCount} strategies agree`);
+    buyEligible = true;
+  }
+  if (!sellEligible && sellCount >= 3 && sellScore > buyScore + (minScoreDiff * 0.5)) {
+    console.log(`  🎯 ${symbol}: STRONG SELL alignment - ${sellCount} strategies agree`);
+    sellEligible = true;
+  }
+  
+  // If both eligible - NO TRADE (conflict)
+  if (buyEligible && sellEligible) {
+    console.log(`  ⚠️ ${symbol}: CONFLICT - Both BUY and SELL eligible, skipping`);
+    return null;
+  }
+  
+  // If neither eligible - NO TRADE
+  if (!buyEligible && !sellEligible) {
+    const buyReason = buyCount < minStrategies ? `need ${minStrategies}+ strats (have ${buyCount})` : `score diff ${scoreDiff.toFixed(2)} < ${minScoreDiff}`;
+    const sellReason = sellCount < minStrategies ? `need ${minStrategies}+ strats (have ${sellCount})` : `score diff ${scoreDiff.toFixed(2)} < ${minScoreDiff}`;
+    console.log(`  ⏸️ ${symbol}: NO TRADE - BUY: ${buyReason}, SELL: ${sellReason}`);
     return null;
   }
   
   // ================================================================
-  // SORT ALL SIGNALS BY WEIGHTED CONFIDENCE (HIGHEST FIRST)
-  // This ensures we always pick the strongest signal
+  // DETERMINE DIRECTION AND BUILD SIGNAL
   // ================================================================
-  signals.sort((a, b) => b.weightedConfidence - a.weightedConfidence);
+  const direction = buyEligible ? 'buy' : 'sell';
+  const alignedStrategies = direction === 'buy' ? buyStrategies : sellStrategies;
+  const totalScore = direction === 'buy' ? buyScore : sellScore;
+  const strategyCount = direction === 'buy' ? buyCount : sellCount;
   
-  console.log(`  📊 ${symbol}: Signal ranking by weighted confidence:`);
-  signals.forEach((s, i) => {
-    console.log(`      ${i+1}. ${s.strategyName}: ${s.type.toUpperCase()} ${s.confidence}% (weighted: ${s.weightedConfidence.toFixed(1)})`);
-  });
+  console.log(`  ✅ ${symbol}: ${direction.toUpperCase()} ELIGIBLE - ${strategyCount} strategies, score=${totalScore.toFixed(2)}`);
+  console.log(`     Aligned: ${alignedStrategies.map(s => s.name).join(', ')}`);
   
-  // ================================================================
-  // BOT-SPECIFIC ALIGNMENT CHECK
-  // Each bot has specific strategies that MUST confirm its signals
-  // NO GLOBAL REQUIREMENT - Only bot-specific alignment matters
-  // ================================================================
-  const buySignals = signals.filter(s => s.type === 'buy');
-  const sellSignals = signals.filter(s => s.type === 'sell');
+  // Get best signal from aligned strategies (highest confidence)
+  alignedStrategies.sort((a, b) => b.confidence - a.confidence);
+  const bestSignal = alignedStrategies[0].signal;
   
-  // Use bot-specific minAlignments instead of global MIN_STRATEGIES_REQUIRED
-  const minStrategies = botConfig?.minAlignments || 2;
-  
-  // Sort agreeing signals by weighted confidence
-  buySignals.sort((a, b) => b.weightedConfidence - a.weightedConfidence);
-  sellSignals.sort((a, b) => b.weightedConfidence - a.weightedConfidence);
-  
-  console.log(`  📊 ${symbol}: ${buySignals.length} BUY signals, ${sellSignals.length} SELL signals (bot needs ${minStrategies} alignment)`);
-  
-  let bestSignal = null;
-  let confluenceCount = 0;
-  let allAgreeingSignals = [];
+  // Calculate weighted confidence (average of all aligned strategy confidences)
+  const avgConfidence = alignedStrategies.reduce((sum, s) => sum + s.confidence, 0) / alignedStrategies.length;
+  const weightedConfidence = totalScore; // Use total weighted score as confidence metric
   
   // ================================================================
-  // BOT-SPECIFIC ALIGNMENT VALIDATION
-  // Check if bot's required alignment strategies are confirming
+  // BUILD FINAL SIGNAL WITH SL/TP
   // ================================================================
-  const checkBotAlignment = (agreeing, direction) => {
-    if (!botConfig || !botConfig.minAlignments || !botConfig.alignWith) {
-      // No specific alignment requirements - need at least 2 strategies agreeing
-      return { passed: agreeing.length >= 2, reason: 'general confluence (2+)', alignmentCount: agreeing.length, minRequired: 2, confirmingStrategies: agreeing.map(s => s.strategyName) };
-    }
-    
-    const minRequired = botConfig.minAlignments;
-    const alignStrategies = botConfig.alignWith || [];
-    
-    // Map strategy names to check names (handles naming differences)
-    const strategyNameMap = {
-      'ema-pullback': ['EMA200-Pullback', 'ema', 'pullback'],
-      'break-retest': ['Break-Retest', 'break', 'retest'],
-      'liquidity-sweep': ['Liquidity-Sweep', 'liquidity', 'sweep', 'smc'],
-      'london-breakout': ['London-Breakout', 'london', 'session'],
-      'order-block': ['Order-Block', 'order', 'block'],
-      'vwap-reversion': ['VWAP-Reversion', 'vwap', 'reversion'],
-      'fib-continuation': ['Fibonacci', 'fib', 'fibonacci'],
-      'rsi-divergence': ['RSI-Divergence', 'rsi', 'divergence'],
-    };
-    
-    // Find which required alignment strategies are confirming
-    const confirmingStrategies = [];
-    for (const requiredStrategy of alignStrategies) {
-      const aliases = strategyNameMap[requiredStrategy] || [requiredStrategy];
-      const found = agreeing.find(s => 
-        aliases.some(alias => 
-          s.strategyName.toLowerCase().includes(alias.toLowerCase())
-        )
-      );
-      if (found) {
-        confirmingStrategies.push({ required: requiredStrategy, found: found.strategyName });
-      }
-    }
-    
-    const alignmentCount = confirmingStrategies.length;
-    const passed = alignmentCount >= minRequired;
-    
-    if (passed) {
-      console.log(`  🎯 BOT ALIGNMENT MET: ${alignmentCount}/${minRequired} required strategies confirming`);
-      console.log(`     Confirming: ${confirmingStrategies.map(c => c.found).join(', ')}`);
-      console.log(`     Explanation: ${botConfig.alignmentExplanation}`);
-    } else {
-      console.log(`  ⏸️ BOT ALIGNMENT NOT MET: Only ${alignmentCount}/${minRequired} strategies confirming`);
-      console.log(`     Found: ${confirmingStrategies.map(c => c.found).join(', ') || 'none'}`);
-      console.log(`     Needed: ${alignStrategies.join(', ')}`);
-    }
-    
-    return { 
-      passed, 
-      alignmentCount,
-      minRequired,
-      confirmingStrategies: confirmingStrategies.map(c => c.found),
-      reason: passed ? 
-        `BOT ALIGNMENT (${alignmentCount}/${minRequired}): ${confirmingStrategies.map(c => c.found).join('+')}` :
-        `Need ${minRequired - alignmentCount} more alignment strategies`
-    };
-  };
-  
-  // Check BUY signals with bot-specific alignment
-  if (buySignals.length > 0) {
-    // Check bot-specific alignment
-    const alignment = checkBotAlignment(buySignals, 'BUY');
-    
-    if (alignment.passed) {
-      // Bot alignment confirmed - can trade
-      confluenceCount = buySignals.length;
-      allAgreeingSignals = buySignals;
-      bestSignal = buySignals[0]; // Already sorted - first is highest weighted confidence
-      
-      // Calculate average weighted confidence of all agreeing strategies
-      const avgWeighted = buySignals.reduce((sum, s) => sum + s.weightedConfidence, 0) / buySignals.length;
-      
-      bestSignal.reason = `🔥ALIGNMENT(${alignment.alignmentCount}/${alignment.minRequired}): ` + 
-        `[${alignment.confirmingStrategies.join('+')}] ` + bestSignal.reason;
-      console.log(`  ✅ ${symbol}: BOT ALIGNMENT MET for BUY - TOP: ${bestSignal.strategyName} (${bestSignal.weightedConfidence.toFixed(1)})`);
-    }
-  }
-  
-  // Check SELL signals with bot-specific alignment (only if no buy signal passed)
-  if (!bestSignal && sellSignals.length > 0) {
-    // Check bot-specific alignment
-    const alignment = checkBotAlignment(sellSignals, 'SELL');
-    
-    if (alignment.passed) {
-      // Bot alignment confirmed - can trade
-      confluenceCount = sellSignals.length;
-      allAgreeingSignals = sellSignals;
-      bestSignal = sellSignals[0]; // Already sorted - first is highest weighted confidence
-      
-      // Calculate average weighted confidence
-      const avgWeighted = sellSignals.reduce((sum, s) => sum + s.weightedConfidence, 0) / sellSignals.length;
-      
-      bestSignal.reason = `🔥ALIGNMENT(${alignment.alignmentCount}/${alignment.minRequired}): ` + 
-        `[${alignment.confirmingStrategies.join('+')}] ` + bestSignal.reason;
-      console.log(`  ✅ ${symbol}: BOT ALIGNMENT MET for SELL - TOP: ${bestSignal.strategyName} (${bestSignal.weightedConfidence.toFixed(1)})`);
-    }
-  }
-  
-  // No alignment met - wait for setup
-  if (!bestSignal) {
-    console.log(`  ⏸️ ${symbol}: BOT ALIGNMENT NOT MET - waiting for ${minStrategies} confirming strategies`);
-    return null;
-  }
-  
-  // ================================================================
-  // CONFLUENCE-BASED LOT SCALING
-  // More agreeing strategies = bigger lots for higher probability trades
-  // ================================================================
-  let lotMultiplier = RISK_CONFIG.LOT_MULTIPLIER_3_STRATS;
-  if (confluenceCount >= 6) {
-    lotMultiplier = RISK_CONFIG.LOT_MULTIPLIER_6_PLUS;
-    console.log(`  🚀 ${symbol}: EXTREME CONFLUENCE (${confluenceCount} strategies) - ${lotMultiplier}x lot multiplier`);
-  } else if (confluenceCount >= 5) {
-    lotMultiplier = RISK_CONFIG.LOT_MULTIPLIER_5_STRATS;
-    console.log(`  🔥 ${symbol}: VERY HIGH CONFLUENCE (${confluenceCount} strategies) - ${lotMultiplier}x lot multiplier`);
-  } else if (confluenceCount >= 4) {
-    lotMultiplier = RISK_CONFIG.LOT_MULTIPLIER_4_STRATS;
-    console.log(`  ⭐ ${symbol}: HIGH CONFLUENCE (${confluenceCount} strategies) - ${lotMultiplier}x lot multiplier`);
-  } else {
-    console.log(`  ✅ ${symbol}: ALIGNMENT MET (${confluenceCount} strategies) - ${lotMultiplier}x base lot`);
-  }
-  
-  // Boost confidence based on number of agreeing strategies (+5% per extra strategy beyond minimum)
-  const confluenceBonus = Math.max(0, (confluenceCount - minStrategies) * 5);
-  bestSignal.confidence = Math.min(95, bestSignal.confidence + confluenceBonus);
-  
-  console.log(`  🎯 ${symbol}: BEST SIGNAL = ${bestSignal.type.toUpperCase()} via ${bestSignal.strategyName} (${bestSignal.confidence}%)`);
-  
-  // ================================================================
-  // USE THE SL/TP ALREADY CALCULATED BY THE STRATEGY
-  // Each strategy calculates proper structure-based SL/TP
-  // This ensures SL/TP are based on actual market levels that WILL get hit
-  // ================================================================
-  
-  // The strategy should have already calculated these values
-  // If not present for some reason, fall back to ATR-based defaults
   let stopLoss = bestSignal.stopLoss;
   let takeProfit = bestSignal.takeProfit;
   let slPips = bestSignal.slPips;
   let tpPips = bestSignal.tpPips;
   
-  // Fallback only if strategy didn't calculate SL/TP
+  // Fallback SL/TP if strategy didn't calculate
   if (!stopLoss || !takeProfit) {
-    console.log(`  ⚠️ ${symbol}: Strategy ${bestSignal.strategy} missing SL/TP - using ATR fallback`);
-    const isBuy = bestSignal.type === 'buy';
-    const atrMultiplierSL = isGold ? 1.5 : 1.5;
-    const atrMultiplierTP = isGold ? 3 : 3;
-    
-    slPips = Math.round((atr * atrMultiplierSL) / pipSize);
-    tpPips = Math.round((atr * atrMultiplierTP) / pipSize);
-    
+    const isBuy = direction === 'buy';
+    slPips = Math.round((atr * 1.5) / pipSize);
+    tpPips = Math.round((atr * 3) / pipSize);
     stopLoss = isBuy ? currentPrice - (slPips * pipSize) : currentPrice + (slPips * pipSize);
     takeProfit = isBuy ? currentPrice + (tpPips * pipSize) : currentPrice - (tpPips * pipSize);
   }
   
+  const reason = `ENSEMBLE[${strategyCount}/${strategies.length}]: ${alignedStrategies.map(s => s.name).join('+')} | Score=${totalScore.toFixed(2)} | ${bestSignal.reason || ''}`;
+  
   return {
     symbol,
-    type: bestSignal.type,
+    type: direction,
     entryPrice: currentPrice,
-    stopLoss: stopLoss,
-    takeProfit: takeProfit,
-    volume: 0.01,
-    confidence: bestSignal.confidence,
-    reason: bestSignal.reason,
+    stopLoss,
+    takeProfit,
+    volume: 0.01, // Will be recalculated
+    confidence: avgConfidence,
+    weightedScore: totalScore,
+    reason,
     atr,
-    strategy: bestSignal.strategy,
-    slPips: slPips,
-    tpPips: tpPips,
-    confluenceCount: confluenceCount,
-    lotMultiplier: lotMultiplier,
-    allAgreeingStrategies: allAgreeingSignals.map(s => s.strategyName),
-    avgWeightedConfidence: allAgreeingSignals.reduce((sum, s) => sum + s.weightedConfidence, 0) / allAgreeingSignals.length,
+    strategy: 'ensemble',
+    slPips,
+    tpPips,
+    strategyCount,
+    alignedStrategies: alignedStrategies.map(s => s.name),
+    buyScore,
+    sellScore,
   };
 }
 
@@ -4781,15 +4508,11 @@ async function executeRobotTrade(robot) {
     const pairsToScan = TRADING_PAIRS.filter(p => allowedPairs.includes(p));
     
     console.log(`  📋 Scanning ${pairsToScan.length} pairs for ${robotName}: ${pairsToScan.join(', ')}`);
-    console.log(`  ⚙️ Bot settings: minStrategies=${RISK_CONFIG.MIN_STRATEGIES_REQUIRED}, maxLot=${botMaxLotSize}, cooldown=${botCooldown/1000}s`);
+    console.log(`  ⚙️ Ensemble Engine: minAlign=${ENSEMBLE_CONFIG.MIN_STRATEGIES_ALIGNED}, scoreDiff=${ENSEMBLE_CONFIG.MIN_SCORE_DIFFERENCE}, maxPos=${ENSEMBLE_CONFIG.MAX_POSITIONS_PER_SYMBOL}`);
     
     for (const symbol of pairsToScan) {
       try {
-        // Check cooldown using BOT-SPECIFIC cooldown
-        const lastTrade = lastTradeTime.get(symbol) || 0;
-        const onCooldown = Date.now() - lastTrade < botCooldown;
-        
-        // Get signal first to check confidence level
+        // Get candle data
         const candles = await fetchCandles(account, symbol, timeframe?.toLowerCase() || 'm15', 100);
         
         if (!candles || candles.length < 30) {
@@ -4797,88 +4520,119 @@ async function executeRobotTrade(robot) {
           continue;
         }
         
-        // Get current price from latest candle
         const currentPrice = candles[candles.length - 1].close;
-        
-        let signal = null;
-        const botStrategy = botConfig.strategy || 'default';
+        const atr = calculateATR(candles, 14);
         
         // ================================================================
-        // STRATEGY-SPECIFIC SIGNAL GENERATION
-        // ALL BOTS NOW USE THE 8 PROVEN HIGH WIN-RATE STRATEGIES
-        // The multi-strategy analyzer picks the strongest signal
+        // RUN ENSEMBLE STRATEGY ANALYZER
         // ================================================================
+        const signal = analyzeWithMultipleStrategies(candles, symbol, botConfig);
         
-        // 🚀 ALL BOTS USE PROVEN STRATEGIES
-        signal = analyzeWithMultipleStrategies(candles, symbol, botConfig);
-        
-        if (signal) {
-          // Log with bot-specific emoji for clarity
-          const botEmoji = {
-            'scalping': '⚡',
-            'momentum': '🚀', 
-            'trend': '📈',
-            'breakout': '💥',
-            'swing': '🔄',
-            'gold': '🥇',
-            'position': '🎯',
-            'sniper': '🎯',
-            'news': '📰',
-            'grid': '📊',
-            'hedge': '🛡️',
-            'default': '🎯'
-          };
-          const emoji = botEmoji[botStrategy] || '🎯';
-          console.log(`  ${emoji} ${symbol}: ${botStrategy.toUpperCase()} via [${signal.strategy}] ${signal.type} (${signal.confidence}%) SL=${signal.slPips}pips TP=${signal.tpPips}pips - ${signal.reason}`);
-        }
-        
-        // Skip only if NO signal at all (strategy returned null)
         if (!signal) {
           continue;
         }
         
-        // Get dynamic position limits based on account balance
-        const positionLimits = getPositionLimits(accountInfo.balance);
-        
-        // Check if we're under target positions
-        const underTarget = livePositions.length < positionLimits.target;
-        const isHighConfidence = signal.confidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD;
-        
         // ================================================================
-        // NO POSITION LIMITS - Open as many trades as signals allow
-        // Only prevent hedging (opposing positions on same symbol)
+        // GET SYMBOL STATE - Track positions and scaling
         // ================================================================
-        const signalDirection = signal.type.toLowerCase();
-        const oppositeDirection = signalDirection === 'buy' ? 'sell' : 'buy';
+        const state = getSymbolState(symbol);
         const existingPositionsOnPair = livePositions.filter(p => p.symbol === symbol);
+        const currentPositionCount = existingPositionsOnPair.length;
         
-        // NO LIMIT on positions per symbol - keep opening if signals are strong
-        // Just log how many we have
-        if (existingPositionsOnPair.length > 0) {
-          console.log(`  📊 ${symbol}: Have ${existingPositionsOnPair.length} existing position(s) - adding more allowed`);
+        // Sync state with live positions
+        if (currentPositionCount === 0 && state.openPositions > 0) {
+          // All positions closed - reset state
+          resetSymbolState(symbol);
+        } else if (currentPositionCount > 0) {
+          // Update state based on live positions
+          const posDirection = existingPositionsOnPair[0].type?.toLowerCase().includes('buy') ? 'BUY' : 'SELL';
+          state.direction = posDirection;
+          state.openPositions = currentPositionCount;
         }
         
-        const hasOpposingPosition = existingPositionsOnPair.some(p => 
-          p.type?.toLowerCase() === oppositeDirection || 
-          p.type?.toLowerCase()?.includes(oppositeDirection)
-        );
+        const signalDirection = signal.type.toUpperCase();
         
-        if (RISK_CONFIG.PREVENT_HEDGING && hasOpposingPosition) {
-          // NEVER open opposite position - skip this pair entirely
-          console.log(`  🚫 ${symbol}: Skipping ${signal.type.toUpperCase()} - already have ${oppositeDirection.toUpperCase()} position (no hedging)`);
+        // ================================================================
+        // HEDGING CHECK - Never open opposite direction
+        // ================================================================
+        if (state.direction && state.direction !== signalDirection && state.openPositions > 0) {
+          console.log(`  🚫 ${symbol}: Signal ${signalDirection} conflicts with existing ${state.direction} positions`);
           continue;
         }
         
-        // Cooldown check - enforce 1 minute cooldown per symbol
-        if (onCooldown) {
+        // ================================================================
+        // POSITION LIMIT CHECK - Max 10 per symbol
+        // ================================================================
+        if (currentPositionCount >= ENSEMBLE_CONFIG.MAX_POSITIONS_PER_SYMBOL) {
+          console.log(`  📊 ${symbol}: At max positions (${currentPositionCount}/${ENSEMBLE_CONFIG.MAX_POSITIONS_PER_SYMBOL})`);
+          continue;
+        }
+        
+        // ================================================================
+        // RISK CHECK - Max 5% per symbol
+        // ================================================================
+        const symbolRisk = calculateSymbolRisk(existingPositionsOnPair, accountInfo.balance);
+        if (symbolRisk >= ENSEMBLE_CONFIG.MAX_RISK_PER_SYMBOL) {
+          console.log(`  ⛔ ${symbol}: Risk limit reached (${(symbolRisk * 100).toFixed(2)}% >= ${ENSEMBLE_CONFIG.MAX_RISK_PER_SYMBOL * 100}%)`);
+          continue;
+        }
+        
+        // ================================================================
+        // PRICE SPACING CHECK - ATR × 0.5 minimum from last entry
+        // ================================================================
+        if (state.lastEntryPrice > 0) {
+          const priceDistance = Math.abs(currentPrice - state.lastEntryPrice);
+          const minSpacing = atr * ENSEMBLE_CONFIG.ATR_SPACING_MULTIPLIER;
+          if (priceDistance < minSpacing) {
+            console.log(`  ⏳ ${symbol}: Price too close to last entry (${priceDistance.toFixed(4)} < ${minSpacing.toFixed(4)} ATR spacing)`);
+            continue;
+          }
+        }
+        
+        // ================================================================
+        // COOLDOWN CHECK
+        // ================================================================
+        const lastTrade = lastTradeTime.get(symbol) || 0;
+        if (Date.now() - lastTrade < RISK_CONFIG.TRADE_COOLDOWN_MS) {
           const timeSinceLast = Math.round((Date.now() - lastTrade) / 1000);
-          console.log(`  ⏳ ${symbol}: Cooldown - last trade ${timeSinceLast}s ago (need ${RISK_CONFIG.TRADE_COOLDOWN_MS/1000}s)`);
+          console.log(`  ⏳ ${symbol}: Cooldown (${timeSinceLast}s ago)`);
           skippedSymbols.push(`${symbol}(cooldown)`);
           continue;
         }
         
-        signals.push({ symbol, signal, candles });
-        console.log(`  📊 ${symbol}: ${signal.type.toUpperCase()} signal (${signal.confidence}%)${isHighConfidence ? ' 🔥HIGH' : ''} - ${signal.reason}`);
+        // ================================================================
+        // DETERMINE POSITIONS TO OPEN
+        // ================================================================
+        let positionsToOpen = 0;
+        const weightedScore = signal.weightedScore || signal.buyScore || signal.sellScore || 0;
+        
+        if (state.openPositions === 0) {
+          // INITIAL ENTRY - Open 5 positions
+          positionsToOpen = ENSEMBLE_CONFIG.INITIAL_POSITIONS;
+          console.log(`  🚀 ${symbol}: INITIAL ENTRY - Opening ${positionsToOpen} positions`);
+        } else {
+          // SCALE-IN - Check if confidence increased by 1.0+
+          const confidenceIncrease = weightedScore - state.lastEntryConfidence;
+          if (confidenceIncrease >= ENSEMBLE_CONFIG.SCALE_IN_CONFIDENCE_INCREMENT) {
+            positionsToOpen = 1;
+            console.log(`  📈 ${symbol}: SCALE-IN - Confidence +${confidenceIncrease.toFixed(2)} → Opening 1 position`);
+          } else {
+            console.log(`  ⏸️ ${symbol}: No scale-in (conf increase ${confidenceIncrease.toFixed(2)} < ${ENSEMBLE_CONFIG.SCALE_IN_CONFIDENCE_INCREMENT})`);
+            continue;
+          }
+        }
+        
+        // Cap at max positions
+        const remainingSlots = ENSEMBLE_CONFIG.MAX_POSITIONS_PER_SYMBOL - currentPositionCount;
+        positionsToOpen = Math.min(positionsToOpen, remainingSlots);
+        
+        if (positionsToOpen <= 0) {
+          continue;
+        }
+        
+        signals.push({ symbol, signal, candles, positionsToOpen, weightedScore, atr });
+        console.log(`  ✅ ${symbol}: ${signal.type.toUpperCase()} eligible | Score=${weightedScore.toFixed(2)} | Opening ${positionsToOpen} position(s)`);
+        
       } catch (err) {
         skippedSymbols.push(`${symbol}(error: ${err.message?.substring(0, 30)})`);
         continue;
@@ -4891,160 +4645,111 @@ async function executeRobotTrade(robot) {
     }
     
     if (signals.length === 0) {
-      console.log(`  ⏸️ No confluence signals (need ${RISK_CONFIG.MIN_STRATEGIES_REQUIRED}+ strategies agreeing)`);
+      console.log(`  ⏸️ No eligible signals (need ${ENSEMBLE_CONFIG.MIN_STRATEGIES_ALIGNED}+ strategies aligned with score diff >= ${ENSEMBLE_CONFIG.MIN_SCORE_DIFFERENCE})`);
       return;
     }
     
-    // Sort signals by confidence (strongest first)
-    signals.sort((a, b) => b.signal.confidence - a.signal.confidence);
+    // Sort by weighted score (highest first)
+    signals.sort((a, b) => (b.weightedScore || 0) - (a.weightedScore || 0));
     
-    // Separate high-confidence (70%+), news signals, and normal signals
-    const highConfidenceSignals = signals.filter(s => s.signal.confidence >= RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD);
-    const newsSignals = signals.filter(s => s.signal.impactLevel && (s.signal.impactLevel === 'HIGH' || s.signal.impactLevel === 'MEDIUM'));
-    const normalSignals = signals.filter(s => s.signal.confidence < RISK_CONFIG.HIGH_CONFIDENCE_THRESHOLD && !s.signal.impactLevel);
-    
-    console.log(`  🎯 Found ${signals.length} signal(s): ${highConfidenceSignals.length} HIGH CONF, ${newsSignals.length} NEWS, ${normalSignals.length} normal`);
+    console.log(`  🎯 Processing ${signals.length} eligible signal(s)...`);
     
     // ================================================================
-    // NEWS SIGNALS - Prioritize high-impact news trades
+    // EXECUTE TRADES WITH MULTI-POSITION SCALING
     // ================================================================
-    if (newsSignals.length > 0 && isNewsTrader) {
-      console.log(`  📰 NEWS TRADING MODE - Processing ${newsSignals.length} news signal(s)...`);
-      
-      for (const { symbol, signal } of newsSignals) {
-        // NO position limit check - always open if signal is strong
-        const existingOnSymbol = livePositions.filter(p => p.symbol === symbol);
-        console.log(`    📰 ${symbol}: Have ${existingOnSymbol.length} existing position(s) - news signal processing`);
-        
-        const currentPL = livePositions.reduce((sum, p) => sum + (p.profit || 0), 0);
-        const riskCheck = canOpenMoreTrades(accountInfo.balance, accountInfo.equity, livePositions.length, currentPL, signal.confidence, accountId);
-        
-        if (!riskCheck.canTrade) {
-          console.log(`    ⛔ ${symbol}: ${riskCheck.reason}`);
-          continue;
-        }
-        
-        try {
-          // Calculate lot size using signal confidence, bot config, and confluence multiplier
-          const lotMultiplier = signal.lotMultiplier || 1.0;
-          const lotSize = calculatePositionSize(accountInfo.balance, signal.slPips, symbol, signal.confidence, botConfig, lotMultiplier);
-          signal.volume = lotSize;
-          
-          console.log(`    📰 ${symbol}: ${signal.impactLevel} IMPACT NEWS - ${signal.tradingMode}`);
-          console.log(`       ${signal.type} @ ${signal.entryPrice?.toFixed(5)}, SL: ${signal.stopLoss?.toFixed(5)}, TP: ${signal.takeProfit?.toFixed(5)}`);
-          console.log(`       Lots: ${lotSize} (confidence: ${signal.confidence}%, multiplier: ${lotMultiplier}x)`);
-          
-          const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
-          if (trade) {
-            lastTradeTime.set(symbol, Date.now());
-            // Invalidate cache so next check gets fresh data
-            positionsCache.delete(`positions_${accountId}`);
-            livePositions = await getCachedPositions(connection, accountId); // Refresh
-            console.log(`    ✅ NEWS trade opened on ${symbol}`);
-          }
-        } catch (err) {
-          console.error(`    ❌ Failed to open news trade on ${symbol}:`, err.message);
-        }
-      }
-    }
+    let totalTradesOpened = 0;
     
-    // For HIGH CONFIDENCE signals - BIGGER LOT SIZES
-    if (highConfidenceSignals.length > 0) {
-      console.log(`  🔥 STRONG SIGNALS - Processing ${highConfidenceSignals.length} high-confidence signal(s) with BIGGER LOTS...`);
+    for (const { symbol, signal, positionsToOpen, weightedScore, atr } of signals) {
+      const state = getSymbolState(symbol);
+      const currentPrice = signal.entryPrice;
       
-      for (const { symbol, signal } of highConfidenceSignals) {
-        // NO position limit - always open if signal is strong
-        const existingOnSymbol = livePositions.filter(p => p.symbol === symbol);
-        console.log(`    🔥 ${symbol}: Have ${existingOnSymbol.length} position(s) - adding HIGH CONFIDENCE trade`);
-        
-        // Re-check risk for each high-confidence trade
-        const currentPL = livePositions.reduce((sum, p) => sum + (p.profit || 0), 0);
-        const riskCheck = canOpenMoreTrades(accountInfo.balance, accountInfo.equity, livePositions.length, currentPL, signal.confidence, accountId);
-        
-        if (!riskCheck.canTrade) {
-          console.log(`    ⛔ ${symbol}: ${riskCheck.reason}`);
-          continue;
-        }
-        
-        try {
-          // Calculate position size - BIGGER lots for high confidence with confluence multiplier
-          const lotMultiplier = signal.lotMultiplier || 1.0;
-          const lotSize = calculatePositionSize(accountInfo.balance, signal.slPips, symbol, signal.confidence, botConfig, lotMultiplier);
-          signal.volume = lotSize;
-          
-          console.log(`    🔥 ${symbol}: HIGH CONFIDENCE ${signal.confidence}% - Confluence: ${signal.confluenceCount || 'N/A'} strategies`);
-          console.log(`       SL=${signal.slPips}pips, TP=${signal.tpPips}pips, Lots=${lotSize} (${lotMultiplier}x multiplier)`);
-          
-          // Execute trade
-          const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
-          if (trade) {
-            lastTradeTime.set(symbol, Date.now());
-            positionsCache.delete(`positions_${accountId}`); // Invalidate cache
-            livePositions = await getCachedPositions(connection, accountId); // Use cache
-            console.log(`    ✅ HIGH CONFIDENCE trade opened on ${symbol}`);
-          }
-        } catch (err) {
-          console.error(`    ❌ Failed to open high-confidence trade on ${symbol}:`, err.message);
-        }
+      console.log(`\n  📊 EXECUTING: ${symbol} ${signal.type.toUpperCase()}`);
+      console.log(`     Score: ${weightedScore.toFixed(2)} | Strategies: ${signal.strategyCount} | Positions to open: ${positionsToOpen}`);
+      
+      // Re-check risk before opening
+      const currentPL = livePositions.reduce((sum, p) => sum + (p.profit || 0), 0);
+      const riskCheck = canOpenMoreTrades(accountInfo.balance, accountInfo.equity, livePositions.length, currentPL, signal.confidence, accountId);
+      
+      if (!riskCheck.canTrade) {
+        console.log(`     ⛔ BLOCKED: ${riskCheck.reason}`);
+        continue;
       }
-    }
-    
-    // For NORMAL signals - NO LIMIT, open all valid signals
-    if (normalSignals.length > 0) {
-      const currentPositionCount = livePositions.length;
       
-      // NO LIMIT - open as many trades as signals allow
-      console.log(`  🎯 NORMAL SIGNALS: ${normalSignals.length} signal(s) to process - NO POSITION LIMIT`);
-      console.log(`  📊 Currently have ${currentPositionCount} position(s) - opening more...`);
+      // Calculate lot size per position
+      const lotSize = calculatePositionSize(accountInfo.balance, signal.slPips, symbol, signal.confidence, botConfig, 1.0);
+      signal.volume = lotSize;
       
-      let tradesOpened = 0;
+      let positionsOpened = 0;
       
-      for (const { symbol, signal } of normalSignals) {
-        // NO position limit - open all valid signals
-        const existingOnSymbol = livePositions.filter(p => p.symbol === symbol);
-        console.log(`    📊 ${symbol}: Have ${existingOnSymbol.length} position(s) - adding normal signal trade`);
-        
-        // Re-check we can still trade
-        const currentPL = livePositions.reduce((sum, p) => sum + (p.profit || 0), 0);
-        const riskCheck = canOpenMoreTrades(accountInfo.balance, accountInfo.equity, livePositions.length, currentPL, signal.confidence, accountId);
-        if (!riskCheck.canTrade) {
-          console.log(`    ⛔ ${riskCheck.reason}`);
-          break;
-        }
-        
+      // Open multiple positions
+      for (let i = 0; i < positionsToOpen; i++) {
         try {
-          // Calculate proper position size based on account balance, signal strength, and confluence
-          const lotMultiplier = signal.lotMultiplier || 1.0;
-          const lotSize = calculatePositionSize(accountInfo.balance, signal.slPips, symbol, signal.confidence, botConfig, lotMultiplier);
-          signal.volume = lotSize;
+          console.log(`     🔄 Opening position ${i + 1}/${positionsToOpen}...`);
           
-          console.log(`    📐 ${symbol}: ${signal.confidence}% - Confluence: ${signal.confluenceCount || 'N/A'} strategies`);
-          console.log(`       SL=${signal.slPips}pips, TP=${signal.tpPips}pips, Lots=${lotSize} (${lotMultiplier}x multiplier)`);
-          
-          // Execute trade
           const trade = await executeTrade(connection, accountId, robotId, userId, robotName, signal);
+          
           if (trade) {
-            tradesOpened++;
-            lastTradeTime.set(symbol, Date.now());
-            positionsCache.delete(`positions_${accountId}`); // Invalidate cache
-            livePositions = await getCachedPositions(connection, accountId); // Use cache
-            console.log(`    ✅ Trade opened on ${symbol} (${livePositions.length} total positions)`);
+            positionsOpened++;
+            totalTradesOpened++;
+            
+            // Update symbol state
+            updateSymbolState(symbol, {
+              direction: signal.type.toUpperCase(),
+              lastEntryConfidence: weightedScore,
+              openPositions: state.openPositions + positionsOpened,
+              lastEntryPrice: currentPrice,
+              totalRisk: state.totalRisk + (lotSize * 0.01), // Approximate risk
+            });
+            
+            console.log(`     ✅ Position ${i + 1} opened (lot=${lotSize})`);
+            
+            // Small delay between multiple positions to avoid rate limits
+            if (i < positionsToOpen - 1) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          } else {
+            console.log(`     ❌ Position ${i + 1} failed`);
           }
         } catch (err) {
-          console.error(`    ❌ Failed to open trade on ${symbol}:`, err.message);
+          console.error(`     ❌ Error opening position ${i + 1}:`, err.message);
         }
       }
       
-      console.log(`  📈 Opened ${tradesOpened} trade(s) this cycle`);
+      if (positionsOpened > 0) {
+        lastTradeTime.set(symbol, Date.now());
+        positionsCache.delete(`positions_${accountId}`);
+        livePositions = await getCachedPositions(connection, accountId);
+        console.log(`     📈 Opened ${positionsOpened}/${positionsToOpen} positions on ${symbol}`);
+      }
     }
     
     // Refresh final position count (use cache)
     livePositions = await getCachedPositions(connection, accountId);
-    console.log(`  📈 Cycle complete. Total positions: ${livePositions.length}`);
+    console.log(`  📈 Cycle complete. Total trades opened: ${totalTradesOpened}, Total positions: ${livePositions.length}`);
     
   } catch (error) {
     console.error(`Error executing trade for robot ${robotName}:`, error);
   }
+}
+
+/**
+ * Calculate total risk exposure for a symbol
+ */
+function calculateSymbolRisk(positions, balance) {
+  if (!positions || positions.length === 0 || !balance) return 0;
+  
+  // Sum up potential loss from all positions on this symbol
+  let totalRisk = 0;
+  for (const pos of positions) {
+    // Estimate risk as lot size * approximate pip value
+    const lotSize = pos.volume || 0.01;
+    const pipValue = pos.symbol?.includes('XAU') ? 1 : 0.1; // Gold vs Forex
+    const slPips = 100; // Assume 100 pip average SL
+    const positionRisk = lotSize * pipValue * slPips;
+    totalRisk += positionRisk;
+  }
+  
+  return totalRisk / balance;
 }
 
 /**
