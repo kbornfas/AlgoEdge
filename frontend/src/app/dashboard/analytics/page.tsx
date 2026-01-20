@@ -155,6 +155,8 @@ export default function AnalyticsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
   const fetchAnalytics = useCallback(async (showRefresh = false) => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -165,7 +167,7 @@ export default function AnalyticsPage() {
     if (showRefresh) setRefreshing(true);
 
     try {
-      const response = await fetch('/api/trades/analytics', {
+      const response = await fetch(`${backendUrl}/api/trades/analytics`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -183,7 +185,7 @@ export default function AnalyticsPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [router]);
+  }, [router, backendUrl]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -197,7 +199,7 @@ export default function AnalyticsPage() {
     if (!token) return;
 
     try {
-      const response = await fetch('/api/trades/admin/kill-switch/reset', {
+      const response = await fetch(`${backendUrl}/api/trades/admin/kill-switch/reset`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
