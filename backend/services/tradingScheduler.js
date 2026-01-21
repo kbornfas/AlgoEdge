@@ -101,28 +101,28 @@ const ENSEMBLE_CONFIG = {
     'RSI-Divergence': 1.3,               // Boosted - divergences catch reversals
   },
   
-  // TRADE ELIGIBILITY RULES (OPTIMIZED FOR PROFIT)
+  // TRADE ELIGIBILITY RULES (BALANCED)
   MIN_STRATEGIES_ALIGNED: 2,              // At least 2 strategies must align
-  MIN_SCORE_DIFFERENCE: 0.8,              // Lowered to 0.8 to catch more trades
+  MIN_SCORE_DIFFERENCE: 0.8,              // Score difference for signal clarity
   SINGLE_STRONG_THRESHOLD: 2.0,           // Allow single strong strategy at 2.0 weight
   
-  // POSITION SCALING (CONSERVATIVE START, AGGRESSIVE SCALE-IN)
-  INITIAL_POSITIONS: 2,                   // Start with 2 positions (was 5)
-  MAX_POSITIONS_PER_SYMBOL: 6,            // Cap at 6 per symbol (was 10)
-  SCALE_IN_CONFIDENCE_INCREMENT: 0.8,     // Scale in faster when confident
+  // POSITION SCALING (START 2-3, SCALE IN UNLIMITED)
+  INITIAL_POSITIONS: 2,                   // Start with 2-3 positions
+  MAX_POSITIONS_PER_SYMBOL: 999,          // NO LIMIT - scale in as confidence grows
+  SCALE_IN_CONFIDENCE_INCREMENT: 0.8,     // Scale in on +0.8 confidence increase
   
   // PRICE SPACING
   ATR_SPACING_MULTIPLIER: 0.3,            // Tighter spacing for more entries
   
-  // RISK LIMITS (BALANCED FOR GOLD)
-  MAX_RISK_PER_SYMBOL: 0.04,              // 4% max risk per symbol (was 5%)
-  MAX_TOTAL_EXPOSURE: 0.20,               // 20% max total (was 30%)
+  // RISK LIMITS (BALANCED)
+  MAX_RISK_PER_SYMBOL: 0.05,              // 5% max risk per symbol
+  MAX_TOTAL_EXPOSURE: 0.30,               // 30% max total exposure
   
   // CONFLICT PROTECTION
-  SCORE_CONVERGENCE_THRESHOLD: 0.6,       // Tighter threshold for cleaner signals
+  SCORE_CONVERGENCE_THRESHOLD: 0.6,       // Threshold for cleaner signals
   
-  // CONFIDENCE REQUIREMENTS (HIGHER QUALITY)
-  MIN_STRATEGY_CONFIDENCE: 68,            // Raised from 60% to 68%
+  // CONFIDENCE REQUIREMENTS
+  MIN_STRATEGY_CONFIDENCE: 65,            // 65% minimum confidence
 };
 
 // =========================================================================
@@ -238,38 +238,20 @@ const TIMEFRAME_EVALUATION_INTERVALS = {
 const lastStrategyEvaluation = new Map();
 
 const RISK_CONFIG = {
-  // ACCOUNT PROTECTION
-  MIN_ACCOUNT_BALANCE: parseFloat(process.env.MIN_ACCOUNT_BALANCE) || 100,
+  // ACCOUNT PROTECTION - BALANCED FOR CATCHING MOVES
+  MIN_ACCOUNT_BALANCE: parseFloat(process.env.MIN_ACCOUNT_BALANCE) || 50,
   TRADE_COOLDOWN_MS: parseInt(process.env.TRADE_COOLDOWN_MS) || 30000,        // 30 sec cooldown
-  DAILY_LOSS_LIMIT: parseFloat(process.env.DAILY_LOSS_LIMIT) || 0.15,         // 15% daily loss limit
-  MAX_LOT_SIZE: 1.00,
+  DAILY_LOSS_LIMIT: 1.0,                  // DISABLED - 100% = no daily limit
+  MAX_LOT_SIZE: 1.00,                     // Allow up to 1.0 lots for scaling
   MIN_LOT_SIZE: 0.01,
   PREVENT_HEDGING: true,                  // Never open opposite positions
 };
 
 // =========================================================================
-// 🛡️ EMERGENCY DRAWDOWN KILL-SWITCH CONFIGURATION
-// Automatically stops ALL trading when drawdown thresholds are exceeded
+// KILL SWITCH - DISABLED
+// User requested removal to allow catching big moves without restrictions
 // =========================================================================
-const KILL_SWITCH_CONFIG = {
-  // DRAWDOWN THRESHOLDS (% of account)
-  SOFT_DRAWDOWN: 0.10,                    // 10% - Warning level, reduce position sizes
-  HARD_DRAWDOWN: 0.15,                    // 15% - Stop new trades
-  EMERGENCY_DRAWDOWN: 0.20,               // 20% - CLOSE ALL positions immediately
-  
-  // TIME-BASED RECOVERY
-  COOLDOWN_AFTER_SOFT: 30 * 60 * 1000,    // 30 min cooldown after soft drawdown
-  COOLDOWN_AFTER_HARD: 60 * 60 * 1000,    // 1 hour cooldown after hard drawdown
-  COOLDOWN_AFTER_EMERGENCY: 4 * 60 * 60 * 1000, // 4 hours after emergency
-  
-  // SESSION PROTECTION
-  MAX_LOSSES_PER_SESSION: 5,              // Max consecutive losses before pause
-  SESSION_RESET_HOURS: 4,                 // Hours before session loss count resets
-  
-  // RECOVERY MODE
-  RECOVERY_LOT_REDUCTION: 0.5,            // Use 50% lot size after recovery
-  RECOVERY_TRADES_REQUIRED: 3,            // Win 3 trades before normal sizing
-};
+const KILL_SWITCH_CONFIG = null; // DISABLED - No trading restrictions
 
 // =========================================================================
 // 📈 PARTIAL PROFIT CONFIGURATION
@@ -1874,29 +1856,29 @@ function calculatePositionSize(balance, stopLossPips, symbol, confidence = 50, b
     maxLotForAccount = 0.05;   // Max 0.05 lots
     console.log(`    🔒 MINI ACCOUNT ($${balance.toFixed(0)}) - Max 3% risk, max 0.05 lots`);
   } else if (balance < 1000) {
-    // SMALL ACCOUNT: $500-$999 - Moderate
+    // SMALL ACCOUNT: $500-$999 - Very Conservative (RECOVERY MODE)
     accountTier = 'SMALL';
-    maxRiskForAccount = 0.04;  // Max 4% risk per trade
-    maxLotForAccount = 0.10;   // Max 0.10 lots
-    console.log(`    📊 SMALL ACCOUNT ($${balance.toFixed(0)}) - Max 4% risk, max 0.10 lots`);
+    maxRiskForAccount = 0.02;  // Max 2% risk per trade (reduced from 4%)
+    maxLotForAccount = 0.03;   // Max 0.03 lots (reduced from 0.10 - MICRO LOTS ONLY)
+    console.log(`    🔒 SMALL ACCOUNT ($${balance.toFixed(0)}) - Max 2% risk, max 0.03 lots (RECOVERY MODE)`);
   } else if (balance < 2500) {
-    // MEDIUM ACCOUNT: $1000-$2499 - Standard
+    // MEDIUM ACCOUNT: $1000-$2499 - Conservative
     accountTier = 'MEDIUM';
-    maxRiskForAccount = 0.05;  // Max 5% risk per trade
-    maxLotForAccount = 0.20;   // Max 0.20 lots
-    console.log(`    📈 MEDIUM ACCOUNT ($${balance.toFixed(0)}) - Max 5% risk, max 0.20 lots`);
+    maxRiskForAccount = 0.02;  // Max 2% risk per trade (reduced from 5%)
+    maxLotForAccount = 0.05;   // Max 0.05 lots (reduced from 0.20 for Gold safety)
+    console.log(`    📈 MEDIUM ACCOUNT ($${balance.toFixed(0)}) - Max 2% risk, max 0.05 lots`);
   } else if (balance < 5000) {
-    // STANDARD ACCOUNT: $2500-$4999 - Normal
+    // STANDARD ACCOUNT: $2500-$4999 - Moderate
     accountTier = 'STANDARD';
-    maxRiskForAccount = 0.06;  // Max 6% risk per trade
-    maxLotForAccount = 0.35;   // Max 0.35 lots
-    console.log(`    💪 STANDARD ACCOUNT ($${balance.toFixed(0)}) - Max 6% risk, max 0.35 lots`);
+    maxRiskForAccount = 0.03;  // Max 3% risk per trade (reduced from 6%)
+    maxLotForAccount = 0.10;   // Max 0.10 lots (reduced from 0.35 for Gold safety)
+    console.log(`    📊 STANDARD ACCOUNT ($${balance.toFixed(0)}) - Max 3% risk, max 0.10 lots`);
   } else if (balance < 10000) {
-    // PROFESSIONAL ACCOUNT: $5000-$9999 - Aggressive
+    // PROFESSIONAL ACCOUNT: $5000-$9999 - CONSERVATIVE for Gold
     accountTier = 'PROFESSIONAL';
-    maxRiskForAccount = 0.08;  // Max 8% risk per trade
-    maxLotForAccount = 0.50;   // Max 0.50 lots
-    console.log(`    🔥 PROFESSIONAL ACCOUNT ($${balance.toFixed(0)}) - Max 8% risk, max 0.50 lots`);
+    maxRiskForAccount = 0.04;  // Max 4% risk per trade (reduced from 8%)
+    maxLotForAccount = 0.15;   // Max 0.15 lots (reduced from 0.50 for Gold safety)
+    console.log(`    💼 PROFESSIONAL ACCOUNT ($${balance.toFixed(0)}) - Max 4% risk, max 0.15 lots`);
   } else {
     // LARGE ACCOUNT: $10000+ - Full capacity
     accountTier = 'LARGE';
