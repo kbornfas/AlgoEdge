@@ -7277,28 +7277,99 @@ async function manageOpenPositions(connection, account, accountId, userId) {
 }
 
 /**
- * Sync local database with actual MT5 positions
+ * Sync local database with actual MT5 positions and track P&L
  */
 async function syncTradesWithMT5(connection, accountId) {
   try {
     // Use cached positions to avoid rate limits
     const positions = await getCachedPositions(connection, accountId);
     const openPositionIds = new Set((positions || []).map(p => p.symbol));
+    const openPositionMap = new Map((positions || []).map(p => [p.symbol, p]));
     
     // Get open trades from database
     const dbTrades = await pool.query(
-      `SELECT id, pair FROM trades WHERE mt5_account_id = $1 AND status = 'open'`,
+      `SELECT id, pair, type, volume, open_price, robot_id, mt5_ticket FROM trades WHERE mt5_account_id = $1 AND status = 'open'`,
       [accountId]
     );
+    
+    // Get closed deals/history from MT5 for profit calculation
+    let historyDeals = [];
+    try {
+      historyDeals = await connection.getDealsByTimeRange(
+        new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
+        new Date()
+      );
+    } catch (e) {
+      // getDealsByTimeRange may not be available, try history orders
+      try {
+        const orders = await connection.getHistoryOrdersByTimeRange(
+          new Date(Date.now() - 24 * 60 * 60 * 1000),
+          new Date()
+        );
+        if (orders && orders.length > 0) {
+          historyDeals = orders;
+        }
+      } catch (e2) {
+        // That's okay, we'll calculate profit from price difference
+      }
+    }
     
     // Close trades in database that are no longer open in MT5
     for (const trade of dbTrades.rows) {
       if (!openPositionIds.has(trade.pair)) {
-        await pool.query(
-          `UPDATE trades SET status = 'closed', close_time = NOW() WHERE id = $1`,
-          [trade.id]
+        // Try to find the closing deal to get actual profit
+        let profit = 0;
+        let closePrice = 0;
+        
+        // Method 1: Find in history deals
+        const closingDeal = historyDeals.find(d => 
+          d.symbol === trade.pair && 
+          (d.profit !== undefined || d.closePrice !== undefined)
         );
-        console.log(`    📊 Synced: Trade ${trade.id} (${trade.pair}) marked as closed`);
+        
+        if (closingDeal && closingDeal.profit !== undefined) {
+          profit = closingDeal.profit;
+          closePrice = closingDeal.closePrice || closingDeal.price || 0;
+        } else if (closingDeal && closingDeal.closePrice) {
+          // Calculate profit from price difference
+          closePrice = closingDeal.closePrice;
+          const priceDiff = closePrice - trade.open_price;
+          const pipValue = trade.pair.includes('XAU') ? 10 : (trade.pair.includes('XAG') ? 50 : 10);
+          profit = priceDiff * trade.volume * pipValue * (trade.type === 'buy' ? 1 : -1);
+        }
+        
+        // Get strategy from position map if available
+        let strategy = 'unknown';
+        if (trade.mt5_ticket) {
+          const strategyInfo = positionStrategyMap.get(String(trade.mt5_ticket));
+          if (strategyInfo) {
+            strategy = strategyInfo.strategy;
+            // Clean up the map
+            positionStrategyMap.delete(String(trade.mt5_ticket));
+          }
+        }
+        if (strategy === 'unknown' && trade.robot_id) {
+          strategy = `robot_${trade.robot_id}`;
+        }
+        
+        // Update trade in database with profit
+        await pool.query(
+          `UPDATE trades SET status = 'closed', close_time = NOW(), close_price = $2, profit = $3 WHERE id = $1`,
+          [trade.id, closePrice || null, profit]
+        );
+        
+        // Record analytics for win rate tracking
+        recordAnalytics('trade_close', {
+          strategy: strategy,
+          symbol: trade.pair,
+          profit: profit,
+          duration: 0,
+        });
+        
+        // Update kill switch state for streak tracking
+        updateKillSwitchOnClose(profit, trade.pair, profit < 0, trade.type);
+        
+        console.log(`    📊 Synced: Trade ${trade.id} (${trade.pair}) closed | Strategy: ${strategy} | P/L: $${profit.toFixed(2)}`);
       }
     }
   } catch (error) {
@@ -7338,7 +7409,7 @@ export function getAnalyticsDashboard() {
         level: killSwitchState.level,
         triggeredAt: killSwitchState.triggeredAt ? new Date(killSwitchState.triggeredAt).toISOString() : null,
         recoveryMode: killSwitchState.recoveryMode,
-        recoveryProgress: killSwitchState.recoveryMode 
+        recoveryProgress: killSwitchState.recoveryMode && KILL_SWITCH_CONFIG
           ? `${killSwitchState.recoveryWins}/${KILL_SWITCH_CONFIG.RECOVERY_TRADES_REQUIRED}` 
           : null,
       },
@@ -7364,11 +7435,16 @@ export function getAnalyticsDashboard() {
       runnersActive: runnerPositions.size,
     },
     config: {
-      killSwitch: {
+      killSwitch: KILL_SWITCH_CONFIG ? {
         softDrawdown: `${KILL_SWITCH_CONFIG.SOFT_DRAWDOWN * 100}%`,
         hardDrawdown: `${KILL_SWITCH_CONFIG.HARD_DRAWDOWN * 100}%`,
         emergencyDrawdown: `${KILL_SWITCH_CONFIG.EMERGENCY_DRAWDOWN * 100}%`,
         maxLossesPerSession: KILL_SWITCH_CONFIG.MAX_LOSSES_PER_SESSION,
+      } : {
+        softDrawdown: 'DISABLED',
+        hardDrawdown: 'DISABLED',
+        emergencyDrawdown: 'DISABLED',
+        maxLossesPerSession: 'DISABLED',
       },
       partialProfit: {
         levels: PARTIAL_PROFIT_CONFIG.LEVELS,
