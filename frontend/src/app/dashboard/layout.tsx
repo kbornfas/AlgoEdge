@@ -98,7 +98,7 @@ const menuCategories = [
   {
     title: 'Resources',
     items: [
-      { text: 'Learning Hub', icon: BookOpen, href: '/dashboard/learning', requiresSubscription: true },
+      { text: 'Learning Hub', icon: BookOpen, href: '/dashboard/learning-hub', requiresSubscription: true },
       { text: 'Market News', icon: Newspaper, href: '/dashboard/news', requiresSubscription: true },
       { text: 'Community', icon: MessageSquare, href: '/dashboard/community', requiresSubscription: true },
     ],

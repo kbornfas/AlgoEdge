@@ -21,73 +21,73 @@ const blogPosts = [
     slug: 'best-xauusd-strategy-2026',
     title: 'Best XAUUSD Strategy 2026: Complete Gold Trading Guide',
     excerpt: 'Discover the most profitable XAUUSD (Gold) trading strategies for 2026. Learn how AI-powered bots are revolutionizing gold trading with 94%+ win rates.',
-    image: '/images/gold-trading.jpg',
+    image: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=800&q=80',
     category: 'Trading Strategies',
     readTime: '8 min read',
     date: 'January 15, 2026',
     featured: true,
     color: '#FFD700',
-    emoji: '🪙',
+    gradient: 'linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(218,165,32,0.95) 100%)',
   },
   {
     slug: 'best-trading-api-2026',
     title: 'Best Trading APIs for Algorithmic Trading in 2026: Complete Developer Guide',
     excerpt: 'Compare the top trading APIs for building automated trading systems. Real-time market data, historical prices, WebSocket streaming, and everything developers need.',
-    image: '/images/trading-api.jpg',
+    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80',
     category: 'Trading APIs',
     readTime: '12 min read',
     date: 'January 25, 2026',
     featured: true,
     color: '#8B5CF6',
-    emoji: '💻',
+    gradient: 'linear-gradient(135deg, rgba(139,92,246,0.85) 0%, rgba(109,40,217,0.9) 100%)',
   },
   {
     slug: 'best-forex-signals-2026',
     title: 'Best Forex Signal Services 2026: Complete Guide to Copy Trading Success',
     excerpt: 'Discover the top-rated forex signal providers with proven track records. Learn how to choose reliable signals and maximize profits from professional trading alerts.',
-    image: '/images/forex-signals.jpg',
+    image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80',
     category: 'Trading Signals',
     readTime: '15 min read',
     date: 'January 25, 2026',
     featured: true,
     color: '#3B82F6',
-    emoji: '📡',
+    gradient: 'linear-gradient(135deg, rgba(59,130,246,0.85) 0%, rgba(37,99,235,0.9) 100%)',
   },
   {
     slug: 'forex-trading-courses-2026',
     title: 'Best Forex Trading Courses & Education in 2026: Complete Learning Guide',
     excerpt: 'Master forex trading with the best courses, ebooks, and educational resources. Compare top-rated programs and start your journey to profitable trading.',
-    image: '/images/forex-education.jpg',
+    image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&q=80',
     category: 'Forex Education',
     readTime: '14 min read',
     date: 'January 25, 2026',
     featured: true,
     color: '#F59E0B',
-    emoji: '📚',
+    gradient: 'linear-gradient(135deg, rgba(245,158,11,0.85) 0%, rgba(217,119,6,0.9) 100%)',
   },
   {
     slug: 'how-to-automate-mt5-trading',
     title: 'How to Automate MT5 Trading: Step-by-Step Guide for 2026',
     excerpt: 'Complete guide to automating your MetaTrader 5 trading. Connect your MT5 account to AI-powered trading bots and start earning passive income.',
-    image: '/images/mt5-automation.jpg',
+    image: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=800&q=80',
     category: 'MT5 Guides',
     readTime: '10 min read',
     date: 'January 12, 2026',
     featured: true,
     color: '#2196F3',
-    emoji: '📊',
+    gradient: 'linear-gradient(135deg, rgba(33,150,243,0.85) 0%, rgba(25,118,210,0.9) 100%)',
   },
   {
     slug: 'best-forex-bots-for-beginners',
     title: 'Best Forex Bots for Beginners 2026: Top 5 Automated Trading Systems',
     excerpt: 'New to forex trading? Discover the best forex trading bots for beginners. Our comprehensive review covers features, costs, and expected returns.',
-    image: '/images/forex-bots.jpg',
+    image: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&q=80',
     category: 'Reviews',
     readTime: '12 min read',
     date: 'January 10, 2026',
     featured: true,
     color: '#00c853',
-    emoji: '🤖',
+    gradient: 'linear-gradient(135deg, rgba(0,200,83,0.85) 0%, rgba(0,150,36,0.9) 100%)',
   },
 ];
 
@@ -139,6 +139,7 @@ export default function BlogPage() {
         <Grid container spacing={4}>
           {blogPosts.map((post) => (
             <Grid item xs={12} md={4} key={post.slug}>
+              <Link href={`/blog/${post.slug}`} style={{ textDecoration: 'none' }}>
               <Card
                 sx={{
                   height: '100%',
@@ -147,26 +148,78 @@ export default function BlogPage() {
                   borderRadius: 3,
                   overflow: 'hidden',
                   transition: 'all 0.3s ease',
+                  cursor: 'pointer',
                   '&:hover': {
                     transform: 'translateY(-8px)',
                     borderColor: 'rgba(0, 200, 83, 0.3)',
-                    boxShadow: '0 20px 40px rgba(0, 200, 83, 0.1)',
+                    boxShadow: '0 20px 40px rgba(0, 200, 83, 0.15)',
+                    '& img': {
+                      transform: 'scale(1.1)',
+                    },
                   },
                 }}
               >
-                <CardMedia
+              <CardMedia
                   component="div"
                   sx={{
-                    height: 200,
-                    background: `linear-gradient(135deg, ${post.color} 0%, ${post.color}99 100%)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    height: 220,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: post.gradient,
+                      zIndex: 1,
+                      opacity: 0.6,
+                      transition: 'opacity 0.3s ease',
+                    },
+                    '&:hover::before': {
+                      opacity: 0.4,
+                    },
                   }}
                 >
-                  <Typography variant="h3" sx={{ opacity: 0.3, fontWeight: 800 }}>
-                    {post.emoji}
-                  </Typography>
+                  <Box
+                    component="img"
+                    src={post.image}
+                    alt={post.title}
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      transition: 'transform 0.5s ease',
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: 16,
+                      left: 16,
+                      zIndex: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '50%',
+                        bgcolor: 'rgba(255,255,255,0.2)',
+                        backdropFilter: 'blur(10px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                      }}
+                    >
+                      <TrendingUp size={20} color="white" />
+                    </Box>
+                  </Box>
                 </CardMedia>
                 <CardContent sx={{ p: 3 }}>
                   <Chip
@@ -211,25 +264,25 @@ export default function BlogPage() {
                       <Typography variant="caption">{post.readTime}</Typography>
                     </Stack>
                   </Stack>
-                  <Button
-                    component={Link}
-                    href={`/blog/${post.slug}`}
-                    endIcon={<ArrowRight size={16} />}
+                  <Box
                     sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
                       color: '#00c853',
-                      textTransform: 'none',
                       fontWeight: 600,
-                      p: 0,
+                      fontSize: '0.875rem',
                       '&:hover': {
-                        bgcolor: 'transparent',
                         color: '#00e676',
                       },
                     }}
                   >
                     Read Full Article
-                  </Button>
+                    <ArrowRight size={16} />
+                  </Box>
                 </CardContent>
               </Card>
+              </Link>
             </Grid>
           ))}
         </Grid>

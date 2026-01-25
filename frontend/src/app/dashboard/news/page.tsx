@@ -68,8 +68,8 @@ export default function NewsPage() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       
       const [newsRes, eventsRes] = await Promise.all([
-        fetch(`${apiUrl}/api/news`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }),
-        fetch(`${apiUrl}/api/economic-calendar`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }),
+        fetch(`${apiUrl}/api/users/news`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }),
+        fetch(`${apiUrl}/api/users/economic-calendar`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }),
       ]);
 
       if (newsRes.ok) {
