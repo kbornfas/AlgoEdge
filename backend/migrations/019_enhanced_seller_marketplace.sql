@@ -198,6 +198,6 @@ CREATE INDEX IF NOT EXISTS idx_telegram_channel_members_user ON telegram_channel
 -- 9. UPDATE COMMISSION RATE CONFIGURATION
 -- ============================================================================
 
--- Platform takes 25% commission by default (Admin: 25%, Seller: 75%)
+-- Platform takes 20% commission by default (Admin: 20%, Seller: 80%)
 -- This can be stored in a settings table or env variable
--- seller_earnings = sale_amount * (1 - 0.25)
+-- seller_earnings = sale_amount * (1 - 0.20)

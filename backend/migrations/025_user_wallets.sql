@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS marketplace_purchases (
     price DECIMAL(12, 2) NOT NULL,
     platform_commission DECIMAL(12, 2) NOT NULL,
     seller_earnings DECIMAL(12, 2) NOT NULL,
-    commission_rate DECIMAL(5, 2) DEFAULT 25.00, -- Admin receives 25%, Seller receives 75%
+    commission_rate DECIMAL(5, 2) DEFAULT 20.00, -- Admin receives 20%, Seller receives 80%
     wallet_transaction_id INTEGER REFERENCES wallet_transactions(id),
     status VARCHAR(20) DEFAULT 'completed', -- 'completed', 'refunded', 'disputed'
     access_granted BOOLEAN DEFAULT TRUE,

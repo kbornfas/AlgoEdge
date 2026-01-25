@@ -113,11 +113,11 @@ export default function VerifyOTPPage() {
         localStorage.setItem('pendingUser', JSON.stringify(user));
       }
 
-      setSuccess('Email verified successfully! Redirecting to pricing...');
+      setSuccess('Email verified successfully! Redirecting to dashboard...');
       
-      // Redirect to pricing page after 2 seconds
+      // Redirect to dashboard where they can see locked features and upgrade
       setTimeout(() => {
-        router.push('/auth/pricing');
+        router.push('/dashboard');
       }, 2000);
     } catch (err) {
       setError('Network error. Please try again.');

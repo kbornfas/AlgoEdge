@@ -83,7 +83,7 @@ const faqs = [
       },
       {
         question: 'What is the minimum withdrawal amount?',
-        answer: 'The minimum withdrawal is $10. There\'s a 2% + $1 fee on all withdrawals.',
+        answer: 'The minimum withdrawal is $10. There\'s a 3% fee on all withdrawals.',
       },
     ],
   },

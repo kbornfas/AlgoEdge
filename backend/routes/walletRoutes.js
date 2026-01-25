@@ -969,8 +969,8 @@ router.get('/withdrawal/settings', authenticate, async (req, res) => {
       settings: {
         min_withdrawal_user: '10',
         min_withdrawal_seller: '20',
-        withdrawal_fee_percent: '2',
-        withdrawal_fee_fixed: '1',
+        withdrawal_fee_percent: '3',
+        withdrawal_fee_fixed: '0',
         processing_time_hours: '24',
         instant_withdrawal_enabled: 'true',
       }
@@ -987,8 +987,8 @@ router.post('/withdrawal/request', authenticate, async (req, res) => {
     const { amount, payment_method, payment_details, wallet_type = 'user' } = req.body;
 
     const minWithdrawal = wallet_type === 'seller' ? 20 : 10;
-    const feePercent = 2;
-    const feeFixed = 1;
+    const feePercent = 3;
+    const feeFixed = 0;
 
     if (!amount || amount < minWithdrawal) {
       return res.status(400).json({ error: `Minimum withdrawal is $${minWithdrawal}` });

@@ -80,7 +80,8 @@ export default function LoginPage() {
           if (!data.isVerified) {
             setError('Please verify your email address. Check your inbox for the verification code.');
           } else {
-            router.push('/auth/pricing');
+            // User is verified but hasn't subscribed - take them to dashboard where they can upgrade
+            router.push('/dashboard');
             return;
           }
         } else if (data.details && Array.isArray(data.details)) {
@@ -105,7 +106,8 @@ export default function LoginPage() {
       if (data.hasActiveSubscription) {
         router.push('/dashboard');
       } else {
-        router.push('/auth/pricing');
+        // Take users to dashboard with locked features - they can unlock from there
+        router.push('/dashboard');
       }
     } catch (err) {
       console.error('Login error:', err);

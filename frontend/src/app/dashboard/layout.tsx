@@ -207,10 +207,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const handleMenuItemClick = (item: any, e: React.MouseEvent) => {
+    // Redirect to pricing page for locked features
     if (item.requiresSubscription && !isSubscribed && !subscriptionLoading) {
       e.preventDefault();
-      setLockedFeature(item.text);
-      setShowSubscriptionModal(true);
+      router.push('/auth/pricing');
+      return;
     }
     if (isMobile) setMobileOpen(false);
   };
@@ -304,16 +305,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               sx={{
                 p: 2,
                 borderRadius: 3,
-                background: 'linear-gradient(135deg, rgba(0, 102, 255, 0.1) 0%, rgba(0, 212, 255, 0.05) 100%)',
-                border: '1px solid rgba(0, 102, 255, 0.2)',
+                background: 'linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(107, 114, 128, 0.1) 100%)',
+                border: '1px solid rgba(156, 163, 175, 0.3)',
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Sparkles size={16} color="#0066FF" />
-                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                  Free Plan
+                <User size={16} color="#9CA3AF" />
+                <Typography variant="body2" sx={{ fontWeight: 700, color: '#9CA3AF' }}>
+                  Free Member
                 </Typography>
               </Box>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1.5 }}>
+                Limited access to features
+              </Typography>
               <Button
                 component={Link}
                 href="/auth/pricing"
@@ -369,20 +373,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 return (
                   <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
                     <Tooltip 
-                      title={isLocked ? "Upgrade to Premium to access" : ""}
+                      title={isLocked ? "Premium feature - Subscribe to unlock" : ""}
                       placement="right"
                       arrow
                     >
                       <ListItemButton
                         component={Link}
-                        href={isLocked ? '/auth/pricing' : item.href}
+                        href={item.href}
                         selected={isActive}
                         onClick={(e) => handleMenuItemClick(item, e)}
                         sx={{
                           borderRadius: 2,
                           mx: 0.5,
                           py: 1.2,
-                          opacity: isLocked ? 0.5 : 1,
+                          opacity: isLocked ? 0.6 : 1,
                           position: 'relative',
                           transition: 'all 0.2s ease',
                           '&::before': isActive ? {
@@ -424,7 +428,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           }}
                         />
                         {isLocked && (
-                          <Lock size={14} style={{ color: theme.palette.text.secondary }} />
+                          <Lock size={16} style={{ color: '#F59E0B' }} />
                         )}
                       </ListItemButton>
                     </Tooltip>
@@ -677,6 +681,74 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             px: { xs: 2, sm: 3, lg: 4 },
           }}
         >
+          {/* Unlock Features Banner for Free Users */}
+          {!subscriptionLoading && !isSubscribed && (
+            <Box
+              component={Link}
+              href="/auth/pricing"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 2,
+                p: 2,
+                mb: 3,
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, rgba(0, 102, 255, 0.15) 0%, rgba(0, 212, 255, 0.1) 100%)',
+                border: '2px solid rgba(0, 102, 255, 0.3)',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, rgba(0, 102, 255, 0.25) 0%, rgba(0, 212, 255, 0.2) 100%)',
+                  border: '2px solid rgba(0, 102, 255, 0.5)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 25px rgba(0, 102, 255, 0.2)',
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, #0066FF 0%, #00D4FF 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Lock size={20} color="white" />
+              </Box>
+              <Box sx={{ flexGrow: 1 }}>
+                <Typography variant="body1" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                  🔓 To Unlock All Features Click Here
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Get access to Trading Signals, Robots, Analytics, Learning Hub & more
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, #0066FF 0%, #00D4FF 100%)',
+                  color: 'white',
+                  fontWeight: 600,
+                  fontSize: '0.875rem',
+                  flexShrink: 0,
+                }}
+              >
+                <Crown size={16} />
+                Upgrade Now
+              </Box>
+            </Box>
+          )}
           {children}
         </Box>
 

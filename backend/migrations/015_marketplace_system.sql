@@ -196,8 +196,8 @@ CREATE TABLE IF NOT EXISTS signal_providers (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Signal subscriptions
-CREATE TABLE IF NOT EXISTS signal_subscriptions (
+-- Signal subscriptions (for marketplace signal providers - NOT platform signal tiers)
+CREATE TABLE IF NOT EXISTS signal_provider_subscriptions (
     id SERIAL PRIMARY KEY,
     provider_id INTEGER NOT NULL REFERENCES signal_providers(id) ON DELETE CASCADE,
     subscriber_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -574,8 +574,8 @@ CREATE INDEX IF NOT EXISTS idx_marketplace_bot_purchases_seller ON marketplace_b
 -- Signal marketplace indexes
 CREATE INDEX IF NOT EXISTS idx_signal_providers_user ON signal_providers(user_id);
 CREATE INDEX IF NOT EXISTS idx_signal_providers_status ON signal_providers(status);
-CREATE INDEX IF NOT EXISTS idx_signal_subscriptions_provider ON signal_subscriptions(provider_id);
-CREATE INDEX IF NOT EXISTS idx_signal_subscriptions_subscriber ON signal_subscriptions(subscriber_id);
+CREATE INDEX IF NOT EXISTS idx_signal_provider_subscriptions_provider ON signal_provider_subscriptions(provider_id);
+CREATE INDEX IF NOT EXISTS idx_signal_provider_subscriptions_subscriber ON signal_provider_subscriptions(subscriber_id);
 CREATE INDEX IF NOT EXISTS idx_marketplace_signals_provider ON marketplace_signals(provider_id);
 CREATE INDEX IF NOT EXISTS idx_marketplace_signals_created ON marketplace_signals(created_at);
 

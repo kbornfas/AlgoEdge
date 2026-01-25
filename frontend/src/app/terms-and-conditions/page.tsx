@@ -163,7 +163,7 @@ Marketplace purchases are separate from subscriptions and are one-time or as pri
     list: [
       'Sellers must provide accurate descriptions of their products (bots, signals, courses)',
       'Sellers set their own prices and are responsible for product quality and support',
-      'AlgoEdge charges a platform fee of 25% on marketplace sales (sellers receive 75%)',
+      'AlgoEdge charges a platform fee of 20% on marketplace sales (sellers receive 80%)',
       'Buyers receive access to purchased products according to seller terms',
       'Refunds for marketplace products are handled according to seller policies',
       'AlgoEdge is not responsible for third-party product performance or accuracy',

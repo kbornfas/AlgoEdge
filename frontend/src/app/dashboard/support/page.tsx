@@ -115,7 +115,7 @@ const faqs = [
       },
       {
         question: 'How do withdrawals work?',
-        answer: 'Request a withdrawal from your wallet. Minimum is $10 with a 2% + $1 fee. Processing takes 24-48 hours.',
+        answer: 'Request a withdrawal from your wallet. Minimum is $10 with a 3% fee. Processing takes 24-48 hours.',
       },
       {
         question: 'Can I get a refund?',

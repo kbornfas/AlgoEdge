@@ -83,8 +83,8 @@ CREATE TABLE IF NOT EXISTS withdrawal_settings (
 INSERT INTO withdrawal_settings (setting_key, setting_value, description) VALUES
     ('min_withdrawal_user', '10', 'Minimum withdrawal amount for users (USD)'),
     ('min_withdrawal_seller', '20', 'Minimum withdrawal amount for sellers (USD)'),
-    ('withdrawal_fee_percent', '2', 'Withdrawal fee percentage'),
-    ('withdrawal_fee_fixed', '1', 'Fixed withdrawal fee (USD)'),
+    ('withdrawal_fee_percent', '3', 'Withdrawal fee percentage'),
+    ('withdrawal_fee_fixed', '0', 'Fixed withdrawal fee (USD)'),
     ('instant_withdrawal_enabled', 'true', 'Enable instant withdrawals'),
     ('seller_payout_hold_days', '7', 'Days to hold seller earnings before withdrawal'),
     ('max_daily_withdrawal', '5000', 'Maximum daily withdrawal per user'),

@@ -844,7 +844,7 @@ export default function WalletPage() {
               helperText={
                 actionType === 'deposit'
                   ? 'Minimum deposit: $19'
-                  : `Minimum: $10 | Available: $${wallet?.balance.toFixed(2) || '0.00'} | Fee: 2% + $1`
+                  : `Minimum: $10 | Available: $${wallet?.balance.toFixed(2) || '0.00'} | Fee: 3%`
               }
             />
 
@@ -954,7 +954,7 @@ export default function WalletPage() {
               <>
                 <Alert severity="info" sx={{ mb: 2 }}>
                   <Typography variant="body2">
-                    <strong>Withdrawal Fee:</strong> 2% + $1<br />
+                    <strong>Withdrawal Fee:</strong> 3%<br />
                     <strong>Processing Time:</strong> 24-48 hours
                   </Typography>
                 </Alert>
@@ -1014,7 +1014,7 @@ export default function WalletPage() {
                       ${Math.max(parseFloat(amount) - (parseFloat(amount) * 0.02 + 1), 0).toFixed(2)}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      After 2% + $1 withdrawal fee
+                      After 3% withdrawal fee
                     </Typography>
                   </Paper>
                 )}

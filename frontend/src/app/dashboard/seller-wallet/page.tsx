@@ -429,8 +429,8 @@ export default function SellerWalletPage() {
       {/* Commission Info */}
       <Alert severity="info" sx={{ mb: 4 }}>
         <Typography variant="body2">
-          <strong>Commission Structure:</strong> Platform takes 25% commission on all sales. 
-          You receive 75% of each sale. Withdrawal fee: 2% + $1. Minimum seller withdrawal: $20.
+          <strong>Commission Structure:</strong> Platform takes 20% commission on all sales. 
+          You receive 80% of each sale. Withdrawal fee: 3%. Minimum seller withdrawal: $20.
         </Typography>
       </Alert>
 
@@ -608,7 +608,7 @@ export default function SellerWalletPage() {
           <Box sx={{ pt: 2 }}>
             <Alert severity="info" sx={{ mb: 3 }}>
               <Typography variant="body2">
-                <strong>Withdrawal Fee:</strong> 2% + $1 (minimum $1)<br />
+                <strong>Withdrawal Fee:</strong> 3%<br />
                 <strong>Processing Time:</strong> 24-48 hours<br />
                 <strong>Minimum Withdrawal:</strong> $20
               </Typography>
@@ -706,7 +706,7 @@ export default function SellerWalletPage() {
                     <Typography fontWeight="bold">${parseFloat(withdrawAmount).toFixed(2)}</Typography>
                   </Grid>
                   <Grid item xs={6}>
-                    <Typography variant="body2" color="text.secondary">Fee (2% + $1)</Typography>
+                    <Typography variant="body2" color="text.secondary">Fee (3%)</Typography>
                     <Typography fontWeight="bold" color="error.main">
                       -${(parseFloat(withdrawAmount) * 0.02 + 1).toFixed(2)}
                     </Typography>
