@@ -12,34 +12,16 @@ import {
   Button,
   Chip,
   Stack,
-  TextField,
-  InputAdornment,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Pagination,
   Skeleton,
   Rating,
-  Slider,
-  Drawer,
-  IconButton,
-  useMediaQuery,
-  useTheme,
   Tooltip,
 } from '@mui/material';
 import {
-  Search,
   Bot,
-  Filter,
   TrendingUp,
-  Award,
-  Clock,
   DollarSign,
-  X,
   ChevronRight,
-  Shield,
-  Zap,
   CheckCircle2,
   ShoppingCart,
 } from 'lucide-react';
@@ -64,44 +46,163 @@ interface TradingBot {
   seller_name: string;
 }
 
-const categories = [
-  { value: '', label: 'All Categories' },
-  { value: 'scalping', label: 'Scalping' },
-  { value: 'swing', label: 'Swing Trading' },
-  { value: 'grid', label: 'Grid Trading' },
-  { value: 'news', label: 'News Trading' },
-  { value: 'martingale', label: 'Martingale' },
-  { value: 'hedge', label: 'Hedging' },
-];
-
-const sortOptions = [
-  { value: 'popular', label: 'Most Popular' },
-  { value: 'newest', label: 'Newest' },
-  { value: 'rating', label: 'Top Rated' },
-  { value: 'win_rate', label: 'Highest Win Rate' },
-  { value: 'price_low', label: 'Price: Low to High' },
-  { value: 'price_high', label: 'Price: High to Low' },
+// Demo bots data for display
+const demoBots: TradingBot[] = [
+  {
+    id: 1,
+    name: 'Gold Scalper Pro EA',
+    slug: 'gold-scalper-pro',
+    short_description: 'Professional XAUUSD scalping EA with advanced risk management. Optimized for M5/M15 timeframes with smart lot sizing, news filter, and trailing stop functionality.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=225&fit=crop',
+    price: 149,
+    price_type: 'one_time',
+    win_rate: 79.60,
+    monthly_return: 12,
+    total_sales: 245,
+    rating_average: 4.8,
+    rating_count: 67,
+    category: 'scalper',
+    supported_platforms: ['MT5'],
+    verified_performance: true,
+    seller_name: 'AlgoEdge Labs'
+  },
+  {
+    id: 2,
+    name: 'Multi-Metal Portfolio EA',
+    slug: 'multi-metal-portfolio',
+    short_description: 'Diversified precious metals trading strategy for Gold, Silver and Platinum with correlation filter and risk diversification.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=400&h=225&fit=crop',
+    price: 199,
+    price_type: 'one_time',
+    win_rate: 78.90,
+    monthly_return: 10,
+    total_sales: 156,
+    rating_average: 4.8,
+    rating_count: 42,
+    category: 'portfolio',
+    supported_platforms: ['MT5'],
+    verified_performance: true,
+    seller_name: 'AlgoEdge Labs'
+  },
+  {
+    id: 3,
+    name: 'News Trading Sniper',
+    slug: 'news-trading-sniper',
+    short_description: 'Capitalize on high-impact news events with automated spike detection and quick execution.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=400&h=225&fit=crop',
+    price: 179,
+    price_type: 'one_time',
+    win_rate: 84.90,
+    monthly_return: 15,
+    total_sales: 198,
+    rating_average: 4.8,
+    rating_count: 54,
+    category: 'news',
+    supported_platforms: ['MT5'],
+    verified_performance: true,
+    seller_name: 'AlgoEdge Labs'
+  },
+  {
+    id: 4,
+    name: 'Risk Manager Pro EA',
+    slug: 'risk-manager-pro',
+    short_description: 'Advanced risk management tool that protects your account with automatic lot sizing, drawdown limits, and profit targets.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=225&fit=crop',
+    price: 99,
+    price_type: 'one_time',
+    win_rate: 0,
+    monthly_return: 0,
+    total_sales: 312,
+    rating_average: 4.9,
+    rating_count: 89,
+    category: 'utility',
+    supported_platforms: ['MT5'],
+    verified_performance: true,
+    seller_name: 'AlgoEdge Labs'
+  },
+  {
+    id: 5,
+    name: 'Silver Trend Rider EA',
+    slug: 'silver-trend-rider',
+    short_description: 'Trend-following EA optimized for XAGUSD. Captures medium to long-term silver trends with dynamic trailing stops.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=400&h=225&fit=crop',
+    price: 129,
+    price_type: 'one_time',
+    win_rate: 72.50,
+    monthly_return: 8,
+    total_sales: 134,
+    rating_average: 4.7,
+    rating_count: 38,
+    category: 'trend',
+    supported_platforms: ['MT5'],
+    verified_performance: true,
+    seller_name: 'AlgoEdge Labs'
+  },
+  {
+    id: 6,
+    name: 'Smart S/R Indicator',
+    slug: 'smart-sr-indicator',
+    short_description: 'Automatically identifies and draws high-probability support and resistance zones based on price action.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1642790551116-18e150f248e3?w=400&h=225&fit=crop',
+    price: 49,
+    price_type: 'one_time',
+    win_rate: 0,
+    monthly_return: 0,
+    total_sales: 428,
+    rating_average: 4.6,
+    rating_count: 112,
+    category: 'indicator',
+    supported_platforms: ['MT5'],
+    verified_performance: true,
+    seller_name: 'AlgoEdge Labs'
+  },
+  {
+    id: 7,
+    name: 'Supply Demand Zone Indicator',
+    slug: 'supply-demand-zone-indicator',
+    short_description: 'Professional supply and demand zone indicator with multi-timeframe analysis and alert system.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=225&fit=crop',
+    price: 59,
+    price_type: 'one_time',
+    win_rate: 0,
+    monthly_return: 0,
+    total_sales: 356,
+    rating_average: 4.7,
+    rating_count: 94,
+    category: 'indicator',
+    supported_platforms: ['MT5'],
+    verified_performance: true,
+    seller_name: 'AlgoEdge Labs'
+  },
+  {
+    id: 8,
+    name: 'Trend Strength Dashboard',
+    slug: 'trend-strength-dashboard',
+    short_description: 'Multi-currency trend strength indicator that shows the relative strength of major currencies across timeframes.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=225&fit=crop',
+    price: 69,
+    price_type: 'one_time',
+    win_rate: 0,
+    monthly_return: 0,
+    total_sales: 267,
+    rating_average: 4.8,
+    rating_count: 71,
+    category: 'indicator',
+    supported_platforms: ['MT5'],
+    verified_performance: true,
+    seller_name: 'AlgoEdge Labs'
+  }
 ];
 
 export default function BotMarketplacePage() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
   const [bots, setBots] = useState<TradingBot[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
-  const [priceType, setPriceType] = useState('');
-  const [sort, setSort] = useState('popular');
-  const [priceRange, setPriceRange] = useState<number[]>([0, 500]);
-  const [minWinRate, setMinWinRate] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
   useEffect(() => {
     fetchBots();
-  }, [category, priceType, sort, page, priceRange, minWinRate]);
+  }, [page]);
 
   const fetchBots = async () => {
     setLoading(true);
@@ -109,117 +210,34 @@ export default function BotMarketplacePage() {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '12',
-        sort,
+        sort: 'popular',
       });
-
-      if (category) params.append('category', category);
-      if (priceType) params.append('price_type', priceType);
-      if (priceRange[0] > 0) params.append('min_price', priceRange[0].toString());
-      if (priceRange[1] < 500) params.append('max_price', priceRange[1].toString());
-      if (minWinRate > 0) params.append('min_win_rate', minWinRate.toString());
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/bots?${params}`);
       if (res.ok) {
         const data = await res.json();
-        setBots(data.bots);
-        setTotalPages(data.pagination.totalPages);
+        if (data.bots && data.bots.length > 0) {
+          setBots(data.bots);
+          setTotalPages(data.pagination?.totalPages || 1);
+        } else {
+          // Use demo data if no bots from API
+          setBots(demoBots);
+          setTotalPages(1);
+        }
+      } else {
+        // Fallback to demo data
+        setBots(demoBots);
+        setTotalPages(1);
       }
     } catch (error) {
       console.error('Error fetching bots:', error);
+      // Fallback to demo data on error
+      setBots(demoBots);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
   };
-
-  const FilterContent = () => (
-    <Box sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ color: 'white', fontWeight: 700, mb: 3 }}>
-        Filters
-      </Typography>
-
-      {/* Category */}
-      <FormControl fullWidth sx={{ mb: 3 }}>
-        <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Category</InputLabel>
-        <Select
-          value={category}
-          label="Category"
-          onChange={(e) => setCategory(e.target.value)}
-          sx={{
-            color: 'white',
-            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
-            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#22C55E' },
-          }}
-        >
-          {categories.map((cat) => (
-            <MenuItem key={cat.value} value={cat.value}>{cat.label}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      {/* Price Type */}
-      <FormControl fullWidth sx={{ mb: 3 }}>
-        <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Price Type</InputLabel>
-        <Select
-          value={priceType}
-          label="Price Type"
-          onChange={(e) => setPriceType(e.target.value)}
-          sx={{
-            color: 'white',
-            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
-          }}
-        >
-          <MenuItem value="">All</MenuItem>
-          <MenuItem value="one_time">One-Time Purchase</MenuItem>
-          <MenuItem value="subscription">Subscription</MenuItem>
-          <MenuItem value="free">Free</MenuItem>
-        </Select>
-      </FormControl>
-
-      {/* Price Range */}
-      <Box sx={{ mb: 3 }}>
-        <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
-          Price Range: ${priceRange[0]} - ${priceRange[1]}+
-        </Typography>
-        <Slider
-          value={priceRange}
-          onChange={(_, value) => setPriceRange(value as number[])}
-          valueLabelDisplay="auto"
-          min={0}
-          max={500}
-          sx={{ color: '#22C55E' }}
-        />
-      </Box>
-
-      {/* Minimum Win Rate */}
-      <Box sx={{ mb: 3 }}>
-        <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
-          Min Win Rate: {minWinRate}%
-        </Typography>
-        <Slider
-          value={minWinRate}
-          onChange={(_, value) => setMinWinRate(value as number)}
-          valueLabelDisplay="auto"
-          min={0}
-          max={100}
-          sx={{ color: '#22C55E' }}
-        />
-      </Box>
-
-      <Button
-        fullWidth
-        variant="outlined"
-        onClick={() => {
-          setCategory('');
-          setPriceType('');
-          setPriceRange([0, 500]);
-          setMinWinRate(0);
-        }}
-        sx={{ borderColor: 'rgba(255,255,255,0.3)', color: 'white' }}
-      >
-        Reset Filters
-      </Button>
-    </Box>
-  );
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a' }}>
@@ -256,130 +274,49 @@ export default function BotMarketplacePage() {
       </Box>
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
+        {/* Bots Grid */}
         <Grid container spacing={3}>
-          {/* Sidebar Filters - Desktop */}
-          {!isMobile && (
-            <Grid item md={3}>
-              <Box
-                sx={{
-                  bgcolor: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 2,
-                  position: 'sticky',
-                  top: 20,
-                }}
-              >
-                <FilterContent />
-              </Box>
-            </Grid>
-          )}
-
-          {/* Main Content */}
-          <Grid item xs={12} md={9}>
-            {/* Search & Sort Bar */}
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 2,
-                mb: 3,
-                flexDirection: { xs: 'column', sm: 'row' },
-              }}
-            >
-              <TextField
-                fullWidth
-                placeholder="Search bots..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search size={20} color="rgba(255,255,255,0.5)" />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    bgcolor: 'rgba(255,255,255,0.05)',
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
-                    '&:hover fieldset': { borderColor: '#22C55E' },
-                  },
-                  '& input': { color: 'white' },
-                }}
-              />
-
-              <FormControl sx={{ minWidth: 180 }}>
-                <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Sort By</InputLabel>
-                <Select
-                  value={sort}
-                  label="Sort By"
-                  onChange={(e) => setSort(e.target.value)}
-                  sx={{
-                    color: 'white',
-                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
-                  }}
-                >
-                  {sortOptions.map((opt) => (
-                    <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              {isMobile && (
-                <Button
-                  variant="outlined"
-                  startIcon={<Filter />}
-                  onClick={() => setFilterDrawerOpen(true)}
-                  sx={{ borderColor: 'rgba(255,255,255,0.3)', color: 'white' }}
-                >
-                  Filters
-                </Button>
-              )}
-            </Box>
-
-            {/* Bots Grid */}
-            <Grid container spacing={3}>
-              {loading
-                ? Array.from({ length: 6 }).map((_, i) => (
-                    <Grid item xs={12} sm={6} lg={4} key={i}>
-                      <Skeleton
-                        variant="rounded"
-                        height={320}
-                        sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}
-                      />
-                    </Grid>
-                  ))
-                : bots.map((bot) => (
-                    <Grid item xs={12} sm={6} lg={4} key={bot.id}>
-                      <Card
-                        component={Link}
-                        href={`/marketplace/bots/${bot.slug}`}
-                        sx={{
-                          height: '100%',
-                          bgcolor: 'rgba(255,255,255,0.03)',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          transition: 'all 0.3s ease',
-                          textDecoration: 'none',
-                          '&:hover': {
-                            transform: 'translateY(-4px)',
-                            borderColor: '#22C55E',
-                            boxShadow: '0 8px 32px rgba(34, 197, 94, 0.2)',
-                          },
-                        }}
-                      >
-                        <CardMedia
-                          component="div"
-                          sx={{
-                            height: 160,
-                            bgcolor: 'rgba(34, 197, 94, 0.1)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            position: 'relative',
-                          }}
-                        >
-                          {bot.thumbnail_url ? (
-                            <Box
+          {loading
+            ? Array.from({ length: 8 }).map((_, i) => (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={i}>
+                  <Skeleton
+                    variant="rounded"
+                    height={380}
+                    sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}
+                  />
+                </Grid>
+              ))
+            : bots.map((bot) => (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={bot.id}>
+                  <Card
+                    component={Link}
+                    href={`/marketplace/bots/${bot.slug}`}
+                    sx={{
+                      height: '100%',
+                      bgcolor: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      transition: 'all 0.3s ease',
+                      textDecoration: 'none',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        borderColor: '#22C55E',
+                        boxShadow: '0 8px 32px rgba(34, 197, 94, 0.2)',
+                      },
+                    }}
+                  >
+                    <CardMedia
+                      component="div"
+                      sx={{
+                        height: 160,
+                        bgcolor: 'rgba(34, 197, 94, 0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                      }}
+                    >
+                      {bot.thumbnail_url ? (
+                        <Box
                               component="img"
                               src={bot.thumbnail_url}
                               alt={bot.name}
@@ -479,7 +416,7 @@ export default function BotMarketplacePage() {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                               <ShoppingCart size={12} color="rgba(255,255,255,0.5)" />
                               <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
-                                {bot.total_sales || Math.floor(Math.random() * 100 + 25)} sales
+                                {bot.total_sales || 0} sales
                               </Typography>
                             </Box>
                           </Box>
@@ -487,68 +424,37 @@ export default function BotMarketplacePage() {
                       </Card>
                     </Grid>
                   ))}
-            </Grid>
-
-            {/* No Results */}
-            {!loading && bots.length === 0 && (
-              <Box sx={{ textAlign: 'center', py: 8 }}>
-                <Bot size={64} color="rgba(255,255,255,0.2)" style={{ marginBottom: 16 }} />
-                <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 2 }}>
-                  No bots found matching your criteria
-                </Typography>
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    setCategory('');
-                    setPriceType('');
-                    setSearch('');
-                  }}
-                  sx={{ borderColor: '#22C55E', color: '#22C55E' }}
-                >
-                  Reset Filters
-                </Button>
-              </Box>
-            )}
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={(_, value) => setPage(value)}
-                  sx={{
-                    '& .MuiPaginationItem-root': {
-                      color: 'white',
-                      '&.Mui-selected': {
-                        bgcolor: '#22C55E',
-                      },
-                    },
-                  }}
-                />
-              </Box>
-            )}
-          </Grid>
         </Grid>
-      </Container>
 
-      {/* Mobile Filter Drawer */}
-      <Drawer
-        anchor="right"
-        open={filterDrawerOpen}
-        onClose={() => setFilterDrawerOpen(false)}
-        PaperProps={{
-          sx: { bgcolor: '#0a0f1a', width: 300 },
-        }}
-      >
-        <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography sx={{ color: 'white', fontWeight: 700 }}>Filters</Typography>
-          <IconButton onClick={() => setFilterDrawerOpen(false)} sx={{ color: 'white' }}>
-            <X />
-          </IconButton>
-        </Box>
-        <FilterContent />
-      </Drawer>
+        {/* No Results */}
+        {!loading && bots.length === 0 && (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Bot size={64} color="rgba(255,255,255,0.2)" style={{ marginBottom: 16 }} />
+            <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 2 }}>
+              No bots available at the moment
+            </Typography>
+          </Box>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <Pagination
+              count={totalPages}
+              page={page}
+              onChange={(_, value) => setPage(value)}
+              sx={{
+                '& .MuiPaginationItem-root': {
+                  color: 'white',
+                  '&.Mui-selected': {
+                    bgcolor: '#22C55E',
+                  },
+                },
+              }}
+            />
+          </Box>
+        )}
+      </Container>
     </Box>
   );
 }

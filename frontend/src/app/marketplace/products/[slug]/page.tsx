@@ -92,91 +92,529 @@ const reviewerImages: Record<number, string> = {
 
 // Demo product data
 const demoProducts: Record<string, ProductDetails> = {
-  'complete-price-action-course': {
+  'gold-trading-bible-ebook': {
     id: 1,
-    name: 'Complete Price Action Trading Course',
-    slug: 'complete-price-action-course',
-    description: `Master the art of reading pure price movement with this comprehensive course. Learn to trade without indicators using institutional-grade techniques.
+    name: 'Gold Trading Bible eBook',
+    slug: 'gold-trading-bible-ebook',
+    description: `Comprehensive guide to trading XAUUSD with institutional strategies and risk management techniques.
 
 ## What You'll Learn
 
-- **Candlestick Patterns**: Master all major reversal and continuation patterns
-- **Support & Resistance**: Identify high-probability trading zones
-- **Order Flow Analysis**: Understand how smart money moves markets
-- **Trade Management**: Professional entry, exit, and position sizing
-
-## Course Contents
-
-1. Introduction to Price Action (2 hours)
-2. Candlestick Psychology (3 hours)
-3. Market Structure Analysis (4 hours)
-4. Supply & Demand Zones (3 hours)
-5. Live Trading Examples (5 hours)
-6. Trading Plan Development (2 hours)
-
-Total: 19+ hours of HD video content with lifetime access.`,
-    short_description: 'Master price action trading with 19+ hours of HD video content',
-    seller_id: 1,
-    seller_name: 'AlgoEdge Academy',
-    seller_rating: 4.9,
-    seller_total_sales: 2847,
-    product_type: 'video_course',
-    category: 'Education',
-    price: 199.99,
-    discount_percentage: 25,
-    file_size_bytes: 5120000000,
-    preview_content: ['Introduction video', 'Course outline PDF', 'Sample chapter'],
-    features: [
-      '19+ hours of HD video content',
-      'Lifetime access with updates',
-      'Certificate of completion',
-      'Private Discord community',
-      'Weekly live Q&A sessions',
-      '30-day money-back guarantee',
-    ],
-    tags: ['price action', 'forex', 'trading course', 'education'],
-    total_purchases: 1523,
-    avg_rating: 4.8,
-    total_reviews: 234,
-    created_at: '2024-06-15',
-    updated_at: '2025-01-20',
-  },
-  'smart-money-concepts-ebook': {
-    id: 2,
-    name: 'Smart Money Concepts Trading eBook',
-    slug: 'smart-money-concepts-ebook',
-    description: `Unlock the secrets of how institutional traders move the markets with this comprehensive 280-page guide to Smart Money Concepts.
-
-## What's Inside
-
-- Order blocks and breaker blocks explained
-- Fair value gaps and liquidity voids
-- Market structure breaks and change of character
-- Institutional order flow patterns
-- Real chart examples with annotations`,
-    short_description: 'Learn how institutions trade the markets',
+- Gold market fundamentals and drivers
+- Technical analysis specifically for gold
+- Institutional trading strategies
+- Risk management for volatile markets
+- Trade setups with real examples`,
+    short_description: 'Comprehensive guide to trading XAUUSD',
     seller_id: 1,
     seller_name: 'AlgoEdge Academy',
     seller_rating: 4.9,
     seller_total_sales: 2847,
     product_type: 'ebook',
     category: 'Education',
-    price: 49.99,
-    discount_percentage: 0,
+    price: 49,
+    discount_percentage: 38,
     file_size_bytes: 52428800,
     preview_content: ['Table of contents', 'Chapter 1 preview'],
     features: [
-      '280+ pages of content',
+      '200+ pages of content',
       'Annotated chart examples',
       'PDF format for all devices',
       'Free updates for life',
     ],
-    tags: ['smart money', 'forex', 'ebook', 'education'],
-    total_purchases: 892,
+    tags: ['gold', 'trading', 'ebook', 'education'],
+    total_purchases: 234,
+    avg_rating: 4.8,
+    total_reviews: 67,
+    created_at: '2024-06-15',
+    updated_at: '2026-01-20',
+  },
+  'mt5-mastery-course': {
+    id: 2,
+    name: 'MT5 Mastery Course',
+    slug: 'mt5-mastery-course',
+    description: `Complete video course on mastering MetaTrader 5 for professional trading.
+
+## Course Contents
+
+1. MT5 Platform Overview
+2. Chart Analysis Tools
+3. Order Types & Execution
+4. Custom Indicators
+5. Expert Advisors
+6. Optimization & Backtesting`,
+    short_description: 'Master MetaTrader 5 platform',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Academy',
+    seller_rating: 4.9,
+    seller_total_sales: 2847,
+    product_type: 'video_course',
+    category: 'Education',
+    price: 149,
+    discount_percentage: 25,
+    file_size_bytes: 5120000000,
+    preview_content: ['Introduction video', 'Course outline'],
+    features: [
+      '12+ hours of HD video',
+      'Lifetime access',
+      'Certificate of completion',
+      'Practice exercises',
+    ],
+    tags: ['mt5', 'metatrader', 'video course', 'education'],
+    total_purchases: 456,
+    avg_rating: 4.9,
+    total_reviews: 123,
+    created_at: '2024-06-15',
+    updated_at: '2026-01-20',
+  },
+  'price-action-secrets-ebook': {
+    id: 3,
+    name: 'Price Action Secrets eBook',
+    slug: 'price-action-secrets-ebook',
+    description: `Learn professional price action trading strategies used by institutional traders.`,
+    short_description: 'Professional price action strategies',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Academy',
+    seller_rating: 4.9,
+    seller_total_sales: 2847,
+    product_type: 'ebook',
+    category: 'Education',
+    price: 39,
+    discount_percentage: 34,
+    file_size_bytes: 45000000,
+    preview_content: ['Table of contents'],
+    features: [
+      '180+ pages',
+      'Chart examples',
+      'PDF format',
+      'Free updates',
+    ],
+    tags: ['price action', 'ebook', 'education'],
+    total_purchases: 312,
     avg_rating: 4.7,
     total_reviews: 89,
-    created_at: '2024-08-20',
-    updated_at: '2025-01-15',
+    created_at: '2024-06-15',
+    updated_at: '2026-01-20',
+  },
+  'risk-management-ebook': {
+    id: 4,
+    name: 'Risk Management eBook',
+    slug: 'risk-management-ebook',
+    description: `Master risk management principles to protect and grow your trading capital.`,
+    short_description: 'Protect your trading capital',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Academy',
+    seller_rating: 4.9,
+    seller_total_sales: 2847,
+    product_type: 'ebook',
+    category: 'Education',
+    price: 29,
+    discount_percentage: 41,
+    file_size_bytes: 35000000,
+    preview_content: ['Table of contents'],
+    features: [
+      '150+ pages',
+      'Calculators included',
+      'PDF format',
+      'Free updates',
+    ],
+    tags: ['risk', 'management', 'ebook', 'education'],
+    total_purchases: 567,
+    avg_rating: 4.9,
+    total_reviews: 156,
+    created_at: '2024-06-15',
+    updated_at: '2026-01-20',
+  },
+  'technical-analysis-mastery-ebook': {
+    id: 5,
+    name: 'Technical Analysis Mastery eBook',
+    slug: 'technical-analysis-mastery-ebook',
+    description: `Deep dive into technical analysis with chart patterns, indicators, and trading signals.`,
+    short_description: 'Master technical analysis',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Academy',
+    seller_rating: 4.9,
+    seller_total_sales: 2847,
+    product_type: 'ebook',
+    category: 'Education',
+    price: 59,
+    discount_percentage: 34,
+    file_size_bytes: 60000000,
+    preview_content: ['Table of contents'],
+    features: [
+      '250+ pages',
+      'Chart patterns',
+      'Indicator setups',
+      'Free updates',
+    ],
+    tags: ['technical analysis', 'ebook', 'education'],
+    total_purchases: 289,
+    avg_rating: 4.8,
+    total_reviews: 78,
+    created_at: '2024-06-15',
+    updated_at: '2026-01-20',
+  },
+  'prop-firm-challenge-blueprint': {
+    id: 6,
+    name: 'Prop Firm Challenge Blueprint',
+    slug: 'prop-firm-challenge-blueprint',
+    description: `Step-by-step guide to passing prop firm challenges and getting funded.`,
+    short_description: 'Pass prop firm challenges',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Academy',
+    seller_rating: 4.9,
+    seller_total_sales: 2847,
+    product_type: 'strategy_guide',
+    category: 'Education',
+    price: 79,
+    discount_percentage: 39,
+    file_size_bytes: 55000000,
+    preview_content: ['Table of contents'],
+    features: [
+      'Complete strategy guide',
+      'Risk management rules',
+      'Trade examples',
+      'Free updates',
+    ],
+    tags: ['prop firm', 'challenge', 'funded', 'education'],
+    total_purchases: 423,
+    avg_rating: 4.9,
+    total_reviews: 134,
+    created_at: '2024-06-15',
+    updated_at: '2026-01-20',
+  },
+  'professional-trading-journal': {
+    id: 7,
+    name: 'Professional Trading Journal',
+    slug: 'professional-trading-journal',
+    description: `Digital trading journal template for tracking and analyzing your trades.`,
+    short_description: 'Track and analyze your trades',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Academy',
+    seller_rating: 4.9,
+    seller_total_sales: 2847,
+    product_type: 'template',
+    category: 'Tools',
+    price: 19,
+    discount_percentage: 34,
+    file_size_bytes: 5000000,
+    preview_content: ['Preview screenshots'],
+    features: [
+      'Excel/Google Sheets',
+      'Trade tracking',
+      'Performance analytics',
+      'Free updates',
+    ],
+    tags: ['journal', 'tracking', 'template', 'tools'],
+    total_purchases: 678,
+    avg_rating: 4.6,
+    total_reviews: 201,
+    created_at: '2024-06-15',
+    updated_at: '2026-01-20',
+  },
+  'trading-plan-template-bundle': {
+    id: 8,
+    name: 'Trading Plan Template Bundle',
+    slug: 'trading-plan-template-bundle',
+    description: `Complete set of trading plan templates for different trading styles.`,
+    short_description: 'Complete trading plan templates',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Academy',
+    seller_rating: 4.9,
+    seller_total_sales: 2847,
+    product_type: 'template',
+    category: 'Tools',
+    price: 29,
+    discount_percentage: 41,
+    file_size_bytes: 8000000,
+    preview_content: ['Preview screenshots'],
+    features: [
+      'Multiple templates',
+      'Customizable',
+      'PDF & Word formats',
+      'Free updates',
+    ],
+    tags: ['trading plan', 'template', 'tools'],
+    total_purchases: 345,
+    avg_rating: 4.7,
+    total_reviews: 98,
+    created_at: '2024-06-15',
+    updated_at: '2026-01-20',
+  },
+  'forex-calculator-suite': {
+    id: 9,
+    name: 'Forex Calculator Suite',
+    slug: 'forex-calculator-suite',
+    description: `Professional Excel-based forex calculators for position sizing, pip value, and risk management.`,
+    short_description: 'Professional forex calculators',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Academy',
+    seller_rating: 4.9,
+    seller_total_sales: 2847,
+    product_type: 'template',
+    category: 'Tools',
+    price: 39,
+    discount_percentage: 34,
+    file_size_bytes: 3000000,
+    preview_content: ['Preview screenshots'],
+    features: [
+      'Position size calculator',
+      'Pip value calculator',
+      'Risk calculator',
+      'Free updates',
+    ],
+    tags: ['calculator', 'forex', 'tools'],
+    total_purchases: 234,
+    avg_rating: 4.8,
+    total_reviews: 67,
+    created_at: '2024-06-15',
+    updated_at: '2026-01-20',
+  },
+  'trading-psychology-blueprint': {
+    id: 10,
+    name: 'Trading Psychology Blueprint',
+    slug: 'trading-psychology-blueprint',
+    description: `Master your trading mindset with proven psychological frameworks.`,
+    short_description: 'Master your trading mindset',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Academy',
+    seller_rating: 4.9,
+    seller_total_sales: 2847,
+    product_type: 'ebook',
+    category: 'Education',
+    price: 49,
+    discount_percentage: 38,
+    file_size_bytes: 40000000,
+    preview_content: ['Table of contents'],
+    features: [
+      '160+ pages',
+      'Exercises included',
+      'PDF format',
+      'Free updates',
+    ],
+    tags: ['psychology', 'mindset', 'ebook', 'education'],
+    total_purchases: 189,
+    avg_rating: 4.8,
+    total_reviews: 54,
+    created_at: '2024-06-15',
+    updated_at: '2026-01-20',
+  },
+  'complete-forex-trading-course': {
+    id: 11,
+    name: 'Complete Forex Trading Course',
+    slug: 'complete-forex-trading-course',
+    description: `The ultimate comprehensive forex trading course covering everything from basics to advanced strategies.
+
+## Course Modules
+
+1. **Forex Fundamentals** - Currency pairs, pips, lots, and market structure
+2. **Technical Analysis** - Chart patterns, candlesticks, and price action
+3. **Fundamental Analysis** - Economic indicators and news trading
+4. **Risk Management** - Position sizing and capital protection
+5. **Trading Psychology** - Emotional control and discipline
+6. **Live Trading Sessions** - Real-time market analysis and execution
+
+## What's Included
+
+- 25+ hours of HD video content
+- Downloadable resources and templates
+- Private Discord community access
+- Monthly live Q&A sessions
+- Lifetime updates`,
+    short_description: 'Ultimate comprehensive forex trading course from beginner to professional',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Academy',
+    seller_rating: 4.9,
+    seller_total_sales: 2847,
+    product_type: 'video_course',
+    category: 'Education',
+    price: 299,
+    discount_percentage: 40,
+    file_size_bytes: 15000000000,
+    preview_content: ['Course introduction video', 'Full course outline PDF', 'Sample lesson'],
+    features: [
+      '25+ hours of HD video',
+      'Comprehensive curriculum',
+      'Private Discord community',
+      'Monthly live Q&A sessions',
+      'Downloadable resources',
+      'Certificate of completion',
+      'Lifetime access & updates',
+      '30-day money-back guarantee',
+    ],
+    tags: ['forex', 'trading course', 'education', 'comprehensive'],
+    total_purchases: 1523,
+    avg_rating: 4.9,
+    total_reviews: 342,
+    created_at: '2024-01-15',
+    updated_at: '2026-01-20',
+  },
+  'smart-money-concepts-course': {
+    id: 12,
+    name: 'Smart Money Concepts Course',
+    slug: 'smart-money-concepts-course',
+    description: `Master institutional trading strategies with our comprehensive Smart Money Concepts course.
+
+## What You'll Learn
+
+- Order blocks and breaker blocks
+- Fair value gaps and liquidity voids
+- Market structure and character changes
+- Institutional order flow analysis
+- Entry models and trade management`,
+    short_description: 'Learn how institutional traders move the markets',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Academy',
+    seller_rating: 4.9,
+    seller_total_sales: 2847,
+    product_type: 'video_course',
+    category: 'Education',
+    price: 199,
+    discount_percentage: 35,
+    file_size_bytes: 8000000000,
+    preview_content: ['Introduction video', 'Course outline'],
+    features: [
+      '18+ hours of HD video',
+      'Real chart examples',
+      'Entry model templates',
+      'Discord community access',
+      'Lifetime updates',
+    ],
+    tags: ['smart money', 'institutional', 'ICT', 'video course'],
+    total_purchases: 892,
+    avg_rating: 4.8,
+    total_reviews: 187,
+    created_at: '2024-03-20',
+    updated_at: '2026-01-20',
+  },
+  'price-action-bible-ebook': {
+    id: 13,
+    name: 'Price Action Bible eBook',
+    slug: 'price-action-bible-ebook',
+    description: `The complete encyclopedia of price action trading with 350+ pages and over 200 annotated chart examples.
+
+## What's Covered
+
+- Candlestick patterns and formations
+- Support and resistance trading
+- Trend analysis and structure
+- Multi-timeframe analysis
+- Trade entries and exits
+- Real-world examples from all markets`,
+    short_description: '350+ pages with 200+ chart examples',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Academy',
+    seller_rating: 4.9,
+    seller_total_sales: 2847,
+    product_type: 'ebook',
+    category: 'Education',
+    price: 49,
+    discount_percentage: 20,
+    file_size_bytes: 85000000,
+    preview_content: ['Table of contents', 'Sample chapter'],
+    features: [
+      '350+ pages of content',
+      '200+ annotated chart examples',
+      'PDF format for all devices',
+      'Bookmark-ready chapters',
+      'Free lifetime updates',
+      'Print-friendly version included',
+    ],
+    tags: ['price action', 'ebook', 'education', 'charts'],
+    total_purchases: 1876,
+    avg_rating: 4.7,
+    total_reviews: 234,
+    created_at: '2024-02-10',
+    updated_at: '2026-01-15',
+  },
+  'ultimate-mt5-indicator-pack': {
+    id: 14,
+    name: 'Ultimate MT5 Indicator Pack',
+    slug: 'ultimate-mt5-indicator-pack',
+    description: `A collection of 25 premium custom indicators for MetaTrader 5, complete with source code and documentation.
+
+## Included Indicators
+
+- Supply/Demand Zones Auto-Drawer
+- Smart Money Order Blocks
+- Fair Value Gap Detector
+- Liquidity Sweep Alert
+- Session High/Low Markers
+- Multi-Timeframe Dashboard
+- And 19 more professional indicators!
+
+## Features
+
+- Full source code (.mq5 files)
+- Detailed documentation
+- Video installation guide
+- Lifetime updates`,
+    short_description: '25 premium indicators with source code',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Academy',
+    seller_rating: 4.9,
+    seller_total_sales: 2847,
+    product_type: 'indicator',
+    category: 'Tools',
+    price: 149,
+    discount_percentage: 33,
+    file_size_bytes: 25000000,
+    preview_content: ['Indicator screenshots', 'Feature overview video'],
+    features: [
+      '25 premium indicators',
+      'Full source code included',
+      'Detailed documentation',
+      'Video installation guide',
+      'Works on all timeframes',
+      'Free lifetime updates',
+      'Discord support community',
+    ],
+    tags: ['mt5', 'indicators', 'tools', 'metatrader'],
+    total_purchases: 1234,
+    avg_rating: 4.8,
+    total_reviews: 156,
+    created_at: '2024-04-05',
+    updated_at: '2026-01-18',
+  },
+  'trading-psychology-masterclass': {
+    id: 15,
+    name: 'Trading Psychology Masterclass',
+    slug: 'trading-psychology-masterclass',
+    description: `Transform your trading mindset with this in-depth psychology course designed specifically for traders.
+
+## Course Contents
+
+1. Understanding the Trading Mind
+2. Fear and Greed Management
+3. Building Trading Discipline
+4. Handling Losing Streaks
+5. Peak Performance Strategies
+6. Creating Your Mental Edge`,
+    short_description: 'Master the psychology of successful trading',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Academy',
+    seller_rating: 4.9,
+    seller_total_sales: 2847,
+    product_type: 'video_course',
+    category: 'Education',
+    price: 149,
+    discount_percentage: 30,
+    file_size_bytes: 6000000000,
+    preview_content: ['Introduction video', 'Course outline'],
+    features: [
+      '10+ hours of video content',
+      'Practical exercises',
+      'Journaling templates',
+      'Meditation guides for traders',
+      'Private community access',
+      'Lifetime updates',
+    ],
+    tags: ['psychology', 'mindset', 'video course', 'education'],
+    total_purchases: 645,
+    avg_rating: 4.9,
+    total_reviews: 178,
+    created_at: '2024-05-12',
+    updated_at: '2026-01-20',
   },
 };
 

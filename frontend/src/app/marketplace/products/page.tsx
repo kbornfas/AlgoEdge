@@ -8,15 +8,8 @@ import {
   Grid,
   Card,
   CardContent,
-  Button,
   Chip,
   Stack,
-  TextField,
-  InputAdornment,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Rating,
   Pagination,
   Skeleton,
@@ -24,14 +17,11 @@ import {
   Tooltip,
 } from '@mui/material';
 import {
-  Search,
   FileText,
   BookOpen,
   Video,
   Activity,
   ChevronRight,
-  Download,
-  Star,
   CheckCircle2,
   ShoppingCart,
 } from 'lucide-react';
@@ -79,15 +69,6 @@ interface Product {
   is_verified?: boolean;
 }
 
-const productTypes = [
-  { value: '', label: 'All Types' },
-  { value: 'ebook', label: 'E-Books' },
-  { value: 'video_course', label: 'Video Courses' },
-  { value: 'indicator', label: 'Indicators' },
-  { value: 'template', label: 'Templates' },
-  { value: 'strategy_guide', label: 'Strategy Guides' },
-];
-
 const getTypeIcon = (type: string) => {
   switch (type) {
     case 'ebook': return BookOpen;
@@ -107,17 +88,249 @@ const getTypeColor = (type: string) => {
   }
 };
 
+// Demo products data
+const demoProducts: Product[] = [
+  {
+    id: 1,
+    name: 'Gold Trading Bible eBook',
+    slug: 'gold-trading-bible-ebook',
+    short_description: 'Comprehensive guide to trading XAUUSD with institutional strategies and risk management techniques.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=400&h=300&fit=crop',
+    price: 49,
+    compare_at_price: 79,
+    product_type: 'ebook',
+    category: 'education',
+    total_sales: 234,
+    rating_average: 4.8,
+    rating_count: 67,
+    seller_name: 'AlgoEdge Academy'
+  },
+  {
+    id: 2,
+    name: 'MT5 Mastery Course',
+    slug: 'mt5-mastery-course',
+    short_description: 'Complete video course on mastering MetaTrader 5 for professional trading.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=300&fit=crop',
+    price: 149,
+    compare_at_price: 199,
+    product_type: 'video_course',
+    category: 'education',
+    total_sales: 456,
+    rating_average: 4.9,
+    rating_count: 123,
+    seller_name: 'AlgoEdge Academy'
+  },
+  {
+    id: 3,
+    name: 'Price Action Secrets eBook',
+    slug: 'price-action-secrets-ebook',
+    short_description: 'Learn professional price action trading strategies used by institutional traders.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=400&h=300&fit=crop',
+    price: 39,
+    compare_at_price: 59,
+    product_type: 'ebook',
+    category: 'education',
+    total_sales: 312,
+    rating_average: 4.7,
+    rating_count: 89,
+    seller_name: 'AlgoEdge Academy'
+  },
+  {
+    id: 4,
+    name: 'Risk Management eBook',
+    slug: 'risk-management-ebook',
+    short_description: 'Master risk management principles to protect and grow your trading capital.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=300&fit=crop',
+    price: 29,
+    compare_at_price: 49,
+    product_type: 'ebook',
+    category: 'education',
+    total_sales: 567,
+    rating_average: 4.9,
+    rating_count: 156,
+    seller_name: 'AlgoEdge Academy'
+  },
+  {
+    id: 5,
+    name: 'Technical Analysis Mastery eBook',
+    slug: 'technical-analysis-mastery-ebook',
+    short_description: 'Deep dive into technical analysis with chart patterns, indicators, and trading signals.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=400&h=300&fit=crop',
+    price: 59,
+    compare_at_price: 89,
+    product_type: 'ebook',
+    category: 'education',
+    total_sales: 289,
+    rating_average: 4.8,
+    rating_count: 78,
+    seller_name: 'AlgoEdge Academy'
+  },
+  {
+    id: 6,
+    name: 'Prop Firm Challenge Blueprint',
+    slug: 'prop-firm-challenge-blueprint',
+    short_description: 'Step-by-step guide to passing prop firm challenges and getting funded.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1559526324-593bc073d938?w=400&h=300&fit=crop',
+    price: 79,
+    compare_at_price: 129,
+    product_type: 'strategy_guide',
+    category: 'education',
+    total_sales: 423,
+    rating_average: 4.9,
+    rating_count: 134,
+    seller_name: 'AlgoEdge Academy'
+  },
+  {
+    id: 7,
+    name: 'Professional Trading Journal',
+    slug: 'professional-trading-journal',
+    short_description: 'Digital trading journal template for tracking and analyzing your trades.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=300&fit=crop',
+    price: 19,
+    compare_at_price: 29,
+    product_type: 'template',
+    category: 'tools',
+    total_sales: 678,
+    rating_average: 4.6,
+    rating_count: 201,
+    seller_name: 'AlgoEdge Academy'
+  },
+  {
+    id: 8,
+    name: 'Trading Plan Template Bundle',
+    slug: 'trading-plan-template-bundle',
+    short_description: 'Complete set of trading plan templates for different trading styles.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=300&fit=crop',
+    price: 29,
+    compare_at_price: 49,
+    product_type: 'template',
+    category: 'tools',
+    total_sales: 345,
+    rating_average: 4.7,
+    rating_count: 98,
+    seller_name: 'AlgoEdge Academy'
+  },
+  {
+    id: 9,
+    name: 'Forex Calculator Suite',
+    slug: 'forex-calculator-suite',
+    short_description: 'Professional Excel-based forex calculators for position sizing, pip value, and risk management.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400&h=300&fit=crop',
+    price: 39,
+    compare_at_price: 59,
+    product_type: 'template',
+    category: 'tools',
+    total_sales: 234,
+    rating_average: 4.8,
+    rating_count: 67,
+    seller_name: 'AlgoEdge Academy'
+  },
+  {
+    id: 10,
+    name: 'Trading Psychology Blueprint',
+    slug: 'trading-psychology-blueprint',
+    short_description: 'Master your trading mindset with proven psychological frameworks.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop',
+    price: 49,
+    compare_at_price: 79,
+    product_type: 'ebook',
+    category: 'education',
+    total_sales: 189,
+    rating_average: 4.8,
+    rating_count: 54,
+    seller_name: 'AlgoEdge Academy'
+  },
+  {
+    id: 11,
+    name: 'Complete Forex Trading Course',
+    slug: 'complete-forex-trading-course',
+    short_description: 'Ultimate comprehensive forex trading course from beginner to professional with 25+ hours of content.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=300&fit=crop',
+    price: 299,
+    compare_at_price: 499,
+    product_type: 'video_course',
+    category: 'education',
+    total_sales: 1523,
+    rating_average: 4.9,
+    rating_count: 342,
+    seller_name: 'AlgoEdge Academy',
+    is_official: true
+  },
+  {
+    id: 12,
+    name: 'Smart Money Concepts Course',
+    slug: 'smart-money-concepts-course',
+    short_description: 'Master institutional trading strategies and learn how smart money moves the markets.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=400&h=300&fit=crop',
+    price: 199,
+    compare_at_price: 299,
+    product_type: 'video_course',
+    category: 'education',
+    total_sales: 892,
+    rating_average: 4.8,
+    rating_count: 187,
+    seller_name: 'AlgoEdge Academy',
+    is_official: true
+  },
+  {
+    id: 13,
+    name: 'Price Action Bible eBook',
+    slug: 'price-action-bible-ebook',
+    short_description: '350+ pages with 200+ annotated chart examples covering all price action concepts.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=400&h=300&fit=crop',
+    price: 39,
+    compare_at_price: 49,
+    product_type: 'ebook',
+    category: 'education',
+    total_sales: 1876,
+    rating_average: 4.7,
+    rating_count: 234,
+    seller_name: 'AlgoEdge Academy',
+    is_official: true
+  },
+  {
+    id: 14,
+    name: 'Ultimate MT5 Indicator Pack',
+    slug: 'ultimate-mt5-indicator-pack',
+    short_description: '25 premium custom indicators for MetaTrader 5 with full source code and documentation.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=300&fit=crop',
+    price: 99,
+    compare_at_price: 149,
+    product_type: 'indicator',
+    category: 'tools',
+    total_sales: 1234,
+    rating_average: 4.8,
+    rating_count: 156,
+    seller_name: 'AlgoEdge Academy',
+    is_official: true
+  },
+  {
+    id: 15,
+    name: 'Trading Psychology Masterclass',
+    slug: 'trading-psychology-masterclass',
+    short_description: 'Master the psychology of successful trading with in-depth video course.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop',
+    price: 104,
+    compare_at_price: 149,
+    product_type: 'video_course',
+    category: 'education',
+    total_sales: 645,
+    rating_average: 4.9,
+    rating_count: 178,
+    seller_name: 'AlgoEdge Academy',
+    is_official: true
+  }
+];
+
 export default function ProductsMarketplacePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [productType, setProductType] = useState('');
-  const [sort, setSort] = useState('popular');
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     fetchProducts();
-  }, [productType, sort, page]);
+  }, [page]);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -125,18 +338,30 @@ export default function ProductsMarketplacePage() {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '12',
-        sort,
+        sort: 'popular',
       });
-
-      if (productType) params.append('product_type', productType);
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/products?${params}`);
       if (res.ok) {
         const data = await res.json();
-        setProducts(data.products);
+        if (data.products && data.products.length > 0) {
+          setProducts(data.products);
+          setTotalPages(data.pagination?.totalPages || 1);
+        } else {
+          // Use demo data if no products from API
+          setProducts(demoProducts);
+          setTotalPages(1);
+        }
+      } else {
+        // Fallback to demo data
+        setProducts(demoProducts);
+        setTotalPages(1);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
+      // Fallback to demo data on error
+      setProducts(demoProducts);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -177,67 +402,12 @@ export default function ProductsMarketplacePage() {
       </Box>
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        {/* Filters */}
-        <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap' }}>
-          <TextField
-            placeholder="Search products..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search size={20} color="rgba(255,255,255,0.5)" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              flex: 1,
-              minWidth: 200,
-              '& .MuiOutlinedInput-root': {
-                bgcolor: 'rgba(255,255,255,0.05)',
-                '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
-              },
-              '& input': { color: 'white' },
-            }}
-          />
-
-          <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Type</InputLabel>
-            <Select
-              value={productType}
-              label="Type"
-              onChange={(e) => setProductType(e.target.value)}
-              sx={{ color: 'white', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
-            >
-              {productTypes.map((t) => (
-                <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Sort</InputLabel>
-            <Select
-              value={sort}
-              label="Sort"
-              onChange={(e) => setSort(e.target.value)}
-              sx={{ color: 'white', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
-            >
-              <MenuItem value="popular">Best Selling</MenuItem>
-              <MenuItem value="rating">Top Rated</MenuItem>
-              <MenuItem value="newest">Newest</MenuItem>
-              <MenuItem value="price_low">Price: Low to High</MenuItem>
-              <MenuItem value="price_high">Price: High to Low</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-
         {/* Products Grid */}
         <Grid container spacing={3}>
           {loading
             ? Array.from({ length: 8 }).map((_, i) => (
                 <Grid item xs={12} sm={6} md={3} key={i}>
-                  <Skeleton variant="rounded" height={320} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                  <Skeleton variant="rounded" height={380} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
                 </Grid>
               ))
             : products.map((product) => {
@@ -283,12 +453,34 @@ export default function ProductsMarketplacePage() {
                         ) : (
                           <TypeIcon size={64} color={typeColor} />
                         )}
-                        {/* Verified Badge */}
+                        {/* Official Badge */}
                         <Box
                           sx={{
                             position: 'absolute',
                             top: 8,
                             left: 8,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            bgcolor: 'rgba(34, 197, 94, 0.95)',
+                            backdropFilter: 'blur(8px)',
+                            color: 'white',
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 2,
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                          }}
+                        >
+                          <CheckCircle2 size={12} />
+                          Official
+                        </Box>
+                        {/* Verified Badge */}
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 8,
+                            left: 70,
                             display: 'flex',
                             alignItems: 'center',
                             gap: 0.5,
@@ -364,7 +556,7 @@ export default function ProductsMarketplacePage() {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
                           <Rating value={product.rating_average || 4.5} size="small" readOnly precision={0.5} />
                           <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: 600 }}>
-                            ({product.rating_count || Math.floor(Math.random() * 50 + 10)})
+                            ({product.rating_count || 0})
                           </Typography>
                         </Box>
 
@@ -388,7 +580,7 @@ export default function ProductsMarketplacePage() {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <ShoppingCart size={12} color="rgba(255,255,255,0.5)" />
                           <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>
-                            {product.total_sales || Math.floor(Math.random() * 100 + 20)} sales
+                            {product.total_sales || 0} sales
                           </Typography>
                         </Box>
                       </CardContent>
@@ -403,44 +595,29 @@ export default function ProductsMarketplacePage() {
           <Box sx={{ textAlign: 'center', py: 8 }}>
             <FileText size={64} color="rgba(255,255,255,0.2)" style={{ marginBottom: 16 }} />
             <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 2 }}>
-              No products found
+              No products available at the moment
             </Typography>
           </Box>
         )}
 
-        {/* Sell Products CTA */}
-        <Box
-          sx={{
-            mt: 6,
-            p: 4,
-            textAlign: 'center',
-            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%)',
-            border: '1px solid rgba(245, 158, 11, 0.3)',
-            borderRadius: 3,
-          }}
-        >
-          <Typography variant="h5" sx={{ color: 'white', fontWeight: 800, mb: 2 }}>
-            Sell Your Digital Products
-          </Typography>
-          <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 3, maxWidth: 500, mx: 'auto' }}>
-            Have a trading course, e-book, custom indicator, or strategy guide?
-            Reach thousands of traders and monetize your expertise.
-          </Typography>
-          <Button
-            component={Link}
-            href="/dashboard/seller?tab=products"
-            variant="contained"
-            size="large"
-            sx={{
-              bgcolor: '#F59E0B',
-              '&:hover': { bgcolor: '#D97706' },
-              fontWeight: 700,
-              px: 4,
-            }}
-          >
-            Start Selling
-          </Button>
-        </Box>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <Pagination
+              count={totalPages}
+              page={page}
+              onChange={(_, value) => setPage(value)}
+              sx={{
+                '& .MuiPaginationItem-root': {
+                  color: 'white',
+                  '&.Mui-selected': {
+                    bgcolor: '#F59E0B',
+                  },
+                },
+              }}
+            />
+          </Box>
+        )}
       </Container>
     </Box>
   );

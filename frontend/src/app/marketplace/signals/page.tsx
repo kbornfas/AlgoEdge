@@ -8,30 +8,16 @@ import {
   Grid,
   Card,
   CardContent,
-  Button,
   Chip,
   Stack,
-  TextField,
-  InputAdornment,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Avatar,
   Rating,
   Pagination,
   Skeleton,
-  Tooltip,
 } from '@mui/material';
 import {
-  Search,
   Signal,
-  TrendingUp,
-  Users,
-  Award,
-  Target,
   ChevronRight,
-  Shield,
   CheckCircle2,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -56,33 +42,95 @@ interface SignalProvider {
   main_instruments: string[];
 }
 
-const tradingStyles = [
-  { value: '', label: 'All Styles' },
-  { value: 'scalping', label: 'Scalping' },
-  { value: 'day_trading', label: 'Day Trading' },
-  { value: 'swing', label: 'Swing Trading' },
-  { value: 'position', label: 'Position Trading' },
-];
-
-const riskLevels = [
-  { value: '', label: 'All Risk Levels' },
-  { value: 'conservative', label: 'Conservative' },
-  { value: 'moderate', label: 'Moderate' },
-  { value: 'aggressive', label: 'Aggressive' },
+// Demo signal providers
+const demoProviders: SignalProvider[] = [
+  {
+    id: 1,
+    display_name: 'GoldMaster Pro',
+    slug: 'goldmaster-pro',
+    bio: 'Professional XAUUSD trader with 5+ years experience. Specialized in technical analysis and price action trading.',
+    avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
+    trading_style: 'day_trading',
+    risk_level: 'moderate',
+    win_rate: 78.5,
+    total_pips: 12450,
+    subscriber_count: 234,
+    rating_average: 4.8,
+    rating_count: 89,
+    monthly_price: 49,
+    quarterly_price: 129,
+    yearly_price: 449,
+    is_free: false,
+    main_instruments: ['XAUUSD', 'XAGUSD']
+  },
+  {
+    id: 2,
+    display_name: 'Forex Elite',
+    slug: 'forex-elite',
+    bio: 'Former institutional trader. Focus on major currency pairs with strict risk management.',
+    avatar_url: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&h=100&fit=crop&crop=face',
+    trading_style: 'swing',
+    risk_level: 'conservative',
+    win_rate: 72.3,
+    total_pips: 8920,
+    subscriber_count: 456,
+    rating_average: 4.9,
+    rating_count: 156,
+    monthly_price: 79,
+    quarterly_price: 199,
+    yearly_price: 699,
+    is_free: false,
+    main_instruments: ['EURUSD', 'GBPUSD', 'USDJPY']
+  },
+  {
+    id: 3,
+    display_name: 'Scalp King',
+    slug: 'scalp-king',
+    bio: 'High-frequency scalper specializing in volatile market conditions.',
+    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
+    trading_style: 'scalping',
+    risk_level: 'aggressive',
+    win_rate: 68.9,
+    total_pips: 15670,
+    subscriber_count: 189,
+    rating_average: 4.6,
+    rating_count: 67,
+    monthly_price: 39,
+    quarterly_price: 99,
+    yearly_price: 349,
+    is_free: false,
+    main_instruments: ['XAUUSD', 'EURUSD']
+  },
+  {
+    id: 4,
+    display_name: 'Smart Money Trader',
+    slug: 'smart-money-trader',
+    bio: 'ICT/Smart Money Concepts specialist. Focusing on liquidity sweeps and order blocks.',
+    avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&h=100&fit=crop&crop=face',
+    trading_style: 'day_trading',
+    risk_level: 'moderate',
+    win_rate: 75.2,
+    total_pips: 9840,
+    subscriber_count: 312,
+    rating_average: 4.7,
+    rating_count: 98,
+    monthly_price: 59,
+    quarterly_price: 149,
+    yearly_price: 499,
+    is_free: false,
+    main_instruments: ['XAUUSD', 'NAS100', 'US30']
+  }
 ];
 
 export default function SignalMarketplacePage() {
   const [providers, setProviders] = useState<SignalProvider[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [tradingStyle, setTradingStyle] = useState('');
-  const [riskLevel, setRiskLevel] = useState('');
-  const [sort, setSort] = useState('popular');
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     fetchProviders();
-  }, [tradingStyle, riskLevel, sort, page]);
+  }, [page]);
 
   const fetchProviders = async () => {
     setLoading(true);
@@ -90,19 +138,27 @@ export default function SignalMarketplacePage() {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '12',
-        sort,
+        sort: 'popular',
       });
-
-      if (tradingStyle) params.append('trading_style', tradingStyle);
-      if (riskLevel) params.append('risk_level', riskLevel);
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/signals/providers?${params}`);
       if (res.ok) {
         const data = await res.json();
-        setProviders(data.providers);
+        if (data.providers && data.providers.length > 0) {
+          setProviders(data.providers);
+          setTotalPages(data.pagination?.totalPages || 1);
+        } else {
+          setProviders(demoProviders);
+          setTotalPages(1);
+        }
+      } else {
+        setProviders(demoProviders);
+        setTotalPages(1);
       }
     } catch (error) {
       console.error('Error fetching providers:', error);
+      setProviders(demoProviders);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -152,88 +208,12 @@ export default function SignalMarketplacePage() {
       </Box>
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        {/* Filters */}
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 2,
-            mb: 4,
-            flexWrap: 'wrap',
-          }}
-        >
-          <TextField
-            placeholder="Search providers..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search size={20} color="rgba(255,255,255,0.5)" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              flex: 1,
-              minWidth: 200,
-              '& .MuiOutlinedInput-root': {
-                bgcolor: 'rgba(255,255,255,0.05)',
-                '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
-              },
-              '& input': { color: 'white' },
-            }}
-          />
-
-          <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Style</InputLabel>
-            <Select
-              value={tradingStyle}
-              label="Style"
-              onChange={(e) => setTradingStyle(e.target.value)}
-              sx={{ color: 'white', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
-            >
-              {tradingStyles.map((s) => (
-                <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Risk</InputLabel>
-            <Select
-              value={riskLevel}
-              label="Risk"
-              onChange={(e) => setRiskLevel(e.target.value)}
-              sx={{ color: 'white', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
-            >
-              {riskLevels.map((r) => (
-                <MenuItem key={r.value} value={r.value}>{r.label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Sort</InputLabel>
-            <Select
-              value={sort}
-              label="Sort"
-              onChange={(e) => setSort(e.target.value)}
-              sx={{ color: 'white', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
-            >
-              <MenuItem value="popular">Most Subscribers</MenuItem>
-              <MenuItem value="win_rate">Highest Win Rate</MenuItem>
-              <MenuItem value="pips">Most Pips</MenuItem>
-              <MenuItem value="rating">Top Rated</MenuItem>
-              <MenuItem value="newest">Newest</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-
         {/* Providers Grid */}
         <Grid container spacing={3}>
           {loading
             ? Array.from({ length: 6 }).map((_, i) => (
                 <Grid item xs={12} sm={6} md={4} key={i}>
-                  <Skeleton variant="rounded" height={350} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                  <Skeleton variant="rounded" height={400} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
                 </Grid>
               ))
             : providers.map((provider) => (
@@ -403,44 +383,29 @@ export default function SignalMarketplacePage() {
           <Box sx={{ textAlign: 'center', py: 8 }}>
             <Signal size={64} color="rgba(255,255,255,0.2)" style={{ marginBottom: 16 }} />
             <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 2 }}>
-              No signal providers found
+              No signal providers available at the moment
             </Typography>
           </Box>
         )}
 
-        {/* Become a Provider CTA */}
-        <Box
-          sx={{
-            mt: 6,
-            p: 4,
-            textAlign: 'center',
-            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
-            borderRadius: 3,
-          }}
-        >
-          <Typography variant="h5" sx={{ color: 'white', fontWeight: 800, mb: 2 }}>
-            Share Your Trading Signals
-          </Typography>
-          <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 3, maxWidth: 500, mx: 'auto' }}>
-            Are you a profitable trader? Start earning by sharing your signals with subscribers.
-            We verify all providers for quality.
-          </Typography>
-          <Button
-            component={Link}
-            href="/dashboard/seller?tab=signals"
-            variant="contained"
-            size="large"
-            sx={{
-              bgcolor: '#3B82F6',
-              '&:hover': { bgcolor: '#2563EB' },
-              fontWeight: 700,
-              px: 4,
-            }}
-          >
-            Become a Signal Provider
-          </Button>
-        </Box>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <Pagination
+              count={totalPages}
+              page={page}
+              onChange={(_, value) => setPage(value)}
+              sx={{
+                '& .MuiPaginationItem-root': {
+                  color: 'white',
+                  '&.Mui-selected': {
+                    bgcolor: '#3B82F6',
+                  },
+                },
+              }}
+            />
+          </Box>
+        )}
       </Container>
     </Box>
   );

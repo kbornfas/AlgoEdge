@@ -300,8 +300,8 @@ export default function WalletPage() {
   };
 
   const handleSubmitDeposit = async () => {
-    if (!amount || parseFloat(amount) < 5) {
-      setError('Minimum deposit is $5');
+    if (!amount || parseFloat(amount) < 19) {
+      setError('Minimum deposit is $19');
       return;
     }
     if (!paymentReference) {
@@ -838,12 +838,12 @@ export default function WalletPage() {
               fullWidth
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              inputProps={{ min: actionType === 'deposit' ? 5 : 10, step: 1 }}
+              inputProps={{ min: actionType === 'deposit' ? 19 : 10, step: 1 }}
               sx={{ mb: 3 }}
               required
               helperText={
                 actionType === 'deposit'
-                  ? 'Minimum deposit: $5'
+                  ? 'Minimum deposit: $19'
                   : `Minimum: $10 | Available: $${wallet?.balance.toFixed(2) || '0.00'} | Fee: 2% + $1`
               }
             />
@@ -860,8 +860,8 @@ export default function WalletPage() {
                   </Typography>
                 </Alert>
 
-                <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.50' }}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                <Paper sx={{ p: 2, mb: 3, bgcolor: 'rgba(0, 50, 50, 0.8)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+                  <Typography variant="subtitle2" color="rgba(255,255,255,0.7)" gutterBottom>
                     Send {getPaymentMethodLabel(selectedMethod)} to:
                   </Typography>
                   
@@ -869,8 +869,8 @@ export default function WalletPage() {
                     <>
                       <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
                         <Box>
-                          <Typography variant="body2" color="text.secondary">Phone Number</Typography>
-                          <Typography variant="h6" fontWeight="bold">
+                          <Typography variant="body2" color="rgba(255,255,255,0.6)">Phone Number</Typography>
+                          <Typography variant="h6" fontWeight="bold" sx={{ color: '#fff' }}>
                             {PLATFORM_PAYMENT_DETAILS[selectedMethod as 'mpesa' | 'airtel_money'].number}
                           </Typography>
                         </Box>
@@ -888,8 +888,8 @@ export default function WalletPage() {
                     <>
                       <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
                         <Box sx={{ maxWidth: '80%' }}>
-                          <Typography variant="body2" color="text.secondary">USDT Address (TRC20)</Typography>
-                          <Typography variant="body1" fontWeight="bold" sx={{ wordBreak: 'break-all' }}>
+                          <Typography variant="body2" color="rgba(255,255,255,0.6)">USDT Address (TRC20)</Typography>
+                          <Typography variant="body1" fontWeight="bold" sx={{ wordBreak: 'break-all', color: '#fff' }}>
                             {PLATFORM_PAYMENT_DETAILS.usdt.address}
                           </Typography>
                         </Box>
@@ -912,8 +912,8 @@ export default function WalletPage() {
                     <>
                       <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
                         <Box sx={{ maxWidth: '80%' }}>
-                          <Typography variant="body2" color="text.secondary">Bitcoin Address</Typography>
-                          <Typography variant="body1" fontWeight="bold" sx={{ wordBreak: 'break-all' }}>
+                          <Typography variant="body2" color="rgba(255,255,255,0.6)">Bitcoin Address</Typography>
+                          <Typography variant="body1" fontWeight="bold" sx={{ wordBreak: 'break-all', color: '#fff' }}>
                             {PLATFORM_PAYMENT_DETAILS.btc.address}
                           </Typography>
                         </Box>

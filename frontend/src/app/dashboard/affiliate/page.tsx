@@ -171,7 +171,8 @@ export default function DashboardAffiliatePage() {
   const fetchAffiliateStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/affiliate/stats', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/affiliate/stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -196,7 +197,8 @@ export default function DashboardAffiliatePage() {
     setPayoutError('');
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/affiliate/payout', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/affiliate/payout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ amount: parseFloat(payoutAmount), method: payoutMethod, details: payoutDetails }),
@@ -294,7 +296,7 @@ export default function DashboardAffiliatePage() {
                   textOverflow: 'ellipsis',
                 }}
               >
-                {loading ? 'Loading...' : (stats?.referralLink || 'https://algoedge.io/register?ref=CODE')}
+                {loading ? 'Loading your referral link...' : (stats?.referralLink || 'Sign up to get your referral link')}
               </Typography>
             </Box>
             <Button

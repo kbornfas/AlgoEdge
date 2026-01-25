@@ -91,6 +91,7 @@ import {
   ChevronDown,
   AlertCircle,
   Database,
+  RefreshCw,
 } from 'lucide-react';
 
 // Types
@@ -306,6 +307,7 @@ const CURRENCIES = [
 export default function SettingsPage() {
   const router = useRouter();
   const theme = useTheme();
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
@@ -508,7 +510,7 @@ export default function SettingsPage() {
       if (!token) return;
       
       try {
-        const response = await fetch('/api/telegram/status', {
+        const response = await fetch(`${API_URL}/api/telegram/status`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -538,7 +540,7 @@ export default function SettingsPage() {
       const token = localStorage.getItem('token');
       if (!token) return;
       
-      const response = await fetch('/api/telegram/status', {
+      const response = await fetch(`${API_URL}/api/telegram/status`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -559,7 +561,7 @@ export default function SettingsPage() {
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch(`${API_URL}/api/user/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -606,7 +608,7 @@ export default function SettingsPage() {
   const fetchSessions = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/user/sessions', {
+      const response = await fetch(`${API_URL}/api/user/sessions`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -632,7 +634,7 @@ export default function SettingsPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch(`${API_URL}/api/user/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -677,7 +679,7 @@ export default function SettingsPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/user/change-password', {
+      const response = await fetch(`${API_URL}/api/user/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -710,7 +712,7 @@ export default function SettingsPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/user/settings', {
+      const response = await fetch(`${API_URL}/api/user/settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -737,7 +739,7 @@ export default function SettingsPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/auth/2fa/setup', {
+      const response = await fetch(`${API_URL}/api/auth/2fa/setup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -773,7 +775,7 @@ export default function SettingsPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/auth/2fa/verify', {
+      const response = await fetch(`${API_URL}/api/auth/2fa/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -804,7 +806,7 @@ export default function SettingsPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/auth/2fa/disable', {
+      const response = await fetch(`${API_URL}/api/auth/2fa/disable`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -831,7 +833,7 @@ export default function SettingsPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/telegram/connect', {
+      const response = await fetch(`${API_URL}/api/telegram/connect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -863,7 +865,7 @@ export default function SettingsPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/telegram/status', {
+      const response = await fetch(`${API_URL}/api/telegram/status`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -902,7 +904,7 @@ export default function SettingsPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/telegram/disconnect', {
+      const response = await fetch(`${API_URL}/api/telegram/disconnect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1602,6 +1604,11 @@ export default function SettingsPage() {
       <Dialog open={showTelegramDialog} onClose={() => { setShowTelegramDialog(false); setTelegramConnectLink(''); }} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Send size={24} color="#0088cc" />Connect Telegram</DialogTitle>
         <DialogContent>
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              <strong>Important:</strong> The connection link expires in 10 minutes. If it expires, click "Generate New Link" below.
+            </Typography>
+          </Alert>
           <Typography color="text.secondary" sx={{ mb: 3 }}>Click the button below to open Telegram and connect your account:</Typography>
           <Card variant="outlined" sx={{ mb: 2, bgcolor: 'background.default' }}>
             <CardContent>
@@ -1631,7 +1638,19 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
+          <Button 
+            variant="text" 
+            onClick={async () => {
+              setTelegramLoading(true);
+              await handleConnectTelegram();
+              setTelegramLoading(false);
+            }} 
+            disabled={telegramLoading}
+            startIcon={<RefreshCw size={16} />}
+          >
+            Generate New Link
+          </Button>
           <Button onClick={() => { setShowTelegramDialog(false); setTelegramConnectLink(''); }}>Cancel</Button>
         </DialogActions>
       </Dialog>

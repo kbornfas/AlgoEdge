@@ -83,8 +83,9 @@ export default function TradesPage() {
   // Fetch live open positions from MetaAPI
   const fetchOpenPositions = useCallback(async () => {
     try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       // Add timestamp to bust any caching
-      const response = await fetch(`/api/user/positions?_t=${Date.now()}`, {
+      const response = await fetch(`${apiUrl}/api/user/positions?_t=${Date.now()}`, {
         headers: {
           ...getAuthHeaders(),
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -130,7 +131,8 @@ export default function TradesPage() {
   // Fetch closed trades from database
   const fetchClosedTrades = useCallback(async () => {
     try {
-      const response = await fetch(`/api/user/trades?status=closed&_t=${Date.now()}`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/user/trades?status=closed&_t=${Date.now()}`, {
         headers: {
           ...getAuthHeaders(),
           'Cache-Control': 'no-cache, no-store, must-revalidate',

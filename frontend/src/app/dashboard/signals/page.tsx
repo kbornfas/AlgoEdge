@@ -71,31 +71,6 @@ interface AlertSetting {
   conditions: string[];
 }
 
-// Simulated signals data - In production, this would come from backend
-const generateSignals = (): Signal[] => {
-  const symbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTCUSD', 'NASDAQ100', 'US30'];
-  const strategies = ['Trend Following', 'Breakout', 'RSI Divergence', 'Support/Resistance', 'News Based'];
-  const timeframes = ['M15', 'H1', 'H4', 'D1'];
-  
-  return symbols.slice(0, 5).map((symbol, index) => ({
-    id: `signal-${index + 1}`,
-    symbol,
-    direction: Math.random() > 0.5 ? 'BUY' : 'SELL',
-    entryPrice: parseFloat((1.0 + Math.random() * 0.2).toFixed(5)),
-    stopLoss: parseFloat((1.0 + Math.random() * 0.15).toFixed(5)),
-    takeProfit1: parseFloat((1.1 + Math.random() * 0.2).toFixed(5)),
-    takeProfit2: parseFloat((1.15 + Math.random() * 0.2).toFixed(5)),
-    takeProfit3: parseFloat((1.2 + Math.random() * 0.2).toFixed(5)),
-    confidence: Math.floor(70 + Math.random() * 30),
-    timeframe: timeframes[Math.floor(Math.random() * timeframes.length)],
-    strategy: strategies[Math.floor(Math.random() * strategies.length)],
-    timestamp: new Date(Date.now() - Math.random() * 3600000).toISOString(),
-    status: ['active', 'hit_tp', 'pending'][Math.floor(Math.random() * 3)] as Signal['status'],
-    currentPrice: parseFloat((1.0 + Math.random() * 0.2).toFixed(5)),
-    pnlPercent: parseFloat((Math.random() * 5 - 1).toFixed(2)),
-  }));
-};
-
 // Market indicators data
 const indicators = [
   { name: 'RSI (14)', value: 62, signal: 'Neutral', color: '#FFA500' },
@@ -128,11 +103,42 @@ export default function SignalsPage() {
     if (showRefresh) setRefreshing(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSignals(generateSignals());
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/signals/active`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.signals && data.signals.length > 0) {
+          // Map API data to Signal interface
+          const mappedSignals: Signal[] = data.signals.map((s: any) => ({
+            id: `signal-${s.id}`,
+            symbol: s.symbol,
+            direction: s.signal_type?.toUpperCase() || s.direction,
+            entryPrice: parseFloat(s.entry_price),
+            stopLoss: parseFloat(s.stop_loss),
+            takeProfit1: parseFloat(s.take_profit_1 || s.takeProfit1),
+            takeProfit2: s.take_profit_2 ? parseFloat(s.take_profit_2) : undefined,
+            takeProfit3: s.take_profit_3 ? parseFloat(s.take_profit_3) : undefined,
+            confidence: s.confidence || 75,
+            timeframe: s.timeframe || 'H1',
+            strategy: s.strategy || 'Technical Analysis',
+            timestamp: s.created_at || new Date().toISOString(),
+            status: s.status || 'active',
+            currentPrice: s.current_price ? parseFloat(s.current_price) : undefined,
+            pnlPercent: s.pnl_percent ? parseFloat(s.pnl_percent) : undefined,
+          }));
+          setSignals(mappedSignals);
+        } else {
+          setSignals([]);
+        }
+      } else {
+        setSignals([]);
+      }
     } catch (error) {
       console.error('Error fetching signals:', error);
+      setSignals([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
