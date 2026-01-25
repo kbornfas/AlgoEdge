@@ -1,0 +1,35 @@
+; News Trading Sniper EA - Momentum Settings
+; Trade with the move after confirmation
+
+[News Filter]
+TradeHighImpact=true
+TradeMediumImpact=false
+TradeLowImpact=false
+NewsCountries=USD
+SpecificEvents=FOMC,NFP,CPI
+ExcludeEvents=
+
+[Strategy Settings]
+Strategy=Momentum
+MinutesBeforeNews=0
+RemoveOrdersAfter=0
+OrderDistance=0
+
+[Momentum Settings]
+WaitAfterNews=3
+ConfirmationPips=25
+MomentumSL=40
+MomentumTP=80
+TrailAfterPips=30
+TrailDistance=20
+
+[Risk Management]
+RiskPercent=1.0
+MaxSpread=45
+MaxSlippage=25
+MaxDailyRisk=3.0
+MaxEventsPerDay=2
+
+[Timing]
+UseServerTime=true
+TimeOffset=0

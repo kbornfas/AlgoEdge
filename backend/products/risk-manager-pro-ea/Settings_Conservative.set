@@ -1,0 +1,45 @@
+; Risk Manager Pro EA - Conservative Settings
+; Maximum protection settings
+
+[Daily Limits]
+DailyLossLimit=2.0
+DailyProfitTarget=3.0
+MaxTradesPerDay=5
+ResetTime=00:00
+
+[Weekly Limits]
+WeeklyLossLimit=5.0
+WeeklyResetDay=Monday
+
+[Total Account Limits]
+MaxDrawdown=10.0
+MaxDrawdownAction=CloseAll
+EquityStopLevel=15.0
+
+[Position Limits]
+MaxOpenPositions=3
+MaxLotsPerPosition=0.5
+MaxTotalLots=1.0
+MaxPerSymbol=1
+
+[Time Controls]
+EnableTimeControl=true
+TradingStartHour=9
+TradingEndHour=17
+CloseAllEndOfDay=true
+FridayCloseHour=14
+CloseWeekend=true
+
+[Alert Settings]
+EnablePopupAlert=true
+EnableSoundAlert=true
+EnableEmailAlert=true
+EnablePushAlert=true
+WarningThreshold=60
+
+[Advanced]
+MonitorOtherEAs=true
+ExcludeMagics=
+DisableTradingOnLimit=true
+ReenableAfter=Never
+ProtectProfits=true

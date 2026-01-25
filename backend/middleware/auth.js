@@ -49,3 +49,37 @@ export const optionalAuth = async (req, res, next) => {
   
   next();
 };
+
+// Alias for authenticate
+export const authenticateToken = authenticate;
+
+// Alias for optionalAuth
+export const optionalAuthenticate = optionalAuth;
+
+// Middleware to require admin role
+export const requireAdmin = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await pool.query(
+      'SELECT role FROM users WHERE id = $1',
+      [req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    if (result.rows[0].role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    req.user.role = 'admin';
+    next();
+  } catch (error) {
+    console.error('Admin auth error:', error);
+    return res.status(500).json({ error: 'Authorization failed' });
+  }
+};

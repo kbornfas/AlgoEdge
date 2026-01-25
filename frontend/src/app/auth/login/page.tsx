@@ -14,22 +14,23 @@ import {
   CircularProgress,
   InputAdornment,
   IconButton,
-  Grid,
+  Divider,
+  Chip,
 } from '@mui/material';
-import { Eye, EyeOff, MessageCircle } from 'lucide-react';
+import { 
+  Eye, 
+  EyeOff, 
+  Shield, 
+  Lock, 
+  Mail,
+  ArrowRight,
+  CheckCircle2,
+  Sparkles,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import CTACard from '@/components/CTACard';
 import AuthBackground from '@/components/AuthBackground';
 import ThemeToggle from '@/components/ThemeToggle';
-import GoogleSignInButton from '@/components/GoogleSignInButton';
-
-// Instagram icon component
-const InstagramIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-  </svg>
-);
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,10 +43,6 @@ export default function LoginPage() {
   const [requires2FA, setRequires2FA] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  // Get WhatsApp and Instagram URLs from environment
-  const whatsappUrl = process.env.NEXT_PUBLIC_WHATSAPP_URL || 'https://wa.me/';
-  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://www.instagram.com/algoedge.hub?igsh=MXZtcDYyMjJ1c2dobw%3D%3D&utm_source=qr';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -74,23 +71,19 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        // Handle different types of errors
         if (data.requires2FA) {
           setRequires2FA(true);
           setError('');
         } else if (data.notFound) {
-          // Account doesn't exist
           setError('No account found with this email. Please create an account first.');
         } else if (data.requiresActivation) {
           if (!data.isVerified) {
             setError('Please verify your email address. Check your inbox for the verification code.');
           } else {
-            // Redirect to pricing if not yet subscribed
             router.push('/auth/pricing');
             return;
           }
         } else if (data.details && Array.isArray(data.details)) {
-          // Validation errors with field details
           const fieldErrors = data.details
             .map((err: { field: string; message: string }) => `${err.field}: ${err.message}`)
             .join(', ');
@@ -101,17 +94,14 @@ export default function LoginPage() {
         return;
       }
 
-      // Save token to localStorage and clear any pending registration data
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.removeItem('pendingUser');
       localStorage.removeItem('pendingEmail');
       
-      // Clear any stale Google OAuth cookies to prevent email mixing
       document.cookie = 'pending_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       document.cookie = 'pending_user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 
-      // Redirect based on subscription status
       if (data.hasActiveSubscription) {
         router.push('/dashboard');
       } else {
@@ -138,139 +128,343 @@ export default function LoginPage() {
     >
       <AuthBackground />
       
-      {/* Theme Toggle - Top Right */}
+      {/* Theme Toggle */}
       <Box sx={{ position: 'fixed', top: 16, right: 16, zIndex: 1000 }}>
         <ThemeToggle />
       </Box>
 
-      <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
-        {/* Logo */}
+      <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
+        {/* Logo & Branding */}
         <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Box
             component="img"
             src="/images/logo.png"
             alt="AlgoEdge Logo"
-            sx={{ width: 80, height: 80, objectFit: 'contain', mx: 'auto' }}
+            sx={{ 
+              width: 72, 
+              height: 72, 
+              objectFit: 'contain', 
+              mx: 'auto',
+              mb: 2,
+              filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))',
+            }}
           />
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 700, 
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 0.5,
+            }}
+          >
+            AlgoEdge
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Professional Automated Trading
+          </Typography>
         </Box>
         
-        {/* Login Form */}
-        <Card sx={{ mb: 4 }}>
-          <CardContent sx={{ p: 4 }}>
-            <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 600 }}>
+        {/* Login Card */}
+        <Card 
+          elevation={0}
+          sx={{ 
+            borderRadius: 4,
+            border: '1px solid',
+            borderColor: 'divider',
+            backdropFilter: 'blur(20px)',
+            background: (theme) => 
+              theme.palette.mode === 'dark' 
+                ? 'rgba(30, 30, 30, 0.9)' 
+                : 'rgba(255, 255, 255, 0.95)',
+            overflow: 'visible',
+          }}
+        >
+          {/* Security Badge */}
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              justifyContent: 'center',
+              mt: -2,
+            }}
+          >
+            <Chip
+              icon={<Shield size={14} />}
+              label="256-bit SSL Encrypted"
+              size="small"
+              sx={{
+                bgcolor: 'success.main',
+                color: 'white',
+                fontWeight: 600,
+                fontSize: '0.7rem',
+                '& .MuiChip-icon': { color: 'white' },
+              }}
+            />
+          </Box>
+
+          <CardContent sx={{ p: { xs: 3, sm: 5 } }}>
+            <Typography 
+              variant="h5" 
+              align="center" 
+              gutterBottom 
+              sx={{ fontWeight: 700, mb: 1 }}
+            >
               Welcome Back
             </Typography>
-            <Typography variant="body2" align="center" color="text.secondary" sx={{ mb: 4 }}>
-              Sign in to your AlgoEdge account
+            <Typography 
+              variant="body2" 
+              align="center" 
+              color="text.secondary" 
+              sx={{ mb: 4 }}
+            >
+              Sign in to access your trading dashboard
             </Typography>
 
             {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
+              <Alert 
+                severity="error" 
+                sx={{ 
+                  mb: 3, 
+                  borderRadius: 2,
+                  '& .MuiAlert-icon': { alignItems: 'center' },
+                }}
+              >
                 {error}
               </Alert>
             )}
 
-            <Box component="form" onSubmit={handleSubmit} autoComplete="on">
+            <Box component="form" onSubmit={handleSubmit} autoComplete="on" name="login">
+              {/* Email Field */}
               <TextField
                 fullWidth
-                label="Email"
+                label="Email Address"
                 name="email"
-                id="email"
+                id="login-email"
                 type="email"
-                autoComplete="username"
+                autoComplete="username email"
                 value={formData.email}
                 onChange={handleChange}
                 required
                 disabled={loading}
-                sx={{ mb: 2 }}
+                placeholder="you@example.com"
+                sx={{ mb: 2.5 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Mail size={20} strokeWidth={1.5} />
+                    </InputAdornment>
+                  ),
+                }}
               />
 
+              {/* Password Field */}
               <TextField
                 fullWidth
                 label="Password"
                 name="password"
-                id="password"
+                id="login-password"
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 value={formData.password}
                 onChange={handleChange}
                 required
                 disabled={loading}
-                sx={{ mb: 2 }}
+                placeholder="Enter your password"
+                sx={{ mb: 1.5 }}
                 InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Lock size={20} strokeWidth={1.5} />
+                    </InputAdornment>
+                  ),
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
                         tabIndex={-1}
+                        size="small"
                       >
-                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </IconButton>
                     </InputAdornment>
                   ),
                 }}
               />
 
+              {/* 2FA Field */}
               {requires2FA && (
                 <TextField
                   fullWidth
-                  label="2FA Code"
+                  label="2FA Verification Code"
                   name="twoFactorCode"
-                  id="twoFactorCode"
+                  id="login-2fa"
                   value={formData.twoFactorCode}
                   onChange={handleChange}
                   required
                   disabled={loading}
                   placeholder="Enter 6-digit code"
                   sx={{ mb: 2 }}
-                  inputProps={{ maxLength: 6, inputMode: 'numeric', autoComplete: 'one-time-code' }}
+                  inputProps={{ 
+                    maxLength: 6, 
+                    inputMode: 'numeric', 
+                    autoComplete: 'one-time-code',
+                    style: { letterSpacing: '0.5em', textAlign: 'center' },
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Shield size={20} strokeWidth={1.5} />
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               )}
 
+              {/* Forgot Password Link */}
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
                 <MuiLink
                   component={Link}
                   href="/auth/forgot-password"
                   variant="body2"
                   underline="hover"
+                  sx={{ 
+                    color: 'primary.main',
+                    fontWeight: 500,
+                    '&:hover': { color: 'primary.dark' },
+                  }}
                 >
                   Forgot password?
                 </MuiLink>
               </Box>
 
+              {/* Submit Button */}
               <Button
                 type="submit"
                 fullWidth
                 variant="contained"
                 size="large"
                 disabled={loading}
-                sx={{ mb: 2 }}
+                sx={{ 
+                  mb: 3, 
+                  py: 1.5,
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  textTransform: 'none',
+                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                    boxShadow: '0 6px 20px rgba(16, 185, 129, 0.5)',
+                  },
+                }}
               >
-                {loading ? <CircularProgress size={24} /> : 'Sign In'}
+                {loading ? (
+                  <CircularProgress size={24} sx={{ color: 'white' }} />
+                ) : (
+                  <>
+                    Sign In Securely
+                    <ArrowRight size={20} style={{ marginLeft: 8 }} />
+                  </>
+                )}
               </Button>
 
               {/* Divider */}
-              <Box sx={{ display: 'flex', alignItems: 'center', my: 2 }}>
-                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-                <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
-                  or
+              <Divider sx={{ mb: 3 }}>
+                <Typography variant="caption" color="text.secondary">
+                  New to AlgoEdge?
                 </Typography>
-                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-              </Box>
+              </Divider>
 
-              {/* Google Sign In */}
-              <GoogleSignInButton mode="signin" />
-
-              <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 3 }}>
-                Don&apos;t have an account?{' '}
-                <MuiLink component={Link} href="/auth/register" underline="hover">
-                  Sign up
-                </MuiLink>
-              </Typography>
+              {/* Register Link */}
+              <Button
+                component={Link}
+                href="/auth/register"
+                fullWidth
+                variant="outlined"
+                size="large"
+                sx={{ 
+                  py: 1.5,
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  borderWidth: 2,
+                  '&:hover': { borderWidth: 2 },
+                }}
+              >
+                Create Free Account
+              </Button>
             </Box>
           </CardContent>
+
+          {/* Security Features Footer */}
+          <Box 
+            sx={{ 
+              px: { xs: 3, sm: 5 }, 
+              pb: 3,
+              pt: 0,
+            }}
+          >
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                gap: 3,
+                flexWrap: 'wrap',
+              }}
+            >
+              {[
+                { icon: <CheckCircle2 size={14} />, text: 'Secure Login' },
+                { icon: <Shield size={14} />, text: '2FA Protected' },
+                { icon: <Lock size={14} />, text: 'Encrypted Data' },
+              ].map((item, index) => (
+                <Box 
+                  key={index}
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 0.5,
+                    color: 'text.secondary',
+                  }}
+                >
+                  {item.icon}
+                  <Typography variant="caption">{item.text}</Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
         </Card>
+
+        {/* Trust Indicators */}
+        <Box sx={{ mt: 4, textAlign: 'center' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            Trusted by 10,000+ traders worldwide
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Chip 
+              icon={<Sparkles size={12} />} 
+              label="4.9★ Rating" 
+              size="small" 
+              variant="outlined"
+              sx={{ fontSize: '0.7rem' }}
+            />
+            <Chip 
+              label="24/7 Support" 
+              size="small" 
+              variant="outlined"
+              sx={{ fontSize: '0.7rem' }}
+            />
+            <Chip 
+              label="Instant Access" 
+              size="small" 
+              variant="outlined"
+              sx={{ fontSize: '0.7rem' }}
+            />
+          </Box>
+        </Box>
       </Container>
     </Box>
   );

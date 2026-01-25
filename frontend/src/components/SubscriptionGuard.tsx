@@ -8,6 +8,21 @@ interface SubscriptionGuardProps {
   children: React.ReactNode;
 }
 
+// Routes that are accessible to all authenticated users (even without subscription)
+// These routes allow unsubscribed users to access marketplace, seller features, affiliate, and wallets
+const OPEN_ROUTES = [
+  '/dashboard',                // Dashboard overview (shows locked features)
+  '/dashboard/affiliate',      // Affiliate program
+  '/dashboard/wallet',         // User wallet
+  '/dashboard/seller',         // Seller dashboard
+  '/dashboard/seller-wallet',  // Seller earnings
+  '/dashboard/settings',       // Settings (basic profile)
+  '/dashboard/purchases',      // User purchases from marketplace
+  '/dashboard/notifications',  // Notifications
+  '/dashboard/support',        // Help & support
+  '/marketplace',              // Marketplace browsing
+];
+
 export default function SubscriptionGuard({ children }: SubscriptionGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -25,7 +40,23 @@ export default function SubscriptionGuard({ children }: SubscriptionGuardProps) 
           return;
         }
 
-        // Check subscription status
+        // Check if current path is an open route (accessible without subscription)
+        // Exact match for /dashboard, startsWith for other routes
+        const isOpenRoute = OPEN_ROUTES.some(route => {
+          if (route === '/dashboard') {
+            return pathname === '/dashboard';
+          }
+          return pathname?.startsWith(route);
+        });
+        
+        if (isOpenRoute) {
+          // Allow access to open routes for all authenticated users
+          setHasAccess(true);
+          setLoading(false);
+          return;
+        }
+
+        // Check subscription status for protected routes
         const response = await fetch('/api/subscription/status', {
           headers: {
             'Authorization': `Bearer ${token}`,

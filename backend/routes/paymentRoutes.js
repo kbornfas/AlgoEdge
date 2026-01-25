@@ -1,19 +1,25 @@
 import express from 'express';
-import {
-  createCheckoutSession,
-  createPortalSession,
-  handleWebhook,
-} from '../controllers/stripeController.js';
 import { authenticate } from '../middleware/auth.js';
 import { apiLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
-// Webhook must use raw body (no JSON parsing)
-router.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook);
+// All payment processing is handled through Whop
+// Whop webhooks are handled in whopRoutes.js
 
-// Protected payment routes
-router.post('/create-checkout-session', authenticate, apiLimiter, createCheckoutSession);
-router.post('/create-portal-session', authenticate, apiLimiter, createPortalSession);
+// Get payment status
+router.get('/status', authenticate, apiLimiter, async (req, res) => {
+  try {
+    // Return user's payment/subscription status from Whop
+    res.json({
+      success: true,
+      provider: 'whop',
+      message: 'Payment processing is handled through Whop',
+    });
+  } catch (error) {
+    console.error('Payment status error:', error);
+    res.status(500).json({ error: 'Failed to get payment status' });
+  }
+});
 
 export default router;

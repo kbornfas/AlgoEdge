@@ -1,10 +1,12 @@
 'use client';
 
-import { Box, Container, Typography, Button, Grid, Card, CardContent, Stack, Fab, Avatar, Rating } from '@mui/material';
-import { TrendingUp, Shield, BarChart3, CheckCircle2, Send, Instagram, Star, Users, Award, Globe, Zap, Quote } from 'lucide-react';
+import { Box, Container, Typography, Button, Grid, Card, CardContent, Stack, Fab, Avatar, Rating, Menu, MenuItem, IconButton, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { TrendingUp, Shield, BarChart3, CheckCircle2, Send, Instagram, Star, Users, Award, Globe, Zap, Quote, ChevronDown, Headphones, HelpCircle, MessageSquare, FileText, Lock, X, Store } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import ProductShowcase from '@/components/landing/ProductShowcase';
 
 /**
  * Trading Background Component
@@ -165,10 +167,10 @@ const TradingBackground = () => {
       >
         <defs>
           <linearGradient id="chartLineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0" />
-            <stop offset="30%" stopColor="#10b981" stopOpacity="0.8" />
-            <stop offset="70%" stopColor="#10b981" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+            <stop offset="0%" stopColor="#22C55E" stopOpacity="0" />
+            <stop offset="30%" stopColor="#22C55E" stopOpacity="0.8" />
+            <stop offset="70%" stopColor="#22C55E" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#22C55E" stopOpacity="0" />
           </linearGradient>
         </defs>
         <path
@@ -274,43 +276,43 @@ const LiveStatsBar = () => {
       label: 'Signals Today', 
       value: stats.signalsToday.toString(), 
       icon: '📊',
-      color: '#10b981',
-      bgColor: 'rgba(16, 185, 129, 0.15)',
-      borderColor: 'rgba(16, 185, 129, 0.4)',
+      color: '#22C55E',
+      bgColor: 'rgba(0, 255, 0, 0.15)',
+      borderColor: 'rgba(0, 255, 0, 0.4)',
       pulse: true,
     },
     { 
       label: 'Users Online', 
       value: stats.usersOnline.toString(), 
       icon: '🟢',
-      color: '#22c55e',
-      bgColor: 'rgba(34, 197, 94, 0.15)',
-      borderColor: 'rgba(34, 197, 94, 0.4)',
+      color: '#22C55E',
+      bgColor: 'rgba(0, 255, 0, 0.15)',
+      borderColor: 'rgba(0, 255, 0, 0.4)',
       pulse: true,
     },
     { 
       label: 'Trades Today', 
       value: stats.tradesExecuted.toLocaleString(), 
       icon: '📈',
-      color: '#3b82f6',
-      bgColor: 'rgba(59, 130, 246, 0.15)',
-      borderColor: 'rgba(59, 130, 246, 0.4)',
+      color: '#0066FF',
+      bgColor: 'rgba(0, 102, 255, 0.15)',
+      borderColor: 'rgba(0, 102, 255, 0.4)',
     },
     { 
       label: 'Total Profit', 
       value: `$${stats.totalProfit.toLocaleString()}`, 
       icon: '💰',
-      color: '#fbbf24',
-      bgColor: 'rgba(251, 191, 36, 0.15)',
-      borderColor: 'rgba(251, 191, 36, 0.4)',
+      color: '#FFD700',
+      bgColor: 'rgba(255, 215, 0, 0.15)',
+      borderColor: 'rgba(255, 215, 0, 0.4)',
     },
     { 
       label: 'Win Rate', 
       value: `${stats.winRate.toFixed(1)}%`, 
       icon: '🎯',
-      color: '#ec4899',
-      bgColor: 'rgba(236, 72, 153, 0.15)',
-      borderColor: 'rgba(236, 72, 153, 0.4)',
+      color: '#FF00AA',
+      bgColor: 'rgba(255, 0, 170, 0.15)',
+      borderColor: 'rgba(255, 0, 170, 0.4)',
     },
   ];
 
@@ -412,10 +414,11 @@ const LiveStatsBar = () => {
                 <Typography
                   sx={{
                     fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.7rem' },
-                    color: 'text.secondary',
+                    color: '#888888',
                     textTransform: 'uppercase',
                     letterSpacing: '0.3px',
                     whiteSpace: 'nowrap',
+                    fontWeight: 700,
                   }}
                 >
                   {stat.label}
@@ -497,7 +500,7 @@ const RecentActivityPopup = () => {
           backdropFilter: 'blur(10px)',
           borderRadius: 2,
           p: { xs: 1.25, sm: 1.5 },
-          border: '1px solid rgba(16, 185, 129, 0.3)',
+          border: '1px solid rgba(0, 255, 0, 0.3)',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
         }}
       >
@@ -507,7 +510,7 @@ const RecentActivityPopup = () => {
             width: 44,
             height: 44,
             borderRadius: '50%',
-            bgcolor: 'rgba(16, 185, 129, 0.2)',
+            bgcolor: 'rgba(0, 255, 0, 0.2)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -522,8 +525,8 @@ const RecentActivityPopup = () => {
           <Typography
             sx={{
               fontSize: '0.85rem',
-              fontWeight: 600,
-              color: 'white',
+              fontWeight: 700,
+              color: '#FFFFFF',
               lineHeight: 1.3,
             }}
           >
@@ -532,16 +535,16 @@ const RecentActivityPopup = () => {
           <Typography
             sx={{
               fontSize: '0.8rem',
-              color: activity.action.includes('earned') ? '#10b981' : 'text.secondary',
-              fontWeight: activity.action.includes('earned') ? 600 : 400,
+              color: activity.action.includes('earned') ? '#22C55E' : '#888888',
+              fontWeight: activity.action.includes('earned') ? 700 : 500,
             }}
           >
-            {activity.action} {activity.plan && <span style={{ color: '#10b981' }}>{activity.plan}</span>}
+            {activity.action} {activity.plan && <span style={{ color: '#22C55E' }}>{activity.plan}</span>}
           </Typography>
           <Typography
             sx={{
               fontSize: '0.7rem',
-              color: 'text.disabled',
+              color: '#666666',
             }}
           >
             {activity.time}
@@ -554,17 +557,445 @@ const RecentActivityPopup = () => {
             width: 20,
             height: 20,
             borderRadius: '50%',
-            bgcolor: '#10b981',
+            bgcolor: '#22C55E',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
           }}
         >
-          <CheckCircle2 size={14} color="white" />
+          <CheckCircle2 size={14} color="black" />
         </Box>
       </Box>
     </Box>
+  );
+};
+
+// Top Navigation Bar Component - Similar to ReadyPips
+const TopNavBar = () => {
+  const [resourcesAnchor, setResourcesAnchor] = useState<null | HTMLElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleResourcesOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setResourcesAnchor(event.currentTarget);
+  };
+
+  const handleResourcesClose = () => {
+    setResourcesAnchor(null);
+  };
+
+  return (
+    <Box
+      sx={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1100,
+        bgcolor: '#000000',
+        borderBottom: '1px solid #222222',
+        transition: 'all 0.3s ease',
+      }}
+    >
+      <Container maxWidth="lg">
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            py: 1.5,
+            gap: 2,
+          }}
+        >
+          {/* Logo */}
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Box
+              component="img"
+              src="/images/logo.png"
+              alt="AlgoEdge"
+              sx={{ width: 36, height: 36, objectFit: 'contain' }}
+            />
+            <Typography
+              sx={{
+                fontWeight: 900,
+                fontSize: '1.4rem',
+                color: '#FFFFFF',
+                display: { xs: 'none', sm: 'block' },
+                letterSpacing: '-0.01em',
+              }}
+            >
+              <Box component="span" sx={{ color: '#FF0000' }}>Algo</Box><Box component="span" sx={{ color: '#22C55E' }}>Edge</Box>
+            </Typography>
+          </Link>
+
+          {/* Navigation Links - Desktop */}
+          <Box
+            sx={{
+              display: { xs: 'none', md: 'flex' },
+              alignItems: 'center',
+              gap: 0.5,
+            }}
+          >
+            <Button
+              component={Link}
+              href="/dashboard/signals"
+              startIcon={<TrendingUp size={18} />}
+              sx={{
+                color: '#FFFFFF',
+                fontWeight: 600,
+                fontSize: '0.95rem',
+                textTransform: 'none',
+                px: 2,
+                '&:hover': {
+                  color: '#22C55E',
+                  bgcolor: 'transparent',
+                },
+              }}
+            >
+              Indicator
+            </Button>
+
+            <Button
+              component={Link}
+              href="/dashboard/robots"
+              startIcon={<Zap size={18} />}
+              sx={{
+                color: '#FFFFFF',
+                fontWeight: 600,
+                fontSize: '0.95rem',
+                textTransform: 'none',
+                px: 2,
+                '&:hover': {
+                  color: '#22C55E',
+                  bgcolor: 'transparent',
+                },
+              }}
+            >
+              Copy Trading
+            </Button>
+
+            <Button
+              component={Link}
+              href="/marketplace"
+              startIcon={<Store size={18} />}
+              sx={{
+                color: '#FFFFFF',
+                fontWeight: 600,
+                fontSize: '0.95rem',
+                textTransform: 'none',
+                px: 2,
+                '&:hover': {
+                  color: '#22C55E',
+                  bgcolor: 'transparent',
+                },
+              }}
+            >
+              Marketplace
+            </Button>
+
+            <Button
+              component={Link}
+              href="/affiliate"
+              startIcon={<BarChart3 size={18} />}
+              sx={{
+                color: '#FFFFFF',
+                fontWeight: 600,
+                fontSize: '0.95rem',
+                textTransform: 'none',
+                px: 2,
+                '&:hover': {
+                  color: '#22C55E',
+                  bgcolor: 'transparent',
+                },
+              }}
+            >
+              Affiliate Program
+            </Button>
+
+            <Button
+              onClick={handleResourcesOpen}
+              endIcon={<ChevronDown size={16} />}
+              sx={{
+                color: '#FFFFFF',
+                fontWeight: 600,
+                fontSize: '0.95rem',
+                textTransform: 'none',
+                px: 2,
+                '&:hover': {
+                  color: '#22C55E',
+                  bgcolor: 'transparent',
+                },
+              }}
+            >
+              More
+            </Button>
+
+            <Menu
+              anchorEl={resourcesAnchor}
+              open={Boolean(resourcesAnchor)}
+              onClose={handleResourcesClose}
+              PaperProps={{
+                sx: {
+                  bgcolor: '#111111',
+                  border: '1px solid #333333',
+                  borderRadius: 2,
+                  mt: 1,
+                  minWidth: 200,
+                },
+              }}
+            >
+              <MenuItem
+                component={Link}
+                href="/support"
+                onClick={handleResourcesClose}
+                sx={{
+                  py: 1.5,
+                  px: 2.5,
+                  gap: 1.5,
+                  '&:hover': { bgcolor: '#222222' },
+                }}
+              >
+                <Headphones size={18} color="#22C55E" />
+                <Typography sx={{ color: '#FFFFFF', fontSize: '0.95rem', fontWeight: 500 }}>Support</Typography>
+              </MenuItem>
+              <MenuItem
+                component={Link}
+                href="/faq"
+                onClick={handleResourcesClose}
+                sx={{
+                  py: 1.5,
+                  px: 2.5,
+                  gap: 1.5,
+                  '&:hover': { bgcolor: '#222222' },
+                }}
+              >
+                <HelpCircle size={18} color="#22C55E" />
+                <Typography sx={{ color: '#FFFFFF', fontSize: '0.95rem', fontWeight: 500 }}>FAQs</Typography>
+              </MenuItem>
+              <MenuItem
+                component={Link}
+                href="/testimonials"
+                onClick={handleResourcesClose}
+                sx={{
+                  py: 1.5,
+                  px: 2.5,
+                  gap: 1.5,
+                  '&:hover': { bgcolor: '#222222' },
+                }}
+              >
+                <MessageSquare size={18} color="#22C55E" />
+                <Typography sx={{ color: '#FFFFFF', fontSize: '0.95rem', fontWeight: 500 }}>Testimonials</Typography>
+              </MenuItem>
+              <MenuItem
+                component={Link}
+                href="/privacy"
+                onClick={handleResourcesClose}
+                sx={{
+                  py: 1.5,
+                  px: 2.5,
+                  gap: 1.5,
+                  '&:hover': { bgcolor: '#222222' },
+                }}
+              >
+                <Lock size={18} color="#22C55E" />
+                <Typography sx={{ color: '#FFFFFF', fontSize: '0.95rem', fontWeight: 500 }}>Privacy Policy</Typography>
+              </MenuItem>
+              <MenuItem
+                component={Link}
+                href="/terms"
+                onClick={handleResourcesClose}
+                sx={{
+                  py: 1.5,
+                  px: 2.5,
+                  gap: 1.5,
+                  '&:hover': { bgcolor: '#222222' },
+                }}
+              >
+                <FileText size={18} color="#22C55E" />
+                <Typography sx={{ color: '#FFFFFF', fontSize: '0.95rem', fontWeight: 500 }}>Terms & Conditions</Typography>
+              </MenuItem>
+            </Menu>
+          </Box>
+
+          {/* Auth Buttons */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              component={Link}
+              href="/auth/login"
+              sx={{
+                color: '#FFFFFF',
+                fontWeight: 600,
+                fontSize: '0.95rem',
+                textTransform: 'none',
+                px: 2,
+                display: { xs: 'none', sm: 'flex' },
+                '&:hover': {
+                  color: '#22C55E',
+                  bgcolor: 'transparent',
+                },
+              }}
+            >
+              Login
+            </Button>
+            <Button
+              component={Link}
+              href="/auth/register"
+              variant="contained"
+              sx={{
+                bgcolor: '#22C55E',
+                color: '#000000',
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                textTransform: 'none',
+                px: 3,
+                py: 1,
+                borderRadius: 2,
+                '&:hover': {
+                  bgcolor: '#16A34A',
+                },
+              }}
+            >
+              Sign Up
+            </Button>
+          </Box>
+        </Box>
+      </Container>
+    </Box>
+  );
+};
+
+// Affiliate Login Dialog Component
+const AffiliateLoginDialog = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+  const router = useRouter();
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      PaperProps={{
+        sx: {
+          bgcolor: '#111111',
+          border: '1px solid #333333',
+          borderRadius: 3,
+          maxWidth: 400,
+          width: '100%',
+        },
+      }}
+    >
+      <DialogTitle
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          pb: 1,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            sx={{
+              p: 1,
+              borderRadius: 2,
+              bgcolor: '#22C55E',
+            }}
+          >
+            <Users size={24} color="#000000" />
+          </Box>
+          <Typography variant="h6" fontWeight={800} color="#FFFFFF">
+            Affiliate Program
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} size="small" sx={{ color: '#888888' }}>
+          <X size={20} />
+        </IconButton>
+      </DialogTitle>
+      
+      <DialogContent sx={{ pt: 2 }}>
+        <Typography sx={{ mb: 3, color: '#FFFFFF' }}>
+          Join our affiliate program and earn <strong style={{ color: '#22C55E' }}>10% commission</strong> on every referral subscription!
+        </Typography>
+        
+        <Box
+          sx={{
+            p: 2.5,
+            borderRadius: 2,
+            bgcolor: '#001a00',
+            border: '1px solid #22C55E',
+            mb: 2,
+          }}
+        >
+          <Typography fontWeight={800} sx={{ mb: 1, color: '#22C55E' }}>
+            Commission Rates:
+          </Typography>
+          <Stack spacing={0.5}>
+            <Typography sx={{ color: '#FFFFFF', fontSize: '0.95rem' }}>
+              • Weekly Plan ($19): <strong style={{ color: '#22C55E' }}>$1.90</strong> per referral
+            </Typography>
+            <Typography sx={{ color: '#FFFFFF', fontSize: '0.95rem' }}>
+              • Monthly Plan ($49): <strong style={{ color: '#22C55E' }}>$4.90</strong> per referral
+            </Typography>
+            <Typography sx={{ color: '#FFFFFF', fontSize: '0.95rem' }}>
+              • Quarterly Plan ($149): <strong style={{ color: '#22C55E' }}>$14.90</strong> per referral
+            </Typography>
+          </Stack>
+        </Box>
+        
+        <Typography sx={{ textAlign: 'center', color: '#888888' }}>
+          Please login or create an account to access your affiliate dashboard.
+        </Typography>
+      </DialogContent>
+      
+      <DialogActions sx={{ p: 3, pt: 2, gap: 1 }}>
+        <Button
+          fullWidth
+          variant="outlined"
+          onClick={() => {
+            onClose();
+            router.push('/auth/login?redirect=/dashboard/affiliate');
+          }}
+          sx={{
+            borderColor: '#FFFFFF',
+            borderWidth: 2,
+            color: '#FFFFFF',
+            fontWeight: 700,
+            py: 1.25,
+            '&:hover': {
+              borderColor: '#22C55E',
+              borderWidth: 2,
+              bgcolor: 'transparent',
+            },
+          }}
+        >
+          Login
+        </Button>
+        <Button
+          fullWidth
+          variant="contained"
+          onClick={() => {
+            onClose();
+            router.push('/auth/register?redirect=/dashboard/affiliate');
+          }}
+          sx={{
+            bgcolor: '#22C55E',
+            color: '#000000',
+            fontWeight: 700,
+            py: 1.25,
+            '&:hover': {
+              bgcolor: '#16A34A',
+            },
+          }}
+        >
+          Create Account
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
@@ -574,6 +1005,9 @@ export default function Home() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'transparent', position: 'relative' }}>
+      {/* Top Navigation Bar */}
+      <TopNavBar />
+      
       {/* Trading Background - Animated Candlestick Chart */}
       <TradingBackground />
       
@@ -584,16 +1018,16 @@ export default function Home() {
       <RecentActivityPopup />
       
       {/* Hero Section - Above the Fold */}
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 10 }}>
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 10, pt: 8 }}>
         <Box sx={{ py: { xs: 6, md: 10 }, textAlign: 'center' }}>
           {/* Main Headline with Clear Offer */}
           <Typography
             variant="h1"
             sx={{
               fontSize: { xs: '2.5rem', sm: '3rem', md: '4rem' },
-              fontWeight: 800,
+              fontWeight: 900,
               mb: 3,
-              background: 'linear-gradient(135deg, #00ff00 0%, #10b981 50%, #22c55e 100%)',
+              background: 'linear-gradient(135deg, #22C55E 0%, #22C55E 50%, #22C55E 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               textShadow: '0 0 40px rgba(0, 255, 0, 0.3)',
@@ -607,12 +1041,12 @@ export default function Home() {
           <Typography
             sx={{
               fontSize: { xs: '1.1rem', md: '1.3rem' },
-              color: 'text.primary',
+              color: '#FFFFFF',
               mb: 4,
               maxWidth: '800px',
               mx: 'auto',
               lineHeight: 1.6,
-              fontWeight: 500,
+              fontWeight: 600,
             }}
           >
             Earn Consistent Forex Returns with Fully Automated Trading Bots — No Experience Needed.
@@ -637,20 +1071,20 @@ export default function Home() {
               size="large"
               sx={{
                 minWidth: { xs: '100%', sm: 240 },
-                bgcolor: '#10b981',
-                color: 'white',
-                fontWeight: 700,
+                bgcolor: '#22C55E',
+                color: '#000000',
+                fontWeight: 800,
                 fontSize: { xs: '1.1rem', md: '1.2rem' },
                 py: 2,
                 px: 5,
                 '&:hover': {
-                  bgcolor: '#059669',
+                  bgcolor: '#16A34A',
                   transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 32px rgba(16, 185, 129, 0.5)',
+                  boxShadow: '0 12px 32px rgba(0, 255, 0, 0.5)',
                 },
                 transition: 'all 0.3s ease',
                 textTransform: 'none',
-                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)',
+                boxShadow: '0 8px 24px rgba(0, 255, 0, 0.4)',
                 borderRadius: 2,
               }}
             >
@@ -663,16 +1097,16 @@ export default function Home() {
               size="large"
               sx={{
                 minWidth: { xs: '100%', sm: 240 },
-                borderColor: '#10b981',
-                color: '#10b981',
-                fontWeight: 700,
+                borderColor: '#22C55E',
+                color: '#22C55E',
+                fontWeight: 800,
                 fontSize: { xs: '1.1rem', md: '1.2rem' },
                 py: 2,
                 px: 5,
                 borderWidth: 2,
                 '&:hover': {
-                  borderColor: '#059669',
-                  bgcolor: 'rgba(16, 185, 129, 0.1)',
+                  borderColor: '#22C55E',
+                  bgcolor: 'rgba(0, 255, 0, 0.1)',
                   borderWidth: 2,
                   transform: 'translateY(-4px)',
                 },
@@ -706,8 +1140,8 @@ export default function Home() {
               variant="h3"
               sx={{
                 fontSize: { xs: '1.8rem', md: '2.5rem' },
-                fontWeight: 700,
-                color: '#10b981',
+                fontWeight: 800,
+                color: '#22C55E',
                 mb: 2,
                 fontStyle: 'italic',
               }}
@@ -717,8 +1151,9 @@ export default function Home() {
             <Typography
               sx={{
                 fontSize: { xs: '1rem', md: '1.1rem' },
-                color: 'text.secondary',
+                color: '#FFFFFF',
                 mb: 4,
+                fontWeight: 600,
               }}
             >
               Secure your bot and start trading today.
@@ -813,8 +1248,8 @@ export default function Home() {
             <Typography
               sx={{
                 fontSize: { xs: '1.3rem', md: '1.5rem' },
-                fontWeight: 700,
-                color: '#10b981',
+                fontWeight: 800,
+                color: '#22C55E',
                 mb: 3,
                 textAlign: 'center',
               }}
@@ -828,14 +1263,14 @@ export default function Home() {
                     display: 'flex', 
                     gap: 1.5, 
                     alignItems: 'flex-start',
-                    bgcolor: 'rgba(16, 185, 129, 0.05)',
+                    bgcolor: 'rgba(0, 255, 0, 0.05)',
                     p: 2.5,
                     borderRadius: 2,
-                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(0, 255, 0, 0.2)',
                   }}
                 >
-                  <CheckCircle2 size={24} color="#10b981" style={{ marginTop: 2, flexShrink: 0 }} />
-                  <Typography sx={{ color: 'text.primary', fontSize: { xs: '1rem', md: '1.1rem' }, lineHeight: 1.6 }}>
+                  <CheckCircle2 size={24} color="#22C55E" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <Typography sx={{ color: '#FFFFFF', fontSize: { xs: '1rem', md: '1.1rem' }, lineHeight: 1.6, fontWeight: 600 }}>
                     <strong>Instant Setup</strong> – We install and configure everything for you
                   </Typography>
                 </Box>
@@ -846,14 +1281,14 @@ export default function Home() {
                     display: 'flex', 
                     gap: 1.5, 
                     alignItems: 'flex-start',
-                    bgcolor: 'rgba(16, 185, 129, 0.05)',
+                    bgcolor: 'rgba(0, 255, 0, 0.05)',
                     p: 2.5,
                     borderRadius: 2,
-                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(0, 255, 0, 0.2)',
                   }}
                 >
-                  <CheckCircle2 size={24} color="#10b981" style={{ marginTop: 2, flexShrink: 0 }} />
-                  <Typography sx={{ color: 'text.primary', fontSize: { xs: '1rem', md: '1.1rem' }, lineHeight: 1.6 }}>
+                  <CheckCircle2 size={24} color="#22C55E" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <Typography sx={{ color: '#FFFFFF', fontSize: { xs: '1rem', md: '1.1rem' }, lineHeight: 1.6, fontWeight: 600 }}>
                     <strong>All 7 Strategies</strong> – Trend, scalping, breakout & more
                   </Typography>
                 </Box>
@@ -864,14 +1299,14 @@ export default function Home() {
                     display: 'flex', 
                     gap: 1.5, 
                     alignItems: 'flex-start',
-                    bgcolor: 'rgba(16, 185, 129, 0.05)',
+                    bgcolor: 'rgba(0, 255, 0, 0.05)',
                     p: 2.5,
                     borderRadius: 2,
-                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(0, 255, 0, 0.2)',
                   }}
                 >
-                  <CheckCircle2 size={24} color="#10b981" style={{ marginTop: 2, flexShrink: 0 }} />
-                  <Typography sx={{ color: 'text.primary', fontSize: { xs: '1rem', md: '1.1rem' }, lineHeight: 1.6 }}>
+                  <CheckCircle2 size={24} color="#22C55E" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <Typography sx={{ color: '#FFFFFF', fontSize: { xs: '1rem', md: '1.1rem' }, lineHeight: 1.6, fontWeight: 600 }}>
                     <strong>No Manual Trading</strong> – Algorithm handles everything 24/7
                   </Typography>
                 </Box>
@@ -882,14 +1317,14 @@ export default function Home() {
                     display: 'flex', 
                     gap: 1.5, 
                     alignItems: 'flex-start',
-                    bgcolor: 'rgba(16, 185, 129, 0.05)',
+                    bgcolor: 'rgba(0, 255, 0, 0.05)',
                     p: 2.5,
                     borderRadius: 2,
-                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(0, 255, 0, 0.2)',
                   }}
                 >
-                  <CheckCircle2 size={24} color="#10b981" style={{ marginTop: 2, flexShrink: 0 }} />
-                  <Typography sx={{ color: 'text.primary', fontSize: { xs: '1rem', md: '1.1rem' }, lineHeight: 1.6 }}>
+                  <CheckCircle2 size={24} color="#22C55E" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <Typography sx={{ color: '#FFFFFF', fontSize: { xs: '1rem', md: '1.1rem' }, lineHeight: 1.6, fontWeight: 600 }}>
                     <strong>Works with MT5</strong> – Seamless MetaTrader 5 integration
                   </Typography>
                 </Box>
@@ -904,11 +1339,11 @@ export default function Home() {
             variant="h3"
             align="center"
             sx={{
-              fontWeight: 700,
+              fontWeight: 800,
               mb: 2,
               fontSize: { xs: '2rem', md: '2.5rem' },
-              color: '#10b981',
-              textShadow: '0 2px 10px rgba(16, 185, 129, 0.3)',
+              color: '#22C55E',
+              textShadow: '0 2px 10px rgba(0, 255, 0, 0.3)',
             }}
           >
             How AlgoEdge Works
@@ -918,9 +1353,10 @@ export default function Home() {
             sx={{
               mb: 5,
               fontSize: { xs: '1rem', md: '1.1rem' },
-              color: 'text.secondary',
+              color: '#FFFFFF',
               maxWidth: '700px',
               mx: 'auto',
+              fontWeight: 600,
             }}
           >
             Watch our algorithm in action - real trades, real profits
@@ -934,7 +1370,7 @@ export default function Home() {
               borderRadius: 3,
               overflow: 'hidden',
               boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
-              border: '2px solid rgba(16, 185, 129, 0.3)',
+              border: '2px solid rgba(0, 255, 0, 0.3)',
             }}
           >
             <video
@@ -961,13 +1397,13 @@ export default function Home() {
             variant="h4"
             align="center"
             sx={{
-              fontWeight: 700,
+              fontWeight: 800,
               mb: 3,
               fontSize: { xs: '1.5rem', md: '2rem' },
-              color: '#10b981',
+              color: '#22C55E',
             }}
           >
-            See AlgoEdge&apos;s Real Results <Box component="span" sx={{ fontWeight: 400, fontSize: { xs: '1rem', md: '1.3rem' }, fontStyle: 'italic' }}>(Just a few examples)</Box>
+            See AlgoEdge&apos;s Real Results <Box component="span" sx={{ fontWeight: 500, fontSize: { xs: '1rem', md: '1.3rem' }, fontStyle: 'italic', color: '#FFFFFF' }}>(Just a few examples)</Box>
           </Typography>
 
           {/* Grid for Videos and Images - 2x2 on mobile, 4 columns on desktop */}
@@ -978,7 +1414,7 @@ export default function Home() {
                 sx={{
                   borderRadius: 2,
                   overflow: 'hidden',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  border: '1px solid rgba(0, 255, 0, 0.3)',
                   bgcolor: '#1a1a1a',
                   aspectRatio: '9/16',
                 }}
@@ -1000,7 +1436,7 @@ export default function Home() {
                 sx={{
                   borderRadius: 2,
                   overflow: 'hidden',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  border: '1px solid rgba(0, 255, 0, 0.3)',
                   bgcolor: '#1a1a1a',
                   aspectRatio: '9/16',
                 }}
@@ -1022,7 +1458,7 @@ export default function Home() {
                 sx={{
                   borderRadius: 2,
                   overflow: 'hidden',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  border: '1px solid rgba(0, 255, 0, 0.3)',
                   bgcolor: '#1a1a1a',
                   aspectRatio: '9/16',
                 }}
@@ -1041,7 +1477,7 @@ export default function Home() {
                 sx={{
                   borderRadius: 2,
                   overflow: 'hidden',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  border: '1px solid rgba(0, 255, 0, 0.3)',
                   bgcolor: '#1a1a1a',
                   aspectRatio: '9/16',
                 }}
@@ -1068,18 +1504,18 @@ export default function Home() {
               transform: 'translateX(-50%)',
               width: '80%',
               height: '1px',
-              background: 'linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.5), transparent)',
+              background: 'linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.5), transparent)',
             }}
           />
           <Typography
             variant="h3"
             align="center"
             sx={{
-              fontWeight: 700,
+              fontWeight: 800,
               mb: 2,
               fontSize: { xs: '2rem', md: '2.5rem' },
-              color: '#10b981',
-              textShadow: '0 2px 10px rgba(16, 185, 129, 0.3)',
+              color: '#22C55E',
+              textShadow: '0 2px 10px rgba(0, 255, 0, 0.3)',
             }}
           >
             Real Performance. Real Results.
@@ -1089,9 +1525,10 @@ export default function Home() {
             sx={{
               mb: 6,
               fontSize: { xs: '1rem', md: '1.1rem' },
-              color: 'text.secondary',
+              color: '#FFFFFF',
               maxWidth: '600px',
               mx: 'auto',
+              fontWeight: 600,
             }}
           >
             Our algorithms have been battle-tested across all market conditions
@@ -1109,9 +1546,9 @@ export default function Home() {
                   sx={{
                     textAlign: 'center',
                     p: { xs: 2, md: 3 },
-                    bgcolor: 'rgba(16, 185, 129, 0.05)',
+                    bgcolor: 'rgba(0, 255, 0, 0.05)',
                     borderRadius: 3,
-                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(0, 255, 0, 0.2)',
                     height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
@@ -1121,27 +1558,27 @@ export default function Home() {
                     transition: 'all 0.3s ease',
                     '&:hover': {
                       transform: 'translateY(-5px)',
-                      borderColor: '#10b981',
-                      boxShadow: '0 10px 40px rgba(16, 185, 129, 0.2)',
+                      borderColor: '#22C55E',
+                      boxShadow: '0 10px 40px rgba(0, 255, 0, 0.2)',
                     },
                   }}
                 >
-                  <Box sx={{ color: '#10b981', mb: { xs: 1.5, md: 2 }, opacity: 0.8 }}>{stat.icon}</Box>
+                  <Box sx={{ color: '#22C55E', mb: { xs: 1.5, md: 2 }, opacity: 0.8 }}>{stat.icon}</Box>
                   <Typography
                     sx={{
                       fontSize: { xs: '1.75rem', md: '2.5rem' },
-                      fontWeight: 800,
-                      color: '#10b981',
+                      fontWeight: 900,
+                      color: '#22C55E',
                       lineHeight: 1,
                       mb: 0.5,
                     }}
                   >
                     {stat.value}
                   </Typography>
-                  <Typography sx={{ fontWeight: 600, color: 'text.primary', mb: 0.5, fontSize: { xs: '0.9rem', md: '1rem' } }}>
+                  <Typography sx={{ fontWeight: 700, color: '#FFFFFF', mb: 0.5, fontSize: { xs: '0.9rem', md: '1rem' } }}>
                     {stat.label}
                   </Typography>
-                  <Typography sx={{ fontSize: { xs: '0.75rem', md: '0.85rem' }, color: 'text.secondary' }}>
+                  <Typography sx={{ fontSize: { xs: '0.75rem', md: '0.85rem' }, color: '#888888', fontWeight: 600 }}>
                     {stat.sublabel}
                   </Typography>
                 </Box>
@@ -1151,6 +1588,11 @@ export default function Home() {
         </Box>
 
         {/* ═══════════════════════════════════════════════════════════════════════
+            PRODUCT SHOWCASE - Premium Trading Products
+        ═══════════════════════════════════════════════════════════════════════ */}
+        <ProductShowcase />
+
+        {/* ═══════════════════════════════════════════════════════════════════════
             TESTIMONIALS - Social Proof Section
         ═══════════════════════════════════════════════════════════════════════ */}
         <Box sx={{ py: 8 }}>
@@ -1158,11 +1600,11 @@ export default function Home() {
             variant="h3"
             align="center"
             sx={{
-              fontWeight: 700,
+              fontWeight: 800,
               mb: 2,
               fontSize: { xs: '2rem', md: '2.5rem' },
-              color: '#10b981',
-              textShadow: '0 2px 10px rgba(16, 185, 129, 0.3)',
+              color: '#22C55E',
+              textShadow: '0 2px 10px rgba(0, 255, 0, 0.3)',
             }}
           >
             Trusted by Traders Worldwide
@@ -1172,9 +1614,10 @@ export default function Home() {
             sx={{
               mb: 6,
               fontSize: { xs: '1rem', md: '1.1rem' },
-              color: 'text.secondary',
+              color: '#FFFFFF',
               maxWidth: '600px',
               mx: 'auto',
+              fontWeight: 600,
             }}
           >
             Join hundreds of traders who've transformed their trading journey
@@ -1186,6 +1629,7 @@ export default function Home() {
                 name: 'Michael T.',
                 location: 'United States',
                 avatar: 'M',
+                image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
                 rating: 5,
                 title: 'Finally, Passive Income That Works',
                 text: "I was skeptical at first, but after 3 months with AlgoEdge, I'm seeing consistent returns. The bot handles everything while I focus on my day job. Best investment decision I've made.",
@@ -1196,6 +1640,7 @@ export default function Home() {
                 name: 'Sarah K.',
                 location: 'United Kingdom',
                 avatar: 'S',
+                image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face',
                 rating: 5,
                 title: 'Perfect for Beginners Like Me',
                 text: "Zero trading experience before AlgoEdge. The setup team handled everything, and now I just check my dashboard weekly. It's like having a professional trader working 24/7 for me.",
@@ -1206,6 +1651,7 @@ export default function Home() {
                 name: 'David R.',
                 location: 'Canada',
                 avatar: 'D',
+                image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
                 rating: 5,
                 title: 'The Risk Management is Outstanding',
                 text: "What impressed me most is the smart risk management. Even during volatile markets, the algorithm protects my capital. Finally found a system I can trust with my money.",
@@ -1216,6 +1662,7 @@ export default function Home() {
                 name: 'Emma L.',
                 location: 'Australia',
                 avatar: 'E',
+                image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
                 rating: 5,
                 title: 'Life-Changing Results',
                 text: "Quit my second job because AlgoEdge now generates more than I was earning. The WhatsApp support is incredible - they respond within minutes. Highly recommend!",
@@ -1226,6 +1673,7 @@ export default function Home() {
                 name: 'James O.',
                 location: 'Nigeria',
                 avatar: 'J',
+                image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face',
                 rating: 5,
                 title: 'Best Trading Bot in Africa',
                 text: "Tried many trading bots before, but AlgoEdge is different. Transparent, reliable, and actually profitable. The 7 strategies work well across different market conditions.",
@@ -1236,6 +1684,7 @@ export default function Home() {
                 name: 'Anna M.',
                 location: 'Germany',
                 avatar: 'A',
+                image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face',
                 rating: 5,
                 title: 'Professional and Trustworthy',
                 text: "The money-back guarantee gave me confidence to try. Now I'm a lifetime customer. The performance dashboard shows everything - full transparency. Very impressed.",
@@ -1250,15 +1699,15 @@ export default function Home() {
                     p: { xs: 2.5, md: 3 },
                     bgcolor: 'rgba(30, 41, 59, 0.6)',
                     backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(0, 255, 0, 0.2)',
                     borderRadius: 3,
                     transition: 'all 0.3s ease',
                     position: 'relative',
                     overflow: 'visible',
                     '&:hover': {
                       transform: 'translateY(-5px)',
-                      borderColor: '#10b981',
-                      boxShadow: '0 15px 50px rgba(16, 185, 129, 0.2)',
+                      borderColor: '#22C55E',
+                      boxShadow: '0 15px 50px rgba(0, 255, 0, 0.2)',
                     },
                   }}
                 >
@@ -1268,48 +1717,51 @@ export default function Home() {
                       position: 'absolute',
                       top: -12,
                       right: 20,
-                      bgcolor: '#10b981',
+                      bgcolor: '#22C55E',
                       borderRadius: '50%',
                       p: 1,
-                      boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)',
+                      boxShadow: '0 4px 15px rgba(0, 255, 0, 0.4)',
                     }}
                   >
-                    <Quote size={20} color="white" />
+                    <Quote size={20} color="black" />
                   </Box>
 
                   <CardContent sx={{ p: 0 }}>
                     {/* Header */}
                     <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
                       <Avatar
+                        src={testimonial.image}
                         sx={{
-                          bgcolor: '#10b981',
+                          bgcolor: '#22C55E',
                           width: 50,
                           height: 50,
-                          fontWeight: 700,
+                          fontWeight: 800,
                           fontSize: '1.2rem',
+                          color: '#000000',
+                          border: '2px solid #22C55E',
                         }}
                       >
                         {testimonial.avatar}
                       </Avatar>
                       <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontWeight: 700, color: 'text.primary' }}>
+                        <Typography sx={{ fontWeight: 700, color: '#FFFFFF' }}>
                           {testimonial.name}
                         </Typography>
-                        <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+                        <Typography sx={{ fontSize: '0.85rem', color: '#888888' }}>
                           {testimonial.location}
                         </Typography>
                       </Box>
                       <Box sx={{ textAlign: 'right' }}>
                         <Typography
                           sx={{
-                            fontWeight: 800,
-                            color: '#10b981',
+                            fontWeight: 900,
+                            color: '#22C55E',
                             fontSize: '1.1rem',
                           }}
                         >
                           {testimonial.profit}
                         </Typography>
-                        <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                        <Typography sx={{ fontSize: '0.75rem', color: '#888888' }}>
                           {testimonial.period}
                         </Typography>
                       </Box>
@@ -1318,15 +1770,15 @@ export default function Home() {
                     {/* Rating */}
                     <Stack direction="row" spacing={0.5} sx={{ mb: 2 }}>
                       {[...Array(testimonial.rating)].map((_, i) => (
-                        <Star key={i} size={18} fill="#10b981" color="#10b981" />
+                        <Star key={i} size={18} fill="#22C55E" color="#22C55E" />
                       ))}
                     </Stack>
 
                     {/* Title */}
                     <Typography
                       sx={{
-                        fontWeight: 700,
-                        color: '#10b981',
+                        fontWeight: 800,
+                        color: '#22C55E',
                         mb: 1.5,
                         fontSize: '1.1rem',
                       }}
@@ -1337,9 +1789,10 @@ export default function Home() {
                     {/* Text */}
                     <Typography
                       sx={{
-                        color: 'text.primary',
+                        color: '#FFFFFF',
                         lineHeight: 1.7,
                         fontSize: '0.95rem',
+                        fontWeight: 500,
                       }}
                     >
                       {testimonial.text}
@@ -1358,16 +1811,16 @@ export default function Home() {
               alignItems="center"
               justifyContent="center"
               sx={{
-                bgcolor: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
+                bgcolor: 'rgba(0, 255, 0, 0.1)',
+                border: '1px solid rgba(0, 255, 0, 0.3)',
                 borderRadius: 50,
                 px: 3,
                 py: 1,
                 display: 'inline-flex',
               }}
             >
-              <CheckCircle2 size={18} color="#10b981" />
-              <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>
+              <CheckCircle2 size={18} color="#22C55E" />
+              <Typography sx={{ color: '#FFFFFF', fontSize: '0.9rem', fontWeight: 600 }}>
                 All testimonials from verified AlgoEdge users
               </Typography>
             </Stack>
@@ -1382,9 +1835,9 @@ export default function Home() {
             variant="h4"
             align="center"
             sx={{
-              fontWeight: 700,
+              fontWeight: 800,
               mb: 5,
-              color: 'text.secondary',
+              color: '#FFFFFF',
               fontSize: { xs: '1.2rem', md: '1.4rem' },
               textTransform: 'uppercase',
               letterSpacing: 2,
@@ -1480,7 +1933,7 @@ export default function Home() {
                     '&:hover': {
                       '& .trust-icon': {
                         transform: 'scale(1.1)',
-                        color: '#10b981',
+                        color: '#22C55E',
                       },
                     },
                   }}
@@ -1488,7 +1941,7 @@ export default function Home() {
                   <Box
                     className="trust-icon"
                     sx={{
-                      color: 'rgba(16, 185, 129, 0.7)',
+                      color: 'rgba(0, 255, 0, 0.7)',
                       mb: { xs: 1.5, md: 2 },
                       transition: 'all 0.3s ease',
                     }}
@@ -1497,8 +1950,8 @@ export default function Home() {
                   </Box>
                   <Typography
                     sx={{
-                      fontWeight: 700,
-                      color: 'text.primary',
+                      fontWeight: 800,
+                      color: '#FFFFFF',
                       mb: 0.5,
                       fontSize: { xs: '0.85rem', md: '1rem' },
                       lineHeight: 1.3,
@@ -1509,8 +1962,9 @@ export default function Home() {
                   <Typography
                     sx={{
                       fontSize: { xs: '0.75rem', md: '0.85rem' },
-                      color: 'text.secondary',
+                      color: '#888888',
                       lineHeight: 1.4,
+                      fontWeight: 600,
                     }}
                   >
                     {badge.description}
@@ -1541,13 +1995,13 @@ export default function Home() {
                   gap: 1,
                   px: { xs: 1.5, md: 2 },
                   py: { xs: 0.75, md: 1 },
-                  bgcolor: 'rgba(16, 185, 129, 0.1)',
+                  bgcolor: 'rgba(0, 255, 0, 0.1)',
                   borderRadius: 50,
-                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  border: '1px solid rgba(0, 255, 0, 0.2)',
                 }}
               >
-                <CheckCircle2 size={14} color="#10b981" />
-                <Typography sx={{ fontSize: { xs: '0.75rem', md: '0.85rem' }, color: 'text.secondary', fontWeight: 500 }}>
+                <CheckCircle2 size={14} color="#22C55E" />
+                <Typography sx={{ fontSize: { xs: '0.75rem', md: '0.85rem' }, color: '#FFFFFF', fontWeight: 600 }}>
                   {badge}
                 </Typography>
               </Box>
@@ -1563,10 +2017,10 @@ export default function Home() {
             variant="h3"
             align="center"
             sx={{
-              fontWeight: 800,
+              fontWeight: 900,
               mb: 1.5,
               fontSize: { xs: '1.75rem', md: '2.25rem' },
-              background: 'linear-gradient(135deg, #10b981 0%, #22c55e 50%, #fbbf24 100%)',
+              background: 'linear-gradient(135deg, #22C55E 0%, #22C55E 50%, #FFD700 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -1578,7 +2032,8 @@ export default function Home() {
             sx={{
               mb: 1,
               fontSize: { xs: '0.9rem', md: '1rem' },
-              color: 'text.secondary',
+              color: '#FFFFFF',
+              fontWeight: 600,
             }}
           >
             Start with our proven trading system today
@@ -1594,15 +2049,15 @@ export default function Home() {
               mb: 3,
               py: 1,
               px: 2,
-              bgcolor: 'rgba(251, 191, 36, 0.1)',
-              border: '1px solid rgba(251, 191, 36, 0.3)',
+              bgcolor: 'rgba(255, 215, 0, 0.1)',
+              border: '1px solid rgba(255, 215, 0, 0.3)',
               borderRadius: 2,
               maxWidth: '420px',
               mx: 'auto',
             }}
           >
-            <Zap size={16} color="#fbbf24" />
-            <Typography sx={{ fontSize: '0.8rem', color: '#fbbf24', fontWeight: 500 }}>
+            <Zap size={16} color="#FFD700" />
+            <Typography sx={{ fontSize: '0.8rem', color: '#FFD700', fontWeight: 700 }}>
               Create an account first, then choose your plan at checkout
             </Typography>
           </Box>
@@ -1617,13 +2072,13 @@ export default function Home() {
                   position: 'relative',
                   overflow: 'visible',
                   borderRadius: 3,
-                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 41, 59, 0.9) 100%)',
-                  border: '2px solid rgba(59, 130, 246, 0.4)',
+                  background: 'linear-gradient(135deg, rgba(0, 102, 255, 0.1) 0%, rgba(30, 41, 59, 0.9) 100%)',
+                  border: '2px solid rgba(0, 102, 255, 0.4)',
                   transition: 'all 0.3s ease',
                   '&:hover': {
                     transform: 'translateY(-4px)',
-                    borderColor: '#3b82f6',
-                    boxShadow: '0 12px 30px rgba(59, 130, 246, 0.25)',
+                    borderColor: '#0066FF',
+                    boxShadow: '0 12px 30px rgba(0, 102, 255, 0.25)',
                   },
                 }}
               >
@@ -1634,19 +2089,19 @@ export default function Home() {
                       width: 50,
                       height: 50,
                       borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                      background: 'linear-gradient(135deg, #0066FF 0%, #0044CC 100%)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       mx: 'auto',
                       mb: 1.5,
-                      boxShadow: '0 4px 16px rgba(59, 130, 246, 0.4)',
+                      boxShadow: '0 4px 16px rgba(0, 102, 255, 0.4)',
                     }}
                   >
                     <Zap size={24} color="white" />
                   </Box>
                   
-                  <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: '#3b82f6', mb: 0.5 }}>
+                  <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: '#0066FF', mb: 0.5 }}>
                     Weekly
                   </Typography>
                   
@@ -1654,20 +2109,20 @@ export default function Home() {
                     <Typography component="span" sx={{ fontSize: '2.25rem', fontWeight: 800, color: 'white' }}>
                       $19
                     </Typography>
-                    <Typography component="span" sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>
+                    <Typography component="span" sx={{ fontSize: '0.9rem', color: '#888888' }}>
                       /week
                     </Typography>
                   </Box>
                   
-                  <Typography sx={{ color: 'text.secondary', mb: 2, fontSize: '0.8rem' }}>
+                  <Typography sx={{ color: '#888888', mb: 2, fontSize: '0.8rem', fontWeight: 600 }}>
                     Perfect for trying out our system
                   </Typography>
                   
                   <Stack spacing={0.75} sx={{ mb: 2.5, textAlign: 'left' }}>
                     {['Full Bot Access', 'All 7 Strategies', 'Real-time Signals', 'Performance Dashboard', 'Email Support', 'Cancel Anytime'].map((feature, i) => (
                       <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CheckCircle2 size={14} color="#3b82f6" />
-                        <Typography sx={{ color: 'text.primary', fontSize: '0.8rem' }}>{feature}</Typography>
+                        <CheckCircle2 size={14} color="#0066FF" />
+                        <Typography sx={{ color: '#FFFFFF', fontSize: '0.8rem', fontWeight: 600 }}>{feature}</Typography>
                       </Box>
                     ))}
                   </Stack>
@@ -1679,15 +2134,15 @@ export default function Home() {
                     fullWidth
                     sx={{
                       py: 1,
-                      borderColor: '#3b82f6',
-                      color: '#3b82f6',
+                      borderColor: '#0066FF',
+                      color: '#0066FF',
                       fontWeight: 600,
                       fontSize: '0.9rem',
                       borderWidth: 2,
                       borderRadius: 2,
                       '&:hover': {
-                        borderColor: '#3b82f6',
-                        bgcolor: 'rgba(59, 130, 246, 0.1)',
+                        borderColor: '#0066FF',
+                        bgcolor: 'rgba(0, 102, 255, 0.1)',
                         borderWidth: 2,
                       },
                     }}
@@ -1706,14 +2161,14 @@ export default function Home() {
                   position: 'relative',
                   overflow: 'visible',
                   borderRadius: 3,
-                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(30, 41, 59, 0.95) 100%)',
-                  border: '2px solid #10b981',
+                  background: 'linear-gradient(135deg, rgba(0, 255, 0, 0.15) 0%, rgba(30, 41, 59, 0.95) 100%)',
+                  border: '2px solid #22C55E',
                   transform: { md: 'scale(1.03)' },
                   transition: 'all 0.3s ease',
-                  boxShadow: '0 12px 40px rgba(16, 185, 129, 0.25)',
+                  boxShadow: '0 12px 40px rgba(0, 255, 0, 0.25)',
                   '&:hover': {
                     transform: { xs: 'translateY(-4px)', md: 'scale(1.05)' },
-                    boxShadow: '0 16px 50px rgba(16, 185, 129, 0.35)',
+                    boxShadow: '0 16px 50px rgba(0, 255, 0, 0.35)',
                   },
                 }}
               >
@@ -1724,7 +2179,7 @@ export default function Home() {
                     top: -12,
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                    background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
                     color: '#000',
                     px: 2,
                     py: 0.5,
@@ -1733,7 +2188,7 @@ export default function Home() {
                     fontSize: '0.7rem',
                     textTransform: 'uppercase',
                     letterSpacing: 0.5,
-                    boxShadow: '0 4px 12px rgba(251, 191, 36, 0.4)',
+                    boxShadow: '0 4px 12px rgba(255, 215, 0, 0.4)',
                     whiteSpace: 'nowrap',
                   }}
                 >
@@ -1747,19 +2202,19 @@ export default function Home() {
                       width: 56,
                       height: 56,
                       borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       mx: 'auto',
                       mb: 1.5,
-                      boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
+                      boxShadow: '0 4px 20px rgba(0, 255, 0, 0.4)',
                     }}
                   >
-                    <TrendingUp size={28} color="white" />
+                    <TrendingUp size={28} color="black" />
                   </Box>
                   
-                  <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: '#10b981', mb: 0.5 }}>
+                  <Typography sx={{ fontSize: '1.2rem', fontWeight: 800, color: '#22C55E', mb: 0.5 }}>
                     Monthly
                   </Typography>
                   
@@ -1767,13 +2222,13 @@ export default function Home() {
                     <Typography component="span" sx={{ fontSize: '2.5rem', fontWeight: 800, color: 'white' }}>
                       $49
                     </Typography>
-                    <Typography component="span" sx={{ fontSize: '1rem', color: 'text.secondary' }}>
+                    <Typography component="span" sx={{ fontSize: '1rem', color: '#888888' }}>
                       /month
                     </Typography>
                   </Box>
                   
-                  <Box sx={{ bgcolor: 'rgba(16, 185, 129, 0.2)', borderRadius: 50, px: 1.5, py: 0.25, mb: 2, display: 'inline-block' }}>
-                    <Typography sx={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 600 }}>
+                  <Box sx={{ bgcolor: 'rgba(0, 255, 0, 0.2)', borderRadius: 50, px: 1.5, py: 0.25, mb: 2, display: 'inline-block' }}>
+                    <Typography sx={{ color: '#22C55E', fontSize: '0.75rem', fontWeight: 700 }}>
                       Save 37% vs Weekly
                     </Typography>
                   </Box>
@@ -1781,8 +2236,8 @@ export default function Home() {
                   <Stack spacing={0.75} sx={{ mb: 2.5, textAlign: 'left' }}>
                     {['Full Bot Access', 'All 7 Strategies', 'Priority Trade Execution', 'Advanced Analytics', '24/7 Support', 'Dedicated Account Manager'].map((feature, i) => (
                       <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CheckCircle2 size={14} color="#10b981" />
-                        <Typography sx={{ color: 'text.primary', fontSize: '0.8rem', fontWeight: i === 5 ? 600 : 400 }}>{feature}</Typography>
+                        <CheckCircle2 size={14} color="#22C55E" />
+                        <Typography sx={{ color: '#FFFFFF', fontSize: '0.8rem', fontWeight: i === 5 ? 700 : 600 }}>{feature}</Typography>
                       </Box>
                     ))}
                   </Stack>
@@ -1794,15 +2249,15 @@ export default function Home() {
                     fullWidth
                     sx={{
                       py: 1.25,
-                      bgcolor: '#10b981',
-                      color: 'white',
-                      fontWeight: 700,
+                      bgcolor: '#22C55E',
+                      color: '#000000',
+                      fontWeight: 800,
                       fontSize: '0.95rem',
                       borderRadius: 2,
-                      boxShadow: '0 4px 16px rgba(16, 185, 129, 0.4)',
+                      boxShadow: '0 4px 16px rgba(0, 255, 0, 0.4)',
                       '&:hover': {
-                        bgcolor: '#059669',
-                        boxShadow: '0 8px 24px rgba(16, 185, 129, 0.5)',
+                        bgcolor: '#16A34A',
+                        boxShadow: '0 8px 24px rgba(0, 255, 0, 0.5)',
                       },
                     }}
                   >
@@ -1820,13 +2275,13 @@ export default function Home() {
                   position: 'relative',
                   overflow: 'visible',
                   borderRadius: 3,
-                  background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(30, 41, 59, 0.9) 100%)',
-                  border: '2px solid rgba(168, 85, 247, 0.4)',
+                  background: 'linear-gradient(135deg, rgba(160, 0, 255, 0.1) 0%, rgba(30, 41, 59, 0.9) 100%)',
+                  border: '2px solid rgba(160, 0, 255, 0.4)',
                   transition: 'all 0.3s ease',
                   '&:hover': {
                     transform: 'translateY(-4px)',
-                    borderColor: '#a855f7',
-                    boxShadow: '0 12px 30px rgba(168, 85, 247, 0.25)',
+                    borderColor: '#A000FF',
+                    boxShadow: '0 12px 30px rgba(160, 0, 255, 0.25)',
                   },
                 }}
               >
@@ -1836,7 +2291,7 @@ export default function Home() {
                     position: 'absolute',
                     top: -10,
                     right: 12,
-                    background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
+                    background: 'linear-gradient(135deg, #A000FF 0%, #7700CC 100%)',
                     color: 'white',
                     px: 1.5,
                     py: 0.35,
@@ -1844,7 +2299,7 @@ export default function Home() {
                     fontWeight: 700,
                     fontSize: '0.65rem',
                     textTransform: 'uppercase',
-                    boxShadow: '0 4px 10px rgba(168, 85, 247, 0.4)',
+                    boxShadow: '0 4px 10px rgba(160, 0, 255, 0.4)',
                   }}
                 >
                   💎 Best Value
@@ -1857,19 +2312,19 @@ export default function Home() {
                       width: 50,
                       height: 50,
                       borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
+                      background: 'linear-gradient(135deg, #A000FF 0%, #7700CC 100%)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       mx: 'auto',
                       mb: 1.5,
-                      boxShadow: '0 4px 16px rgba(168, 85, 247, 0.4)',
+                      boxShadow: '0 4px 16px rgba(160, 0, 255, 0.4)',
                     }}
                   >
                     <Award size={24} color="white" />
                   </Box>
                   
-                  <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: '#a855f7', mb: 0.5 }}>
+                  <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: '#A000FF', mb: 0.5 }}>
                     Quarterly
                   </Typography>
                   
@@ -1877,13 +2332,13 @@ export default function Home() {
                     <Typography component="span" sx={{ fontSize: '2.25rem', fontWeight: 800, color: 'white' }}>
                       $149
                     </Typography>
-                    <Typography component="span" sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>
+                    <Typography component="span" sx={{ fontSize: '0.9rem', color: '#888888' }}>
                       /3 months
                     </Typography>
                   </Box>
                   
-                  <Box sx={{ bgcolor: 'rgba(168, 85, 247, 0.2)', borderRadius: 50, px: 1.5, py: 0.25, mb: 2, display: 'inline-block' }}>
-                    <Typography sx={{ color: '#a855f7', fontSize: '0.75rem', fontWeight: 600 }}>
+                  <Box sx={{ bgcolor: 'rgba(160, 0, 255, 0.2)', borderRadius: 50, px: 1.5, py: 0.25, mb: 2, display: 'inline-block' }}>
+                    <Typography sx={{ color: '#A000FF', fontSize: '0.75rem', fontWeight: 600 }}>
                       Save 49% vs Weekly
                     </Typography>
                   </Box>
@@ -1891,8 +2346,8 @@ export default function Home() {
                   <Stack spacing={0.75} sx={{ mb: 2.5, textAlign: 'left' }}>
                     {['Full Bot Access', 'VIP Signal Priority', 'Custom Risk Settings', 'Exclusive Strategies', 'Priority 24/7 Support', '1-on-1 Consultation'].map((feature, i) => (
                       <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CheckCircle2 size={14} color="#a855f7" />
-                        <Typography sx={{ color: 'text.primary', fontSize: '0.8rem', fontWeight: i >= 4 ? 600 : 400 }}>{feature}</Typography>
+                        <CheckCircle2 size={14} color="#A000FF" />
+                        <Typography sx={{ color: '#FFFFFF', fontSize: '0.8rem', fontWeight: i >= 4 ? 700 : 600 }}>{feature}</Typography>
                       </Box>
                     ))}
                   </Stack>
@@ -1904,15 +2359,15 @@ export default function Home() {
                     fullWidth
                     sx={{
                       py: 1,
-                      borderColor: '#a855f7',
-                      color: '#a855f7',
+                      borderColor: '#A000FF',
+                      color: '#A000FF',
                       fontWeight: 600,
                       fontSize: '0.9rem',
                       borderWidth: 2,
                       borderRadius: 2,
                       '&:hover': {
-                        borderColor: '#a855f7',
-                        bgcolor: 'rgba(168, 85, 247, 0.1)',
+                        borderColor: '#A000FF',
+                        bgcolor: 'rgba(160, 0, 255, 0.1)',
                         borderWidth: 2,
                       },
                     }}
@@ -1932,9 +2387,9 @@ export default function Home() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 1.5,
-                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(16, 185, 129, 0.15) 50%, rgba(59, 130, 246, 0.15) 100%)',
+                background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(0, 255, 0, 0.15) 50%, rgba(0, 102, 255, 0.15) 100%)',
                 border: '2px solid',
-                borderColor: 'rgba(16, 185, 129, 0.4)',
+                borderColor: 'rgba(0, 255, 0, 0.4)',
                 borderRadius: 3,
                 px: 3,
                 py: 1.5,
@@ -1943,8 +2398,8 @@ export default function Home() {
                 backdropFilter: 'blur(10px)',
                 transition: 'all 0.3s ease',
                 '&:hover': {
-                  borderColor: '#10b981',
-                  boxShadow: '0 8px 32px rgba(16, 185, 129, 0.25)',
+                  borderColor: '#22C55E',
+                  boxShadow: '0 8px 32px rgba(0, 255, 0, 0.25)',
                   transform: 'translateY(-2px)',
                 },
               }}
@@ -1954,21 +2409,21 @@ export default function Home() {
                   width: 36,
                   height: 36,
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #fbbf24 0%, #10b981 100%)',
+                  background: 'linear-gradient(135deg, #fbbf24 0%, #22C55E 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   boxShadow: '0 4px 12px rgba(251, 191, 36, 0.3)',
                 }}
               >
-                <Shield size={18} color="white" />
+                <Shield size={18} color="black" />
               </Box>
               <Box>
                 <Typography 
                   sx={{ 
                     fontSize: '0.95rem', 
-                    fontWeight: 700,
-                    background: 'linear-gradient(135deg, #fbbf24 0%, #10b981 50%, #3b82f6 100%)',
+                    fontWeight: 800,
+                    background: 'linear-gradient(135deg, #fbbf24 0%, #22C55E 50%, #3b82f6 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     letterSpacing: 0.5,
@@ -1976,7 +2431,7 @@ export default function Home() {
                 >
                   🛡️ 7-Day Money-Back Guarantee
                 </Typography>
-                <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.75rem', fontWeight: 500 }}>
+                <Typography sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.75rem', fontWeight: 600 }}>
                   No questions asked • 100% Risk-Free
                 </Typography>
               </Box>
@@ -1986,11 +2441,11 @@ export default function Home() {
                   px: 1.5,
                   py: 0.5,
                   borderRadius: 50,
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)',
+                  background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
+                  boxShadow: '0 2px 8px rgba(0, 255, 0, 0.4)',
                 }}
               >
-                <Typography sx={{ color: 'white', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                <Typography sx={{ color: '#000000', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase' }}>
                   ✓ Protected
                 </Typography>
               </Box>
@@ -2004,11 +2459,11 @@ export default function Home() {
             variant="h3"
             align="center"
             sx={{
-              fontWeight: 700,
+              fontWeight: 800,
               mb: 2,
               fontSize: { xs: '2rem', md: '2.5rem' },
-              color: '#10b981',
-              textShadow: '0 2px 10px rgba(16, 185, 129, 0.3)',
+              color: '#22C55E',
+              textShadow: '0 2px 10px rgba(0, 255, 0, 0.3)',
             }}
           >
             How It Works
@@ -2018,9 +2473,10 @@ export default function Home() {
             sx={{
               mb: 6,
               fontSize: { xs: '1rem', md: '1.1rem' },
-              color: 'text.secondary',
+              color: '#FFFFFF',
               maxWidth: '700px',
               mx: 'auto',
+              fontWeight: 600,
             }}
           >
             Get started in 3 simple steps
@@ -2035,13 +2491,13 @@ export default function Home() {
                   p: { xs: 2, md: 4 },
                   bgcolor: 'rgba(30, 41, 59, 0.6)',
                   backdropFilter: 'blur(10px)',
-                  border: '2px solid rgba(16, 185, 129, 0.3)',
+                  border: '2px solid rgba(0, 255, 0, 0.3)',
                   borderRadius: 3,
                   transition: 'all 0.3s ease',
                   '&:hover': {
                     transform: 'translateY(-8px)',
-                    borderColor: '#10b981',
-                    boxShadow: '0 12px 40px rgba(16, 185, 129, 0.3)',
+                    borderColor: '#22C55E',
+                    boxShadow: '0 12px 40px rgba(0, 255, 0, 0.3)',
                   },
                 }}
               >
@@ -2051,8 +2507,8 @@ export default function Home() {
                       width: { xs: 60, md: 80 },
                       height: { xs: 60, md: 80 },
                       borderRadius: '50%',
-                      bgcolor: 'rgba(16, 185, 129, 0.2)',
-                      border: '3px solid #10b981',
+                      bgcolor: 'rgba(0, 255, 0, 0.2)',
+                      border: '3px solid #22C55E',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -2064,7 +2520,7 @@ export default function Home() {
                       sx={{
                         fontSize: { xs: '1.8rem', md: '2.5rem' },
                         fontWeight: 900,
-                        color: '#10b981',
+                        color: '#22C55E',
                       }}
                     >
                       1
@@ -2073,11 +2529,11 @@ export default function Home() {
                   <Typography
                     variant="h5"
                     gutterBottom
-                    sx={{ color: '#10b981', fontWeight: 700, mb: 2, fontSize: { xs: '1.2rem', md: '1.5rem' } }}
+                    sx={{ color: '#22C55E', fontWeight: 800, mb: 2, fontSize: { xs: '1.2rem', md: '1.5rem' } }}
                   >
                     We Install & Set Up
                   </Typography>
-                  <Typography variant="body1" color="text.primary" sx={{ lineHeight: 1.7, fontSize: { xs: '0.9rem', md: '1rem' } }}>
+                  <Typography variant="body1" sx={{ color: '#FFFFFF', lineHeight: 1.7, fontSize: { xs: '0.9rem', md: '1rem' }, fontWeight: 500 }}>
                     Our team installs the bot and configures all 7 trading strategies on your MT5 account. Zero technical work required from you.
                   </Typography>
                 </CardContent>
@@ -2092,13 +2548,13 @@ export default function Home() {
                   p: { xs: 2, md: 4 },
                   bgcolor: 'rgba(30, 41, 59, 0.6)',
                   backdropFilter: 'blur(10px)',
-                  border: '2px solid rgba(16, 185, 129, 0.3)',
+                  border: '2px solid rgba(0, 255, 0, 0.3)',
                   borderRadius: 3,
                   transition: 'all 0.3s ease',
                   '&:hover': {
                     transform: 'translateY(-8px)',
-                    borderColor: '#10b981',
-                    boxShadow: '0 12px 40px rgba(16, 185, 129, 0.3)',
+                    borderColor: '#22C55E',
+                    boxShadow: '0 12px 40px rgba(0, 255, 0, 0.3)',
                   },
                 }}
               >
@@ -2108,8 +2564,8 @@ export default function Home() {
                       width: { xs: 60, md: 80 },
                       height: { xs: 60, md: 80 },
                       borderRadius: '50%',
-                      bgcolor: 'rgba(16, 185, 129, 0.2)',
-                      border: '3px solid #10b981',
+                      bgcolor: 'rgba(0, 255, 0, 0.2)',
+                      border: '3px solid #22C55E',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -2121,7 +2577,7 @@ export default function Home() {
                       sx={{
                         fontSize: { xs: '1.8rem', md: '2.5rem' },
                         fontWeight: 900,
-                        color: '#10b981',
+                        color: '#22C55E',
                       }}
                     >
                       2
@@ -2130,11 +2586,11 @@ export default function Home() {
                   <Typography
                     variant="h5"
                     gutterBottom
-                    sx={{ color: '#10b981', fontWeight: 700, mb: 2, fontSize: { xs: '1.2rem', md: '1.5rem' } }}
+                    sx={{ color: '#22C55E', fontWeight: 800, mb: 2, fontSize: { xs: '1.2rem', md: '1.5rem' } }}
                   >
                     Algorithm Trades
                   </Typography>
-                  <Typography variant="body1" color="text.primary" sx={{ lineHeight: 1.7, fontSize: { xs: '0.9rem', md: '1rem' } }}>
+                  <Typography variant="body1" sx={{ color: '#FFFFFF', lineHeight: 1.7, fontSize: { xs: '0.9rem', md: '1rem' }, fontWeight: 500 }}>
                     The AI-powered algorithm analyzes markets 24/7 and executes trades automatically based on proven strategies.
                   </Typography>
                 </CardContent>
@@ -2149,13 +2605,13 @@ export default function Home() {
                   p: { xs: 2, md: 4 },
                   bgcolor: 'rgba(30, 41, 59, 0.6)',
                   backdropFilter: 'blur(10px)',
-                  border: '2px solid rgba(16, 185, 129, 0.3)',
+                  border: '2px solid rgba(0, 255, 0, 0.3)',
                   borderRadius: 3,
                   transition: 'all 0.3s ease',
                   '&:hover': {
                     transform: 'translateY(-8px)',
-                    borderColor: '#10b981',
-                    boxShadow: '0 12px 40px rgba(16, 185, 129, 0.3)',
+                    borderColor: '#22C55E',
+                    boxShadow: '0 12px 40px rgba(0, 255, 0, 0.3)',
                   },
                 }}
               >
@@ -2165,8 +2621,8 @@ export default function Home() {
                       width: { xs: 60, md: 80 },
                       height: { xs: 60, md: 80 },
                       borderRadius: '50%',
-                      bgcolor: 'rgba(16, 185, 129, 0.2)',
-                      border: '3px solid #10b981',
+                      bgcolor: 'rgba(0, 255, 0, 0.2)',
+                      border: '3px solid #22C55E',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -2178,7 +2634,7 @@ export default function Home() {
                       sx={{
                         fontSize: { xs: '1.8rem', md: '2.5rem' },
                         fontWeight: 900,
-                        color: '#10b981',
+                        color: '#22C55E',
                       }}
                     >
                       3
@@ -2187,11 +2643,11 @@ export default function Home() {
                   <Typography
                     variant="h5"
                     gutterBottom
-                    sx={{ color: '#10b981', fontWeight: 700, mb: 2, fontSize: { xs: '1.2rem', md: '1.5rem' } }}
+                    sx={{ color: '#22C55E', fontWeight: 800, mb: 2, fontSize: { xs: '1.2rem', md: '1.5rem' } }}
                   >
                     Watch Growth
                   </Typography>
-                  <Typography variant="body1" color="text.primary" sx={{ lineHeight: 1.7, fontSize: { xs: '0.9rem', md: '1rem' } }}>
+                  <Typography variant="body1" sx={{ color: '#FFFFFF', lineHeight: 1.7, fontSize: { xs: '0.9rem', md: '1rem' }, fontWeight: 500 }}>
                     Monitor your performance through real-time dashboards. Track profits, analyze statistics, and watch your account grow.
                   </Typography>
                 </CardContent>
@@ -2206,9 +2662,9 @@ export default function Home() {
             variant="h4"
             align="center"
             sx={{
-              fontWeight: 700,
+              fontWeight: 800,
               mb: 5,
-              color: '#10b981',
+              color: '#22C55E',
               fontSize: { xs: '1.75rem', md: '2.125rem' },
             }}
           >
@@ -2223,23 +2679,23 @@ export default function Home() {
                   p: 2,
                   bgcolor: 'rgba(30, 41, 59, 0.8)',
                   backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  border: '1px solid rgba(0, 255, 0, 0.2)',
                   transition: 'all 0.3s ease',
                   '&:hover': {
                     transform: 'translateY(-8px)',
-                    borderColor: '#10b981',
-                    boxShadow: '0 8px 32px rgba(16, 185, 129, 0.3)',
+                    borderColor: '#22C55E',
+                    boxShadow: '0 8px 32px rgba(0, 255, 0, 0.3)',
                   },
                 }}
               >
                 <CardContent>
-                  <Box sx={{ color: '#10b981', mb: 2, display: 'flex', justifyContent: 'center' }}>
+                  <Box sx={{ color: '#22C55E', mb: 2, display: 'flex', justifyContent: 'center' }}>
                     <TrendingUp size={48} />
                   </Box>
-                  <Typography variant="h6" gutterBottom sx={{ color: '#10b981', fontWeight: 700 }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#22C55E', fontWeight: 800 }}>
                     8 Trading Strategies
                   </Typography>
-                  <Typography variant="body2" color="text.primary">
+                  <Typography variant="body2" sx={{ color: '#FFFFFF', fontWeight: 500 }}>
                     EMA Pullback, Break & Retest, SMC, London Breakout, Order Block, VWAP, Fibonacci & RSI Divergence
                   </Typography>
                 </CardContent>
@@ -2254,23 +2710,23 @@ export default function Home() {
                   p: 2,
                   bgcolor: 'rgba(30, 41, 59, 0.8)',
                   backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  border: '1px solid rgba(0, 255, 0, 0.2)',
                   transition: 'all 0.3s ease',
                   '&:hover': {
                     transform: 'translateY(-8px)',
-                    borderColor: '#10b981',
-                    boxShadow: '0 8px 32px rgba(16, 185, 129, 0.3)',
+                    borderColor: '#22C55E',
+                    boxShadow: '0 8px 32px rgba(0, 255, 0, 0.3)',
                   },
                 }}
               >
                 <CardContent>
-                  <Box sx={{ color: '#10b981', mb: 2, display: 'flex', justifyContent: 'center' }}>
+                  <Box sx={{ color: '#22C55E', mb: 2, display: 'flex', justifyContent: 'center' }}>
                     <Shield size={48} />
                   </Box>
-                  <Typography variant="h6" gutterBottom sx={{ color: '#10b981', fontWeight: 700 }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#22C55E', fontWeight: 800 }}>
                     MT5 Integration
                   </Typography>
-                  <Typography variant="body2" color="text.primary">
+                  <Typography variant="body2" sx={{ color: '#FFFFFF', fontWeight: 500 }}>
                     Direct MetaTrader 5 connection via MetaAPI with real-time sync
                   </Typography>
                 </CardContent>
@@ -2285,23 +2741,23 @@ export default function Home() {
                   p: 2,
                   bgcolor: 'rgba(30, 41, 59, 0.8)',
                   backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  border: '1px solid rgba(0, 255, 0, 0.2)',
                   transition: 'all 0.3s ease',
                   '&:hover': {
                     transform: 'translateY(-8px)',
-                    borderColor: '#10b981',
-                    boxShadow: '0 8px 32px rgba(16, 185, 129, 0.3)',
+                    borderColor: '#22C55E',
+                    boxShadow: '0 8px 32px rgba(0, 255, 0, 0.3)',
                   },
                 }}
               >
                 <CardContent>
-                  <Box sx={{ color: '#10b981', mb: 2, display: 'flex', justifyContent: 'center' }}>
+                  <Box sx={{ color: '#22C55E', mb: 2, display: 'flex', justifyContent: 'center' }}>
                     <TrendingUp size={48} />
                   </Box>
-                  <Typography variant="h6" gutterBottom sx={{ color: '#10b981', fontWeight: 700 }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#22C55E', fontWeight: 800 }}>
                     Smart Risk Control
                   </Typography>
-                  <Typography variant="body2" color="text.primary">
+                  <Typography variant="body2" sx={{ color: '#FFFFFF', fontWeight: 500 }}>
                     Adjustable risk per trade (1-5%), auto stop-loss, and position sizing
                   </Typography>
                 </CardContent>
@@ -2316,23 +2772,23 @@ export default function Home() {
                   p: 2,
                   bgcolor: 'rgba(30, 41, 59, 0.8)',
                   backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  border: '1px solid rgba(0, 255, 0, 0.2)',
                   transition: 'all 0.3s ease',
                   '&:hover': {
                     transform: 'translateY(-8px)',
-                    borderColor: '#10b981',
-                    boxShadow: '0 8px 32px rgba(16, 185, 129, 0.3)',
+                    borderColor: '#22C55E',
+                    boxShadow: '0 8px 32px rgba(0, 255, 0, 0.3)',
                   },
                 }}
               >
                 <CardContent>
-                  <Box sx={{ color: '#10b981', mb: 2, display: 'flex', justifyContent: 'center' }}>
+                  <Box sx={{ color: '#22C55E', mb: 2, display: 'flex', justifyContent: 'center' }}>
                     <BarChart3 size={48} />
                   </Box>
-                  <Typography variant="h6" gutterBottom sx={{ color: '#10b981', fontWeight: 700 }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#22C55E', fontWeight: 800 }}>
                     Live Dashboard
                   </Typography>
-                  <Typography variant="body2" color="text.primary">
+                  <Typography variant="body2" sx={{ color: '#FFFFFF', fontWeight: 500 }}>
                     Real-time P&L tracking, trade history, and performance analytics
                   </Typography>
                 </CardContent>
@@ -2347,7 +2803,7 @@ export default function Home() {
         component="footer"
         sx={{
           mt: { xs: 6, md: 12 },
-          borderTop: '1px solid rgba(16, 185, 129, 0.2)',
+          borderTop: '1px solid rgba(0, 255, 0, 0.2)',
           bgcolor: 'rgba(10, 15, 26, 0.9)',
           backdropFilter: 'blur(10px)',
         }}
@@ -2375,13 +2831,13 @@ export default function Home() {
                 <Typography 
                   variant="h6" 
                   sx={{ 
-                    fontWeight: 700, 
+                    fontWeight: 800, 
                     color: 'white',
                     letterSpacing: '0.5px',
                     fontSize: { xs: '1.1rem', md: '1.25rem' }
                   }}
                 >
-                  AlgoEdge
+                  <Box component="span" sx={{ color: '#FF0000' }}>Algo</Box><Box component="span" sx={{ color: '#22C55E' }}>Edge</Box>
                 </Typography>
               </Box>
               <Typography 
@@ -2404,8 +2860,8 @@ export default function Home() {
                 gap: 1.5,
                 p: { xs: 1.5, md: 2 },
                 borderRadius: 2,
-                bgcolor: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
+                bgcolor: 'rgba(0, 255, 0, 0.1)',
+                border: '1px solid rgba(0, 255, 0, 0.3)',
                 width: { xs: '100%', sm: 'auto' },
                 justifyContent: { xs: 'center', sm: 'flex-start' },
               }}
@@ -2521,6 +2977,110 @@ export default function Home() {
                 }}
               >
                 🚀 Get Started
+              </Button>
+              <Button
+                component={Link}
+                href="/affiliate"
+                sx={{ 
+                  color: 'rgba(255,255,255,0.7)', 
+                  textTransform: 'none',
+                  fontSize: { xs: '0.9rem', sm: '0.875rem' },
+                  py: { xs: 1, sm: 0.5 },
+                  px: { xs: 2, sm: 1.5 },
+                  minHeight: 44,
+                  '&:hover': { color: '#00c853' }
+                }}
+              >
+                🤝 Affiliate Program
+              </Button>
+            </Stack>
+            
+            {/* Support & Legal Links */}
+            <Stack 
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={{ xs: 0.5, sm: 1 }}
+              sx={{ 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                mb: 2, 
+                flexWrap: 'wrap', 
+                gap: { xs: 0.5, sm: 1 } 
+              }}
+            >
+              <Button
+                component={Link}
+                href="/faq"
+                sx={{ 
+                  color: 'rgba(255,255,255,0.5)', 
+                  textTransform: 'none',
+                  fontSize: { xs: '0.8rem', sm: '0.75rem' },
+                  py: { xs: 0.5, sm: 0.25 },
+                  px: { xs: 1.5, sm: 1 },
+                  minHeight: 36,
+                  '&:hover': { color: '#00c853' }
+                }}
+              >
+                FAQ
+              </Button>
+              <Button
+                component={Link}
+                href="/support"
+                sx={{ 
+                  color: 'rgba(255,255,255,0.5)', 
+                  textTransform: 'none',
+                  fontSize: { xs: '0.8rem', sm: '0.75rem' },
+                  py: { xs: 0.5, sm: 0.25 },
+                  px: { xs: 1.5, sm: 1 },
+                  minHeight: 36,
+                  '&:hover': { color: '#00c853' }
+                }}
+              >
+                Support
+              </Button>
+              <Button
+                component={Link}
+                href="/testimonials"
+                sx={{ 
+                  color: 'rgba(255,255,255,0.5)', 
+                  textTransform: 'none',
+                  fontSize: { xs: '0.8rem', sm: '0.75rem' },
+                  py: { xs: 0.5, sm: 0.25 },
+                  px: { xs: 1.5, sm: 1 },
+                  minHeight: 36,
+                  '&:hover': { color: '#00c853' }
+                }}
+              >
+                Testimonials
+              </Button>
+              <Button
+                component={Link}
+                href="/privacy-policy"
+                sx={{ 
+                  color: 'rgba(255,255,255,0.5)', 
+                  textTransform: 'none',
+                  fontSize: { xs: '0.8rem', sm: '0.75rem' },
+                  py: { xs: 0.5, sm: 0.25 },
+                  px: { xs: 1.5, sm: 1 },
+                  minHeight: 36,
+                  '&:hover': { color: '#00c853' }
+                }}
+              >
+                Privacy Policy
+              </Button>
+              <Button
+                component={Link}
+                href="/terms-and-conditions"
+                sx={{ 
+                  color: 'rgba(255,255,255,0.5)', 
+                  textTransform: 'none',
+                  fontSize: { xs: '0.8rem', sm: '0.75rem' },
+                  py: { xs: 0.5, sm: 0.25 },
+                  px: { xs: 1.5, sm: 1 },
+                  minHeight: 36,
+                  '&:hover': { color: '#00c853' }
+                }}
+              >
+                Terms & Conditions
               </Button>
             </Stack>
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>

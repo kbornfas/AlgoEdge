@@ -1,0 +1,1155 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import {
+  Box,
+  Container,
+  Typography,
+  Grid,
+  Card,
+  CardContent,
+  Button,
+  Chip,
+  Stack,
+  Tab,
+  Tabs,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Avatar,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Alert,
+  CircularProgress,
+  LinearProgress,
+  Menu,
+  MenuItem,
+  Tooltip,
+} from '@mui/material';
+import {
+  Wallet,
+  TrendingUp,
+  Package,
+  Bot,
+  Signal,
+  FileText,
+  Plus,
+  MoreVertical,
+  Eye,
+  Edit,
+  Trash2,
+  ArrowUpRight,
+  ArrowDownRight,
+  DollarSign,
+  Users,
+  Star,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Download,
+  RefreshCcw,
+  ShieldCheck,
+  Camera,
+  Upload,
+} from 'lucide-react';
+import Link from 'next/link';
+
+interface SellerStats {
+  wallet: {
+    available_balance: number;
+    pending_earnings: number;
+    total_earnings: number;
+    total_payouts: number;
+  };
+  is_verified: boolean;
+  verification_pending: boolean;
+  profile_image?: string;
+  totals: {
+    bots: number;
+    products: number;
+    signals?: number;
+    total_sales: number;
+    total_revenue: number;
+    avg_rating: number;
+  };
+  recent_transactions: Transaction[];
+  listings: {
+    bots: BotListing[];
+    products: ProductListing[];
+  };
+}
+
+interface Transaction {
+  id: number;
+  type: string;
+  amount: number;
+  description: string;
+  status: string;
+  created_at: string;
+}
+
+interface BotListing {
+  id: number;
+  name: string;
+  slug: string;
+  price: number;
+  is_free: boolean;
+  status: string;
+  total_purchases: number;
+  avg_rating: number;
+  created_at: string;
+}
+
+interface ProductListing {
+  id: number;
+  name: string;
+  slug: string;
+  price: number;
+  type: string;
+  status: string;
+  total_purchases: number;
+  avg_rating: number;
+  created_at: string;
+}
+
+export default function SellerDashboardPage() {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<SellerStats | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const [payoutDialogOpen, setPayoutDialogOpen] = useState(false);
+  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [payoutAmount, setPayoutAmount] = useState('');
+  const [payoutMethod, setPayoutMethod] = useState('bank_transfer');
+  const [payoutDetails, setPayoutDetails] = useState('');
+  const [payoutLoading, setPayoutLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    if (token && userData) {
+      setUser(JSON.parse(userData));
+    }
+    fetchSellerStats();
+  }, []);
+
+  const fetchSellerStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/seller/dashboard`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Map API response to SellerStats interface
+        const mappedStats: SellerStats = {
+          wallet: {
+            available_balance: parseFloat(data.wallet?.available_balance) || 0,
+            pending_earnings: parseFloat(data.wallet?.pending_earnings) || 0,
+            total_earnings: parseFloat(data.wallet?.total_earnings) || 0,
+            total_payouts: parseFloat(data.wallet?.total_payouts) || 0,
+          },
+          is_verified: data.verification?.is_verified || false,
+          verification_pending: data.verification?.verification_pending || false,
+          profile_image: data.verification?.profile_image || undefined,
+          totals: {
+            bots: data.listings?.bots?.length || 0,
+            products: data.listings?.products?.length || 0,
+            signals: data.listings?.signalProvider ? 1 : 0,
+            total_sales: data.listings?.bots?.reduce((sum: number, b: any) => sum + (b.total_sales || 0), 0) +
+                         data.listings?.products?.reduce((sum: number, p: any) => sum + (p.total_sales || 0), 0),
+            total_revenue: parseFloat(data.wallet?.total_earnings) || 0,
+            avg_rating: 4.5,
+          },
+          recent_transactions: data.transactions || [],
+          listings: {
+            bots: data.listings?.bots || [],
+            products: data.listings?.products || [],
+          },
+        };
+        setStats(mappedStats);
+      }
+    } catch (error) {
+      console.error('Error fetching seller stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRequestPayout = async () => {
+    setPayoutLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/seller/payouts`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: parseFloat(payoutAmount),
+          method: payoutMethod,
+          details: payoutDetails,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess('Payout request submitted successfully!');
+        setPayoutDialogOpen(false);
+        fetchSellerStats();
+      } else {
+        setError(data.error || 'Failed to request payout');
+      }
+    } catch (error) {
+      setError('Network error. Please try again.');
+    } finally {
+      setPayoutLoading(false);
+    }
+  };
+
+  const handleRequestVerification = async () => {
+    setVerifyLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/seller/request-verification`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.payment_url) {
+          window.location.href = data.payment_url;
+        } else {
+          setSuccess('Verification request submitted! You will be notified once approved.');
+          setVerifyDialogOpen(false);
+          fetchSellerStats();
+        }
+      } else {
+        setError(data.error || 'Failed to request verification');
+      }
+    } catch (error) {
+      setError('Network error. Please try again.');
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, item: any) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedItem(item);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedItem(null);
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <CircularProgress sx={{ color: '#8B5CF6' }} />
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: 4 }}>
+      <Container maxWidth="lg">
+        {/* Header */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+          <Box>
+            <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, mb: 1 }}>
+              Seller Dashboard
+            </Typography>
+            <Typography sx={{ color: 'rgba(255,255,255,0.6)' }}>
+              Manage your listings and track your earnings
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={2}>
+            <Button
+              startIcon={<Plus size={18} />}
+              variant="outlined"
+              sx={{ borderColor: '#8B5CF6', color: '#8B5CF6' }}
+              component={Link}
+              href="/dashboard/seller/create"
+            >
+              Add Listing
+            </Button>
+            <Button
+              startIcon={<Wallet size={18} />}
+              variant="contained"
+              onClick={() => setPayoutDialogOpen(true)}
+              disabled={!stats?.wallet?.available_balance || stats.wallet.available_balance < 50}
+              sx={{ bgcolor: '#8B5CF6', '&:hover': { bgcolor: '#7C3AED' } }}
+            >
+              Request Payout
+            </Button>
+          </Stack>
+        </Box>
+
+        {/* Verification Badge Card */}
+        <Card
+          sx={{
+            mb: 4,
+            background: stats?.is_verified 
+              ? 'linear-gradient(135deg, rgba(29, 155, 240, 0.15) 0%, rgba(29, 155, 240, 0.05) 100%)'
+              : 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.05) 100%)',
+            border: stats?.is_verified 
+              ? '1px solid rgba(29, 155, 240, 0.3)'
+              : '1px solid rgba(139, 92, 246, 0.3)',
+          }}
+        >
+          <CardContent>
+            <Grid container spacing={3} alignItems="center">
+              <Grid item xs={12} md={8}>
+                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                  {stats?.is_verified ? (
+                    <Box
+                      sx={{
+                        p: 1.5,
+                        bgcolor: 'rgba(29, 155, 240, 0.2)',
+                        borderRadius: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <svg width="32" height="32" viewBox="0 0 22 22" fill="none">
+                        <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1D9BF0"/>
+                      </svg>
+                    </Box>
+                  ) : (
+                    <Box
+                      sx={{
+                        p: 1.5,
+                        bgcolor: 'rgba(139, 92, 246, 0.2)',
+                        borderRadius: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <ShieldCheck size={32} color="#8B5CF6" />
+                    </Box>
+                  )}
+                  <Box>
+                    <Typography variant="h5" sx={{ color: 'white', fontWeight: 800 }}>
+                      {stats?.is_verified ? 'Verified Seller' : 'Get Verified'}
+                    </Typography>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                      {stats?.is_verified 
+                        ? 'Your listings display the verified badge, increasing buyer trust and sales'
+                        : 'Boost your credibility with a verified seller badge'}
+                    </Typography>
+                  </Box>
+                </Stack>
+                {!stats?.is_verified && (
+                  <Stack direction="row" spacing={3} sx={{ mt: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CheckCircle size={16} color="#22C55E" />
+                      <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
+                        Verified badge on all listings
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CheckCircle size={16} color="#22C55E" />
+                      <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
+                        Higher visibility in search
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CheckCircle size={16} color="#22C55E" />
+                      <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
+                        Increased buyer confidence
+                      </Typography>
+                    </Box>
+                  </Stack>
+                )}
+              </Grid>
+              <Grid item xs={12} md={4} sx={{ textAlign: { xs: 'left', md: 'right' } }}>
+                {stats?.is_verified ? (
+                  <Chip
+                    icon={
+                      <svg width="16" height="16" viewBox="0 0 22 22" fill="none">
+                        <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1D9BF0"/>
+                      </svg>
+                    }
+                    label="Verified Seller"
+                    sx={{
+                      bgcolor: 'rgba(29, 155, 240, 0.2)',
+                      color: '#1D9BF0',
+                      fontWeight: 700,
+                      fontSize: '1rem',
+                      py: 2.5,
+                      px: 1,
+                    }}
+                  />
+                ) : stats?.verification_pending ? (
+                  <Chip
+                    icon={<Clock size={16} />}
+                    label="Verification Pending"
+                    sx={{
+                      bgcolor: 'rgba(245, 158, 11, 0.2)',
+                      color: '#F59E0B',
+                      fontWeight: 600,
+                    }}
+                  />
+                ) : (
+                  <Box>
+                    <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '2rem', mb: 0.5 }}>
+                      $50
+                    </Typography>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', mb: 2 }}>
+                      One-time payment
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={
+                        <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+                          <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="white"/>
+                        </svg>
+                      }
+                      onClick={() => setVerifyDialogOpen(true)}
+                      sx={{
+                        bgcolor: '#1D9BF0',
+                        '&:hover': { bgcolor: '#1A8CD8' },
+                        fontWeight: 700,
+                        px: 3,
+                      }}
+                    >
+                      Get Verified Now
+                    </Button>
+                  </Box>
+                )}
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions */}
+        <Grid container spacing={2} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<Package size={20} />}
+              component={Link}
+              href="/dashboard/seller/listings"
+              sx={{
+                py: 2,
+                borderColor: 'rgba(34, 197, 94, 0.5)',
+                color: '#22C55E',
+                '&:hover': { borderColor: '#22C55E', bgcolor: 'rgba(34, 197, 94, 0.1)' },
+              }}
+            >
+              Manage Listings & Prices
+            </Button>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<Download size={20} />}
+              component={Link}
+              href="/dashboard/seller/deliverables"
+              sx={{
+                py: 2,
+                borderColor: 'rgba(245, 158, 11, 0.5)',
+                color: '#F59E0B',
+                '&:hover': { borderColor: '#F59E0B', bgcolor: 'rgba(245, 158, 11, 0.1)' },
+              }}
+            >
+              Manage Deliverables
+            </Button>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<Users size={20} />}
+              component={Link}
+              href="/dashboard/seller/customers"
+              sx={{
+                py: 2,
+                borderColor: 'rgba(59, 130, 246, 0.5)',
+                color: '#3B82F6',
+                '&:hover': { borderColor: '#3B82F6', bgcolor: 'rgba(59, 130, 246, 0.1)' },
+              }}
+            >
+              View Customers
+            </Button>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<Star size={20} />}
+              component={Link}
+              href="/dashboard/seller/reviews"
+              sx={{
+                py: 2,
+                borderColor: 'rgba(139, 92, 246, 0.5)',
+                color: '#8B5CF6',
+                '&:hover': { borderColor: '#8B5CF6', bgcolor: 'rgba(139, 92, 246, 0.1)' },
+              }}
+            >
+              Reviews & Ratings
+            </Button>
+          </Grid>
+        </Grid>
+
+        {success && (
+          <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>
+            {success}
+          </Alert>
+        )}
+
+        {/* Wallet Stats */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ bgcolor: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Box sx={{ p: 1, bgcolor: 'rgba(139, 92, 246, 0.2)', borderRadius: 1 }}>
+                    <Wallet size={20} color="#8B5CF6" />
+                  </Box>
+                  <Chip
+                    label="Available"
+                    size="small"
+                    sx={{ bgcolor: 'rgba(34, 197, 94, 0.2)', color: '#22C55E' }}
+                  />
+                </Box>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>
+                  Available Balance
+                </Typography>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800 }}>
+                  ${stats?.wallet?.available_balance?.toFixed(2) || '0.00'}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ bgcolor: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Box sx={{ p: 1, bgcolor: 'rgba(245, 158, 11, 0.2)', borderRadius: 1 }}>
+                    <Clock size={20} color="#F59E0B" />
+                  </Box>
+                  <Chip
+                    label="Pending"
+                    size="small"
+                    sx={{ bgcolor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B' }}
+                  />
+                </Box>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>
+                  Pending Earnings
+                </Typography>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800 }}>
+                  ${stats?.wallet?.pending_earnings?.toFixed(2) || '0.00'}
+                </Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>
+                  Clears after 14 days
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ bgcolor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Box sx={{ p: 1, bgcolor: 'rgba(34, 197, 94, 0.2)', borderRadius: 1 }}>
+                    <TrendingUp size={20} color="#22C55E" />
+                  </Box>
+                </Box>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>
+                  Total Earnings
+                </Typography>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800 }}>
+                  ${stats?.wallet?.total_earnings?.toFixed(2) || '0.00'}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Box sx={{ p: 1, bgcolor: 'rgba(59, 130, 246, 0.2)', borderRadius: 1 }}>
+                    <DollarSign size={20} color="#3B82F6" />
+                  </Box>
+                </Box>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>
+                  Total Paid Out
+                </Typography>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800 }}>
+                  ${stats?.wallet?.total_payouts?.toFixed(2) || '0.00'}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Quick Stats */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={6} sm={3}>
+            <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Bot size={24} color="#8B5CF6" />
+                <Box>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
+                    Bots Listed
+                  </Typography>
+                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1.25rem' }}>
+                    {stats?.totals?.bots || 0}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
+          </Grid>
+          <Grid item xs={6} sm={3}>
+            <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Package size={24} color="#3B82F6" />
+                <Box>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
+                    Products Listed
+                  </Typography>
+                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1.25rem' }}>
+                    {stats?.totals?.products || 0}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
+          </Grid>
+          <Grid item xs={6} sm={3}>
+            <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Users size={24} color="#22C55E" />
+                <Box>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
+                    Total Sales
+                  </Typography>
+                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1.25rem' }}>
+                    {stats?.totals?.total_sales || 0}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
+          </Grid>
+          <Grid item xs={6} sm={3}>
+            <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Star size={24} color="#F59E0B" />
+                <Box>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
+                    Avg Rating
+                  </Typography>
+                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1.25rem' }}>
+                    {stats?.totals?.avg_rating?.toFixed(1) || '0.0'} ★
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
+          </Grid>
+        </Grid>
+
+        {/* Tabs */}
+        <Tabs
+          value={activeTab}
+          onChange={(_, v) => setActiveTab(v)}
+          sx={{
+            mb: 3,
+            '& .MuiTab-root': { color: 'rgba(255,255,255,0.5)' },
+            '& .Mui-selected': { color: '#8B5CF6' },
+            '& .MuiTabs-indicator': { bgcolor: '#8B5CF6' },
+          }}
+        >
+          <Tab label="Bots" icon={<Bot size={18} />} iconPosition="start" />
+          <Tab label="Products" icon={<Package size={18} />} iconPosition="start" />
+          <Tab label="Transactions" icon={<FileText size={18} />} iconPosition="start" />
+        </Tabs>
+
+        {/* Bots Tab */}
+        {activeTab === 0 && (
+          <TableContainer component={Paper} sx={{ bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Bot</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Price</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Status</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Sales</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Rating</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {stats?.listings?.bots?.length ? (
+                  stats.listings.bots.map((bot) => (
+                    <TableRow key={bot.id}>
+                      <TableCell>
+                        <Stack direction="row" spacing={2} alignItems="center">
+                          <Avatar sx={{ bgcolor: 'rgba(139, 92, 246, 0.2)' }}>
+                            <Bot size={20} color="#8B5CF6" />
+                          </Avatar>
+                          <Box>
+                            <Typography sx={{ color: 'white', fontWeight: 600 }}>{bot.name}</Typography>
+                            <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
+                              {bot.slug}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </TableCell>
+                      <TableCell>
+                        <Typography sx={{ color: 'white' }}>
+                          {bot.is_free ? 'Free' : `$${bot.price}`}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={bot.status}
+                          size="small"
+                          sx={{
+                            bgcolor: bot.status === 'approved' ? 'rgba(34, 197, 94, 0.2)' : 
+                                     bot.status === 'pending' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                            color: bot.status === 'approved' ? '#22C55E' : 
+                                   bot.status === 'pending' ? '#F59E0B' : '#EF4444',
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography sx={{ color: 'white' }}>{bot.total_purchases}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                          <Star size={14} fill="#F59E0B" color="#F59E0B" />
+                          <Typography sx={{ color: 'white' }}>{bot.avg_rating?.toFixed(1) || '0.0'}</Typography>
+                        </Stack>
+                      </TableCell>
+                      <TableCell>
+                        <IconButton size="small" onClick={(e) => handleMenuClick(e, bot)}>
+                          <MoreVertical size={18} color="white" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>No bots listed yet</Typography>
+                      <Button
+                        component={Link}
+                        href="/dashboard/seller/create?type=bot"
+                        startIcon={<Plus size={16} />}
+                        sx={{ mt: 2, color: '#8B5CF6' }}
+                      >
+                        Create Your First Bot
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+
+        {/* Products Tab */}
+        {activeTab === 1 && (
+          <TableContainer component={Paper} sx={{ bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Product</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Type</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Price</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Status</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Sales</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Rating</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {stats?.listings?.products?.length ? (
+                  stats.listings.products.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        <Stack direction="row" spacing={2} alignItems="center">
+                          <Avatar sx={{ bgcolor: 'rgba(59, 130, 246, 0.2)' }}>
+                            <Package size={20} color="#3B82F6" />
+                          </Avatar>
+                          <Box>
+                            <Typography sx={{ color: 'white', fontWeight: 600 }}>{product.name}</Typography>
+                            <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
+                              {product.slug}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={product.type} size="small" sx={{ bgcolor: 'rgba(139, 92, 246, 0.2)', color: '#8B5CF6' }} />
+                      </TableCell>
+                      <TableCell>
+                        <Typography sx={{ color: 'white' }}>${product.price}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={product.status}
+                          size="small"
+                          sx={{
+                            bgcolor: product.status === 'approved' ? 'rgba(34, 197, 94, 0.2)' : 
+                                     product.status === 'pending' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                            color: product.status === 'approved' ? '#22C55E' : 
+                                   product.status === 'pending' ? '#F59E0B' : '#EF4444',
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography sx={{ color: 'white' }}>{product.total_purchases}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                          <Star size={14} fill="#F59E0B" color="#F59E0B" />
+                          <Typography sx={{ color: 'white' }}>{product.avg_rating?.toFixed(1) || '0.0'}</Typography>
+                        </Stack>
+                      </TableCell>
+                      <TableCell>
+                        <IconButton size="small" onClick={(e) => handleMenuClick(e, product)}>
+                          <MoreVertical size={18} color="white" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>No products listed yet</Typography>
+                      <Button
+                        component={Link}
+                        href="/dashboard/seller/create?type=product"
+                        startIcon={<Plus size={16} />}
+                        sx={{ mt: 2, color: '#8B5CF6' }}
+                      >
+                        Create Your First Product
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+
+        {/* Transactions Tab */}
+        {activeTab === 2 && (
+          <TableContainer component={Paper} sx={{ bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Date</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Type</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Description</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Amount</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {stats?.recent_transactions?.length ? (
+                  stats.recent_transactions.map((tx) => (
+                    <TableRow key={tx.id}>
+                      <TableCell sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                        {new Date(tx.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={tx.type}
+                          size="small"
+                          icon={tx.type === 'sale' ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                          sx={{
+                            bgcolor: tx.type === 'sale' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                            color: tx.type === 'sale' ? '#22C55E' : '#3B82F6',
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ color: 'white' }}>{tx.description}</TableCell>
+                      <TableCell>
+                        <Typography
+                          sx={{
+                            color: tx.type === 'sale' ? '#22C55E' : '#3B82F6',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {tx.type === 'sale' ? '+' : '-'}${Math.abs(tx.amount).toFixed(2)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                          {tx.status === 'completed' && <CheckCircle size={14} color="#22C55E" />}
+                          {tx.status === 'pending' && <Clock size={14} color="#F59E0B" />}
+                          {tx.status === 'failed' && <XCircle size={14} color="#EF4444" />}
+                          <Typography
+                            sx={{
+                              color: tx.status === 'completed' ? '#22C55E' : 
+                                     tx.status === 'pending' ? '#F59E0B' : '#EF4444',
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            {tx.status}
+                          </Typography>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>No transactions yet</Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+
+        {/* Actions Menu */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          PaperProps={{
+            sx: { bgcolor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' },
+          }}
+        >
+          <MenuItem
+            onClick={() => {
+              window.open(`/marketplace/bots/${selectedItem?.slug}`, '_blank');
+              handleMenuClose();
+            }}
+            sx={{ color: 'white' }}
+          >
+            <Eye size={16} style={{ marginRight: 8 }} /> View
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              // Navigate to edit page
+              handleMenuClose();
+            }}
+            sx={{ color: 'white' }}
+          >
+            <Edit size={16} style={{ marginRight: 8 }} /> Edit
+          </MenuItem>
+          <MenuItem onClick={handleMenuClose} sx={{ color: '#EF4444' }}>
+            <Trash2 size={16} style={{ marginRight: 8 }} /> Delete
+          </MenuItem>
+        </Menu>
+
+        {/* Payout Dialog */}
+        <Dialog
+          open={payoutDialogOpen}
+          onClose={() => setPayoutDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: { bgcolor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' },
+          }}
+        >
+          <DialogTitle sx={{ color: 'white' }}>Request Payout</DialogTitle>
+          <DialogContent>
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+            <Typography sx={{ color: 'rgba(255,255,255,0.6)', mb: 3 }}>
+              Available balance: <strong style={{ color: '#22C55E' }}>${stats?.wallet?.available_balance?.toFixed(2) || '0.00'}</strong>
+            </Typography>
+            <TextField
+              label="Amount"
+              type="number"
+              fullWidth
+              value={payoutAmount}
+              onChange={(e) => setPayoutAmount(e.target.value)}
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  color: 'white',
+                  '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.5)' },
+              }}
+              inputProps={{ min: 50, max: stats?.wallet?.available_balance || 0 }}
+              helperText="Minimum payout: $50"
+            />
+            <TextField
+              label="Payout Method"
+              select
+              fullWidth
+              value={payoutMethod}
+              onChange={(e) => setPayoutMethod(e.target.value)}
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  color: 'white',
+                  '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.5)' },
+              }}
+            >
+              <MenuItem value="bank_transfer">Bank Transfer</MenuItem>
+              <MenuItem value="paypal">PayPal</MenuItem>
+              <MenuItem value="crypto">Cryptocurrency</MenuItem>
+            </TextField>
+            <TextField
+              label="Payment Details"
+              fullWidth
+              multiline
+              rows={3}
+              value={payoutDetails}
+              onChange={(e) => setPayoutDetails(e.target.value)}
+              placeholder={payoutMethod === 'bank_transfer' ? 'Bank name, account number, routing number...' :
+                          payoutMethod === 'paypal' ? 'PayPal email address' : 'Wallet address (BTC/ETH/USDT)'}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  color: 'white',
+                  '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.5)' },
+              }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={() => setPayoutDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRequestPayout}
+              variant="contained"
+              disabled={payoutLoading || !payoutAmount || parseFloat(payoutAmount) < 50}
+              sx={{ bgcolor: '#8B5CF6', '&:hover': { bgcolor: '#7C3AED' } }}
+            >
+              {payoutLoading ? <CircularProgress size={20} /> : 'Submit Request'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Verification Dialog */}
+        <Dialog
+          open={verifyDialogOpen}
+          onClose={() => setVerifyDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: { bgcolor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' },
+          }}
+        >
+          <DialogTitle sx={{ color: 'white', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <svg width="24" height="24" viewBox="0 0 22 22" fill="none">
+              <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1D9BF0"/>
+            </svg>
+            Get Verified Seller Badge
+          </DialogTitle>
+          <DialogContent>
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+            <Box sx={{ textAlign: 'center', py: 3 }}>
+              <Box
+                sx={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: '50%',
+                  bgcolor: 'rgba(29, 155, 240, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 3,
+                }}
+              >
+                <svg width="40" height="40" viewBox="0 0 22 22" fill="none">
+                  <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1D9BF0"/>
+                </svg>
+              </Box>
+              <Typography variant="h5" sx={{ color: 'white', fontWeight: 800, mb: 1 }}>
+                Become a Verified Seller
+              </Typography>
+              <Typography sx={{ color: 'rgba(255,255,255,0.6)', mb: 3 }}>
+                Stand out from the competition with a verified badge
+              </Typography>
+              
+              <Stack spacing={2} sx={{ textAlign: 'left', mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2 }}>
+                  <CheckCircle size={20} color="#22C55E" />
+                  <Typography sx={{ color: 'white' }}>Verified badge displayed on all your listings</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2 }}>
+                  <CheckCircle size={20} color="#22C55E" />
+                  <Typography sx={{ color: 'white' }}>Priority placement in marketplace search results</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2 }}>
+                  <CheckCircle size={20} color="#22C55E" />
+                  <Typography sx={{ color: 'white' }}>Increased buyer trust and higher conversion rates</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2 }}>
+                  <CheckCircle size={20} color="#22C55E" />
+                  <Typography sx={{ color: 'white' }}>Access to premium seller analytics</Typography>
+                </Box>
+              </Stack>
+              
+              <Box sx={{ p: 3, bgcolor: 'rgba(29, 155, 240, 0.1)', borderRadius: 2, border: '1px solid rgba(29, 155, 240, 0.3)' }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>
+                  One-time verification fee
+                </Typography>
+                <Typography variant="h3" sx={{ color: 'white', fontWeight: 800, my: 1 }}>
+                  $50
+                </Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
+                  Lifetime badge • No recurring fees
+                </Typography>
+              </Box>
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ p: 2, justifyContent: 'center' }}>
+            <Button onClick={() => setVerifyDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              Maybe Later
+            </Button>
+            <Button
+              onClick={handleRequestVerification}
+              variant="contained"
+              disabled={verifyLoading}
+              startIcon={verifyLoading ? <CircularProgress size={16} /> : (
+                <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+                  <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="white"/>
+                </svg>
+              )}
+              sx={{ bgcolor: '#1D9BF0', '&:hover': { bgcolor: '#1A8CD8' }, px: 4 }}
+            >
+              {verifyLoading ? 'Processing...' : 'Pay $50 & Get Verified'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Container>
+    </Box>
+  );
+}

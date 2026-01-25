@@ -1,0 +1,34 @@
+; News Trading Sniper EA - Straddle Settings
+; Place orders both directions before news
+
+[News Filter]
+TradeHighImpact=true
+TradeMediumImpact=false
+TradeLowImpact=false
+NewsCountries=USD
+SpecificEvents=FOMC,NFP,CPI
+ExcludeEvents=
+
+[Strategy Settings]
+Strategy=Straddle
+MinutesBeforeNews=2
+RemoveOrdersAfter=10
+OrderDistance=15
+
+[Straddle Settings]
+BuyStopDistance=15
+SellStopDistance=15
+StopLoss=30
+TakeProfit=60
+OCO_Mode=true
+
+[Risk Management]
+RiskPercent=1.0
+MaxSpread=50
+MaxSlippage=30
+MaxDailyRisk=3.0
+MaxEventsPerDay=2
+
+[Timing]
+UseServerTime=true
+TimeOffset=0

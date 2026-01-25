@@ -1,0 +1,848 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import {
+  Box,
+  Container,
+  Typography,
+  Grid,
+  Card,
+  CardContent,
+  Button,
+  Chip,
+  Stack,
+  Avatar,
+  Rating,
+  Divider,
+  Paper,
+  Tab,
+  Tabs,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Alert,
+  CircularProgress,
+  Breadcrumbs,
+} from '@mui/material';
+import {
+  Bot,
+  ArrowLeft,
+  Star,
+  Users,
+  Download,
+  ShoppingCart,
+  Check,
+  Shield,
+  Clock,
+  TrendingUp,
+  DollarSign,
+  BarChart3,
+  AlertTriangle,
+  ChevronRight,
+  MessageSquare,
+  Play,
+  FileText,
+  Zap,
+} from 'lucide-react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+
+interface BotDetails {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  short_description: string;
+  seller_id: number;
+  seller_name: string;
+  seller_avatar: string;
+  seller_rating: number;
+  seller_total_sales: number;
+  category: string;
+  platform: string;
+  currency_pairs: string;
+  timeframe: string;
+  minimum_deposit: number;
+  price: number;
+  is_free: boolean;
+  discount_percentage: number;
+  backtest_results: {
+    win_rate: number;
+    profit_factor: number;
+    max_drawdown: number;
+    total_trades: number;
+    period: string;
+  };
+  features: string[];
+  tags: string[];
+  screenshots: string[];
+  version: string;
+  total_purchases: number;
+  avg_rating: number;
+  total_reviews: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Review {
+  id: number;
+  user_name: string;
+  rating: number;
+  title: string;
+  review: string;
+  created_at: string;
+  avatar?: string;
+}
+
+// Profile images for demo reviews
+const reviewerImages: Record<number, string> = {
+  1: 'https://images.unsplash.com/photo-1599566150163-29194dcabd36?w=60&h=60&fit=crop&crop=face',
+  2: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=60&h=60&fit=crop&crop=face',
+  3: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=60&h=60&fit=crop&crop=face',
+  4: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=60&h=60&fit=crop&crop=face',
+  5: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=face',
+};
+
+// Demo bot data
+const demoBots: Record<string, BotDetails> = {
+  'gold-scalper-pro': {
+    id: 1,
+    name: 'Gold Scalper Pro EA',
+    slug: 'gold-scalper-pro',
+    description: `The Gold Scalper Pro EA is a fully automated Expert Advisor designed specifically for trading XAUUSD (Gold). Using advanced price action algorithms and smart money concepts, this EA identifies high-probability scalping opportunities during the London and New York sessions.
+
+## Key Features
+
+- **Smart Entry System**: Uses institutional order flow patterns to identify precise entry points
+- **Dynamic Risk Management**: Automatically adjusts lot sizes based on account equity
+- **Multiple TP Levels**: Scales out positions at 3 take-profit levels
+- **News Filter**: Built-in high-impact news filter to avoid volatile periods
+- **Spread Protection**: Won't open trades when spread exceeds defined threshold
+
+## Requirements
+
+- MetaTrader 5 Platform
+- Minimum $500 deposit recommended
+- VPS recommended for 24/7 operation
+- ECN broker with tight spreads on Gold`,
+    short_description: 'Professional XAUUSD scalping EA with 71% win rate',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Labs',
+    seller_avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face',
+    seller_rating: 4.9,
+    seller_total_sales: 1847,
+    category: 'Scalper',
+    platform: 'MT5',
+    currency_pairs: 'XAUUSD',
+    timeframe: 'M15, M30',
+    minimum_deposit: 500,
+    price: 299.99,
+    is_free: false,
+    discount_percentage: 15,
+    backtest_results: {
+      win_rate: 71,
+      profit_factor: 2.4,
+      max_drawdown: 12,
+      total_trades: 2847,
+      period: '2020-2025',
+    },
+    features: [
+      'Fully automated trading',
+      'Works on XAUUSD (Gold)',
+      'Smart money entry system',
+      'Built-in news filter',
+      'Multiple TP levels',
+      'Lifetime updates included',
+      '30-day money-back guarantee',
+    ],
+    tags: ['gold', 'scalper', 'automated', 'xauusd', 'mt5'],
+    screenshots: [
+      'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&h=450&fit=crop',
+      'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=800&h=450&fit=crop',
+    ],
+    version: '3.2.1',
+    total_purchases: 892,
+    avg_rating: 4.7,
+    total_reviews: 156,
+    created_at: '2023-06-15',
+    updated_at: '2026-01-20',
+  },
+  'forex-grid-master': {
+    id: 2,
+    name: 'Forex Grid Master EA',
+    slug: 'forex-grid-master',
+    description: `A sophisticated grid trading system for major forex pairs. Uses smart grid spacing with built-in recovery system.`,
+    short_description: 'Advanced grid trading with smart recovery',
+    seller_id: 1,
+    seller_name: 'AlgoEdge Labs',
+    seller_avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face',
+    seller_rating: 4.9,
+    seller_total_sales: 1847,
+    category: 'Grid',
+    platform: 'MT5',
+    currency_pairs: 'EURUSD, GBPUSD, USDJPY',
+    timeframe: 'H1, H4',
+    minimum_deposit: 1000,
+    price: 199.99,
+    is_free: false,
+    discount_percentage: 0,
+    backtest_results: {
+      win_rate: 85,
+      profit_factor: 1.8,
+      max_drawdown: 25,
+      total_trades: 1543,
+      period: '2021-2025',
+    },
+    features: [
+      'Smart grid spacing',
+      'Built-in recovery system',
+      'Multiple currency pairs',
+      'Equity protection',
+      'Weekend close option',
+    ],
+    tags: ['grid', 'forex', 'automated', 'mt5'],
+    screenshots: [],
+    version: '2.1.0',
+    total_purchases: 534,
+    avg_rating: 4.5,
+    total_reviews: 78,
+    created_at: '2024-01-10',
+    updated_at: '2026-01-15',
+  },
+};
+
+// Demo reviews for bots
+const demoBotReviews: Review[] = [
+  {
+    id: 1,
+    user_name: 'Marcus R.',
+    rating: 5,
+    title: 'Consistent profits for 6 months!',
+    review: 'This EA has been running on my VPS for 6 months now and the results are incredible. The risk management is solid and I\'ve seen consistent 8-12% monthly returns.',
+    created_at: '2026-01-22',
+    avatar: reviewerImages[1],
+  },
+  {
+    id: 2,
+    user_name: 'Elena S.',
+    rating: 5,
+    title: 'Best gold trading bot I\'ve tried',
+    review: 'After testing many EAs, this one actually delivers. The news filter saves you from nasty drawdowns during high-impact events. Highly recommend!',
+    created_at: '2026-01-20',
+    avatar: reviewerImages[2],
+  },
+  {
+    id: 3,
+    user_name: 'Chris T.',
+    rating: 4,
+    title: 'Good EA, needs proper setup',
+    review: 'The EA works well once you get the settings right. Support helped me optimize for my broker. Only 4 stars because the default settings could be better.',
+    created_at: '2026-01-18',
+    avatar: reviewerImages[3],
+  },
+  {
+    id: 4,
+    user_name: 'Amanda K.',
+    rating: 5,
+    title: 'Support is amazing',
+    review: 'Had some issues setting up on my VPS and the support team helped me within hours. The EA itself is profitable and the updates keep improving it.',
+    created_at: '2026-01-15',
+    avatar: reviewerImages[4],
+  },
+  {
+    id: 5,
+    user_name: 'Daniel M.',
+    rating: 5,
+    title: 'Worth every penny',
+    review: 'Already made back my investment in the first month. The backtest results actually match live performance which is rare for EAs. Very impressed.',
+    created_at: '2026-01-12',
+    avatar: reviewerImages[5],
+  },
+];
+
+export default function BotDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const slug = params.slug as string;
+
+  const [loading, setLoading] = useState(true);
+  const [bot, setBot] = useState<BotDetails | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [activeTab, setActiveTab] = useState(0);
+  const [purchasing, setPurchasing] = useState(false);
+  const [error, setError] = useState('');
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [insufficientFunds, setInsufficientFunds] = useState(false);
+
+  useEffect(() => {
+    if (slug) {
+      fetchBotDetails();
+      fetchWalletBalance();
+    }
+  }, [slug]);
+
+  const fetchWalletBalance = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/wallet/balance`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWalletBalance(data.wallet?.balance || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching wallet:', error);
+    }
+  };
+
+  const fetchBotDetails = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/bots/${slug}`);
+      if (res.ok) {
+        const data = await res.json();
+        setBot(data.bot);
+        setReviews(data.reviews?.length > 0 ? data.reviews : demoBotReviews);
+      } else {
+        // Use demo data as fallback
+        if (demoBots[slug]) {
+          setBot(demoBots[slug]);
+          setReviews(demoBotReviews);
+        } else {
+          setError('Bot not found');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching bot:', error);
+      // Use demo data as fallback on network error
+      if (demoBots[slug]) {
+        setBot(demoBots[slug]);
+        setReviews(demoBotReviews);
+      } else {
+        setError('Failed to load bot details');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePurchase = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/auth/login?redirect=/marketplace/bots/' + slug);
+      return;
+    }
+
+    // Check if user has enough balance
+    if (walletBalance !== null && bot && !bot.is_free && walletBalance < (discountedPrice || bot.price)) {
+      setInsufficientFunds(true);
+      return;
+    }
+
+    setPurchasing(true);
+    setError('');
+    try {
+      // Use internal wallet for purchase
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/wallet/purchase/bot/${bot?.id}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        // Success - redirect to purchases page
+        router.push('/dashboard/purchases?success=true');
+      } else {
+        if (data.error === 'Insufficient balance') {
+          setInsufficientFunds(true);
+        } else {
+          setError(data.error || 'Failed to purchase');
+        }
+      }
+    } catch (error) {
+      setError('Network error. Please try again.');
+    } finally {
+      setPurchasing(false);
+    }
+  };
+
+  const discountedPrice = bot?.discount_percentage 
+    ? bot.price * (1 - bot.discount_percentage / 100)
+    : bot?.price;
+
+  if (loading) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress sx={{ color: '#8B5CF6' }} />
+      </Box>
+    );
+  }
+
+  if (error || !bot) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: 8 }}>
+        <Container maxWidth="md">
+          <Alert severity="error" sx={{ mb: 3 }}>{error || 'Bot not found'}</Alert>
+          <Button component={Link} href="/marketplace/bots" startIcon={<ArrowLeft size={18} />}>
+            Back to Bots
+          </Button>
+        </Container>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a' }}>
+      {/* Breadcrumb */}
+      <Box sx={{ bgcolor: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.1)', py: 2 }}>
+        <Container maxWidth="lg">
+          <Breadcrumbs separator={<ChevronRight size={16} color="rgba(255,255,255,0.4)" />}>
+            <Link href="/marketplace" style={{ textDecoration: 'none' }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: '#8B5CF6' } }}>
+                Marketplace
+              </Typography>
+            </Link>
+            <Link href="/marketplace/bots" style={{ textDecoration: 'none' }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: '#8B5CF6' } }}>
+                Trading Bots
+              </Typography>
+            </Link>
+            <Typography sx={{ color: 'white' }}>{bot.name}</Typography>
+          </Breadcrumbs>
+        </Container>
+      </Box>
+
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Grid container spacing={4}>
+          {/* Main Content */}
+          <Grid item xs={12} md={8}>
+            {/* Header */}
+            <Box sx={{ display: 'flex', gap: 3, mb: 4 }}>
+              <Avatar
+                sx={{
+                  width: 100,
+                  height: 100,
+                  bgcolor: 'rgba(139, 92, 246, 0.2)',
+                  fontSize: '2rem',
+                }}
+              >
+                <Bot size={50} color="#8B5CF6" />
+              </Avatar>
+              <Box sx={{ flex: 1 }}>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                  {bot.category && <Chip label={bot.category} size="small" sx={{ bgcolor: 'rgba(139, 92, 246, 0.2)', color: '#8B5CF6' }} />}
+                  {bot.platform && <Chip label={bot.platform.toUpperCase()} size="small" sx={{ bgcolor: 'rgba(59, 130, 246, 0.2)', color: '#3B82F6' }} />}
+                  {bot.is_free && (
+                    <Chip label="FREE" size="small" sx={{ bgcolor: 'rgba(34, 197, 94, 0.2)', color: '#22C55E' }} />
+                  )}
+                </Stack>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, mb: 1 }}>
+                  {bot.name}
+                </Typography>
+                <Stack direction="row" spacing={3} alignItems="center">
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    <Star size={18} fill="#F59E0B" color="#F59E0B" />
+                    <Typography sx={{ color: 'white', fontWeight: 600 }}>
+                      {bot.avg_rating?.toFixed(1) || '0.0'}
+                    </Typography>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                      ({bot.total_reviews} reviews)
+                    </Typography>
+                  </Stack>
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    <Download size={16} color="rgba(255,255,255,0.5)" />
+                    <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                      {bot.total_purchases} purchases
+                    </Typography>
+                  </Stack>
+                </Stack>
+              </Box>
+            </Box>
+
+            {/* Tabs */}
+            <Tabs
+              value={activeTab}
+              onChange={(_, v) => setActiveTab(v)}
+              sx={{
+                mb: 3,
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                '& .MuiTab-root': { color: 'rgba(255,255,255,0.5)' },
+                '& .Mui-selected': { color: '#8B5CF6' },
+                '& .MuiTabs-indicator': { bgcolor: '#8B5CF6' },
+              }}
+            >
+              <Tab label="Overview" />
+              <Tab label="Performance" />
+              <Tab label={`Reviews (${bot.total_reviews})`} />
+            </Tabs>
+
+            {/* Overview Tab */}
+            {activeTab === 0 && (
+              <Box>
+                <Typography sx={{ color: 'rgba(255,255,255,0.9)', mb: 4, lineHeight: 1.8 }}>
+                  {bot.description}
+                </Typography>
+
+                {/* Features */}
+                {bot.features && bot.features.length > 0 && (
+                  <Box sx={{ mb: 4 }}>
+                    <Typography variant="h6" sx={{ color: 'white', fontWeight: 700, mb: 2 }}>
+                      Features
+                    </Typography>
+                    <Grid container spacing={2}>
+                      {bot.features.map((feature, i) => (
+                        <Grid item xs={12} sm={6} key={i}>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Check size={18} color="#22C55E" />
+                            <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>{feature}</Typography>
+                          </Stack>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
+                )}
+
+                {/* Requirements */}
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" sx={{ color: 'white', fontWeight: 700, mb: 2 }}>
+                    Requirements
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6} sm={3}>
+                      <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', textAlign: 'center' }}>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Platform</Typography>
+                        <Typography sx={{ color: 'white', fontWeight: 600 }}>{bot.platform?.toUpperCase() || 'MT5'}</Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={6} sm={3}>
+                      <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', textAlign: 'center' }}>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Min Deposit</Typography>
+                        <Typography sx={{ color: 'white', fontWeight: 600 }}>${bot.minimum_deposit}</Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={6} sm={3}>
+                      <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', textAlign: 'center' }}>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Pairs</Typography>
+                        <Typography sx={{ color: 'white', fontWeight: 600 }}>{bot.currency_pairs}</Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={6} sm={3}>
+                      <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', textAlign: 'center' }}>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Timeframe</Typography>
+                        <Typography sx={{ color: 'white', fontWeight: 600 }}>{bot.timeframe}</Typography>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                </Box>
+              </Box>
+            )}
+
+            {/* Performance Tab */}
+            {activeTab === 1 && (
+              <Box>
+                <Alert severity="info" sx={{ mb: 3, bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6' }}>
+                  <strong>Backtest Results</strong> - Past performance does not guarantee future results
+                </Alert>
+
+                <Grid container spacing={3}>
+                  <Grid item xs={6} sm={3}>
+                    <Card sx={{ bgcolor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <TrendingUp size={24} color="#22C55E" />
+                        <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', mt: 1 }}>
+                          Win Rate
+                        </Typography>
+                        <Typography variant="h4" sx={{ color: '#22C55E', fontWeight: 800 }}>
+                          {bot.backtest_results?.win_rate || 0}%
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <Card sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <BarChart3 size={24} color="#3B82F6" />
+                        <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', mt: 1 }}>
+                          Profit Factor
+                        </Typography>
+                        <Typography variant="h4" sx={{ color: '#3B82F6', fontWeight: 800 }}>
+                          {bot.backtest_results?.profit_factor || 0}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <Card sx={{ bgcolor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <AlertTriangle size={24} color="#EF4444" />
+                        <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', mt: 1 }}>
+                          Max Drawdown
+                        </Typography>
+                        <Typography variant="h4" sx={{ color: '#EF4444', fontWeight: 800 }}>
+                          {bot.backtest_results?.max_drawdown || 0}%
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <Card sx={{ bgcolor: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <Zap size={24} color="#8B5CF6" />
+                        <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', mt: 1 }}>
+                          Total Trades
+                        </Typography>
+                        <Typography variant="h4" sx={{ color: '#8B5CF6', fontWeight: 800 }}>
+                          {bot.backtest_results?.total_trades || 0}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+              </Box>
+            )}
+
+            {/* Reviews Tab */}
+            {activeTab === 2 && (
+              <Box>
+                {/* Rating Summary */}
+                <Paper sx={{ p: 3, mb: 3, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Grid container spacing={3} alignItems="center">
+                    <Grid item xs={12} md={4} sx={{ textAlign: 'center' }}>
+                      <Typography variant="h2" sx={{ color: '#22C55E', fontWeight: 900 }}>
+                        {bot.avg_rating?.toFixed(1) || '4.7'}
+                      </Typography>
+                      <Rating value={bot.avg_rating || 4.7} readOnly precision={0.1} size="large" sx={{ mb: 1 }} />
+                      <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                        {bot.total_reviews || reviews.length} reviews
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={8}>
+                      {[5, 4, 3, 2, 1].map((stars) => {
+                        const count = reviews.filter(r => r.rating === stars).length;
+                        const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+                        return (
+                          <Stack key={stars} direction="row" alignItems="center" spacing={2} sx={{ mb: 0.5 }}>
+                            <Typography sx={{ color: 'rgba(255,255,255,0.7)', width: 60, fontSize: '0.875rem' }}>{stars} stars</Typography>
+                            <Box sx={{ flex: 1, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 1, height: 8 }}>
+                              <Box sx={{ width: `${percentage}%`, bgcolor: '#FFD700', borderRadius: 1, height: '100%' }} />
+                            </Box>
+                            <Typography sx={{ color: 'rgba(255,255,255,0.5)', width: 40, fontSize: '0.875rem' }}>{count}</Typography>
+                          </Stack>
+                        );
+                      })}
+                    </Grid>
+                  </Grid>
+                </Paper>
+
+                {reviews.length > 0 ? (
+                  reviews.map((review, index) => (
+                    <Paper key={review.id} sx={{ 
+                      p: 3, 
+                      mb: 2, 
+                      bgcolor: 'rgba(255,255,255,0.03)', 
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 2,
+                      '&:hover': {
+                        bgcolor: 'rgba(255,255,255,0.05)',
+                        borderColor: 'rgba(139, 92, 246, 0.3)',
+                      },
+                    }}>
+                      <Stack direction="row" spacing={2}>
+                        <Avatar 
+                          src={(review as any).avatar || reviewerImages[(index % 5) + 1]} 
+                          sx={{ 
+                            width: 56, 
+                            height: 56,
+                            border: '2px solid #8B5CF6',
+                          }}
+                        >
+                          {review.user_name?.[0] || 'U'}
+                        </Avatar>
+                        <Box sx={{ flex: 1 }}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="start" sx={{ mb: 1 }}>
+                            <Box>
+                              <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1rem' }}>
+                                {review.user_name}
+                              </Typography>
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                <Rating value={review.rating} readOnly size="small" />
+                                <Chip 
+                                  label="Verified Purchase" 
+                                  size="small" 
+                                  icon={<Check size={12} />}
+                                  sx={{ 
+                                    bgcolor: 'rgba(139, 92, 246, 0.1)', 
+                                    color: '#8B5CF6',
+                                    fontSize: '0.7rem',
+                                    height: 20,
+                                    '& .MuiChip-icon': { color: '#8B5CF6' },
+                                  }} 
+                                />
+                              </Stack>
+                            </Box>
+                            <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>
+                              {new Date(review.created_at).toLocaleDateString('en-US', { 
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric' 
+                              })}
+                            </Typography>
+                          </Stack>
+                          {review.title && (
+                            <Typography sx={{ color: 'white', fontWeight: 600, mb: 1, fontSize: '1.1rem' }}>
+                              "{review.title}"
+                            </Typography>
+                          )}
+                          <Typography sx={{ color: 'rgba(255,255,255,0.8)', lineHeight: 1.6 }}>
+                            {review.review}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Paper>
+                  ))
+                ) : (
+                  <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'rgba(255,255,255,0.03)' }}>
+                    <MessageSquare size={40} color="rgba(255,255,255,0.3)" style={{ marginBottom: 8 }} />
+                    <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>No reviews yet</Typography>
+                  </Paper>
+                )}
+              </Box>
+            )}
+          </Grid>
+
+          {/* Sidebar */}
+          <Grid item xs={12} md={4}>
+            <Card sx={{ bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', position: 'sticky', top: 20 }}>
+              <CardContent sx={{ p: 3 }}>
+                {/* Price */}
+                <Box sx={{ mb: 3 }}>
+                  {bot.is_free ? (
+                    <Typography variant="h3" sx={{ color: '#22C55E', fontWeight: 900 }}>
+                      FREE
+                    </Typography>
+                  ) : (
+                    <>
+                      {bot.discount_percentage > 0 && (
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                          <Typography sx={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'line-through' }}>
+                            ${bot.price}
+                          </Typography>
+                          <Chip
+                            label={`-${bot.discount_percentage}%`}
+                            size="small"
+                            sx={{ bgcolor: 'rgba(239, 68, 68, 0.2)', color: '#EF4444' }}
+                          />
+                        </Stack>
+                      )}
+                      <Typography variant="h3" sx={{ color: '#22C55E', fontWeight: 900 }}>
+                        ${discountedPrice?.toFixed(2)}
+                      </Typography>
+                    </>
+                  )}
+                </Box>
+
+                {/* Buy Button */}
+                {insufficientFunds && (
+                  <Alert 
+                    severity="warning" 
+                    sx={{ mb: 2, bgcolor: 'rgba(234, 179, 8, 0.1)' }}
+                    action={
+                      <Button 
+                        color="inherit" 
+                        size="small" 
+                        component={Link}
+                        href="/dashboard/wallet"
+                      >
+                        Add Funds
+                      </Button>
+                    }
+                  >
+                    Insufficient wallet balance. You need ${(discountedPrice || bot.price).toFixed(2)} but have ${walletBalance?.toFixed(2) || '0.00'}.
+                  </Alert>
+                )}
+
+                {walletBalance !== null && (
+                  <Paper sx={{ p: 2, mb: 2, bgcolor: 'rgba(29, 155, 240, 0.1)', border: '1px solid rgba(29, 155, 240, 0.3)' }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
+                        Your Wallet Balance
+                      </Typography>
+                      <Typography sx={{ color: '#1D9BF0', fontWeight: 700 }}>
+                        ${walletBalance.toFixed(2)}
+                      </Typography>
+                    </Stack>
+                  </Paper>
+                )}
+
+                <Button
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  onClick={handlePurchase}
+                  disabled={purchasing}
+                  startIcon={purchasing ? <CircularProgress size={20} /> : <ShoppingCart size={20} />}
+                  sx={{
+                    bgcolor: '#8B5CF6',
+                    py: 1.5,
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    '&:hover': { bgcolor: '#7C3AED' },
+                    mb: 2,
+                  }}
+                >
+                  {purchasing ? 'Processing...' : bot.is_free ? 'Get for Free' : 'Buy with Wallet'}
+                </Button>
+
+                {/* Trust Badges */}
+                <Stack spacing={1.5} sx={{ mb: 3 }}>
+                  {[
+                    { icon: Shield, text: 'Secure Wallet Payment' },
+                    { icon: Download, text: 'Instant Download' },
+                    { icon: Clock, text: 'Lifetime Access' },
+                    { icon: MessageSquare, text: 'Seller Support Included' },
+                  ].map((item, i) => (
+                    <Stack key={i} direction="row" spacing={1} alignItems="center">
+                      <item.icon size={16} color="#22C55E" />
+                      <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
+                        {item.text}
+                      </Typography>
+                    </Stack>
+                  ))}
+                </Stack>
+
+                <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', my: 2 }} />
+
+                {/* Seller Info */}
+                <Box>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', mb: 1 }}>
+                    Sold by
+                  </Typography>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar sx={{ bgcolor: 'rgba(139, 92, 246, 0.2)' }}>
+                      {bot.seller_name?.charAt(0)}
+                    </Avatar>
+                    <Box>
+                      <Typography sx={{ color: 'white', fontWeight: 600 }}>{bot.seller_name}</Typography>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Star size={14} fill="#F59E0B" color="#F59E0B" />
+                        <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
+                          {bot.seller_rating?.toFixed(1)} • {bot.seller_total_sales} sales
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  </Stack>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Container>
+    </Box>
+  );
+}

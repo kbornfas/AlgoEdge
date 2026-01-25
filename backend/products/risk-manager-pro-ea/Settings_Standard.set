@@ -1,0 +1,45 @@
+; Risk Manager Pro EA - Standard Settings
+; For general trading accounts
+
+[Daily Limits]
+DailyLossLimit=3.0
+DailyProfitTarget=0
+MaxTradesPerDay=10
+ResetTime=00:00
+
+[Weekly Limits]
+WeeklyLossLimit=8.0
+WeeklyResetDay=Monday
+
+[Total Account Limits]
+MaxDrawdown=15.0
+MaxDrawdownAction=CloseAll
+EquityStopLevel=20.0
+
+[Position Limits]
+MaxOpenPositions=5
+MaxLotsPerPosition=1.0
+MaxTotalLots=3.0
+MaxPerSymbol=2
+
+[Time Controls]
+EnableTimeControl=true
+TradingStartHour=8
+TradingEndHour=20
+CloseAllEndOfDay=false
+FridayCloseHour=18
+CloseWeekend=true
+
+[Alert Settings]
+EnablePopupAlert=true
+EnableSoundAlert=true
+EnableEmailAlert=false
+EnablePushAlert=false
+WarningThreshold=80
+
+[Advanced]
+MonitorOtherEAs=true
+ExcludeMagics=
+DisableTradingOnLimit=true
+ReenableAfter=NextDay
+ProtectProfits=false

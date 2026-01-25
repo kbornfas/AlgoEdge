@@ -1,0 +1,63 @@
+; Silver Trend Rider EA - Aggressive Settings
+; Optimized for: Maximum Growth (Higher Risk)
+; Account Size: $5,000+
+; Expected Monthly Return: 10-20%
+; Expected Max Drawdown: 20-30%
+
+; === Core Settings ===
+TradingMode=Auto
+MagicNumber=354791
+TradeComment=SilverTrend_Aggressive
+
+; === Trend Analysis ===
+TrendPeriod=45
+TrendFilter=90
+MinTrendStrength=0.0015
+UseHTFFilter=true
+
+; === Entry Settings ===
+EntryMode=Pullback
+PullbackPercent=50.0
+RSI_Period=14
+RSI_OB=75
+RSI_OS=25
+
+; === Risk Management ===
+RiskMode=Percent
+RiskPercent=2.5
+FixedLots=0.1
+MaxLots=2.0
+MaxDailyTrades=8
+MaxDailyDrawdown=8.0
+
+; === Stop Loss & Take Profit ===
+SL_Mode=ATR
+SL_Points=400
+ATR_Multiplier=1.5
+TP_Mode=RiskReward
+RiskRewardRatio=2.5
+UseTrailing=true
+TrailingStart=200
+TrailingStep=75
+
+; === Partial Close ===
+UsePartialClose=true
+PartialClose1_Pct=40
+PartialClose1_RR=1.0
+PartialClose2_Pct=30
+PartialClose2_RR=1.5
+
+; === Session Filter ===
+UseSessionFilter=true
+TradingStartHour=7
+TradingEndHour=21
+TradeMonday=true
+TradeFriday=true
+FridayCloseHour=19
+
+; === Spread & News ===
+MaxSpread=35
+MaxSlippage=25
+UseNewsFilter=true
+NewsMinutesBefore=45
+NewsMinutesAfter=20

@@ -4,6 +4,11 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 import { initDatabase } from './config/database.js';
 import { initializeWebSocket } from './services/websocketService.js';
@@ -23,6 +28,15 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import mt5Routes from './routes/mt5Routes.js';
 import telegramRoutes from './routes/telegramRoutes.js';
 import whopRoutes from './routes/whopRoutes.js';
+import affiliateRoutes from './routes/affiliateRoutes.js';
+import adminAffiliateRoutes from './routes/adminAffiliateRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import marketplaceRoutes from './routes/marketplaceRoutes.js';
+import adminMarketplaceRoutes from './routes/adminMarketplaceRoutes.js';
+import signalRoutes from './routes/signalRoutes.js';
+import sellerRoutes from './routes/sellerRoutes.js';
+import walletRoutes from './routes/walletRoutes.js';
+import verificationRoutes from './routes/verificationRoutes.js';
 
 /* -------------------------------------------------------------------------- */
 /*                              ENV & CONSTANTS                               */
@@ -113,6 +127,9 @@ const setupRoutes = (app) => {
     });
   });
 
+  // Serve product files statically (files are protected by download route auth)
+  app.use('/products', express.static(path.join(__dirname, 'products')));
+
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/trades', tradeRoutes);
@@ -120,6 +137,15 @@ const setupRoutes = (app) => {
   app.use('/api/mt5', mt5Routes);
   app.use('/api/telegram', telegramRoutes);
   app.use('/api/whop', whopRoutes);
+  app.use('/api/affiliate', affiliateRoutes);
+  app.use('/api/admin/affiliate', adminAffiliateRoutes);
+  app.use('/api/notifications', notificationRoutes);
+  app.use('/api/marketplace', marketplaceRoutes);
+  app.use('/api/admin/marketplace', adminMarketplaceRoutes);
+  app.use('/api/signals', signalRoutes);
+  app.use('/api/seller', sellerRoutes);
+  app.use('/api/wallet', walletRoutes);
+  app.use('/api/verification', verificationRoutes);
   console.log('✅ All routes registered');
 };
 

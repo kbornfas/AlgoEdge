@@ -32,15 +32,16 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "metaapi.cloud-sdk": "^29.3.2",
+    "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.11",
     "pg": "^8.11.3",
     "qrcode": "^1.5.3",
     "socket.io": "^4.6.0",
     "speakeasy": "^2.0.0",
-    "stripe": "^14.10.0",
     "uuid": "^9.0.1",
-    "validator": "^13.11.0"
+    "validator": "^13.11.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

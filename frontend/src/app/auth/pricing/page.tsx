@@ -10,17 +10,13 @@ import {
   Typography,
   Alert,
   Paper,
-  ToggleButton,
-  ToggleButtonGroup,
   Grid,
   Chip,
   Stack,
 } from '@mui/material';
-import { Lock, CheckCircle, CreditCard, Wallet, Zap, TrendingUp, Award, CheckCircle2, Shield } from 'lucide-react';
+import { Lock, CheckCircle, CreditCard, Zap, TrendingUp, Award, CheckCircle2, Shield } from 'lucide-react';
 import AuthBackground from '@/components/AuthBackground';
 import { useRouter } from 'next/navigation';
-
-type PaymentMethod = 'card' | 'crypto';
 
 interface PlanType {
   id: string;
@@ -31,27 +27,14 @@ interface PlanType {
   features: string[];
   benefits: string[];
   recommended?: boolean;
-  checkoutLinks: {
-    card: string;
-    crypto: string;
-  };
+  checkoutLink: string;
 }
 
-// Whop checkout links - Replace these with your actual Whop checkout URLs
-// The {email} placeholder will be replaced with the user's email for matching
+// Whop checkout links
 const WHOP_CHECKOUT_LINKS = {
-  weekly: {
-    card: 'https://whop.com/checkout/plan_kW4SsqSBxI7SM',
-    crypto: 'https://whop.com/checkout/plan_kW4SsqSBxI7SM',
-  },
-  monthly: {
-    card: 'https://whop.com/checkout/plan_AqgOxJtvSfSDU',
-    crypto: 'https://whop.com/checkout/plan_AqgOxJtvSfSDU',
-  },
-  quarterly: {
-    card: 'https://whop.com/checkout/plan_UhC3CzHFnUvLj',
-    crypto: 'https://whop.com/checkout/plan_UhC3CzHFnUvLj',
-  },
+  weekly: process.env.NEXT_PUBLIC_WHOP_WEEKLY || 'https://whop.com/checkout/plan_kW4SsqSBxI7SM',
+  monthly: process.env.NEXT_PUBLIC_WHOP_MONTHLY || 'https://whop.com/checkout/plan_AqgOxJtvSfSDU',
+  quarterly: process.env.NEXT_PUBLIC_WHOP_QUARTERLY || 'https://whop.com/checkout/plan_UhC3CzHFnUvLj',
 };
 
 const plans: PlanType[] = [
@@ -75,7 +58,7 @@ const plans: PlanType[] = [
       'Full bot access during trial',
       'Email support available',
     ],
-    checkoutLinks: WHOP_CHECKOUT_LINKS.weekly,
+    checkoutLink: WHOP_CHECKOUT_LINKS.weekly,
   },
   {
     id: 'monthly',
@@ -99,7 +82,7 @@ const plans: PlanType[] = [
       'All premium features unlocked',
       'Dedicated account manager',
     ],
-    checkoutLinks: WHOP_CHECKOUT_LINKS.monthly,
+    checkoutLink: WHOP_CHECKOUT_LINKS.monthly,
   },
   {
     id: 'quarterly',
@@ -122,13 +105,12 @@ const plans: PlanType[] = [
       'All premium features included',
       '1-on-1 strategy consultation',
     ],
-    checkoutLinks: WHOP_CHECKOUT_LINKS.quarterly,
+    checkoutLink: WHOP_CHECKOUT_LINKS.quarterly,
   },
 ];
 
 export default function PricingPage() {
   const router = useRouter();
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -251,40 +233,31 @@ export default function PricingPage() {
     checkUserAndSubscription();
   }, [router]);
 
-  const handlePaymentMethodChange = (
-    _event: React.MouseEvent<HTMLElement>,
-    newMethod: PaymentMethod | null,
-  ) => {
-    if (newMethod !== null) {
-      setPaymentMethod(newMethod);
-    }
-  };
-
   const handleSelectPlan = (plan: PlanType) => {
     setLoading(true);
-    const baseCheckoutUrl = paymentMethod === 'card' ? plan.checkoutLinks.card : plan.checkoutLinks.crypto;
+    const checkoutUrl = plan.checkoutLink;
     
     // If checkout URL is set, redirect to it with user's email
-    if (baseCheckoutUrl && baseCheckoutUrl !== '' && baseCheckoutUrl !== '#') {
+    if (checkoutUrl && checkoutUrl !== '' && checkoutUrl !== '#') {
       // Build checkout URL with email and redirect parameters
-      const separator = baseCheckoutUrl.includes('?') ? '&' : '?';
+      const separator = checkoutUrl.includes('?') ? '&' : '?';
       const successRedirect = `${window.location.origin}/auth/payment-success`;
       
-      let checkoutUrl = baseCheckoutUrl;
+      let finalUrl = checkoutUrl;
       
       // Add email parameter for Whop to pre-fill and match the user
       if (userEmail) {
-        checkoutUrl += `${separator}email=${encodeURIComponent(userEmail)}`;
+        finalUrl += `${separator}email=${encodeURIComponent(userEmail)}`;
       }
       
       // Add redirect URL for after payment completes
-      const nextSeparator = checkoutUrl.includes('?') ? '&' : '?';
-      checkoutUrl += `${nextSeparator}redirect_url=${encodeURIComponent(successRedirect)}`;
+      const nextSeparator = finalUrl.includes('?') ? '&' : '?';
+      finalUrl += `${nextSeparator}redirect_url=${encodeURIComponent(successRedirect)}`;
       
-      window.location.href = checkoutUrl;
+      window.location.href = finalUrl;
     } else {
       // Checkout links not configured
-      alert(`Checkout link for ${plan.name} (${paymentMethod}) needs to be configured. Please add your Whop checkout links in the environment variables.`);
+      alert(`Checkout link for ${plan.name} needs to be configured. Please add your Whop checkout links in the environment variables.`);
       setLoading(false);
     }
   };
@@ -356,11 +329,11 @@ export default function PricingPage() {
                 size="small"
                 sx={{
                   ml: 2,
-                  bgcolor: '#3B82F6',
+                  bgcolor: '#0066FF',
                   textTransform: 'none',
                   fontWeight: 600,
                   '&:hover': {
-                    bgcolor: '#2563EB',
+                    bgcolor: '#0044CC',
                   },
                 }}
               >
@@ -396,49 +369,6 @@ export default function PricingPage() {
             Gain the unfair advantage with institutional-grade signals and private community access.
           </Typography>
 
-          {/* Payment Method Toggle */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 5 }}>
-            <ToggleButtonGroup
-              value={paymentMethod}
-              exclusive
-              onChange={handlePaymentMethodChange}
-              sx={{
-                bgcolor: 'rgba(30, 41, 59, 0.9)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: 3,
-                p: 0.5,
-                '& .MuiToggleButton-root': {
-                  border: 'none',
-                  borderRadius: 2,
-                  px: 4,
-                  py: 1.5,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  '&.Mui-selected': {
-                    bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    color: 'white',
-                    '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.15)',
-                    },
-                  },
-                  '&:hover': {
-                    bgcolor: 'rgba(255, 255, 255, 0.05)',
-                  },
-                },
-              }}
-            >
-              <ToggleButton value="card">
-                <CreditCard size={18} style={{ marginRight: 8 }} />
-                Card / Apple Pay
-              </ToggleButton>
-              <ToggleButton value="crypto">
-                <Wallet size={18} style={{ marginRight: 8 }} />
-                Crypto (USDT)
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
-
           {/* Pricing Cards */}
           <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
             <Grid container spacing={{ xs: 1.5, md: 2 }} sx={{ maxWidth: '900px', px: { xs: 1.5, md: 0 }, justifyContent: 'center' }}>
@@ -450,13 +380,13 @@ export default function PricingPage() {
                     position: 'relative',
                     overflow: 'visible',
                     borderRadius: 3,
-                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 41, 59, 0.9) 100%)',
-                    border: '2px solid rgba(59, 130, 246, 0.4)',
+                    background: 'linear-gradient(135deg, rgba(0, 102, 255, 0.1) 0%, rgba(30, 41, 59, 0.9) 100%)',
+                    border: '2px solid rgba(0, 102, 255, 0.4)',
                     transition: 'all 0.3s ease',
                     '&:hover': {
                       transform: 'translateY(-4px)',
-                      borderColor: '#3b82f6',
-                      boxShadow: '0 12px 30px rgba(59, 130, 246, 0.25)',
+                      borderColor: '#0066FF',
+                      boxShadow: '0 12px 30px rgba(0, 102, 255, 0.25)',
                     },
                   }}
                 >
@@ -467,19 +397,19 @@ export default function PricingPage() {
                         width: 50,
                         height: 50,
                         borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                        background: 'linear-gradient(135deg, #0066FF 0%, #0044CC 100%)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         mx: 'auto',
                         mb: 1.5,
-                        boxShadow: '0 4px 16px rgba(59, 130, 246, 0.4)',
+                        boxShadow: '0 4px 16px rgba(0, 102, 255, 0.4)',
                       }}
                     >
                       <Zap size={24} color="white" />
                     </Box>
                     
-                    <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: '#3b82f6', mb: 0.5 }}>
+                    <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: '#0066FF', mb: 0.5 }}>
                       Weekly
                     </Typography>
                     
@@ -499,7 +429,7 @@ export default function PricingPage() {
                     <Stack spacing={0.75} sx={{ mb: 2.5, textAlign: 'left' }}>
                       {['Full Bot Access', 'All 7 Strategies', 'Real-time Signals', 'Performance Dashboard', 'Email Support', 'Cancel Anytime'].map((feature, i) => (
                         <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CheckCircle2 size={14} color="#3b82f6" />
+                          <CheckCircle2 size={14} color="#0066FF" />
                           <Typography sx={{ color: 'text.primary', fontSize: '0.8rem' }}>{feature}</Typography>
                         </Box>
                       ))}
@@ -512,15 +442,15 @@ export default function PricingPage() {
                       disabled={loading}
                       sx={{
                         py: 1,
-                        borderColor: '#3b82f6',
-                        color: '#3b82f6',
+                        borderColor: '#0066FF',
+                        color: '#0066FF',
                         fontWeight: 600,
                         fontSize: '0.9rem',
                         borderWidth: 2,
                         borderRadius: 2,
                         '&:hover': {
-                          borderColor: '#3b82f6',
-                          bgcolor: 'rgba(59, 130, 246, 0.1)',
+                          borderColor: '#0066FF',
+                          bgcolor: 'rgba(0, 102, 255, 0.1)',
                           borderWidth: 2,
                         },
                       }}
@@ -539,14 +469,14 @@ export default function PricingPage() {
                     position: 'relative',
                     overflow: 'visible',
                     borderRadius: 3,
-                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(30, 41, 59, 0.95) 100%)',
-                    border: '2px solid #10b981',
+                    background: 'linear-gradient(135deg, rgba(0, 255, 0, 0.15) 0%, rgba(30, 41, 59, 0.95) 100%)',
+                    border: '2px solid #22C55E',
                     transform: { md: 'scale(1.03)' },
                     transition: 'all 0.3s ease',
-                    boxShadow: '0 12px 40px rgba(16, 185, 129, 0.25)',
+                    boxShadow: '0 12px 40px rgba(0, 255, 0, 0.25)',
                     '&:hover': {
                       transform: { xs: 'translateY(-4px)', md: 'scale(1.05)' },
-                      boxShadow: '0 16px 50px rgba(16, 185, 129, 0.35)',
+                      boxShadow: '0 16px 50px rgba(0, 255, 0, 0.35)',
                     },
                   }}
                 >
@@ -557,7 +487,7 @@ export default function PricingPage() {
                       top: -12,
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                      background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
                       color: '#000',
                       px: 2,
                       py: 0.5,
@@ -566,7 +496,7 @@ export default function PricingPage() {
                       fontSize: '0.7rem',
                       textTransform: 'uppercase',
                       letterSpacing: 0.5,
-                      boxShadow: '0 4px 12px rgba(251, 191, 36, 0.4)',
+                      boxShadow: '0 4px 12px rgba(255, 215, 0, 0.4)',
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -580,19 +510,19 @@ export default function PricingPage() {
                         width: 56,
                         height: 56,
                         borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         mx: 'auto',
                         mb: 1.5,
-                        boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
+                        boxShadow: '0 4px 20px rgba(0, 255, 0, 0.4)',
                       }}
                     >
-                      <TrendingUp size={28} color="white" />
+                      <TrendingUp size={28} color="#000000" />
                     </Box>
                     
-                    <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: '#10b981', mb: 0.5 }}>
+                    <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: '#22C55E', mb: 0.5 }}>
                       Monthly
                     </Typography>
                     
@@ -605,8 +535,8 @@ export default function PricingPage() {
                       </Typography>
                     </Box>
                     
-                    <Box sx={{ bgcolor: 'rgba(16, 185, 129, 0.2)', borderRadius: 50, px: 1.5, py: 0.25, mb: 2, display: 'inline-block' }}>
-                      <Typography sx={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 600 }}>
+                    <Box sx={{ bgcolor: 'rgba(0, 255, 0, 0.2)', borderRadius: 50, px: 1.5, py: 0.25, mb: 2, display: 'inline-block' }}>
+                      <Typography sx={{ color: '#22C55E', fontSize: '0.75rem', fontWeight: 600 }}>
                         Save 37% vs Weekly
                       </Typography>
                     </Box>
@@ -614,7 +544,7 @@ export default function PricingPage() {
                     <Stack spacing={0.75} sx={{ mb: 2.5, textAlign: 'left' }}>
                       {['Full Bot Access', 'All 7 Strategies', 'Priority Trade Execution', 'Advanced Analytics', '24/7 Support', 'Dedicated Account Manager'].map((feature, i) => (
                         <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CheckCircle2 size={14} color="#10b981" />
+                          <CheckCircle2 size={14} color="#22C55E" />
                           <Typography sx={{ color: 'text.primary', fontSize: '0.8rem', fontWeight: i === 5 ? 600 : 400 }}>{feature}</Typography>
                         </Box>
                       ))}
@@ -627,15 +557,15 @@ export default function PricingPage() {
                       disabled={loading}
                       sx={{
                         py: 1.25,
-                        bgcolor: '#10b981',
-                        color: 'white',
+                        bgcolor: '#22C55E',
+                        color: '#000000',
                         fontWeight: 700,
                         fontSize: '0.95rem',
                         borderRadius: 2,
-                        boxShadow: '0 4px 16px rgba(16, 185, 129, 0.4)',
+                        boxShadow: '0 4px 16px rgba(0, 255, 0, 0.4)',
                         '&:hover': {
-                          bgcolor: '#059669',
-                          boxShadow: '0 8px 24px rgba(16, 185, 129, 0.5)',
+                          bgcolor: '#16A34A',
+                          boxShadow: '0 8px 24px rgba(0, 255, 0, 0.5)',
                         },
                       }}
                     >
@@ -653,13 +583,13 @@ export default function PricingPage() {
                     position: 'relative',
                     overflow: 'visible',
                     borderRadius: 3,
-                    background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(30, 41, 59, 0.9) 100%)',
-                    border: '2px solid rgba(168, 85, 247, 0.4)',
+                    background: 'linear-gradient(135deg, rgba(160, 0, 255, 0.1) 0%, rgba(30, 41, 59, 0.9) 100%)',
+                    border: '2px solid rgba(160, 0, 255, 0.4)',
                     transition: 'all 0.3s ease',
                     '&:hover': {
                       transform: 'translateY(-4px)',
-                      borderColor: '#a855f7',
-                      boxShadow: '0 12px 30px rgba(168, 85, 247, 0.25)',
+                      borderColor: '#A000FF',
+                      boxShadow: '0 12px 30px rgba(160, 0, 255, 0.25)',
                     },
                   }}
                 >
@@ -669,7 +599,7 @@ export default function PricingPage() {
                       position: 'absolute',
                       top: -10,
                       right: 12,
-                      background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
+                      background: 'linear-gradient(135deg, #A000FF 0%, #7700CC 100%)',
                       color: 'white',
                       px: 1.5,
                       py: 0.35,
@@ -677,7 +607,7 @@ export default function PricingPage() {
                       fontWeight: 700,
                       fontSize: '0.65rem',
                       textTransform: 'uppercase',
-                      boxShadow: '0 4px 10px rgba(168, 85, 247, 0.4)',
+                      boxShadow: '0 4px 10px rgba(160, 0, 255, 0.4)',
                     }}
                   >
                     💎 Best Value
@@ -690,19 +620,19 @@ export default function PricingPage() {
                         width: 50,
                         height: 50,
                         borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
+                        background: 'linear-gradient(135deg, #A000FF 0%, #7700CC 100%)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         mx: 'auto',
                         mb: 1.5,
-                        boxShadow: '0 4px 16px rgba(168, 85, 247, 0.4)',
+                        boxShadow: '0 4px 16px rgba(160, 0, 255, 0.4)',
                       }}
                     >
                       <Award size={24} color="white" />
                     </Box>
                     
-                    <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: '#a855f7', mb: 0.5 }}>
+                    <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: '#A000FF', mb: 0.5 }}>
                       Quarterly
                     </Typography>
                     
@@ -715,8 +645,8 @@ export default function PricingPage() {
                       </Typography>
                     </Box>
                     
-                    <Box sx={{ bgcolor: 'rgba(168, 85, 247, 0.2)', borderRadius: 50, px: 1.5, py: 0.25, mb: 2, display: 'inline-block' }}>
-                      <Typography sx={{ color: '#a855f7', fontSize: '0.75rem', fontWeight: 600 }}>
+                    <Box sx={{ bgcolor: 'rgba(160, 0, 255, 0.2)', borderRadius: 50, px: 1.5, py: 0.25, mb: 2, display: 'inline-block' }}>
+                      <Typography sx={{ color: '#A000FF', fontSize: '0.75rem', fontWeight: 600 }}>
                         Save 49% vs Weekly
                       </Typography>
                     </Box>
@@ -724,7 +654,7 @@ export default function PricingPage() {
                     <Stack spacing={0.75} sx={{ mb: 2.5, textAlign: 'left' }}>
                       {['Full Bot Access', 'VIP Signal Priority', 'Custom Risk Settings', 'Exclusive Strategies', 'Priority 24/7 Support', '1-on-1 Consultation'].map((feature, i) => (
                         <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CheckCircle2 size={14} color="#a855f7" />
+                          <CheckCircle2 size={14} color="#A000FF" />
                           <Typography sx={{ color: 'text.primary', fontSize: '0.8rem', fontWeight: i >= 4 ? 600 : 400 }}>{feature}</Typography>
                         </Box>
                       ))}
@@ -737,15 +667,15 @@ export default function PricingPage() {
                       disabled={loading}
                       sx={{
                         py: 1,
-                        borderColor: '#a855f7',
-                        color: '#a855f7',
+                        borderColor: '#A000FF',
+                        color: '#A000FF',
                         fontWeight: 600,
                         fontSize: '0.9rem',
                         borderWidth: 2,
                         borderRadius: 2,
                         '&:hover': {
-                          borderColor: '#a855f7',
-                          bgcolor: 'rgba(168, 85, 247, 0.1)',
+                          borderColor: '#A000FF',
+                          bgcolor: 'rgba(160, 0, 255, 0.1)',
                           borderWidth: 2,
                         },
                       }}
@@ -765,9 +695,9 @@ export default function PricingPage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 1.5,
-                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(16, 185, 129, 0.15) 50%, rgba(59, 130, 246, 0.15) 100%)',
+                background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(0, 255, 0, 0.15) 50%, rgba(0, 102, 255, 0.15) 100%)',
                 border: '2px solid transparent',
-                borderImage: 'linear-gradient(135deg, #fbbf24, #10b981, #3b82f6) 1',
+                borderImage: 'linear-gradient(135deg, #FFD700, #22C55E, #0066FF) 1',
                 borderRadius: 3,
                 px: 3,
                 py: 1.5,

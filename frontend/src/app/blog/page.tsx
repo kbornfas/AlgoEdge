@@ -26,6 +26,44 @@ const blogPosts = [
     readTime: '8 min read',
     date: 'January 15, 2026',
     featured: true,
+    color: '#FFD700',
+    emoji: '🪙',
+  },
+  {
+    slug: 'best-trading-api-2026',
+    title: 'Best Trading APIs for Algorithmic Trading in 2026: Complete Developer Guide',
+    excerpt: 'Compare the top trading APIs for building automated trading systems. Real-time market data, historical prices, WebSocket streaming, and everything developers need.',
+    image: '/images/trading-api.jpg',
+    category: 'Trading APIs',
+    readTime: '12 min read',
+    date: 'January 25, 2026',
+    featured: true,
+    color: '#8B5CF6',
+    emoji: '💻',
+  },
+  {
+    slug: 'best-forex-signals-2026',
+    title: 'Best Forex Signal Services 2026: Complete Guide to Copy Trading Success',
+    excerpt: 'Discover the top-rated forex signal providers with proven track records. Learn how to choose reliable signals and maximize profits from professional trading alerts.',
+    image: '/images/forex-signals.jpg',
+    category: 'Trading Signals',
+    readTime: '15 min read',
+    date: 'January 25, 2026',
+    featured: true,
+    color: '#3B82F6',
+    emoji: '📡',
+  },
+  {
+    slug: 'forex-trading-courses-2026',
+    title: 'Best Forex Trading Courses & Education in 2026: Complete Learning Guide',
+    excerpt: 'Master forex trading with the best courses, ebooks, and educational resources. Compare top-rated programs and start your journey to profitable trading.',
+    image: '/images/forex-education.jpg',
+    category: 'Forex Education',
+    readTime: '14 min read',
+    date: 'January 25, 2026',
+    featured: true,
+    color: '#F59E0B',
+    emoji: '📚',
   },
   {
     slug: 'how-to-automate-mt5-trading',
@@ -36,6 +74,8 @@ const blogPosts = [
     readTime: '10 min read',
     date: 'January 12, 2026',
     featured: true,
+    color: '#2196F3',
+    emoji: '📊',
   },
   {
     slug: 'best-forex-bots-for-beginners',
@@ -46,6 +86,8 @@ const blogPosts = [
     readTime: '12 min read',
     date: 'January 10, 2026',
     featured: true,
+    color: '#00c853',
+    emoji: '🤖',
   },
 ];
 
@@ -116,18 +158,14 @@ export default function BlogPage() {
                   component="div"
                   sx={{
                     height: 200,
-                    background: post.slug.includes('xauusd')
-                      ? 'linear-gradient(135deg, #FFD700 0%, #B8860B 100%)'
-                      : post.slug.includes('mt5')
-                      ? 'linear-gradient(135deg, #2196F3 0%, #1565C0 100%)'
-                      : 'linear-gradient(135deg, #00c853 0%, #009624 100%)',
+                    background: `linear-gradient(135deg, ${post.color} 0%, ${post.color}99 100%)`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
                   <Typography variant="h3" sx={{ opacity: 0.3, fontWeight: 800 }}>
-                    {post.slug.includes('xauusd') ? '🪙' : post.slug.includes('mt5') ? '📊' : '🤖'}
+                    {post.emoji}
                   </Typography>
                 </CardMedia>
                 <CardContent sx={{ p: 3 }}>

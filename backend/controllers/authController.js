@@ -6,6 +6,7 @@ import QRCode from 'qrcode';
 import pool from '../config/database.js';
 import { sendEmail, generateVerificationCode, sendVerificationCodeEmail, sendVerificationCodeSMS } from '../services/emailService.js';
 import { auditLog } from '../middleware/audit.js';
+import { sendNewReferralTelegram } from '../services/telegramService.js';
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -19,23 +20,63 @@ const generateToken = (userId) => {
 export const register = async (req, res) => {
   const client = await pool.connect();
   try {
-    const { username, email, password } = req.body;
-    if (!username || !email || !password) {
+    const { username, firstName, lastName, email, password, referralCode } = req.body;
+    
+    // Support both username field or firstName+lastName
+    const finalUsername = username || (firstName && lastName ? `${firstName.trim()} ${lastName.trim()}` : null);
+    
+    if (!finalUsername || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
-    if (password.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    
+    // Strong password validation
+    const passwordErrors = [];
+    if (password.length < 12) {
+      passwordErrors.push('Password must be at least 12 characters');
     }
+    if (!/[A-Z]/.test(password)) {
+      passwordErrors.push('Password must contain at least one uppercase letter');
+    }
+    if (!/[a-z]/.test(password)) {
+      passwordErrors.push('Password must contain at least one lowercase letter');
+    }
+    if (!/[0-9]/.test(password)) {
+      passwordErrors.push('Password must contain at least one number');
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      passwordErrors.push('Password must contain at least one special character (!@#$%^&*...)');
+    }
+    
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({ 
+        error: 'Password does not meet security requirements',
+        details: passwordErrors.map(msg => ({ field: 'password', message: msg }))
+      });
+    }
+    
     await client.query('BEGIN');
     // Check if user exists
     const existingUser = await client.query(
       'SELECT id FROM users WHERE email = $1 OR username = $2',
-      [email, username]
+      [email, finalUsername]
     );
     if (existingUser.rows.length > 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'User already exists' });
     }
+
+    // Check referral code if provided
+    let referrerId = null;
+    if (referralCode) {
+      const referrerResult = await client.query(
+        'SELECT id, username FROM users WHERE referral_code = $1',
+        [referralCode.toUpperCase()]
+      );
+      if (referrerResult.rows.length > 0) {
+        referrerId = referrerResult.rows[0].id;
+      }
+    }
+
     // Hash password
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(password, salt);
@@ -43,13 +84,16 @@ export const register = async (req, res) => {
     // Generate OTP code
     const otpCode = generateVerificationCode();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Generate unique referral code for new user
+    const newReferralCode = 'ALGO' + Math.random().toString(36).substring(2, 6).toUpperCase();
     
     // Create user with OTP (not verified yet)
     const result = await client.query(
-      `INSERT INTO users (username, email, password_hash, is_verified, verification_token, verification_expires)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO users (username, email, password_hash, is_verified, verification_token, verification_expires, referred_by, referral_code)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, username, email, created_at`,
-      [username, email, passwordHash, false, otpCode, otpExpires]
+      [finalUsername, email, passwordHash, false, otpCode, otpExpires, referrerId, newReferralCode]
     );
     const user = result.rows[0];
     // Create default subscription
@@ -63,16 +107,25 @@ export const register = async (req, res) => {
       [user.id]
     );
     await client.query('COMMIT');
+
+    // Notify referrer via Telegram if they have it connected
+    if (referrerId) {
+      try {
+        await sendNewReferralTelegram(referrerId, { username: finalUsername });
+      } catch (err) {
+        console.warn('Failed to send referral notification:', err);
+      }
+    }
     
     // Send OTP verification email
-    const emailSent = await sendVerificationCodeEmail(email, username, otpCode, 10);
+    const emailSent = await sendVerificationCodeEmail(email, finalUsername, otpCode, 10);
     
     if (!emailSent) {
       console.warn(`⚠️  OTP email failed for ${email}, but registration completed`);
     }
     
     // Audit log
-    auditLog(user.id, 'USER_REGISTERED', { email, username }, req);
+    auditLog(user.id, 'USER_REGISTERED', { email, username: finalUsername, referredBy: referrerId }, req);
     
     res.status(201).json({
       message: 'Registration successful! Please check your email for the verification code.',
@@ -561,140 +614,6 @@ export const verifyCode = async (req, res) => {
   }
 };
 
-// Google OAuth Authentication
-export const googleAuth = async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const { googleId, email, firstName, lastName, picture, isNewUser } = req.body;
-
-    if (!googleId || !email) {
-      return res.status(400).json({ error: 'Google ID and email are required' });
-    }
-
-    await client.query('BEGIN');
-
-    // Check if user exists by Google ID or email
-    let user = await client.query(
-      'SELECT * FROM users WHERE google_id = $1 OR email = $2',
-      [googleId, email]
-    );
-
-    if (user.rows.length > 0) {
-      // Existing user - allow sign in
-      user = user.rows[0];
-
-      // Update Google ID if not set (linking Google to existing account)
-      if (!user.google_id) {
-        await client.query(
-          'UPDATE users SET google_id = $1, profile_picture = COALESCE(profile_picture, $2) WHERE id = $3',
-          [googleId, picture, user.id]
-        );
-      }
-
-      // Update last login
-      await client.query(
-        'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
-        [user.id]
-      );
-
-      // Check subscription status
-      const subscriptionResult = await client.query(
-        `SELECT * FROM subscriptions 
-         WHERE user_id = $1 
-         AND status = 'active' 
-         AND plan != 'free'
-         ORDER BY created_at DESC LIMIT 1`,
-        [user.id]
-      );
-      
-      // Admin bypass - always has access
-      const isAdmin = user.email === process.env.ADMIN_EMAIL || user.role === 'admin';
-      const hasActiveSubscription = isAdmin || subscriptionResult.rows.length > 0 || user.subscription_status === 'active';
-
-      await client.query('COMMIT');
-
-      // Generate JWT token
-      const token = generateToken(user.id);
-
-      // Audit log
-      auditLog(user.id, 'GOOGLE_LOGIN', { email, googleId }, req);
-
-      return res.json({
-        message: 'Login successful',
-        token,
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          firstName: user.first_name || firstName,
-          lastName: user.last_name || lastName,
-          role: user.role,
-          isVerified: user.is_verified,
-          profilePicture: user.profile_picture || picture
-        },
-        isNewUser: false,
-        hasActiveSubscription
-      });
-    }
-
-    // New user - create account via Google
-    const username = email.split('@')[0] + '_' + Math.random().toString(36).substring(2, 6);
-    
-    const result = await client.query(
-      `INSERT INTO users (
-        username, email, google_id, first_name, last_name, 
-        profile_picture, is_verified, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, username, email, role, is_verified`,
-      [username, email, googleId, firstName, lastName, picture, true, true]
-    );
-
-    const newUser = result.rows[0];
-
-    // Create default subscription
-    await client.query(
-      'INSERT INTO subscriptions (user_id, plan, status) VALUES ($1, $2, $3)',
-      [newUser.id, 'free', 'active']
-    );
-
-    // Create default settings
-    await client.query(
-      'INSERT INTO user_settings (user_id) VALUES ($1)',
-      [newUser.id]
-    );
-
-    await client.query('COMMIT');
-
-    // Generate JWT token
-    const token = generateToken(newUser.id);
-
-    // Audit log
-    auditLog(newUser.id, 'GOOGLE_REGISTRATION', { email, googleId }, req);
-
-    res.status(201).json({
-      message: 'Registration successful!',
-      token,
-      user: {
-        id: newUser.id,
-        username: newUser.username,
-        email: newUser.email,
-        firstName,
-        lastName,
-        role: newUser.role,
-        isVerified: true,
-        profilePicture: picture
-      },
-      isNewUser: true
-    });
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Google auth error:', error);
-    res.status(500).json({ error: 'Authentication failed' });
-  } finally {
-    client.release();
-  }
-};
-
 export default {
   register,
   login,
@@ -706,5 +625,4 @@ export default {
   disable2FA,
   sendVerificationCode,
   verifyCode,
-  googleAuth,
 };

@@ -1,10 +1,21 @@
 import pool from '../config/database.js';
 import crypto from 'crypto';
+import { sendCommissionEarnedTelegram, sendNewReferralTelegram } from '../services/telegramService.js';
 
 // Whop webhook secret - should be set in environment variables
 const WHOP_WEBHOOK_SECRET = process.env.WHOP_WEBHOOK_SECRET;
 const WHOP_API_KEY = process.env.WHOP_API_KEY;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+
+// Plan prices for commission calculation
+const PLAN_PRICES = {
+  weekly: 19,
+  monthly: 49,
+  quarterly: 149
+};
+
+// Commission rate (10%)
+const COMMISSION_RATE = 10;
 
 /**
  * Verify Whop webhook signature
@@ -199,6 +210,61 @@ const handleMembershipValid = async (data) => {
        WHERE id = $3`,
       [planType, expiresAt, userId]
     );
+
+    // ============ AFFILIATE COMMISSION CALCULATION ============
+    // Check if this user was referred by someone
+    const referrerResult = await pool.query(
+      `SELECT u.id, u.username, u.email, u.referral_code, u.affiliate_commission_rate,
+              COALESCE(us.telegram_chat_id, '') as telegram_chat_id
+       FROM users u 
+       LEFT JOIN user_settings us ON us.user_id = u.id
+       WHERE u.id = (SELECT referred_by FROM users WHERE id = $1)`,
+      [userId]
+    );
+
+    if (referrerResult.rows.length > 0) {
+      const referrer = referrerResult.rows[0];
+      const planPrice = PLAN_PRICES[planType] || 49; // Default to monthly if unknown
+      const commissionRate = referrer.affiliate_commission_rate || COMMISSION_RATE;
+      const commissionAmount = (planPrice * commissionRate) / 100;
+
+      // Get subscription ID for tracking
+      const subResult = await pool.query(
+        'SELECT id FROM subscriptions WHERE user_id = $1',
+        [userId]
+      );
+      const subscriptionId = subResult.rows[0]?.id;
+
+      // Insert commission record
+      await pool.query(
+        `INSERT INTO affiliate_commissions 
+         (affiliate_user_id, referred_user_id, subscription_id, amount, commission_rate, status, period_start, period_end)
+         VALUES ($1, $2, $3, $4, $5, 'approved', NOW(), $6)`,
+        [referrer.id, userId, subscriptionId, commissionAmount, commissionRate, expiresAt]
+      );
+
+      console.log(`Awarded $${commissionAmount.toFixed(2)} commission to affiliate ${referrer.id} (${referrer.username}) for ${planType} subscription`);
+
+      // Send Telegram notification to referrer about earned commission
+      if (referrer.telegram_chat_id) {
+        const subscribedUser = await pool.query('SELECT username, email FROM users WHERE id = $1', [userId]);
+        const subscribedUsername = subscribedUser.rows[0]?.username || userEmail.split('@')[0];
+        
+        try {
+          await sendCommissionEarnedTelegram(
+            referrer.telegram_chat_id,
+            subscribedUsername,
+            planType,
+            planPrice,
+            commissionAmount
+          );
+        } catch (telegramError) {
+          console.error('Failed to send Telegram commission notification:', telegramError);
+          // Don't throw - commission was still awarded
+        }
+      }
+    }
+    // ============ END AFFILIATE COMMISSION ============
 
     console.log(`Successfully activated ${planType} subscription for user ${userId} (${userEmail})`);
   } catch (error) {

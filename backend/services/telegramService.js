@@ -451,6 +451,113 @@ export async function handleTelegramWebhook(update) {
   }
 }
 
+// ============================================
+// AFFILIATE NOTIFICATION TEMPLATES
+// ============================================
+
+/**
+ * Send new referral notification via Telegram
+ */
+export async function sendNewReferralTelegram(userId, referral) {
+  const status = await getTelegramStatus(userId);
+  if (!status.connected || !status.alertsEnabled) return false;
+
+  const message = `
+🎉 <b>NEW REFERRAL!</b> 🎉
+
+Someone just signed up using your referral link!
+
+👤 <b>Referral Details:</b>
+├ Username: <code>${referral.username}</code>
+└ Joined: ${new Date().toLocaleDateString()}
+
+💰 You'll earn <b>10% commission</b> on all their payments!
+
+Keep sharing your link to grow your earnings 🚀
+
+<i>AlgoEdge Affiliate Program</i>
+`.trim();
+
+  return await sendTelegramMessage(status.chatId, message);
+}
+
+/**
+ * Send commission earned notification via Telegram
+ */
+export async function sendCommissionEarnedTelegram(userId, commission) {
+  const status = await getTelegramStatus(userId);
+  if (!status.connected || !status.alertsEnabled) return false;
+
+  const message = `
+💰 <b>COMMISSION EARNED!</b> 💰
+
+You just earned a commission from a referral payment!
+
+📊 <b>Commission Details:</b>
+├ Amount: <code>$${parseFloat(commission.amount).toFixed(2)}</code>
+├ Rate: <code>${commission.rate}%</code>
+├ Referral: <code>${commission.referralUsername}</code>
+└ Plan: <code>${commission.plan}</code>
+
+Your commission is now pending approval and will be available for withdrawal soon.
+
+Total Available Balance: <b>$${parseFloat(commission.totalAvailable || 0).toFixed(2)}</b>
+
+<i>AlgoEdge Affiliate Program</i>
+`.trim();
+
+  return await sendTelegramMessage(status.chatId, message);
+}
+
+/**
+ * Send payout processed notification via Telegram
+ */
+export async function sendPayoutProcessedTelegram(userId, payout) {
+  const status = await getTelegramStatus(userId);
+  if (!status.connected || !status.alertsEnabled) return false;
+
+  const statusEmoji = payout.status === 'completed' ? '✅' : '❌';
+  const statusText = payout.status === 'completed' ? 'APPROVED' : 'REJECTED';
+
+  const message = `
+${statusEmoji} <b>PAYOUT ${statusText}</b> ${statusEmoji}
+
+Your payout request has been processed!
+
+💸 <b>Payout Details:</b>
+├ Amount: <code>$${parseFloat(payout.amount).toFixed(2)}</code>
+├ Method: <code>${payout.method}</code>
+├ Status: <code>${payout.status}</code>
+${payout.transactionId ? `└ Transaction ID: <code>${payout.transactionId}</code>` : ''}
+
+${payout.status === 'completed' 
+  ? '🎉 Funds have been sent to your account!' 
+  : '📝 ' + (payout.notes || 'Please contact support for more information.')}
+
+<i>AlgoEdge Affiliate Program</i>
+`.trim();
+
+  return await sendTelegramMessage(status.chatId, message);
+}
+
+/**
+ * Send generic notification via Telegram
+ */
+export async function sendNotificationTelegram(userId, title, message, emoji = '📢') {
+  const status = await getTelegramStatus(userId);
+  if (!status.connected || !status.alertsEnabled) return false;
+
+  const formattedMessage = `
+${emoji} <b>${title}</b> ${emoji}
+
+${message}
+
+<i>AlgoEdge</i>
+`.trim();
+
+  return await sendTelegramMessage(status.chatId, formattedMessage);
+}
+
 export default {
   sendTelegramMessage,
   generateConnectionToken,
@@ -464,4 +571,8 @@ export default {
   sendDailySummaryTelegram,
   sendWelcomeMessage,
   handleTelegramWebhook,
+  sendNewReferralTelegram,
+  sendCommissionEarnedTelegram,
+  sendPayoutProcessedTelegram,
+  sendNotificationTelegram,
 };

@@ -1,0 +1,42 @@
+; Multi-Metal Portfolio EA - Moderate Settings
+; Recommended for accounts $5,000+ with moderate risk tolerance
+
+[Portfolio Settings]
+TotalPortfolioRisk=3.0
+GoldAllocation=40
+SilverAllocation=35
+PlatinumAllocation=25
+MaxCorrelatedRisk=4.0
+EnableGold=true
+EnableSilver=true
+EnablePlatinum=true
+
+[Gold Settings]
+Gold_Strategy=TrendPullback
+Gold_Timeframe=H1
+Gold_TrendPeriod=50
+Gold_SL_ATR=2.0
+Gold_RiskReward=2.0
+Gold_MaxTrades=2
+
+[Silver Settings]
+Silver_Strategy=TrendPullback
+Silver_Timeframe=H1
+Silver_TrendPeriod=50
+Silver_SL_ATR=2.5
+Silver_RiskReward=2.0
+Silver_MaxTrades=2
+
+[Platinum Settings]
+Platinum_Strategy=Breakout
+Platinum_Timeframe=H4
+Platinum_SL_ATR=2.0
+Platinum_RiskReward=2.5
+Platinum_MaxTrades=1
+
+[Global Settings]
+MaxDailyLoss=5.0
+MaxWeeklyLoss=10.0
+TradingHoursStart=8
+TradingHoursEnd=20
+FridayCloseHour=18

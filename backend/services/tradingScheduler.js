@@ -3,6 +3,7 @@ import { mt5Connections, connectMT5Account, isMetaApiReady, waitForMetaApi } fro
 import { emitTradeSignal, emitTradeClosed, emitPositionUpdate, emitBalanceUpdate } from './websocketService.js';
 import { generateNewsSignal, shouldAvoidTradingDueToNews, IMPACT } from './newsService.js';
 import { sendTradeOpenedAlert, sendTradeClosedAlert } from './notificationService.js';
+import { createSignal as createTelegramSignal, SIGNAL_PRIORITY } from './signalService.js';
 import https from 'https';
 
 /**
@@ -2400,6 +2401,7 @@ async function executeTradeViaMetaApi(connection, accountId, robotId, userId, si
 
 /**
  * Execute a trade with full logging
+ * Also broadcasts signal to subscribers based on confidence level
  */
 async function executeTrade(connection, accountId, robotId, userId, robotName, signal) {
   try {
@@ -2413,8 +2415,41 @@ async function executeTrade(connection, accountId, robotId, userId, robotName, s
     if (trade) {
       console.log(`  🎉 TRADE EXECUTED: #${trade.id} - ${signal.symbol} ${signal.type.toUpperCase()}`);
       
-      // Emit trade signal
+      // Emit trade signal to websocket
       emitTradeSignal(userId, { robotId, robotName, signal, trade });
+      
+      // ============================================================
+      // BROADCAST SIGNAL TO TELEGRAM SUBSCRIBERS
+      // Priority is determined by signal confidence:
+      // - 90%+ confidence = VIP/EXCLUSIVE (only VIP subscribers)
+      // - 80-89% = HIGH (Premium+ subscribers)
+      // - 70-79% = MEDIUM (Basic+ subscribers)
+      // - <70% = LOW (all subscribers including Starter)
+      // ============================================================
+      try {
+        const signalPriority = determineSignalPriority(signal.confidence, signal);
+        
+        await createTelegramSignal({
+          signalType: signal.type.toUpperCase(),
+          symbol: signal.symbol,
+          entryPrice: signal.entryPrice,
+          stopLoss: signal.stopLoss,
+          takeProfit1: signal.takeProfit,
+          takeProfit2: signal.takeProfit2 || null,
+          takeProfit3: signal.takeProfit3 || null,
+          analysis: signal.reason || `${signal.strategy} signal with ${signal.confidence}% confidence`,
+          timeframe: signal.timeframe || 'Multi-TF',
+          confidence: signal.confidence >= 90 ? 'VERY_HIGH' : 
+                     signal.confidence >= 80 ? 'HIGH' : 
+                     signal.confidence >= 70 ? 'MEDIUM' : 'LOW',
+          priority: signalPriority,
+          source: 'trading_scheduler'
+        });
+        
+        console.log(`  📤 Signal broadcast to subscribers with ${signalPriority} priority`);
+      } catch (signalError) {
+        console.error(`  ⚠️ Signal broadcast failed:`, signalError.message);
+      }
       
       // Send email notification (async - don't block trade execution)
       sendTradeOpenedAlert(userId, {
@@ -2432,6 +2467,34 @@ async function executeTrade(connection, accountId, robotId, userId, robotName, s
     console.error(`  ❌ Trade execution error:`, error.message);
     return null;
   }
+}
+
+/**
+ * Determine signal priority based on confidence and signal characteristics
+ */
+function determineSignalPriority(confidence, signal) {
+  // VIP/EXCLUSIVE: Very high confidence signals (90%+) or specific high-value setups
+  if (confidence >= 92 || (confidence >= 88 && signal.isExplosion)) {
+    return SIGNAL_PRIORITY.EXCLUSIVE;
+  }
+  
+  // VIP: High confidence (88-91%)
+  if (confidence >= 88) {
+    return SIGNAL_PRIORITY.VIP;
+  }
+  
+  // HIGH: Good confidence (78-87%)
+  if (confidence >= 78) {
+    return SIGNAL_PRIORITY.HIGH;
+  }
+  
+  // MEDIUM: Standard confidence (68-77%)
+  if (confidence >= 68) {
+    return SIGNAL_PRIORITY.MEDIUM;
+  }
+  
+  // LOW: Lower confidence (<68%) - available to all subscribers
+  return SIGNAL_PRIORITY.LOW;
 }
 
 /**

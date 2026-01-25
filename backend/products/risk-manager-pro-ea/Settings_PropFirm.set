@@ -1,0 +1,45 @@
+; Risk Manager Pro EA - Prop Firm Settings
+; Configured for typical prop firm rules
+
+[Daily Limits]
+DailyLossLimit=4.0
+DailyProfitTarget=0
+MaxTradesPerDay=15
+ResetTime=00:00
+
+[Weekly Limits]
+WeeklyLossLimit=6.0
+WeeklyResetDay=Monday
+
+[Total Account Limits]
+MaxDrawdown=8.0
+MaxDrawdownAction=CloseAll
+EquityStopLevel=10.0
+
+[Position Limits]
+MaxOpenPositions=3
+MaxLotsPerPosition=0.5
+MaxTotalLots=1.5
+MaxPerSymbol=1
+
+[Time Controls]
+EnableTimeControl=true
+TradingStartHour=8
+TradingEndHour=19
+CloseAllEndOfDay=true
+FridayCloseHour=16
+CloseWeekend=true
+
+[Alert Settings]
+EnablePopupAlert=true
+EnableSoundAlert=true
+EnableEmailAlert=true
+EnablePushAlert=true
+WarningThreshold=70
+
+[Advanced]
+MonitorOtherEAs=true
+ExcludeMagics=
+DisableTradingOnLimit=true
+ReenableAfter=Never
+ProtectProfits=true

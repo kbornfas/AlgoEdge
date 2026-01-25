@@ -10,14 +10,34 @@ import {
   Typography,
   Button,
   Chip,
-  LinearProgress,
   Alert,
   AlertTitle,
   Skeleton,
   CircularProgress,
-  IconButton,
+  Avatar,
+  alpha,
+  useTheme,
 } from '@mui/material';
-import { TrendingUp, TrendingDown, DollarSign, Activity, Users, AlertCircle, Upload, Link as LinkIcon, RefreshCw, Play, Square } from 'lucide-react';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  Activity, 
+  Link as LinkIcon, 
+  RefreshCw, 
+  Play, 
+  Square,
+  Zap,
+  ArrowUpRight,
+  ArrowDownRight,
+  Wallet,
+  Bot,
+  Signal,
+  ExternalLink,
+  Lock,
+  Crown,
+  ChevronRight,
+} from 'lucide-react';
 import Link from 'next/link';
 
 interface MT5Account {
@@ -42,15 +62,265 @@ interface Trade {
 }
 
 interface Robot {
-  id: number;
+  id: string;
   name: string;
   status: 'running' | 'stopped' | 'paused';
   profit: number;
+  strategy?: string;
 }
+
+// Stat Card Component
+const StatCard = ({ 
+  title, 
+  value, 
+  subtitle, 
+  icon: Icon, 
+  trend, 
+  trendValue, 
+  color = 'primary',
+  loading = false,
+  onClick,
+}: {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: any;
+  trend?: 'up' | 'down' | 'neutral';
+  trendValue?: string;
+  color?: 'primary' | 'success' | 'error' | 'warning' | 'info';
+  loading?: boolean;
+  onClick?: () => void;
+}) => {
+  const theme = useTheme();
+  
+  const colorMap = {
+    primary: { main: '#0066FF', light: 'rgba(0, 102, 255, 0.1)', gradient: 'linear-gradient(135deg, #0066FF 0%, #00D4FF 100%)' },
+    success: { main: '#22C55E', light: 'rgba(34, 197, 94, 0.1)', gradient: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)' },
+    error: { main: '#EF4444', light: 'rgba(239, 68, 68, 0.1)', gradient: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)' },
+    warning: { main: '#F59E0B', light: 'rgba(245, 158, 11, 0.1)', gradient: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' },
+    info: { main: '#3B82F6', light: 'rgba(59, 130, 246, 0.1)', gradient: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' },
+  };
+
+  const colors = colorMap[color];
+
+  return (
+    <Card
+      sx={{
+        height: '100%',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all 0.3s ease',
+        border: '1px solid',
+        borderColor: alpha(theme.palette.divider, 0.1),
+        borderRadius: 3,
+        overflow: 'hidden',
+        position: 'relative',
+        '&:hover': onClick ? {
+          transform: 'translateY(-4px)',
+          boxShadow: `0 20px 40px ${alpha(colors.main, 0.15)}`,
+          borderColor: alpha(colors.main, 0.3),
+        } : {},
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 4,
+          background: colors.gradient,
+        },
+      }}
+      onClick={onClick}
+    >
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Box
+            sx={{
+              width: 48,
+              height: 48,
+              borderRadius: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: colors.light,
+            }}
+          >
+            <Icon size={24} color={colors.main} />
+          </Box>
+          {trend && trendValue && (
+            <Chip
+              icon={trend === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+              label={trendValue}
+              size="small"
+              sx={{
+                bgcolor: trend === 'up' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                color: trend === 'up' ? '#22C55E' : '#EF4444',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                '& .MuiChip-icon': {
+                  color: 'inherit',
+                },
+              }}
+            />
+          )}
+        </Box>
+        
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 0.5, fontWeight: 500 }}>
+          {title}
+        </Typography>
+        
+        {loading ? (
+          <Skeleton width={100} height={36} />
+        ) : (
+          <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: '-0.5px', mb: 0.5 }}>
+            {value}
+          </Typography>
+        )}
+        
+        {subtitle && (
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            {subtitle}
+          </Typography>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// Locked Feature Card Component for Unsubscribed Users
+const LockedFeatureCard = ({
+  title,
+  description,
+  icon: Icon,
+  features,
+}: {
+  title: string;
+  description: string;
+  icon: any;
+  features: string[];
+}) => {
+  const theme = useTheme();
+  
+  return (
+    <Card 
+      sx={{ 
+        mb: 4, 
+        borderRadius: 3, 
+        border: '1px solid',
+        borderColor: 'rgba(0, 102, 255, 0.2)',
+        overflow: 'hidden',
+        position: 'relative',
+        background: theme.palette.mode === 'dark' 
+          ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(30, 41, 59, 0.7) 100%)'
+          : 'linear-gradient(135deg, rgba(248, 250, 252, 0.9) 0%, rgba(241, 245, 249, 0.7) 100%)',
+        backdropFilter: 'blur(10px)',
+      }}
+    >
+      {/* Lock overlay */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.02)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+      
+      <CardContent sx={{ p: 4, position: 'relative', zIndex: 1 }}>
+        <Box sx={{ textAlign: 'center', py: 3 }}>
+          <Box
+            sx={{
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, rgba(0, 102, 255, 0.1) 0%, rgba(0, 212, 255, 0.05) 100%)',
+              border: '2px solid rgba(0, 102, 255, 0.2)',
+              mx: 'auto',
+              mb: 3,
+              position: 'relative',
+            }}
+          >
+            <Icon size={36} color="#0066FF" />
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: -4,
+                right: -4,
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                bgcolor: '#0066FF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(0, 102, 255, 0.4)',
+              }}
+            >
+              <Lock size={14} color="white" />
+            </Box>
+          </Box>
+          
+          <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+            {title}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
+            {description}
+          </Typography>
+          
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center', mb: 4 }}>
+            {features.map((feature, index) => (
+              <Chip
+                key={index}
+                label={feature}
+                size="small"
+                sx={{
+                  bgcolor: 'rgba(0, 102, 255, 0.1)',
+                  color: '#0066FF',
+                  fontWeight: 500,
+                  border: '1px solid rgba(0, 102, 255, 0.2)',
+                }}
+              />
+            ))}
+          </Box>
+          
+          <Button
+            component={Link}
+            href="/auth/pricing"
+            variant="contained"
+            size="large"
+            startIcon={<Crown size={18} />}
+            sx={{
+              px: 4,
+              py: 1.5,
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, #0066FF 0%, #00D4FF 100%)',
+              boxShadow: '0 8px 24px rgba(0, 102, 255, 0.4)',
+              fontWeight: 700,
+              fontSize: '1rem',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #0052CC 0%, #00B8D9 100%)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 12px 28px rgba(0, 102, 255, 0.5)',
+              },
+            }}
+          >
+            Unlock Premium Features
+          </Button>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+};
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [paymentStatus, setPaymentStatus] = useState<any>(null);
+  const theme = useTheme();
   const [mt5Account, setMt5Account] = useState<MT5Account | null>(null);
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
   const [robots, setRobots] = useState<Robot[]>([]);
@@ -59,6 +329,58 @@ export default function DashboardPage() {
   const [totalProfit, setTotalProfit] = useState(0);
   const [totalTrades, setTotalTrades] = useState(0);
   const [activeRobots, setActiveRobots] = useState(0);
+  const [user, setUser] = useState<any>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+    
+    // Check subscription status
+    const checkSubscription = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
+        const response = await fetch('/api/subscription/status', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setIsSubscribed(data.isActive || data.status === 'active');
+        }
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+      }
+    };
+    
+    // Fetch wallet balance
+    const fetchWalletBalance = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+        const response = await fetch(`${API_URL}/api/wallet/balance`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setWalletBalance(data.wallet?.balance || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching wallet balance:', error);
+      }
+    };
+    
+    checkSubscription();
+    fetchWalletBalance();
+  }, []);
 
   const fetchAllData = useCallback(async (showRefresh = false) => {
     const token = localStorage.getItem('token');
@@ -70,11 +392,7 @@ export default function DashboardPage() {
     if (showRefresh) setRefreshing(true);
 
     try {
-      // Fetch all data in parallel
-      const [paymentRes, mt5Res, tradesRes, robotsRes] = await Promise.all([
-        fetch('/api/payment-proof/status', {
-          headers: { Authorization: `Bearer ${token}` },
-        }).catch(() => null),
+      const [mt5Res, tradesRes, robotsRes] = await Promise.all([
         fetch('/api/user/mt5-account', {
           headers: { Authorization: `Bearer ${token}` },
         }).catch(() => null),
@@ -86,19 +404,11 @@ export default function DashboardPage() {
         }).catch(() => null),
       ]);
 
-      // Process payment status
-      if (paymentRes?.ok) {
-        const data = await paymentRes.json();
-        setPaymentStatus(data);
-      }
-
-      // Process MT5 account data
       if (mt5Res?.ok) {
         const data = await mt5Res.json();
         setMt5Account(data.account);
       }
 
-      // Process recent trades
       if (tradesRes?.ok) {
         const data = await tradesRes.json();
         setRecentTrades(data.trades || []);
@@ -106,7 +416,6 @@ export default function DashboardPage() {
         setTotalProfit(data.totalProfit || 0);
       }
 
-      // Process robots
       if (robotsRes?.ok) {
         const data = await robotsRes.json();
         setRobots(data.robots || []);
@@ -122,20 +431,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchAllData();
-    
-    // Set up auto-refresh every 30 seconds for real-time updates
-    const interval = setInterval(() => {
-      fetchAllData();
-    }, 30000);
-
+    const interval = setInterval(() => fetchAllData(), 30000);
     return () => clearInterval(interval);
   }, [fetchAllData]);
 
-  const handleRefresh = () => {
-    fetchAllData(true);
-  };
+  const handleRefresh = () => fetchAllData(true);
 
-  // Start a robot
   const startRobot = async (robotId: string) => {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -151,9 +452,8 @@ export default function DashboardPage() {
       });
       
       if (response.ok) {
-        // Update local state immediately
         setRobots(prev => prev.map(r => 
-          r.id.toString() === robotId ? { ...r, status: 'running' as const } : r
+          r.id === robotId ? { ...r, status: 'running' as const } : r
         ));
         setActiveRobots(prev => prev + 1);
       }
@@ -162,7 +462,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Stop a robot
   const stopRobot = async (robotId: string) => {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -170,15 +469,12 @@ export default function DashboardPage() {
     try {
       const response = await fetch(`/api/user/robots/${robotId}/stop`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
       
       if (response.ok) {
-        // Update local state immediately
         setRobots(prev => prev.map(r => 
-          r.id.toString() === robotId ? { ...r, status: 'stopped' as const } : r
+          r.id === robotId ? { ...r, status: 'stopped' as const } : r
         ));
         setActiveRobots(prev => Math.max(0, prev - 1));
       }
@@ -196,39 +492,130 @@ export default function DashboardPage() {
     const diffDays = Math.floor(diffMs / 86400000);
 
     if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} min ago`;
-    if (diffHours < 24) return `${diffHours} hours ago`;
-    return `${diffDays} days ago`;
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
   };
 
   const isAccountConnected = mt5Account && mt5Account.status === 'connected';
 
+  // Robot color schemes
+  const robotColors: Record<string, { gradient: string; border: string; glow: string }> = {
+    'ema-pullback': { gradient: 'linear-gradient(135deg, #059669 0%, #047857 100%)', border: '#10b981', glow: '0 0 20px rgba(16, 185, 129, 0.3)' },
+    'break-retest': { gradient: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)', border: '#a855f7', glow: '0 0 20px rgba(168, 85, 247, 0.3)' },
+    'liquidity-sweep': { gradient: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', border: '#3b82f6', glow: '0 0 20px rgba(59, 130, 246, 0.3)' },
+    'london-breakout': { gradient: 'linear-gradient(135deg, #ea580c 0%, #dc2626 100%)', border: '#f97316', glow: '0 0 20px rgba(249, 115, 22, 0.3)' },
+    'order-block': { gradient: 'linear-gradient(135deg, #db2777 0%, #be185d 100%)', border: '#ec4899', glow: '0 0 20px rgba(236, 72, 153, 0.3)' },
+    'vwap-reversion': { gradient: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)', border: '#06b6d4', glow: '0 0 20px rgba(6, 182, 212, 0.3)' },
+    'fib-continuation': { gradient: 'linear-gradient(135deg, #ca8a04 0%, #a16207 100%)', border: '#eab308', glow: '0 0 20px rgba(234, 179, 8, 0.3)' },
+    'rsi-divergence': { gradient: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)', border: '#ef4444', glow: '0 0 20px rgba(239, 68, 68, 0.3)' },
+  };
+
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Box>
-          <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-            Welcome to AlgoEdge
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Monitor your automated trading performance
-          </Typography>
-        </Box>
-        <Button
-          variant="outlined"
-          startIcon={refreshing ? <CircularProgress size={16} /> : <RefreshCw size={16} />}
-          onClick={handleRefresh}
-          disabled={refreshing}
+      {/* Upgrade Banner for Unsubscribed Users */}
+      {!isSubscribed && (
+        <Alert
+          severity="info"
+          sx={{
+            mb: 3,
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, rgba(0, 102, 255, 0.1) 0%, rgba(0, 212, 255, 0.05) 100%)',
+            border: '1px solid rgba(0, 102, 255, 0.3)',
+            '& .MuiAlert-icon': {
+              color: '#0066FF',
+            },
+          }}
+          icon={<Crown size={24} />}
+          action={
+            <Button
+              component={Link}
+              href="/auth/pricing"
+              variant="contained"
+              size="small"
+              endIcon={<ChevronRight size={16} />}
+              sx={{
+                borderRadius: 2,
+                background: 'linear-gradient(135deg, #0066FF 0%, #00D4FF 100%)',
+                boxShadow: '0 4px 14px rgba(0, 102, 255, 0.4)',
+                fontWeight: 600,
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #0052CC 0%, #00B8D9 100%)',
+                },
+              }}
+            >
+              Upgrade Now
+            </Button>
+          }
         >
-          Refresh
-        </Button>
+          <Box>
+            <Typography sx={{ fontWeight: 700, color: '#0066FF' }}>
+              Unlock Premium Features
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              Get access to trading signals, robots, analytics, and more. Upgrade to start automated trading.
+            </Typography>
+          </Box>
+        </Alert>
+      )}
+
+      {/* Header Section */}
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
+          <Box>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 800, 
+                letterSpacing: '-0.5px',
+                background: 'linear-gradient(135deg, #0066FF 0%, #00D4FF 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mb: 0.5,
+              }}
+            >
+              Welcome back, {user?.username || 'Trader'}
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Monitor your automated trading performance and manage your bots.
+            </Typography>
+          </Box>
+          <Button
+            variant="outlined"
+            startIcon={refreshing ? <CircularProgress size={16} color="inherit" /> : <RefreshCw size={16} />}
+            onClick={handleRefresh}
+            disabled={refreshing}
+            sx={{
+              borderRadius: 2,
+              px: 2.5,
+              py: 1,
+              borderColor: alpha(theme.palette.primary.main, 0.3),
+              '&:hover': {
+                borderColor: 'primary.main',
+                bgcolor: alpha(theme.palette.primary.main, 0.05),
+              },
+            }}
+          >
+            Refresh
+          </Button>
+        </Box>
       </Box>
 
       {/* MT5 Connection Alert */}
       {!loading && !isAccountConnected && (
         <Alert
           severity="warning"
-          sx={{ mb: 4 }}
+          sx={{ 
+            mb: 4,
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: alpha('#F59E0B', 0.3),
+            bgcolor: alpha('#F59E0B', 0.05),
+            '& .MuiAlert-icon': {
+              color: '#F59E0B',
+            },
+          }}
           icon={<LinkIcon size={24} />}
           action={
             <Button
@@ -237,406 +624,321 @@ export default function DashboardPage() {
               variant="contained"
               size="small"
               startIcon={<LinkIcon size={16} />}
+              sx={{
+                borderRadius: 2,
+                background: 'linear-gradient(135deg, #0066FF 0%, #00D4FF 100%)',
+                boxShadow: '0 4px 14px rgba(0, 102, 255, 0.3)',
+              }}
             >
-              Connect Account
+              Connect MT5
             </Button>
           }
         >
-          <AlertTitle>MT5 Account Not Connected</AlertTitle>
+          <AlertTitle sx={{ fontWeight: 700 }}>MT5 Account Not Connected</AlertTitle>
           <Typography variant="body2">
-            Connect your MetaTrader 5 account to see your real balance and enable automated trading with our bots.
+            Connect your MetaTrader 5 account to enable automated trading and view real-time statistics.
           </Typography>
         </Alert>
       )}
 
-      {/* Stats Cards */}
+      {/* Stats Grid */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Balance Card - Only show if MT5 connected */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Box
-                  sx={{
-                    p: 1,
-                    borderRadius: 2,
-                    bgcolor: 'primary.main',
-                    color: 'white',
-                    mr: 2,
-                  }}
-                >
-                  <DollarSign size={24} />
-                </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Balance
-                  </Typography>
-                  {loading ? (
-                    <Skeleton width={100} height={32} />
-                  ) : isAccountConnected ? (
-                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                      ${mt5Account?.balance?.toLocaleString() ?? '0.00'}
-                    </Typography>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      Connect MT5
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-              {isAccountConnected && mt5Account?.equity && (
-                <Typography variant="caption" color="text.secondary">
-                  Equity: ${mt5Account.equity.toLocaleString()}
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
+        <Grid item xs={12} sm={6} lg={3}>
+          <StatCard
+            title="Account Balance"
+            value={isAccountConnected ? `$${mt5Account?.balance?.toLocaleString() ?? '0'}` : '--'}
+            subtitle={isAccountConnected && mt5Account?.equity ? `Equity: $${mt5Account.equity.toLocaleString()}` : 'Connect MT5 to view'}
+            icon={DollarSign}
+            color="primary"
+            loading={loading}
+          />
         </Grid>
-
-        {/* Profit Card */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Box
-                  sx={{
-                    p: 1,
-                    borderRadius: 2,
-                    bgcolor: totalProfit >= 0 ? 'success.main' : 'error.main',
-                    color: 'white',
-                    mr: 2,
-                  }}
-                >
-                  {totalProfit >= 0 ? <TrendingUp size={24} /> : <TrendingDown size={24} />}
-                </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Profit
-                  </Typography>
-                  {loading ? (
-                    <Skeleton width={100} height={32} />
-                  ) : isAccountConnected ? (
-                    <>
-                      <Typography
-                        variant="h5"
-                        sx={{
-                          fontWeight: 600,
-                          color: totalProfit >= 0 ? 'success.main' : 'error.main',
-                        }}
-                      >
-                        {totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(2)}
-                      </Typography>
-                    </>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      Connect MT5
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
+        <Grid item xs={12} sm={6} lg={3}>
+          <StatCard
+            title="Total Profit"
+            value={isAccountConnected ? `${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}` : '--'}
+            subtitle={isAccountConnected ? 'All time performance' : 'Connect MT5 to view'}
+            icon={totalProfit >= 0 ? TrendingUp : TrendingDown}
+            trend={isAccountConnected ? (totalProfit >= 0 ? 'up' : 'down') : undefined}
+            trendValue={isAccountConnected ? `${totalProfit >= 0 ? '+' : ''}${((totalProfit / (mt5Account?.balance || 1)) * 100).toFixed(1)}%` : undefined}
+            color={totalProfit >= 0 ? 'success' : 'error'}
+            loading={loading}
+          />
         </Grid>
-
-        {/* Active Robots Card */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Box
-                  sx={{
-                    p: 1,
-                    borderRadius: 2,
-                    bgcolor: 'info.main',
-                    color: 'white',
-                    mr: 2,
-                  }}
-                >
-                  <Activity size={24} />
-                </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Active Robots
-                  </Typography>
-                  {loading ? (
-                    <Skeleton width={50} height={32} />
-                  ) : (
-                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                      {activeRobots}
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
+        <Grid item xs={12} sm={6} lg={3}>
+          <StatCard
+            title="Active Robots"
+            value={`${activeRobots}/${robots.length}`}
+            subtitle="Trading bots running"
+            icon={Bot}
+            color="info"
+            loading={loading}
+            onClick={() => router.push('/dashboard/robots')}
+          />
         </Grid>
-
-        {/* Total Trades Card */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Box
-                  sx={{
-                    p: 1,
-                    borderRadius: 2,
-                    bgcolor: 'secondary.main',
-                    color: 'white',
-                    mr: 2,
-                  }}
-                >
-                  <Users size={24} />
-                </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Trades
-                  </Typography>
-                  {loading ? (
-                    <Skeleton width={50} height={32} />
-                  ) : isAccountConnected ? (
-                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                      {totalTrades}
-                    </Typography>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      Connect MT5
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
+        <Grid item xs={12} sm={6} lg={3}>
+          <StatCard
+            title="Total Trades"
+            value={isAccountConnected ? totalTrades.toString() : '--'}
+            subtitle={isAccountConnected ? 'Executed trades' : 'Connect MT5 to view'}
+            icon={Activity}
+            color="warning"
+            loading={loading}
+            onClick={() => router.push('/dashboard/history')}
+          />
         </Grid>
       </Grid>
 
-      {/* Quick Actions */}
-      <Grid container spacing={3}>
-        {/* Trading Robots Section - Full Width */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Trading Robots
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Manage your automated trading bots - {activeRobots} of {robots.length} running
-                  </Typography>
-                </Box>
-                <Button
-                  component={Link}
-                  href="/dashboard/robots"
-                  variant="outlined"
-                  size="small"
-                  disabled={!isAccountConnected}
-                >
-                  Advanced Settings
-                </Button>
+      {/* Trading Robots Section */}
+      {!isSubscribed ? (
+        <LockedFeatureCard
+          title="Trading Robots"
+          description="Access our AI-powered trading bots that work 24/7 to maximize your profits with advanced algorithms."
+          icon={Bot}
+          features={['8 AI Algorithms', 'Auto Trading', '24/7 Operation', 'Risk Management']}
+        />
+      ) : (
+      <Card 
+        sx={{ 
+          mb: 4, 
+          borderRadius: 3, 
+          border: '1px solid',
+          borderColor: alpha(theme.palette.divider, 0.1),
+          overflow: 'hidden',
+        }}
+      >
+        <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: alpha(theme.palette.divider, 0.1) }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box
+                sx={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'linear-gradient(135deg, rgba(0, 102, 255, 0.1) 0%, rgba(0, 212, 255, 0.05) 100%)',
+                }}
+              >
+                <Bot size={24} color="#0066FF" />
               </Box>
-              
-              {!isAccountConnected ? (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  <Typography variant="body2">
-                    Connect your MT5 account to activate and use trading robots.
-                  </Typography>
-                </Alert>
-              ) : loading ? (
-                <Grid container spacing={2}>
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                    <Grid item xs={12} sm={6} md={3} key={i}>
-                      <Skeleton height={80} />
-                    </Grid>
-                  ))}
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Trading Robots
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {activeRobots} of {robots.length} bots active
+                </Typography>
+              </Box>
+            </Box>
+            <Button
+              component={Link}
+              href="/dashboard/robots"
+              variant="outlined"
+              size="small"
+              endIcon={<ExternalLink size={14} />}
+              disabled={!isAccountConnected}
+              sx={{ borderRadius: 2 }}
+            >
+              Manage All
+            </Button>
+          </Box>
+        </Box>
+        
+        <CardContent sx={{ p: 3 }}>
+          {!isAccountConnected ? (
+            <Alert 
+              severity="info" 
+              sx={{ 
+                borderRadius: 2,
+                bgcolor: alpha(theme.palette.info.main, 0.05),
+                border: '1px solid',
+                borderColor: alpha(theme.palette.info.main, 0.2),
+              }}
+            >
+              Connect your MT5 account to activate and manage trading robots.
+            </Alert>
+          ) : loading ? (
+            <Grid container spacing={2}>
+              {[1, 2, 3, 4].map((i) => (
+                <Grid item xs={12} sm={6} lg={3} key={i}>
+                  <Skeleton variant="rounded" height={120} sx={{ borderRadius: 2 }} />
                 </Grid>
-              ) : robots.length > 0 ? (
-                <Grid container spacing={2}>
-                  {robots.map((robot: any) => {
-                    const isRunning = robot.status === 'running';
-                    
-                    // Unique color for each robot
-                    const robotColors: Record<string, { gradient: string; border: string; glow: string }> = {
-                      'ema-pullback': { 
-                        gradient: isRunning 
-                          ? 'linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%)'
-                          : 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)',
-                        border: '#10b981', 
-                        glow: '0 0 20px rgba(16, 185, 129, 0.4)' 
-                      },
-                      'break-retest': { 
-                        gradient: isRunning
-                          ? 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 50%, #5b21b6 100%)'
-                          : 'linear-gradient(135deg, #4c1d95 0%, #2e1065 100%)',
-                        border: '#a855f7', 
-                        glow: '0 0 20px rgba(168, 85, 247, 0.4)' 
-                      },
-                      'liquidity-sweep': { 
-                        gradient: isRunning
-                          ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%)'
-                          : 'linear-gradient(135deg, #1e3a8a 0%, #172554 100%)',
-                        border: '#3b82f6', 
-                        glow: '0 0 20px rgba(59, 130, 246, 0.4)' 
-                      },
-                      'london-breakout': { 
-                        gradient: isRunning
-                          ? 'linear-gradient(135deg, #ea580c 0%, #dc2626 50%, #b91c1c 100%)'
-                          : 'linear-gradient(135deg, #7c2d12 0%, #431407 100%)',
-                        border: '#f97316', 
-                        glow: '0 0 20px rgba(249, 115, 22, 0.4)' 
-                      },
-                      'order-block': { 
-                        gradient: isRunning
-                          ? 'linear-gradient(135deg, #db2777 0%, #be185d 50%, #9d174d 100%)'
-                          : 'linear-gradient(135deg, #831843 0%, #500724 100%)',
-                        border: '#ec4899', 
-                        glow: '0 0 20px rgba(236, 72, 153, 0.4)' 
-                      },
-                      'vwap-reversion': { 
-                        gradient: isRunning
-                          ? 'linear-gradient(135deg, #0891b2 0%, #0e7490 50%, #155e75 100%)'
-                          : 'linear-gradient(135deg, #164e63 0%, #083344 100%)',
-                        border: '#06b6d4', 
-                        glow: '0 0 20px rgba(6, 182, 212, 0.4)' 
-                      },
-                      'fib-continuation': { 
-                        gradient: isRunning
-                          ? 'linear-gradient(135deg, #ca8a04 0%, #a16207 50%, #854d0e 100%)'
-                          : 'linear-gradient(135deg, #713f12 0%, #422006 100%)',
-                        border: '#eab308', 
-                        glow: '0 0 20px rgba(234, 179, 8, 0.4)' 
-                      },
-                      'rsi-divergence': { 
-                        gradient: isRunning
-                          ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)'
-                          : 'linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%)',
-                        border: '#ef4444', 
-                        glow: '0 0 20px rgba(239, 68, 68, 0.4)' 
-                      },
-                    };
-                    
-                    const colors = robotColors[robot.id] || robotColors['ema-pullback'];
-                    
-                    return (
-                      <Grid item xs={12} sm={6} md={3} key={robot.id}>
-                        <Box
-                          sx={{
-                            p: 2,
-                            borderRadius: 2,
-                            border: '1px solid',
-                            borderColor: colors.border,
-                            background: colors.gradient,
-                            transition: 'all 0.3s ease',
-                            boxShadow: isRunning ? colors.glow : 'none',
-                            '&:hover': {
-                              transform: 'translateY(-2px)',
-                              boxShadow: colors.glow,
-                            },
+              ))}
+            </Grid>
+          ) : robots.length > 0 ? (
+            <Grid container spacing={2}>
+              {robots.slice(0, 8).map((robot) => {
+                const isRunning = robot.status === 'running';
+                const colors = robotColors[robot.id] || robotColors['ema-pullback'];
+                
+                return (
+                  <Grid item xs={12} sm={6} lg={3} key={robot.id}>
+                    <Box
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 3,
+                        border: '1px solid',
+                        borderColor: isRunning ? colors.border : alpha(colors.border, 0.3),
+                        background: isRunning 
+                          ? colors.gradient
+                          : theme.palette.mode === 'dark' 
+                            ? 'rgba(30, 41, 59, 0.5)'
+                            : 'rgba(248, 250, 252, 0.8)',
+                        transition: 'all 0.3s ease',
+                        boxShadow: isRunning ? colors.glow : 'none',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: colors.glow,
+                        },
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                        <Typography 
+                          variant="subtitle2" 
+                          sx={{ 
+                            fontWeight: 700, 
+                            color: isRunning ? 'white' : 'text.primary',
+                            lineHeight: 1.2,
                           }}
                         >
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                fontWeight: 600, 
-                                color: 'white',
-                                fontSize: '0.85rem',
-                                textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                              }}
-                            >
-                              {robot.name}
-                            </Typography>
-                            <Chip
-                              label={isRunning ? 'ON' : 'OFF'}
-                              size="small"
-                              sx={{
-                                height: 20,
-                                fontSize: '0.65rem',
-                                fontWeight: 'bold',
-                                bgcolor: isRunning ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
-                                color: 'white',
-                                border: `1px solid ${isRunning ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)'}`,
-                              }}
-                            />
-                          </Box>
-                          <Typography 
-                            variant="caption" 
-                            sx={{ 
-                              color: 'rgba(255,255,255,0.8)',
-                              display: 'block',
-                              mb: 1.5,
-                              lineHeight: 1.3,
-                              minHeight: 32,
-                            }}
-                          >
-                            {robot.strategy || 'AI Strategy'}
-                          </Typography>
-                          <Button
-                            variant="contained"
-                            size="small"
-                            fullWidth
-                            onClick={() => isRunning ? stopRobot(robot.id) : startRobot(robot.id)}
-                            startIcon={isRunning ? <Square size={12} /> : <Play size={12} />}
-                            sx={{
-                              height: 28,
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              background: isRunning 
-                                ? 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)'
-                                : `linear-gradient(135deg, ${colors.border} 0%, ${colors.border}cc 100%)`,
-                              border: `1px solid ${isRunning ? 'rgba(255,255,255,0.3)' : colors.border}`,
-                              color: 'white',
-                              '&:hover': {
-                                background: isRunning 
-                                  ? 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.1) 100%)'
-                                  : `linear-gradient(135deg, ${colors.border}ee 0%, ${colors.border} 100%)`,
-                                boxShadow: `0 4px 12px ${colors.border}66`,
-                              },
-                            }}
-                          >
-                            {isRunning ? 'Stop' : 'Start'}
-                          </Button>
-                        </Box>
-                      </Grid>
-                    );
-                  })}
-                </Grid>
-              ) : (
-                <Alert severity="warning">
-                  <Typography variant="body2">
-                    No robots available. Please refresh the page or contact support.
-                  </Typography>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
+                          {robot.name}
+                        </Typography>
+                        <Chip
+                          label={isRunning ? 'LIVE' : 'OFF'}
+                          size="small"
+                          sx={{
+                            height: 22,
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            bgcolor: isRunning ? 'rgba(255,255,255,0.2)' : alpha(theme.palette.text.secondary, 0.1),
+                            color: isRunning ? 'white' : 'text.secondary',
+                            border: `1px solid ${isRunning ? 'rgba(255,255,255,0.3)' : alpha(theme.palette.divider, 0.2)}`,
+                          }}
+                        />
+                      </Box>
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: isRunning ? 'rgba(255,255,255,0.8)' : 'text.secondary',
+                          display: 'block',
+                          mb: 2,
+                          minHeight: 32,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {robot.strategy || 'AI-Powered Strategy'}
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        fullWidth
+                        onClick={() => isRunning ? stopRobot(robot.id) : startRobot(robot.id)}
+                        startIcon={isRunning ? <Square size={14} /> : <Play size={14} />}
+                        sx={{
+                          height: 36,
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          borderRadius: 2,
+                          background: isRunning 
+                            ? 'rgba(255,255,255,0.15)'
+                            : colors.gradient,
+                          border: isRunning ? '1px solid rgba(255,255,255,0.3)' : 'none',
+                          color: 'white',
+                          boxShadow: isRunning ? 'none' : `0 4px 14px ${alpha(colors.border, 0.4)}`,
+                          '&:hover': {
+                            background: isRunning 
+                              ? 'rgba(255,255,255,0.25)'
+                              : colors.gradient,
+                            boxShadow: `0 6px 20px ${alpha(colors.border, 0.5)}`,
+                          },
+                        }}
+                      >
+                        {isRunning ? 'Stop Bot' : 'Start Bot'}
+                      </Button>
+                    </Box>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          ) : (
+            <Alert 
+              severity="warning"
+              sx={{ 
+                borderRadius: 2,
+                bgcolor: alpha(theme.palette.warning.main, 0.05),
+                border: '1px solid',
+                borderColor: alpha(theme.palette.warning.main, 0.2),
+              }}
+            >
+              No trading robots available. Please contact support.
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+      )}
 
-        {/* Recent Trades Section */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                Recent Trades
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Your latest trading activity
-              </Typography>
-              
-              {!isAccountConnected ? (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  <Typography variant="body2">
-                    Connect your MT5 account to view your trade history.
+      {/* Bottom Grid - Recent Trades & Quick Actions */}
+      <Grid container spacing={3}>
+        {/* Recent Trades */}
+        <Grid item xs={12} lg={7}>
+          <Card 
+            sx={{ 
+              height: '100%',
+              borderRadius: 3, 
+              border: '1px solid',
+              borderColor: alpha(theme.palette.divider, 0.1),
+            }}
+          >
+            <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: alpha(theme.palette.divider, 0.1) }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)',
+                  }}
+                >
+                  <Activity size={24} color="#22C55E" />
+                </Box>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    Recent Trades
                   </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Your latest trading activity
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+            
+            <CardContent sx={{ p: 3 }}>
+              {!isAccountConnected ? (
+                <Alert 
+                  severity="info"
+                  sx={{ 
+                    borderRadius: 2,
+                    bgcolor: alpha(theme.palette.info.main, 0.05),
+                    border: '1px solid',
+                    borderColor: alpha(theme.palette.info.main, 0.2),
+                  }}
+                >
+                  Connect your MT5 account to view trade history.
                 </Alert>
               ) : loading ? (
                 <Box>
                   {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} height={60} sx={{ mb: 1 }} />
+                    <Skeleton key={i} variant="rounded" height={64} sx={{ mb: 1.5, borderRadius: 2 }} />
                   ))}
                 </Box>
               ) : recentTrades.length > 0 ? (
                 <Box>
-                  {recentTrades.map((trade) => (
+                  {recentTrades.map((trade, index) => (
                     <Box
                       key={trade.id}
                       sx={{
@@ -644,100 +946,254 @@ export default function DashboardPage() {
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         p: 2,
-                        mb: 1,
+                        mb: index < recentTrades.length - 1 ? 1.5 : 0,
                         borderRadius: 2,
-                        bgcolor: 'background.paper',
+                        bgcolor: alpha(theme.palette.background.paper, 0.5),
                         border: '1px solid',
-                        borderColor: 'divider',
+                        borderColor: alpha(theme.palette.divider, 0.1),
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          bgcolor: alpha(theme.palette.primary.main, 0.05),
+                          borderColor: alpha(theme.palette.primary.main, 0.2),
+                        },
                       }}
                     >
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {trade.symbol}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {trade.type} • {trade.volume} lots • {getTimeAgo(trade.openTime)}
-                        </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            bgcolor: trade.type === 'BUY' 
+                              ? alpha('#22C55E', 0.1)
+                              : alpha('#EF4444', 0.1),
+                            color: trade.type === 'BUY' ? '#22C55E' : '#EF4444',
+                            fontWeight: 700,
+                            fontSize: '0.75rem',
+                          }}
+                        >
+                          {trade.type}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {trade.symbol}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {trade.volume} lots • {getTimeAgo(trade.openTime)}
+                          </Typography>
+                        </Box>
                       </Box>
                       <Typography
                         variant="body2"
                         sx={{
-                          fontWeight: 600,
-                          color: trade.profit >= 0 ? 'success.main' : 'error.main',
+                          fontWeight: 700,
+                          color: trade.profit >= 0 ? '#22C55E' : '#EF4444',
                         }}
                       >
                         {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
                       </Typography>
                     </Box>
                   ))}
+                  <Button
+                    component={Link}
+                    href="/dashboard/history"
+                    variant="outlined"
+                    fullWidth
+                    sx={{ mt: 2, borderRadius: 2 }}
+                  >
+                    View All Trades
+                  </Button>
                 </Box>
               ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  No trades yet. Activate a robot to start trading.
-                </Typography>
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Activity size={48} color={theme.palette.text.secondary} style={{ opacity: 0.5 }} />
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                    No trades yet. Start a robot to begin trading.
+                  </Typography>
+                </Box>
               )}
-              
-              <Button
-                component={Link}
-                href="/dashboard/history"
-                variant="outlined"
-                fullWidth
-                sx={{ mt: 2 }}
-                disabled={!isAccountConnected}
-              >
-                View All Trades
-              </Button>
             </CardContent>
           </Card>
         </Grid>
-      </Grid>
 
-      {/* External CTAs */}
-      <Box sx={{ mt: 4 }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6}>
-            <Card sx={{ bgcolor: '#25D366', color: 'white' }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Need Help?
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 2 }}>
-                  Contact us on WhatsApp for support
-                </Typography>
+        {/* Quick Actions */}
+        <Grid item xs={12} lg={5}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, height: '100%' }}>
+            {/* WhatsApp Card */}
+            <Card
+              sx={{
+                borderRadius: 3,
+                overflow: 'hidden',
+                background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                color: 'white',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 20px 40px rgba(37, 211, 102, 0.3)',
+                },
+              }}
+              onClick={() => window.open(process.env.NEXT_PUBLIC_WHATSAPP_URL || 'https://wa.me/', '_blank')}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
+                  <Box
+                    sx={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: 'rgba(255,255,255,0.2)',
+                    }}
+                  >
+                    <Signal size={24} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      Need Help?
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      Chat with our support team
+                    </Typography>
+                  </Box>
+                </Box>
                 <Button
                   variant="contained"
-                  sx={{ bgcolor: 'white', color: '#25D366', '&:hover': { bgcolor: '#f0f0f0' } }}
-                  href={process.env.NEXT_PUBLIC_WHATSAPP_URL || 'https://wa.me/'}
-                  target="_blank"
+                  fullWidth
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    fontWeight: 600,
+                    borderRadius: 2,
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.3)',
+                    },
+                  }}
                 >
-                  Chat on WhatsApp
+                  Open WhatsApp
                 </Button>
               </CardContent>
             </Card>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Card sx={{ bgcolor: '#E4405F', color: 'white' }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Follow Us
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 2 }}>
-                  Stay updated on Instagram
-                </Typography>
+
+            {/* Instagram Card */}
+            <Card
+              sx={{
+                borderRadius: 3,
+                overflow: 'hidden',
+                background: 'linear-gradient(135deg, #E4405F 0%, #833AB4 50%, #FD1D1D 100%)',
+                color: 'white',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 20px 40px rgba(228, 64, 95, 0.3)',
+                },
+              }}
+              onClick={() => window.open(process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://instagram.com/', '_blank')}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
+                  <Box
+                    sx={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: 'rgba(255,255,255,0.2)',
+                    }}
+                  >
+                    <Zap size={24} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      Follow Us
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      Stay updated with latest news
+                    </Typography>
+                  </Box>
+                </Box>
                 <Button
                   variant="contained"
-                  sx={{ bgcolor: 'white', color: '#E4405F', '&:hover': { bgcolor: '#f0f0f0' } }}
-                  href={process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://instagram.com/'}
-                  target="_blank"
+                  fullWidth
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    fontWeight: 600,
+                    borderRadius: 2,
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.3)',
+                    },
+                  }}
                 >
                   Follow on Instagram
                 </Button>
               </CardContent>
             </Card>
-          </Grid>
+
+            {/* Wallet Card */}
+            <Card
+              sx={{
+                flex: 1,
+                borderRadius: 3,
+                border: '1px solid',
+                borderColor: alpha(theme.palette.divider, 0.1),
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.1)}`,
+                  borderColor: alpha(theme.palette.primary.main, 0.3),
+                },
+              }}
+              onClick={() => router.push('/dashboard/wallet')}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
+                  <Box
+                    sx={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'linear-gradient(135deg, rgba(0, 102, 255, 0.1) 0%, rgba(0, 212, 255, 0.05) 100%)',
+                    }}
+                  >
+                    <Wallet size={24} color="#0066FF" />
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      Your Wallet
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Manage deposits & withdrawals
+                    </Typography>
+                  </Box>
+                </Box>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  sx={{
+                    borderRadius: 2,
+                    borderColor: alpha(theme.palette.primary.main, 0.3),
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                      bgcolor: alpha(theme.palette.primary.main, 0.05),
+                    },
+                  }}
+                >
+                  Open Wallet
+                </Button>
+              </CardContent>
+            </Card>
+          </Box>
         </Grid>
-      </Box>
+      </Grid>
     </Box>
   );
 }

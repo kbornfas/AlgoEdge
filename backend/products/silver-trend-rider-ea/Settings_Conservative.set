@@ -1,0 +1,63 @@
+; Silver Trend Rider EA - Conservative Settings
+; Optimized for: Low Risk, Steady Growth
+; Account Size: $500-$2,000
+; Expected Monthly Return: 3-5%
+; Expected Max Drawdown: 8-12%
+
+; === Core Settings ===
+TradingMode=Auto
+MagicNumber=354789
+TradeComment=SilverTrend_Conservative
+
+; === Trend Analysis ===
+TrendPeriod=50
+TrendFilter=100
+MinTrendStrength=0.003
+UseHTFFilter=true
+
+; === Entry Settings ===
+EntryMode=Pullback
+PullbackPercent=38.2
+RSI_Period=14
+RSI_OB=65
+RSI_OS=35
+
+; === Risk Management ===
+RiskMode=Percent
+RiskPercent=1.0
+FixedLots=0.01
+MaxLots=0.5
+MaxDailyTrades=3
+MaxDailyDrawdown=3.0
+
+; === Stop Loss & Take Profit ===
+SL_Mode=ATR
+SL_Points=600
+ATR_Multiplier=2.5
+TP_Mode=RiskReward
+RiskRewardRatio=1.5
+UseTrailing=true
+TrailingStart=400
+TrailingStep=100
+
+; === Partial Close ===
+UsePartialClose=true
+PartialClose1_Pct=50
+PartialClose1_RR=1.0
+PartialClose2_Pct=30
+PartialClose2_RR=1.3
+
+; === Session Filter ===
+UseSessionFilter=true
+TradingStartHour=9
+TradingEndHour=18
+TradeMonday=false
+TradeFriday=false
+FridayCloseHour=16
+
+; === Spread & News ===
+MaxSpread=25
+MaxSlippage=15
+UseNewsFilter=true
+NewsMinutesBefore=90
+NewsMinutesAfter=60

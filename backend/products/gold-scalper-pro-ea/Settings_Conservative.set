@@ -1,0 +1,43 @@
+; Gold Scalper Pro EA - Conservative Settings
+; Recommended for accounts $500-$2000
+; Risk Level: LOW
+
+[General]
+Risk_Percent=1.5
+Max_Daily_Loss_Percent=3.0
+Max_Spread=25
+Max_Slippage=5
+Magic_Number=123456
+Trade_Comment=GSP_Conservative
+
+[Sessions]
+Trade_London=true
+Trade_NewYork=true
+Trade_Asian=false
+Session_Buffer_Minutes=30
+
+[Entry]
+RSI_Period=14
+RSI_Oversold=25
+RSI_Overbought=75
+BB_Period=20
+BB_Deviation=2.2
+Min_Confluence_Score=5
+
+[Exit]
+Take_Profit_Pips=40
+Stop_Loss_Pips=20
+Use_Trailing_Stop=true
+Trailing_Start=25
+Trailing_Step=8
+Use_Break_Even=true
+Break_Even_Pips=15
+Break_Even_Plus=3
+
+[Filters]
+Max_Trades_Per_Day=3
+Min_Candle_Size=50
+Max_Candle_Size=500
+News_Filter=true
+News_Minutes_Before=60
+News_Minutes_After=30

@@ -1,0 +1,35 @@
+; News Trading Sniper EA - Fade Settings
+; Trade against the initial move after exhaustion
+
+[News Filter]
+TradeHighImpact=true
+TradeMediumImpact=false
+TradeLowImpact=false
+NewsCountries=USD
+SpecificEvents=FOMC,NFP,CPI
+ExcludeEvents=
+
+[Strategy Settings]
+Strategy=Fade
+MinutesBeforeNews=0
+RemoveOrdersAfter=0
+OrderDistance=0
+
+[Fade Settings]
+FadeAfterMinutes=5
+FadeMinMove=30
+FadeSL=25
+FadeTP=50
+FadeTrailStart=20
+FadeTrailStep=10
+
+[Risk Management]
+RiskPercent=1.5
+MaxSpread=40
+MaxSlippage=20
+MaxDailyRisk=4.0
+MaxEventsPerDay=2
+
+[Timing]
+UseServerTime=true
+TimeOffset=0

@@ -83,17 +83,13 @@ const ENV_CONFIG: EnvConfig[] = [
     required: false,
   },
 
-  // Stripe Payment (Optional for basic functionality)
+  // Whop Payment (Optional for basic functionality)
   {
-    name: 'STRIPE_SECRET_KEY',
+    name: 'WHOP_API_KEY',
     required: false,
   },
   {
-    name: 'STRIPE_WEBHOOK_SECRET',
-    required: false,
-  },
-  {
-    name: 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
+    name: 'WHOP_WEBHOOK_SECRET',
     required: false,
   },
 
@@ -179,8 +175,8 @@ export function validateEnvironment(): ValidationResult {
     }
 
     // Warn about missing optional but recommended variables
-    if (!process.env.STRIPE_SECRET_KEY) {
-      warnings.push('STRIPE_SECRET_KEY not set - payment processing will not be available');
+    if (!process.env.WHOP_API_KEY) {
+      warnings.push('WHOP_API_KEY not set - payment processing will not be available');
     }
 
     if (!process.env.METAAPI_TOKEN) {

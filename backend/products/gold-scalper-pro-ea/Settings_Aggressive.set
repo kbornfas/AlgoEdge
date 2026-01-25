@@ -1,0 +1,43 @@
+; Gold Scalper Pro EA - Aggressive Settings
+; Recommended for accounts $10000+
+; Risk Level: HIGH
+
+[General]
+Risk_Percent=3.0
+Max_Daily_Loss_Percent=8.0
+Max_Spread=40
+Max_Slippage=15
+Magic_Number=123458
+Trade_Comment=GSP_Aggressive
+
+[Sessions]
+Trade_London=true
+Trade_NewYork=true
+Trade_Asian=true
+Session_Buffer_Minutes=5
+
+[Entry]
+RSI_Period=10
+RSI_Oversold=35
+RSI_Overbought=65
+BB_Period=15
+BB_Deviation=1.8
+Min_Confluence_Score=3
+
+[Exit]
+Take_Profit_Pips=70
+Stop_Loss_Pips=35
+Use_Trailing_Stop=true
+Trailing_Start=15
+Trailing_Step=12
+Use_Break_Even=true
+Break_Even_Pips=12
+Break_Even_Plus=1
+
+[Filters]
+Max_Trades_Per_Day=10
+Min_Candle_Size=20
+Max_Candle_Size=800
+News_Filter=true
+News_Minutes_Before=30
+News_Minutes_After=15

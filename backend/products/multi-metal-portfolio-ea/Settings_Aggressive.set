@@ -1,0 +1,42 @@
+; Multi-Metal Portfolio EA - Aggressive Settings
+; For experienced traders with $10,000+ accounts
+
+[Portfolio Settings]
+TotalPortfolioRisk=5.0
+GoldAllocation=40
+SilverAllocation=35
+PlatinumAllocation=25
+MaxCorrelatedRisk=6.0
+EnableGold=true
+EnableSilver=true
+EnablePlatinum=true
+
+[Gold Settings]
+Gold_Strategy=TrendPullback
+Gold_Timeframe=H1
+Gold_TrendPeriod=50
+Gold_SL_ATR=1.5
+Gold_RiskReward=2.0
+Gold_MaxTrades=3
+
+[Silver Settings]
+Silver_Strategy=TrendPullback
+Silver_Timeframe=H1
+Silver_TrendPeriod=50
+Silver_SL_ATR=2.0
+Silver_RiskReward=2.0
+Silver_MaxTrades=3
+
+[Platinum Settings]
+Platinum_Strategy=Breakout
+Platinum_Timeframe=H4
+Platinum_SL_ATR=1.5
+Platinum_RiskReward=2.0
+Platinum_MaxTrades=2
+
+[Global Settings]
+MaxDailyLoss=8.0
+MaxWeeklyLoss=15.0
+TradingHoursStart=6
+TradingHoursEnd=22
+FridayCloseHour=18
