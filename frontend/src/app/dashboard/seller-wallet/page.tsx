@@ -128,7 +128,10 @@ export default function SellerWalletPage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   const fetchData = useCallback(async () => {
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -143,19 +146,52 @@ export default function SellerWalletPage() {
         }),
       ]);
 
-      if (!walletRes.ok) throw new Error('Failed to fetch seller wallet');
+      if (!walletRes.ok) {
+        // If API fails, use default wallet data
+        setWallet({
+          balance: 0,
+          pending_balance: 0,
+          total_earned: 0,
+          total_withdrawn: 0,
+          is_frozen: false,
+          pending_withdrawals: 0,
+        });
+        setRecentSales([]);
+        setWithdrawals([]);
+        return;
+      }
 
       const [walletData, withdrawData] = await Promise.all([
         walletRes.json(),
         withdrawRes.json(),
       ]);
 
-      setWallet(walletData.wallet);
+      // Ensure wallet has all required fields with defaults
+      const walletWithDefaults: SellerWallet = {
+        balance: walletData.wallet?.balance ?? 0,
+        pending_balance: walletData.wallet?.pending_balance ?? 0,
+        total_earned: walletData.wallet?.total_earned ?? 0,
+        total_withdrawn: walletData.wallet?.total_withdrawn ?? 0,
+        is_frozen: walletData.wallet?.is_frozen ?? false,
+        frozen_reason: walletData.wallet?.frozen_reason,
+        pending_withdrawals: walletData.wallet?.pending_withdrawals ?? 0,
+      };
+
+      setWallet(walletWithDefaults);
       setRecentSales(walletData.recent_sales || []);
       setWithdrawals(withdrawData.withdrawals || []);
     } catch (err: any) {
       console.error('Error fetching seller wallet:', err);
-      setError(err.message || 'Failed to load seller wallet');
+      // Set default wallet on error so page still renders
+      setWallet({
+        balance: 0,
+        pending_balance: 0,
+        total_earned: 0,
+        total_withdrawn: 0,
+        is_frozen: false,
+        pending_withdrawals: 0,
+      });
+      setError(err.message || 'Failed to load seller wallet data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -327,7 +363,7 @@ export default function SellerWalletPage() {
                 <Typography variant="subtitle2">Available Balance</Typography>
               </Box>
               <Typography variant="h3" fontWeight="bold">
-                ${wallet?.balance.toFixed(2) || '0.00'}
+                ${(wallet?.balance ?? 0).toFixed(2)}
               </Typography>
               {wallet && (wallet.pending_withdrawals || 0) > 0 && (
                 <Typography variant="body2" sx={{ opacity: 0.8, mt: 1 }}>
@@ -367,7 +403,7 @@ export default function SellerWalletPage() {
                 </Typography>
               </Box>
               <Typography variant="h4" fontWeight="bold" color="success.main">
-                ${wallet?.total_earned.toFixed(2) || '0.00'}
+                ${(wallet?.total_earned ?? 0).toFixed(2)}
               </Typography>
             </CardContent>
           </Card>
@@ -581,7 +617,7 @@ export default function SellerWalletPage() {
             <Paper sx={{ p: 2, mb: 3, bgcolor: 'success.50', border: '1px solid', borderColor: 'success.main' }}>
               <Typography variant="body2" color="text.secondary">Available Balance</Typography>
               <Typography variant="h5" fontWeight="bold" color="success.main">
-                ${wallet?.balance.toFixed(2) || '0.00'}
+                ${(wallet?.balance ?? 0).toFixed(2)}
               </Typography>
             </Paper>
 
@@ -594,7 +630,7 @@ export default function SellerWalletPage() {
               inputProps={{ min: 20, max: wallet?.balance || 0, step: 1 }}
               sx={{ mb: 2 }}
               required
-              helperText={`Min: $20 | Max: $${wallet?.balance.toFixed(2) || '0.00'}`}
+              helperText={`Min: $20 | Max: $${(wallet?.balance ?? 0).toFixed(2)}`}
             />
 
             <FormControl fullWidth sx={{ mb: 2 }}>

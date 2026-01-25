@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 import {
@@ -22,8 +22,108 @@ import {
   Pagination,
   Skeleton,
   CircularProgress,
+  alpha,
+  IconButton,
+  Tooltip,
+  LinearProgress,
 } from '@mui/material';
-import { Search, TrendingUp, TrendingDown, RefreshCw, Clock, CheckCircle } from 'lucide-react';
+import { 
+  Search, 
+  TrendingUp, 
+  TrendingDown, 
+  RefreshCw, 
+  Clock, 
+  CheckCircle,
+  Activity,
+  DollarSign,
+  BarChart3,
+  Target,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownRight,
+  Zap,
+  History,
+} from 'lucide-react';
+
+// GlassCard component for modern styling
+const GlassCard = ({ children, sx = {}, ...props }: { children: React.ReactNode; sx?: object; [key: string]: unknown }) => (
+  <Paper
+    elevation={0}
+    sx={{
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+      backdropFilter: 'blur(20px)',
+      border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: 3,
+      overflow: 'hidden',
+      ...sx,
+    }}
+    {...props}
+  >
+    {children}
+  </Paper>
+);
+
+// StatCard component for stats display
+const StatCard = ({ 
+  icon: Icon, 
+  label, 
+  value, 
+  color = '#10B981',
+  trend,
+  prefix = '',
+  suffix = '',
+}: { 
+  icon: React.ElementType; 
+  label: string; 
+  value: string | number; 
+  color?: string;
+  trend?: 'up' | 'down' | null;
+  prefix?: string;
+  suffix?: string;
+}) => (
+  <GlassCard sx={{ p: 2.5, flex: '1 1 180px', minWidth: 160 }}>
+    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.5 }}>
+      <Box
+        sx={{
+          width: 44,
+          height: 44,
+          borderRadius: 2,
+          background: alpha(color, 0.15),
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Icon size={22} color={color} />
+      </Box>
+      {trend && (
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.3,
+            px: 1,
+            py: 0.3,
+            borderRadius: 1,
+            bgcolor: trend === 'up' ? alpha('#10B981', 0.15) : alpha('#EF4444', 0.15),
+          }}
+        >
+          {trend === 'up' ? (
+            <ArrowUpRight size={14} color="#10B981" />
+          ) : (
+            <ArrowDownRight size={14} color="#EF4444" />
+          )}
+        </Box>
+      )}
+    </Box>
+    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 0.5, fontSize: '0.8rem' }}>
+      {label}
+    </Typography>
+    <Typography variant="h5" sx={{ fontWeight: 700, color: trend ? (trend === 'up' ? '#10B981' : '#EF4444') : 'white' }}>
+      {prefix}{typeof value === 'number' ? value.toLocaleString() : value}{suffix}
+    </Typography>
+  </GlassCard>
+);
 
 interface Position {
   id: string;
@@ -84,7 +184,6 @@ export default function TradesPage() {
   const fetchOpenPositions = useCallback(async () => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      // Add timestamp to bust any caching
       const response = await fetch(`${apiUrl}/api/user/positions?_t=${Date.now()}`, {
         headers: {
           ...getAuthHeaders(),
@@ -174,7 +273,7 @@ export default function TradesPage() {
     loadData();
   }, [router, fetchOpenPositions, fetchClosedTrades]);
 
-  // Poll for real-time position updates using stable interval
+  // Poll for real-time position updates
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -186,14 +285,14 @@ export default function TradesPage() {
     return () => clearInterval(interval);
   }, [fetchOpenPositions]);
 
-  // Poll closed trades every 10 seconds for near real-time history updates
+  // Poll closed trades every 10 seconds
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
     const interval = setInterval(() => {
       fetchClosedTrades();
-    }, 10000); // Every 10 seconds
+    }, 10000);
     
     return () => clearInterval(interval);
   }, [fetchClosedTrades]);
@@ -213,17 +312,13 @@ export default function TradesPage() {
       console.log('WebSocket connected for trade updates');
     });
 
-    // When a trade is closed, immediately refresh the closed trades list
-    socket.on('trade:closed', (data) => {
-      console.log('Trade closed event:', data);
+    socket.on('trade:closed', () => {
       fetchClosedTrades();
       fetchOpenPositions();
       setLastUpdated(new Date());
     });
 
-    // When a new trade is opened
-    socket.on('trade:new', (data) => {
-      console.log('New trade event:', data);
+    socket.on('trade:new', () => {
       fetchOpenPositions();
       setLastUpdated(new Date());
     });
@@ -262,6 +357,23 @@ export default function TradesPage() {
   const winningTrades = closedTrades.filter((t) => (t.profit || 0) > 0).length;
   const winRate = closedTrades.length > 0 ? (winningTrades / closedTrades.length) * 100 : 0;
 
+  // Table styles
+  const tableHeadCellSx = {
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: 600,
+    fontSize: '0.75rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    borderBottom: '1px solid rgba(255,255,255,0.1)',
+    bgcolor: 'rgba(255,255,255,0.02)',
+    py: 1.5,
+  };
+
+  const tableCellSx = {
+    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    py: 1.5,
+  };
+
   return (
     <Box sx={{ 
       width: '100%', 
@@ -270,136 +382,232 @@ export default function TradesPage() {
       px: { xs: 0, sm: 0 },
       boxSizing: 'border-box',
     }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Box>
-          <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-            Trades
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            View your open positions and trading history
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          {lastUpdated && (
-            <Typography variant="caption" color="text.secondary">
-              Updated: {lastUpdated.toLocaleTimeString()}
-            </Typography>
-          )}
-          <Chip
-            icon={refreshing ? <CircularProgress size={14} /> : <RefreshCw size={14} />}
-            label="Refresh"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            sx={{ cursor: 'pointer' }}
-          />
+      {/* Header Section */}
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Activity size={24} color="white" />
+              </Box>
+              <Box>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: 'white', lineHeight: 1.2 }}>
+                  Trade History
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mt: 0.3 }}>
+                  Monitor your open positions and trading performance
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {lastUpdated && (
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1, 
+                px: 2, 
+                py: 0.75, 
+                borderRadius: 2,
+                bgcolor: 'rgba(255,255,255,0.05)',
+              }}>
+                <Zap size={14} color="#10B981" />
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                  Live • {lastUpdated.toLocaleTimeString()}
+                </Typography>
+              </Box>
+            )}
+            <Tooltip title="Refresh Data">
+              <IconButton
+                onClick={handleRefresh}
+                disabled={refreshing}
+                sx={{
+                  bgcolor: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  '&:hover': { bgcolor: 'rgba(16, 185, 129, 0.2)' },
+                }}
+              >
+                {refreshing ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  <RefreshCw size={20} color="#10B981" />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
       </Box>
 
       {/* Account Summary Card */}
-      <Paper sx={{ mb: 4, background: 'linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)', overflow: 'hidden' }}>
-        <Box sx={{ p: 3, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-          <Box sx={{ minWidth: 150 }}>
-            <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-              Account Balance
-            </Typography>
-            <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
-              ${accountInfo?.balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
-            </Typography>
-          </Box>
-          <Box sx={{ minWidth: 150 }}>
-            <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-              Account Equity
-            </Typography>
-            <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
-              ${accountInfo?.equity?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+      <GlassCard sx={{ mb: 4, overflow: 'hidden' }}>
+        <Box
+          sx={{
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)',
+            borderBottom: '1px solid rgba(16, 185, 129, 0.2)',
+            p: 3,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+            <Wallet size={20} color="#10B981" />
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'white' }}>
+              Account Overview
             </Typography>
           </Box>
-          <Box sx={{ minWidth: 150 }}>
-            <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-              Open P/L
-            </Typography>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                color: openProfit >= 0 ? '#4caf50' : '#f44336', 
-                fontWeight: 'bold'
-              }}
-            >
-              {openProfit >= 0 ? '+' : ''}${openProfit.toFixed(2)}
-            </Typography>
+          
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            <Box sx={{ minWidth: 150 }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 0.5 }}>
+                Account Balance
+              </Typography>
+              <Typography variant="h4" sx={{ color: 'white', fontWeight: 700 }}>
+                ${accountInfo?.balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+              </Typography>
+            </Box>
+            <Box sx={{ minWidth: 150 }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 0.5 }}>
+                Account Equity
+              </Typography>
+              <Typography variant="h4" sx={{ color: 'white', fontWeight: 700 }}>
+                ${accountInfo?.equity?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+              </Typography>
+            </Box>
+            <Box sx={{ minWidth: 150 }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 0.5 }}>
+                Floating P/L
+              </Typography>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  color: openProfit >= 0 ? '#10B981' : '#EF4444', 
+                  fontWeight: 700,
+                }}
+              >
+                {openProfit >= 0 ? '+' : ''}${openProfit.toFixed(2)}
+              </Typography>
+            </Box>
           </Box>
         </Box>
-      </Paper>
+      </GlassCard>
 
-      {/* Summary Stats */}
+      {/* Stats Row */}
       <Box sx={{ 
         display: 'flex', 
-        gap: { xs: 1, sm: 3 }, 
+        gap: 2, 
         mb: 4, 
         flexWrap: 'wrap',
         overflowX: 'auto',
         pb: 1,
-        '&::-webkit-scrollbar': { height: 4 },
-        '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.3)', borderRadius: 2 },
       }}>
-        <Paper sx={{ p: { xs: 1.5, sm: 2 }, minWidth: { xs: 100, sm: 150 }, flex: '1 1 auto' }}>
-          <Typography variant="body2" color="text.secondary">Open Positions</Typography>
-          <Typography variant="h5" sx={{ fontWeight: 600, color: 'primary.main' }}>
-            {openPositions.length}
-          </Typography>
-        </Paper>
-        <Paper sx={{ p: 2, minWidth: 150 }}>
-          <Typography variant="body2" color="text.secondary">Floating P/L</Typography>
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: 600, color: openProfit >= 0 ? 'success.main' : 'error.main' }}
-          >
-            {openProfit >= 0 ? '+' : ''}${openProfit.toFixed(2)}
-          </Typography>
-        </Paper>
-        <Paper sx={{ p: 2, minWidth: 150 }}>
-          <Typography variant="body2" color="text.secondary">Closed Trades</Typography>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>{closedTrades.length}</Typography>
-        </Paper>
-        <Paper sx={{ p: 2, minWidth: 150 }}>
-          <Typography variant="body2" color="text.secondary">Realized P/L</Typography>
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: 600, color: closedProfit >= 0 ? 'success.main' : 'error.main' }}
-          >
-            {closedProfit >= 0 ? '+' : ''}${closedProfit.toFixed(2)}
-          </Typography>
-        </Paper>
-        <Paper sx={{ p: 2, minWidth: 150 }}>
-          <Typography variant="body2" color="text.secondary">Win Rate</Typography>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>{winRate.toFixed(1)}%</Typography>
-        </Paper>
+        <StatCard
+          icon={Activity}
+          label="Open Positions"
+          value={openPositions.length}
+          color="#3B82F6"
+        />
+        <StatCard
+          icon={DollarSign}
+          label="Floating P/L"
+          value={`$${Math.abs(openProfit).toFixed(2)}`}
+          color={openProfit >= 0 ? '#10B981' : '#EF4444'}
+          trend={openProfit !== 0 ? (openProfit > 0 ? 'up' : 'down') : null}
+          prefix={openProfit >= 0 ? '+' : '-'}
+        />
+        <StatCard
+          icon={BarChart3}
+          label="Closed Trades"
+          value={closedTrades.length}
+          color="#8B5CF6"
+        />
+        <StatCard
+          icon={Target}
+          label="Realized P/L"
+          value={`$${Math.abs(closedProfit).toFixed(2)}`}
+          color={closedProfit >= 0 ? '#10B981' : '#EF4444'}
+          trend={closedProfit !== 0 ? (closedProfit > 0 ? 'up' : 'down') : null}
+          prefix={closedProfit >= 0 ? '+' : '-'}
+        />
+        <StatCard
+          icon={CheckCircle}
+          label="Win Rate"
+          value={winRate.toFixed(1)}
+          suffix="%"
+          color="#F59E0B"
+        />
       </Box>
 
-      {/* ==================== OPEN POSITIONS SECTION ==================== */}
-      <Paper sx={{ mb: 4, overflow: 'hidden', width: '100%' }}>
-        <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'white', display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Clock size={20} />
-          <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-            Open Positions ({openPositions.length})
-          </Typography>
+      {/* Open Positions Section */}
+      <GlassCard sx={{ mb: 4 }}>
+        <Box 
+          sx={{ 
+            p: 2.5, 
+            borderBottom: '1px solid rgba(255,255,255,0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: 1.5,
+                bgcolor: alpha('#3B82F6', 0.2),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Clock size={18} color="#3B82F6" />
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: 'white' }}>
+                Open Positions
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                {openPositions.length} active trade{openPositions.length !== 1 ? 's' : ''}
+              </Typography>
+            </Box>
+          </Box>
+          {openPositions.length > 0 && (
+            <Chip
+              label={`${openProfit >= 0 ? '+' : ''}$${openProfit.toFixed(2)}`}
+              size="small"
+              sx={{
+                bgcolor: openProfit >= 0 ? alpha('#10B981', 0.2) : alpha('#EF4444', 0.2),
+                color: openProfit >= 0 ? '#10B981' : '#EF4444',
+                fontWeight: 600,
+              }}
+            />
+          )}
         </Box>
         
         <Box sx={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <Table size="small" sx={{ minWidth: 700 }}>
+          <Table size="small" sx={{ minWidth: 900 }}>
             <TableHead>
-              <TableRow sx={{ bgcolor: 'action.hover' }}>
-                <TableCell>Symbol</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Robot</TableCell>
-                <TableCell>Volume</TableCell>
-                <TableCell>Open Price</TableCell>
-                <TableCell>Current Price</TableCell>
-                <TableCell>SL</TableCell>
-                <TableCell>TP</TableCell>
-                <TableCell>P/L</TableCell>
-                <TableCell>Open Time</TableCell>
+              <TableRow>
+                <TableCell sx={tableHeadCellSx}>Symbol</TableCell>
+                <TableCell sx={tableHeadCellSx}>Type</TableCell>
+                <TableCell sx={tableHeadCellSx}>Robot</TableCell>
+                <TableCell sx={tableHeadCellSx}>Volume</TableCell>
+                <TableCell sx={tableHeadCellSx}>Open Price</TableCell>
+                <TableCell sx={tableHeadCellSx}>Current Price</TableCell>
+                <TableCell sx={tableHeadCellSx}>SL</TableCell>
+                <TableCell sx={tableHeadCellSx}>TP</TableCell>
+                <TableCell sx={tableHeadCellSx}>P/L</TableCell>
+                <TableCell sx={tableHeadCellSx}>Open Time</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -407,132 +615,195 @@ export default function TradesPage() {
                 [...Array(3)].map((_, i) => (
                   <TableRow key={i}>
                     {[...Array(10)].map((_, j) => (
-                      <TableCell key={j}><Skeleton /></TableCell>
+                      <TableCell key={j} sx={tableCellSx}><Skeleton sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : openPositions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} align="center">
-                    <Typography color="text.secondary" sx={{ py: 3 }}>
-                      No open positions
-                    </Typography>
+                  <TableCell colSpan={10} align="center" sx={{ ...tableCellSx, py: 6 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                      <Activity size={40} color="rgba(255,255,255,0.2)" />
+                      <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                        No open positions
+                      </Typography>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ) : (
                 openPositions.map((position) => {
-                  // Normalize type: POSITION_TYPE_BUY -> BUY, POSITION_TYPE_SELL -> SELL
                   const displayType = position.type?.includes('BUY') ? 'BUY' : 'SELL';
                   return (
-                  <TableRow key={position.id} hover>
-                    <TableCell>
-                      <Typography sx={{ fontWeight: 600 }}>{position.symbol}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        icon={displayType === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                        label={displayType}
-                        color={displayType === 'BUY' ? 'success' : 'error'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={position.comment?.replace('AlgoEdge-', '') || 'Manual'}
-                        size="small"
-                        variant="outlined"
-                        color="info"
-                        sx={{ fontSize: '0.7rem' }}
-                      />
-                    </TableCell>
-                    <TableCell>{position.volume}</TableCell>
-                    <TableCell>{position.openPrice?.toFixed(5)}</TableCell>
-                    <TableCell>
-                      <Typography sx={{ color: 'info.main', fontWeight: 500 }}>
-                        {position.currentPrice?.toFixed(5) || '-'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell sx={{ color: 'error.main' }}>
-                      {position.stopLoss?.toFixed(5) || '-'}
-                    </TableCell>
-                    <TableCell sx={{ color: 'success.main' }}>
-                      {position.takeProfit?.toFixed(5) || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Typography
-                        sx={{
-                          color: position.profit >= 0 ? 'success.main' : 'error.main',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {position.profit >= 0 ? '+' : ''}${position.profit.toFixed(2)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="caption">
-                        {position.openTime ? new Date(position.openTime).toLocaleString() : '-'}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
+                    <TableRow 
+                      key={position.id} 
+                      sx={{ 
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
+                        transition: 'background-color 0.2s',
+                      }}
+                    >
+                      <TableCell sx={tableCellSx}>
+                        <Typography sx={{ fontWeight: 600, color: 'white' }}>{position.symbol}</Typography>
+                      </TableCell>
+                      <TableCell sx={tableCellSx}>
+                        <Chip
+                          icon={displayType === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                          label={displayType}
+                          size="small"
+                          sx={{
+                            bgcolor: displayType === 'BUY' ? alpha('#10B981', 0.15) : alpha('#EF4444', 0.15),
+                            color: displayType === 'BUY' ? '#10B981' : '#EF4444',
+                            fontWeight: 600,
+                            '& .MuiChip-icon': { color: 'inherit' },
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell sx={tableCellSx}>
+                        <Chip
+                          label={position.comment?.replace('AlgoEdge-', '') || 'Manual'}
+                          size="small"
+                          sx={{
+                            bgcolor: 'rgba(139, 92, 246, 0.15)',
+                            color: '#A78BFA',
+                            fontSize: '0.7rem',
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell sx={tableCellSx}>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>{position.volume}</Typography>
+                      </TableCell>
+                      <TableCell sx={tableCellSx}>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>{position.openPrice?.toFixed(5)}</Typography>
+                      </TableCell>
+                      <TableCell sx={tableCellSx}>
+                        <Typography sx={{ color: '#3B82F6', fontWeight: 500 }}>
+                          {position.currentPrice?.toFixed(5) || '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={tableCellSx}>
+                        <Typography sx={{ color: '#EF4444' }}>
+                          {position.stopLoss?.toFixed(5) || '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={tableCellSx}>
+                        <Typography sx={{ color: '#10B981' }}>
+                          {position.takeProfit?.toFixed(5) || '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={tableCellSx}>
+                        <Typography
+                          sx={{
+                            color: position.profit >= 0 ? '#10B981' : '#EF4444',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {position.profit >= 0 ? '+' : ''}${position.profit.toFixed(2)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={tableCellSx}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                          {position.openTime ? new Date(position.openTime).toLocaleString() : '-'}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
                   );
                 })
               )}
             </TableBody>
           </Table>
         </Box>
-      </Paper>
+      </GlassCard>
 
-      {/* ==================== CLOSED TRADES SECTION ==================== */}
-      <Paper sx={{ overflow: 'hidden' }}>
-        <Box sx={{ p: 2, bgcolor: 'grey.700', color: 'white', display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CheckCircle size={20} />
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Trade History ({closedTrades.length})
-          </Typography>
-        </Box>
-
-        {/* Filters */}
-        <Box sx={{ p: 2, display: 'flex', gap: 2, flexWrap: 'wrap', borderBottom: 1, borderColor: 'divider' }}>
-          <TextField
-            placeholder="Search by symbol..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            size="small"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search size={20} />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ minWidth: 200 }}
-          />
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Type</InputLabel>
-            <Select
-              value={filterType}
-              label="Type"
-              onChange={(e) => setFilterType(e.target.value)}
-            >
-              <MenuItem value="all">All</MenuItem>
-              <MenuItem value="BUY">Buy</MenuItem>
-              <MenuItem value="SELL">Sell</MenuItem>
-            </Select>
-          </FormControl>
+      {/* Trade History Section */}
+      <GlassCard>
+        <Box 
+          sx={{ 
+            p: 2.5, 
+            borderBottom: '1px solid rgba(255,255,255,0.1)',
+            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 1.5,
+                  bgcolor: alpha('#8B5CF6', 0.2),
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <History size={18} color="#8B5CF6" />
+              </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: 'white' }}>
+                  Trade History
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                  {closedTrades.length} completed trade{closedTrades.length !== 1 ? 's' : ''}
+                </Typography>
+              </Box>
+            </Box>
+            
+            {/* Filters */}
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+              <TextField
+                placeholder="Search symbol..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                size="small"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search size={18} color="rgba(255,255,255,0.4)" />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ 
+                  minWidth: 180,
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'rgba(255,255,255,0.05)',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                    '&.Mui-focused fieldset': { borderColor: '#8B5CF6' },
+                  },
+                }}
+              />
+              <FormControl size="small" sx={{ minWidth: 100 }}>
+                <Select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  displayEmpty
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.05)',
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.1)' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#8B5CF6' },
+                  }}
+                >
+                  <MenuItem value="all">All Types</MenuItem>
+                  <MenuItem value="BUY">Buy</MenuItem>
+                  <MenuItem value="SELL">Sell</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          </Box>
         </Box>
 
         <Box sx={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <Table size="small" sx={{ minWidth: 700 }}>
+          <Table size="small" sx={{ minWidth: 800 }}>
             <TableHead>
-              <TableRow sx={{ bgcolor: 'action.hover' }}>
-                <TableCell>Symbol</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Volume</TableCell>
-                <TableCell>Open Price</TableCell>
-                <TableCell>Close Price</TableCell>
-                <TableCell>P/L</TableCell>
-                <TableCell>Open Time</TableCell>
-                <TableCell>Close Time</TableCell>
+              <TableRow>
+                <TableCell sx={tableHeadCellSx}>Symbol</TableCell>
+                <TableCell sx={tableHeadCellSx}>Type</TableCell>
+                <TableCell sx={tableHeadCellSx}>Volume</TableCell>
+                <TableCell sx={tableHeadCellSx}>Open Price</TableCell>
+                <TableCell sx={tableHeadCellSx}>Close Price</TableCell>
+                <TableCell sx={tableHeadCellSx}>P/L</TableCell>
+                <TableCell sx={tableHeadCellSx}>Open Time</TableCell>
+                <TableCell sx={tableHeadCellSx}>Close Time</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -540,52 +811,72 @@ export default function TradesPage() {
                 [...Array(5)].map((_, i) => (
                   <TableRow key={i}>
                     {[...Array(8)].map((_, j) => (
-                      <TableCell key={j}><Skeleton /></TableCell>
+                      <TableCell key={j} sx={tableCellSx}><Skeleton sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : paginatedClosedTrades.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
-                    <Typography color="text.secondary" sx={{ py: 3 }}>
-                      No closed trades found
-                    </Typography>
+                  <TableCell colSpan={8} align="center" sx={{ ...tableCellSx, py: 6 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                      <BarChart3 size={40} color="rgba(255,255,255,0.2)" />
+                      <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                        No closed trades found
+                      </Typography>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedClosedTrades.map((trade) => (
-                  <TableRow key={trade.id} hover>
-                    <TableCell>
-                      <Typography sx={{ fontWeight: 500 }}>{trade.symbol}</Typography>
+                  <TableRow 
+                    key={trade.id} 
+                    sx={{ 
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
+                      transition: 'background-color 0.2s',
+                    }}
+                  >
+                    <TableCell sx={tableCellSx}>
+                      <Typography sx={{ fontWeight: 600, color: 'white' }}>{trade.symbol}</Typography>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={tableCellSx}>
                       <Chip
                         icon={trade.type === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                         label={trade.type}
-                        color={trade.type === 'BUY' ? 'success' : 'error'}
                         size="small"
+                        sx={{
+                          bgcolor: trade.type === 'BUY' ? alpha('#10B981', 0.15) : alpha('#EF4444', 0.15),
+                          color: trade.type === 'BUY' ? '#10B981' : '#EF4444',
+                          fontWeight: 600,
+                          '& .MuiChip-icon': { color: 'inherit' },
+                        }}
                       />
                     </TableCell>
-                    <TableCell>{trade.lotSize ?? trade.volume ?? '-'}</TableCell>
-                    <TableCell>{trade.openPrice?.toFixed(5) ?? '-'}</TableCell>
-                    <TableCell>{trade.closePrice?.toFixed(5) ?? '-'}</TableCell>
-                    <TableCell>
+                    <TableCell sx={tableCellSx}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>{trade.lotSize ?? trade.volume ?? '-'}</Typography>
+                    </TableCell>
+                    <TableCell sx={tableCellSx}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>{trade.openPrice?.toFixed(5) ?? '-'}</Typography>
+                    </TableCell>
+                    <TableCell sx={tableCellSx}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>{trade.closePrice?.toFixed(5) ?? '-'}</Typography>
+                    </TableCell>
+                    <TableCell sx={tableCellSx}>
                       <Typography
                         sx={{
-                          color: (trade.profit || 0) >= 0 ? 'success.main' : 'error.main',
-                          fontWeight: 500,
+                          color: (trade.profit || 0) >= 0 ? '#10B981' : '#EF4444',
+                          fontWeight: 600,
                         }}
                       >
                         {(trade.profit || 0) >= 0 ? '+' : ''}${(trade.profit || 0).toFixed(2)}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="caption">
+                    <TableCell sx={tableCellSx}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
                         {trade.openTime ? new Date(trade.openTime).toLocaleString() : '-'}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="caption">
+                    <TableCell sx={tableCellSx}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
                         {trade.closeTime ? new Date(trade.closeTime).toLocaleString() : '-'}
                       </Typography>
                     </TableCell>
@@ -598,16 +889,32 @@ export default function TradesPage() {
 
         {/* Pagination */}
         {filteredClosedTrades.length > rowsPerPage && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            p: 2,
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+          }}>
             <Pagination
               count={Math.ceil(filteredClosedTrades.length / rowsPerPage)}
               page={page}
               onChange={(_, value) => setPage(value)}
-              color="primary"
+              sx={{
+                '& .MuiPaginationItem-root': {
+                  color: 'rgba(255,255,255,0.7)',
+                  '&.Mui-selected': {
+                    bgcolor: alpha('#8B5CF6', 0.3),
+                    color: 'white',
+                  },
+                  '&:hover': {
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                  },
+                },
+              }}
             />
           </Box>
         )}
-      </Paper>
+      </GlassCard>
     </Box>
   );
 }
