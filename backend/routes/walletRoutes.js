@@ -127,21 +127,75 @@ router.get('/transactions', authenticate, async (req, res) => {
 // DEPOSIT ENDPOINTS
 // ============================================================================
 
-// Get available payment methods
+// Payment accounts from environment variables
+const getPaymentAccounts = () => {
+  const accounts = [];
+  
+  // M-Pesa
+  if (process.env.MPESA_NUMBER) {
+    accounts.push({
+      id: 1,
+      payment_method: 'mpesa',
+      account_name: process.env.MPESA_NAME || 'Bonface Kigen',
+      account_number: process.env.MPESA_NUMBER,
+      instructions: 'Send money to this M-Pesa number and include your email in the description. Screenshot the confirmation.',
+      min_amount: MIN_DEPOSIT,
+      max_amount: MAX_DEPOSIT,
+    });
+  }
+  
+  // Airtel Money
+  if (process.env.AIRTEL_NUMBER) {
+    accounts.push({
+      id: 2,
+      payment_method: 'airtel_money',
+      account_name: process.env.AIRTEL_NAME || 'Bonface Kigen',
+      account_number: process.env.AIRTEL_NUMBER,
+      instructions: 'Send money to this Airtel Money number and include your email in the description. Screenshot the confirmation.',
+      min_amount: MIN_DEPOSIT,
+      max_amount: MAX_DEPOSIT,
+    });
+  }
+  
+  // USDT (TRC20)
+  if (process.env.USDT_ADDRESS) {
+    accounts.push({
+      id: 3,
+      payment_method: 'usdt',
+      account_name: 'AlgoEdge USDT',
+      crypto_address: process.env.USDT_ADDRESS,
+      crypto_network: 'TRC20',
+      instructions: 'Send USDT to this TRC20 address. Make sure to use the TRC20 network!',
+      min_amount: MIN_DEPOSIT,
+      max_amount: MAX_DEPOSIT,
+    });
+  }
+  
+  // Bitcoin
+  if (process.env.BTC_ADDRESS) {
+    accounts.push({
+      id: 4,
+      payment_method: 'btc',
+      account_name: 'AlgoEdge BTC',
+      crypto_address: process.env.BTC_ADDRESS,
+      crypto_network: 'Bitcoin',
+      instructions: 'Send Bitcoin to this address. Confirm the address before sending.',
+      min_amount: MIN_DEPOSIT,
+      max_amount: MAX_DEPOSIT,
+    });
+  }
+  
+  return accounts;
+};
+
+// Get available payment methods (from environment variables)
 router.get('/payment-methods', async (req, res) => {
   try {
-    const methods = await pool.query(
-      `SELECT id, payment_method, account_name, account_number, 
-              crypto_address, crypto_network, qr_code_url, instructions,
-              min_amount, max_amount
-       FROM platform_payment_accounts 
-       WHERE is_active = TRUE 
-       ORDER BY display_order ASC`
-    );
+    const paymentAccounts = getPaymentAccounts();
 
     res.json({
       success: true,
-      payment_methods: methods.rows,
+      payment_methods: paymentAccounts,
       limits: {
         min_deposit: MIN_DEPOSIT,
         max_deposit: MAX_DEPOSIT,
@@ -664,7 +718,7 @@ router.get('/admin/deposits/pending', authenticate, async (req, res) => {
     }
 
     const deposits = await pool.query(
-      `SELECT dr.*, u.email, u.username, u.name
+      `SELECT dr.*, u.email, u.username, u.full_name
        FROM wallet_deposit_requests dr
        JOIN users u ON dr.user_id = u.id
        WHERE dr.status = 'pending'
@@ -857,40 +911,6 @@ router.get('/admin/earnings', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Get earnings error:', error);
     res.status(500).json({ error: 'Failed to get earnings' });
-  }
-});
-
-// Admin: Update payment account
-router.put('/admin/payment-accounts/:id', authenticate, async (req, res) => {
-  try {
-    if (!isAdmin(req)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
-    const { id } = req.params;
-    const { account_name, account_number, crypto_address, crypto_network, instructions, is_active } = req.body;
-
-    const result = await pool.query(
-      `UPDATE platform_payment_accounts
-       SET account_name = COALESCE($1, account_name),
-           account_number = COALESCE($2, account_number),
-           crypto_address = COALESCE($3, crypto_address),
-           crypto_network = COALESCE($4, crypto_network),
-           instructions = COALESCE($5, instructions),
-           is_active = COALESCE($6, is_active),
-           updated_at = NOW()
-       WHERE id = $7
-       RETURNING *`,
-      [account_name, account_number, crypto_address, crypto_network, instructions, is_active, id]
-    );
-
-    res.json({
-      success: true,
-      account: result.rows[0],
-    });
-  } catch (error) {
-    console.error('Update payment account error:', error);
-    res.status(500).json({ error: 'Failed to update payment account' });
   }
 });
 
@@ -1177,7 +1197,7 @@ router.get('/admin/wallets', authenticate, async (req, res) => {
     const offset = (page - 1) * limit;
 
     let query = `
-      SELECT uw.*, u.email, u.username, u.name, 
+      SELECT uw.*, u.email, u.username, u.full_name, 
              COALESCE(sw.balance, 0) as seller_balance,
              COALESCE(sw.total_earned, 0) as seller_total_earned,
              COALESCE(sw.is_frozen, false) as seller_frozen
@@ -1190,7 +1210,7 @@ router.get('/admin/wallets', authenticate, async (req, res) => {
 
     if (search) {
       params.push(`%${search}%`);
-      query += ` AND (u.email ILIKE $${params.length} OR u.username ILIKE $${params.length} OR u.name ILIKE $${params.length})`;
+      query += ` AND (u.email ILIKE $${params.length} OR u.username ILIKE $${params.length} OR u.full_name ILIKE $${params.length})`;
     }
 
     if (frozen_only === 'true') {
@@ -1480,7 +1500,7 @@ router.get('/admin/withdrawals/pending', authenticate, async (req, res) => {
     }
 
     const withdrawals = await pool.query(
-      `SELECT w.*, u.email, u.username, u.name
+      `SELECT w.*, u.email, u.username, u.full_name
        FROM wallet_withdrawal_requests w
        JOIN users u ON w.user_id = u.id
        WHERE w.status IN ('pending', 'processing')

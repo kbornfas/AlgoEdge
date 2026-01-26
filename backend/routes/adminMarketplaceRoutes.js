@@ -50,8 +50,6 @@ router.get('/stats', async (req, res) => {
         SELECT price_paid, platform_commission FROM marketplace_bot_purchases WHERE DATE(created_at) = $1
         UNION ALL
         SELECT price_paid, platform_commission FROM marketplace_product_purchases WHERE DATE(created_at) = $1
-        UNION ALL
-        SELECT price_paid, platform_commission FROM signal_subscriptions WHERE DATE(created_at) = $1
       ) as all_sales`,
       [today]
     );
@@ -80,7 +78,7 @@ router.get('/pending', async (req, res) => {
     if (type === 'bots') {
       const result = await pool.query(
         `SELECT 
-          b.id, b.name, b.price, b.is_free, b.category, b.status, b.created_at, b.description,
+          b.id, b.name, b.price, (b.price_type = 'free') AS is_free, b.category, b.status, b.created_at, b.description,
           u.full_name as seller_name, u.email as seller_email
         FROM marketplace_bots b
         JOIN users u ON b.seller_id = u.id

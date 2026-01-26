@@ -1312,7 +1312,7 @@ router.get('/admin/pending-verifications', authenticate, async (req, res) => {
     }
 
     const pending = await pool.query(`
-      SELECT u.id, u.email, u.name, u.created_at,
+      SELECT u.id, u.email, u.full_name, u.created_at,
              sw.balance as wallet_balance,
              (SELECT COUNT(*) FROM marketplace_products WHERE seller_id = u.id) as products_count,
              (SELECT COUNT(*) FROM marketplace_bots WHERE seller_id = u.id) as bots_count,

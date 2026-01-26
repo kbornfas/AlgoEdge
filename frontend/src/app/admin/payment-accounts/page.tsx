@@ -6,38 +6,20 @@ import {
   Typography,
   Paper,
   Grid,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Button,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Switch,
-  FormControlLabel,
   Alert,
   CircularProgress,
   Chip,
   Card,
   CardContent,
+  IconButton,
 } from '@mui/material';
 import {
-  Edit as EditIcon,
   Refresh as RefreshIcon,
   Phone as PhoneIcon,
-  Payments as PaymentsIcon,
   CurrencyBitcoin as CryptoIcon,
-  AccountBalance as BankIcon,
   Check as CheckIcon,
-  Close as CloseIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material';
-import { useAuth } from '@/context/AuthContext';
 
 interface PaymentAccount {
   id: number;
@@ -46,29 +28,21 @@ interface PaymentAccount {
   account_number?: string;
   crypto_address?: string;
   crypto_network?: string;
-  qr_code_url?: string;
   instructions?: string;
   min_amount: number;
   max_amount: number;
-  is_active: boolean;
-  display_order: number;
-  created_at: string;
-  updated_at: string;
 }
 
 const getPaymentMethodIcon = (method: string) => {
   switch (method) {
     case 'mpesa':
+    case 'airtel_money':
       return <PhoneIcon />;
-    case 'paypal':
-      return <PaymentsIcon />;
-    case 'crypto_usdt':
-    case 'crypto_btc':
+    case 'usdt':
+    case 'btc':
       return <CryptoIcon />;
-    case 'bank_transfer':
-      return <BankIcon />;
     default:
-      return <PaymentsIcon />;
+      return <PhoneIcon />;
   }
 };
 
@@ -76,48 +50,34 @@ const getPaymentMethodLabel = (method: string) => {
   switch (method) {
     case 'mpesa':
       return 'M-Pesa';
-    case 'paypal':
-      return 'PayPal';
-    case 'crypto_usdt':
+    case 'airtel_money':
+      return 'Airtel Money';
+    case 'usdt':
       return 'USDT (TRC20)';
-    case 'crypto_btc':
+    case 'btc':
       return 'Bitcoin';
-    case 'bank_transfer':
-      return 'Bank Transfer';
     default:
       return method;
   }
 };
 
 export default function AdminPaymentAccountsPage() {
-  const { token } = useAuth();
   const [accounts, setAccounts] = useState<PaymentAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  // Edit dialog state
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<PaymentAccount | null>(null);
-  const [editForm, setEditForm] = useState({
-    account_name: '',
-    account_number: '',
-    crypto_address: '',
-    crypto_network: '',
-    instructions: '',
-    is_active: true,
-  });
-  const [saving, setSaving] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   const fetchAccounts = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await fetch(`${API_URL}/api/wallet/payment-methods`);
       if (res.ok) {
         const data = await res.json();
         setAccounts(data.payment_methods || []);
+      } else {
+        throw new Error('Failed to fetch payment accounts');
       }
     } catch (err: any) {
       console.error('Error fetching accounts:', err);
@@ -130,54 +90,6 @@ export default function AdminPaymentAccountsPage() {
   useEffect(() => {
     fetchAccounts();
   }, [fetchAccounts]);
-
-  const handleOpenEdit = (account: PaymentAccount) => {
-    setSelectedAccount(account);
-    setEditForm({
-      account_name: account.account_name || '',
-      account_number: account.account_number || '',
-      crypto_address: account.crypto_address || '',
-      crypto_network: account.crypto_network || '',
-      instructions: account.instructions || '',
-      is_active: account.is_active,
-    });
-    setEditDialogOpen(true);
-  };
-
-  const handleSave = async () => {
-    if (!selectedAccount) return;
-
-    try {
-      setSaving(true);
-      setError(null);
-
-      const response = await fetch(
-        `${API_URL}/api/wallet/admin/payment-accounts/${selectedAccount.id}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(editForm),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update account');
-      }
-
-      setSuccess('Payment account updated successfully');
-      setEditDialogOpen(false);
-      fetchAccounts();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -196,7 +108,7 @@ export default function AdminPaymentAccountsPage() {
             Payment Accounts
           </Typography>
           <Typography color="text.secondary">
-            Configure payment methods for user deposits
+            Payment methods configured for user deposits
           </Typography>
         </Box>
         <IconButton onClick={fetchAccounts} disabled={loading}>
@@ -210,24 +122,35 @@ export default function AdminPaymentAccountsPage() {
           {error}
         </Alert>
       )}
-      {success && (
-        <Alert severity="success" onClose={() => setSuccess(null)} sx={{ mb: 3 }}>
-          {success}
-        </Alert>
-      )}
 
       {/* Info Card */}
       <Card sx={{ mb: 4, bgcolor: 'info.main', color: 'white' }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Important: Update Your Payment Details
-          </Typography>
+          <Box display="flex" alignItems="center" gap={1} mb={1}>
+            <InfoIcon />
+            <Typography variant="h6">
+              Environment Variables Configuration
+            </Typography>
+          </Box>
           <Typography variant="body2">
-            Replace the placeholder account numbers below with your actual M-Pesa number, 
-            PayPal email, and crypto wallet addresses. Users will send deposits to these accounts.
+            Payment accounts are configured via environment variables on Railway. 
+            To update payment details, modify the following variables in your Railway dashboard:
           </Typography>
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.85rem' }}>
+            <Typography component="div" sx={{ fontFamily: 'inherit' }}>MPESA_NUMBER, MPESA_NAME</Typography>
+            <Typography component="div" sx={{ fontFamily: 'inherit' }}>AIRTEL_NUMBER, AIRTEL_NAME</Typography>
+            <Typography component="div" sx={{ fontFamily: 'inherit' }}>USDT_ADDRESS</Typography>
+            <Typography component="div" sx={{ fontFamily: 'inherit' }}>BTC_ADDRESS</Typography>
+          </Box>
         </CardContent>
       </Card>
+
+      {/* No accounts warning */}
+      {accounts.length === 0 && !loading && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          No payment accounts configured. Please add the required environment variables on Railway.
+        </Alert>
+      )}
 
       {/* Payment Accounts Grid */}
       <Grid container spacing={3}>
@@ -237,8 +160,7 @@ export default function AdminPaymentAccountsPage() {
               sx={{ 
                 p: 3, 
                 border: '1px solid',
-                borderColor: account.is_active ? 'success.main' : 'grey.300',
-                opacity: account.is_active ? 1 : 0.6,
+                borderColor: 'success.main',
               }}
             >
               <Box display="flex" justifyContent="space-between" alignItems="start" mb={2}>
@@ -249,16 +171,13 @@ export default function AdminPaymentAccountsPage() {
                       {getPaymentMethodLabel(account.payment_method)}
                     </Typography>
                     <Chip 
-                      label={account.is_active ? 'Active' : 'Disabled'}
+                      label="Active"
                       size="small"
-                      color={account.is_active ? 'success' : 'default'}
-                      icon={account.is_active ? <CheckIcon /> : <CloseIcon />}
+                      color="success"
+                      icon={<CheckIcon />}
                     />
                   </Box>
                 </Box>
-                <IconButton onClick={() => handleOpenEdit(account)}>
-                  <EditIcon />
-                </IconButton>
               </Box>
 
               <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, mb: 2 }}>
@@ -288,100 +207,23 @@ export default function AdminPaymentAccountsPage() {
                   "{account.instructions}"
                 </Typography>
               )}
+
+              <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                <Chip 
+                  label={`Min: $${account.min_amount}`} 
+                  size="small" 
+                  variant="outlined" 
+                />
+                <Chip 
+                  label={`Max: $${account.max_amount}`} 
+                  size="small" 
+                  variant="outlined" 
+                />
+              </Box>
             </Paper>
           </Grid>
         ))}
       </Grid>
-
-      {/* Edit Dialog */}
-      <Dialog
-        open={editDialogOpen}
-        onClose={() => !saving && setEditDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          Edit {selectedAccount && getPaymentMethodLabel(selectedAccount.payment_method)}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Account Name"
-              fullWidth
-              value={editForm.account_name}
-              onChange={(e) => setEditForm({ ...editForm, account_name: e.target.value })}
-              placeholder="e.g., AlgoEdge Payments"
-            />
-
-            {selectedAccount && (selectedAccount.payment_method === 'mpesa' || 
-              selectedAccount.payment_method === 'paypal' || 
-              selectedAccount.payment_method === 'bank_transfer') && (
-              <TextField
-                label={selectedAccount.payment_method === 'mpesa' ? 'M-Pesa Phone Number' : 
-                       selectedAccount.payment_method === 'paypal' ? 'PayPal Email' : 'Account Number'}
-                fullWidth
-                value={editForm.account_number}
-                onChange={(e) => setEditForm({ ...editForm, account_number: e.target.value })}
-                placeholder={selectedAccount.payment_method === 'mpesa' ? '+254...' : 
-                            selectedAccount.payment_method === 'paypal' ? 'email@example.com' : 'Account number'}
-              />
-            )}
-
-            {selectedAccount && (selectedAccount.payment_method === 'crypto_usdt' || 
-              selectedAccount.payment_method === 'crypto_btc') && (
-              <>
-                <TextField
-                  label="Crypto Network"
-                  fullWidth
-                  value={editForm.crypto_network}
-                  onChange={(e) => setEditForm({ ...editForm, crypto_network: e.target.value })}
-                  placeholder="e.g., TRC20, ERC20, Bitcoin"
-                />
-                <TextField
-                  label="Wallet Address"
-                  fullWidth
-                  value={editForm.crypto_address}
-                  onChange={(e) => setEditForm({ ...editForm, crypto_address: e.target.value })}
-                  placeholder="Your crypto wallet address"
-                />
-              </>
-            )}
-
-            <TextField
-              label="Instructions for Users"
-              fullWidth
-              multiline
-              rows={3}
-              value={editForm.instructions}
-              onChange={(e) => setEditForm({ ...editForm, instructions: e.target.value })}
-              placeholder="Enter instructions for users making deposits..."
-            />
-
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={editForm.is_active}
-                  onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
-                />
-              }
-              label="Active (shown to users)"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setEditDialogOpen(false)} disabled={saving}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={saving}
-            startIcon={saving ? <CircularProgress size={20} /> : null}
-          >
-            {saving ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }
