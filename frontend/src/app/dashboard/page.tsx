@@ -364,8 +364,8 @@ export default function DashboardPage() {
         const token = localStorage.getItem('token');
         if (!token) return;
         
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-        const response = await fetch(`${API_URL}/api/wallet/balance`, {
+        // Use Next.js API proxy route
+        const response = await fetch('/api/wallet/balance', {
           headers: { 'Authorization': `Bearer ${token}` },
         });
         
