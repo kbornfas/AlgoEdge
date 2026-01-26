@@ -33,11 +33,19 @@ export default function SubscriptionGuard({ children }: SubscriptionGuardProps) 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Wait for client-side mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
+    if (!isMounted) return;
+    
     const checkAuth = async () => {
       // Quick synchronous check for token
-      const token = localStorage.getItem('token');
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       
       if (!token) {
         router.push('/auth/login');
@@ -86,10 +94,10 @@ export default function SubscriptionGuard({ children }: SubscriptionGuardProps) 
     };
 
     checkAuth();
-  }, [router, pathname]);
+  }, [router, pathname, isMounted]);
 
-  // Still checking
-  if (isChecking || isAuthenticated === null) {
+  // Still checking or not mounted yet
+  if (!isMounted || isChecking || isAuthenticated === null) {
     return (
       <Box
         sx={{

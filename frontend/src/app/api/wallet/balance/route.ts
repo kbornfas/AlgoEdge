@@ -4,12 +4,15 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || 'h
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    // Get token from authorization header
+    const authHeader = request.headers.get('authorization');
+    let token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
 
-    if (!token) {
+    // Validate token format - must be a valid JWT (has 3 parts separated by dots)
+    if (!token || token === 'undefined' || token === 'null' || !token.includes('.')) {
       return NextResponse.json({ 
         wallet: { balance: 0 },
-        error: 'No token provided'
+        error: 'No valid token provided'
       }, { status: 401 });
     }
 

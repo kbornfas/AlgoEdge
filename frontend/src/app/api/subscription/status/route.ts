@@ -6,10 +6,17 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || 'h
 export async function GET(request: NextRequest) {
   try {
     // Get token from cookie or authorization header
-    const token = request.cookies.get('auth_token')?.value || 
-                  request.headers.get('authorization')?.replace('Bearer ', '');
+    const authHeader = request.headers.get('authorization');
+    let token = request.cookies.get('auth_token')?.value;
+    
+    // Extract token from Bearer header if present
+    if (!token && authHeader) {
+      token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+    }
 
-    if (!token) {
+    // Validate token format - must be a valid JWT (has 3 parts separated by dots)
+    if (!token || token === 'undefined' || token === 'null' || !token.includes('.')) {
+      console.log('No valid token provided for subscription status check');
       return NextResponse.json({ 
         status: 'trial', 
         plan: null, 

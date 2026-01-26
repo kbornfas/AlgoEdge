@@ -3,10 +3,16 @@ import pool from '../config/database.js';
 
 export const authenticate = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
 
-    if (!token) {
+    if (!token || token === 'undefined' || token === 'null') {
       return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Validate token format before trying to verify
+    if (!token.includes('.') || token.split('.').length !== 3) {
+      return res.status(401).json({ error: 'Invalid token format' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -23,16 +29,17 @@ export const authenticate = async (req, res, next) => {
     req.user = result.rows[0];
     next();
   } catch (error) {
-    console.error('Auth error:', error);
+    console.error('Auth error:', error.message);
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 };
 
 export const optionalAuth = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
 
-    if (token) {
+    if (token && token !== 'undefined' && token !== 'null' && token.includes('.')) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const result = await pool.query(
         'SELECT id, username, email FROM users WHERE id = $1',

@@ -128,10 +128,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [lockedFeature, setLockedFeature] = useState<string>('');
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Wait for client-side mount before accessing localStorage
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
+    if (!isMounted) return;
+    
     try {
-      const userData = localStorage.getItem('user');
+      const userData = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
       if (userData) {
         setUser(JSON.parse(userData));
       } else {
@@ -139,16 +147,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     } catch (error) {
       console.error('Error parsing user data:', error);
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+      }
       router.push('/auth/login');
     }
-  }, [router]);
+  }, [router, isMounted]);
 
   useEffect(() => {
+    if (!isMounted) return;
+    
     const checkSubscription = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         if (!token) {
           setIsSubscribed(false);
           setSubscriptionLoading(false);
@@ -174,13 +186,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
 
     checkSubscription();
-  }, []);
+  }, [isMounted]);
 
   // Fetch wallet balance
   useEffect(() => {
+    if (!isMounted) return;
+    
     const fetchWalletBalance = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         if (!token) return;
 
         // Use Next.js API route proxy
@@ -201,7 +215,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // Refresh balance every 15 seconds to catch updates after admin approval
     const interval = setInterval(fetchWalletBalance, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isMounted]);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
@@ -495,6 +509,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </Box>
     </Box>
   );
+
+  // Show loading spinner while waiting for client-side mount
+  if (!isMounted) {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'background.default',
+        }}
+      >
+        <Box sx={{ textAlign: 'center' }}>
+          <Box
+            sx={{
+              width: 48,
+              height: 48,
+              border: '3px solid',
+              borderColor: 'primary.main',
+              borderTopColor: 'transparent',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              mx: 'auto',
+              '@keyframes spin': {
+                '0%': { transform: 'rotate(0deg)' },
+                '100%': { transform: 'rotate(360deg)' },
+              },
+            }}
+          />
+        </Box>
+      </Box>
+    );
+  }
+
   if (!user) {
     return null;
   }
