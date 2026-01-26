@@ -101,6 +101,15 @@ export default function LoginPage() {
         return;
       }
 
+      // Check for email verification requirement
+      if (data.requiresVerification) {
+        // Store email for OTP page
+        localStorage.setItem('pendingEmail', data.email);
+        // Redirect to OTP verification page
+        router.push('/auth/verify-otp');
+        return;
+      }
+
       // Validate response has required fields
       if (!data.token || !data.user) {
         console.error('Invalid login response - missing token or user:', data);

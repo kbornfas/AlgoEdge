@@ -187,6 +187,27 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: 'Incorrect password. Please try again.' });
     }
 
+    // Check if email is verified - if not, send new OTP and redirect to verification
+    if (!user.is_verified) {
+      // Generate new OTP
+      const otpCode = generateVerificationCode();
+      const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      
+      await pool.query(
+        'UPDATE users SET verification_token = $1, verification_expires = $2 WHERE id = $3',
+        [otpCode, otpExpires, user.id]
+      );
+      
+      // Send OTP email
+      await sendVerificationCodeEmail(user.email, user.username, otpCode, 10);
+      
+      return res.status(200).json({
+        requiresVerification: true,
+        email: user.email,
+        message: 'Please verify your email. A new verification code has been sent.'
+      });
+    }
+
     // Check 2FA
     if (user.two_fa_enabled) {
       if (!twoFACode) {
@@ -210,7 +231,7 @@ export const login = async (req, res) => {
       [user.id]
     );
 
-    // Check subscription status
+    // Check subscription status - ONLY paid plans count as active
     const subscriptionResult = await pool.query(
       `SELECT * FROM subscriptions 
        WHERE user_id = $1 
@@ -220,19 +241,21 @@ export const login = async (req, res) => {
       [user.id]
     );
     
-    // Also check subscription_status field on user
+    // Also check subscription_status field on user - must be 'active' with a non-null plan
     const userStatusResult = await pool.query(
-      'SELECT subscription_status FROM users WHERE id = $1',
+      'SELECT subscription_status, subscription_plan FROM users WHERE id = $1',
       [user.id]
     );
     const userStatus = userStatusResult.rows[0]?.subscription_status;
+    const userPlan = userStatusResult.rows[0]?.subscription_plan;
+    const hasPaidUserSubscription = userStatus === 'active' && userPlan && userPlan !== 'free';
     
     // Admin bypass - always has access (case-insensitive email comparison)
     const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
     const isAdmin = user.email?.toLowerCase() === adminEmail || user.role === 'admin';
-    const hasActiveSubscription = isAdmin || subscriptionResult.rows.length > 0 || userStatus === 'active';
+    const hasActiveSubscription = isAdmin || subscriptionResult.rows.length > 0 || hasPaidUserSubscription;
     
-    console.log('Login check:', { email: user.email, adminEmail, isAdmin, role: user.role, hasActiveSubscription });
+    console.log('Login check:', { email: user.email, adminEmail, isAdmin, role: user.role, hasActiveSubscription, userPlan });
 
     // Generate token
     const token = generateToken(user.id);

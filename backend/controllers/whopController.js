@@ -424,16 +424,16 @@ const getSubscriptionStatus = async (req, res) => {
 
     const result = await pool.query(
       `SELECT u.subscription_status, u.subscription_plan, u.subscription_expires_at,
-              s.whop_membership_id, s.status as sub_status, s.current_period_end
+              s.whop_membership_id, s.status as sub_status, s.plan as sub_plan, s.current_period_end
        FROM users u
-       LEFT JOIN subscriptions s ON u.id = s.user_id
+       LEFT JOIN subscriptions s ON u.id = s.user_id AND s.status = 'active' AND s.plan != 'free'
        WHERE u.id = $1`,
       [userId]
     );
 
     if (result.rows.length === 0) {
       return res.json({
-        status: 'trial',
+        status: 'free',
         plan: null,
         expiresAt: null,
         isActive: false,
@@ -443,11 +443,18 @@ const getSubscriptionStatus = async (req, res) => {
     const user = result.rows[0];
     const now = new Date();
     const expiresAt = user.subscription_expires_at ? new Date(user.subscription_expires_at) : null;
-    const isActive = user.subscription_status === 'active' && (!expiresAt || expiresAt > now);
+    
+    // Check if user has a paid subscription
+    // Either from subscription_status + subscription_plan fields OR from subscriptions table
+    const hasPaidPlan = user.subscription_plan && user.subscription_plan !== 'free';
+    const hasPaidSubscription = user.sub_plan && user.sub_plan !== 'free';
+    const isActive = (user.subscription_status === 'active' && hasPaidPlan && (!expiresAt || expiresAt > now)) || hasPaidSubscription;
+
+    console.log('Subscription check:', { userId, subscription_status: user.subscription_status, subscription_plan: user.subscription_plan, sub_plan: user.sub_plan, isActive });
 
     res.json({
-      status: isActive ? 'active' : user.subscription_status || 'trial',
-      plan: user.subscription_plan,
+      status: isActive ? 'active' : 'free',
+      plan: user.subscription_plan || user.sub_plan || 'free',
       expiresAt: user.subscription_expires_at,
       isActive,
     });
