@@ -163,10 +163,39 @@ export default function DashboardAffiliatePage() {
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [payoutSuccess, setPayoutSuccess] = useState(false);
   const [payoutError, setPayoutError] = useState('');
+  const [isAffiliate, setIsAffiliate] = useState<boolean | null>(null);
+  const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchAffiliateStats();
+    checkAffiliateStatus();
   }, []);
+
+  const checkAffiliateStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/profile/status/affiliate`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setIsAffiliate(data.is_affiliate);
+        if (data.application) {
+          setApplicationStatus(data.application.status);
+        }
+        if (data.is_affiliate) {
+          fetchAffiliateStats();
+        } else {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Failed to check affiliate status:', error);
+      setLoading(false);
+    }
+  };
 
   const fetchAffiliateStats = async () => {
     try {
@@ -235,6 +264,113 @@ export default function DashboardAffiliatePage() {
 
   const currentTier = getCurrentTier();
   const nextTier = getNextTier();
+
+  // Show Become an Affiliate screen for non-affiliates
+  if (loading) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <Skeleton variant="circular" width={60} height={60} sx={{ mx: 'auto', mb: 2 }} />
+          <Skeleton variant="text" width={200} height={40} sx={{ mx: 'auto' }} />
+        </Box>
+      </Box>
+    );
+  }
+
+  if (isAffiliate === false) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: 8, position: 'relative' }}>
+        <AnimatedBackground />
+        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
+          <GlassCard borderColor="rgba(34, 197, 94, 0.3)" sx={{ p: 6, textAlign: 'center' }}>
+            <Share2 size={64} color="#22C55E" style={{ marginBottom: 24 }} />
+            
+            <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, mb: 2 }}>
+              Become an Affiliate
+            </Typography>
+            
+            <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 4, maxWidth: 500, mx: 'auto' }}>
+              Join our affiliate program and earn commissions by referring new users to AlgoEdge. 
+              Start earning passive income today!
+            </Typography>
+
+            {applicationStatus === 'pending' && (
+              <Alert severity="info" sx={{ mb: 4, maxWidth: 400, mx: 'auto' }}>
+                Your affiliate application is under review. We&apos;ll notify you once it&apos;s approved.
+              </Alert>
+            )}
+
+            <Box sx={{ mb: 4 }}>
+              <Grid container spacing={3} justifyContent="center">
+                {tiers.slice(0, 3).map((tier) => (
+                  <Grid item xs={12} sm={4} key={tier.name}>
+                    <Box sx={{ 
+                      p: 2, 
+                      borderRadius: 2, 
+                      bgcolor: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.1)'
+                    }}>
+                      <Typography sx={{ fontSize: '1.5rem', mb: 1 }}>{tier.emoji}</Typography>
+                      <Typography sx={{ color: tier.color, fontWeight: 700, mb: 0.5 }}>
+                        {tier.name}
+                      </Typography>
+                      <Typography sx={{ color: '#22C55E', fontWeight: 800, fontSize: '1.2rem' }}>
+                        {tier.commission}
+                      </Typography>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
+                        {tier.minReferrals}+ referrals
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CheckCircle size={16} color="#22C55E" />
+                <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>
+                  Earn up to 20% commission
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CheckCircle size={16} color="#22C55E" />
+                <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>
+                  Weekly payouts
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CheckCircle size={16} color="#22C55E" />
+                <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>
+                  Unique referral link
+                </Typography>
+              </Box>
+            </Box>
+
+            <Button
+              variant="contained"
+              size="large"
+              component={Link}
+              href="/dashboard/affiliate/apply"
+              disabled={applicationStatus === 'pending'}
+              sx={{
+                mt: 4,
+                background: applicationStatus === 'pending' 
+                  ? 'rgba(255,255,255,0.1)' 
+                  : 'linear-gradient(135deg, #22C55E 0%, #0066FF 100%)',
+                color: 'white',
+                fontWeight: 700,
+                px: 6,
+                py: 1.5,
+              }}
+            >
+              {applicationStatus === 'pending' ? 'Application Pending' : 'Apply to Become an Affiliate'}
+            </Button>
+          </GlassCard>
+        </Container>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', position: 'relative' }}>

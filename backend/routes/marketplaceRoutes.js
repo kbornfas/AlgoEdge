@@ -269,9 +269,19 @@ router.get('/bots/:slug', optionalAuthenticate, async (req, res) => {
       owned = purchase.rows.length > 0;
     }
 
+    // Create sanitized bot object - hide download files unless owned
+    const botData = { ...bot.rows[0] };
+    if (!owned) {
+      // Hide sensitive delivery info from non-owners
+      delete botData.download_files;
+      delete botData.delivery_instructions;
+      delete botData.setup_guide;
+      delete botData.bot_file_url;
+    }
+
     res.json({
       success: true,
-      bot: bot.rows[0],
+      bot: botData,
       reviews: reviews.rows,
       owned
     });
@@ -289,8 +299,23 @@ router.post('/bots', authenticate, requireSellerSubscription, apiLimiter, async 
       name, description, short_description,
       supported_platforms, supported_pairs, recommended_timeframes,
       minimum_balance, price_type, price, subscription_period,
-      trial_days, category, tags, thumbnail_url, screenshots, demo_video_url
+      trial_days, category, tags, thumbnail_url, screenshots, demo_video_url,
+      // NEW: File uploads for product delivery
+      download_files, // [{name, url, size_bytes, file_type}]
+      delivery_instructions,
+      setup_guide
     } = req.body;
+
+    // Validate required fields
+    if (!name || !description) {
+      return res.status(400).json({ error: 'Name and description are required' });
+    }
+    if (!description || description.length < 100) {
+      return res.status(400).json({ error: 'Description must be at least 100 characters' });
+    }
+    if (!download_files || download_files.length === 0) {
+      return res.status(400).json({ error: 'You must upload at least one file (the EA/Bot file)' });
+    }
 
     // Generate slug
     const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -301,14 +326,16 @@ router.post('/bots', authenticate, requireSellerSubscription, apiLimiter, async 
         seller_id, name, slug, description, short_description,
         supported_platforms, supported_pairs, recommended_timeframes,
         minimum_balance, price_type, price, subscription_period,
-        trial_days, category, tags, thumbnail_url, screenshots, demo_video_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+        trial_days, category, tags, thumbnail_url, screenshots, demo_video_url,
+        download_files, delivery_instructions, setup_guide
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
       RETURNING *
     `, [
       userId, name, slug, description, short_description,
       supported_platforms || ['MT5'], supported_pairs || ['XAUUSD'], recommended_timeframes || ['H1'],
       minimum_balance || 100, price_type || 'one_time', price || 0, subscription_period,
-      trial_days || 0, category || 'general', tags || [], thumbnail_url, screenshots || [], demo_video_url
+      trial_days || 0, category || 'general', tags || [], thumbnail_url, screenshots || [], demo_video_url,
+      download_files ? JSON.stringify(download_files) : null, delivery_instructions, setup_guide
     ]);
 
     auditLog(userId, 'BOT_LISTING_CREATED', { botId: result.rows[0].id, name }, req);
@@ -498,12 +525,29 @@ router.get('/signals/providers/:idOrSlug', optionalAuthenticate, async (req, res
       ORDER BY r.created_at DESC LIMIT 10
     `, [provider.rows[0].id]);
 
+    // Create a sanitized provider object - hide community link unless subscribed
+    const providerData = { ...provider.rows[0] };
+    const hasActiveSubscription = isSubscribed.rows.length > 0;
+    
+    if (!hasActiveSubscription) {
+      // Hide sensitive community access info from non-subscribers
+      delete providerData.community_link;
+      delete providerData.community_instructions;
+      // Keep community_platform visible so users know what platform they'll get access to
+    }
+
     res.json({
       success: true,
-      provider: provider.rows[0],
+      provider: providerData,
       signals,
       reviews: reviews.rows,
-      isSubscribed: isSubscribed.rows.length > 0
+      isSubscribed: hasActiveSubscription,
+      // Let user know what they get after subscribing
+      accessInfo: hasActiveSubscription ? {
+        community_link: provider.rows[0].community_link,
+        community_platform: provider.rows[0].community_platform,
+        community_instructions: provider.rows[0].community_instructions
+      } : null
     });
   } catch (error) {
     console.error('Get provider error:', error);
@@ -516,9 +560,28 @@ router.post('/signals/providers', authenticate, requireSellerSubscription, apiLi
   try {
     const userId = req.user.id;
     const {
-      display_name, bio, trading_style, main_instruments, risk_level,
-      monthly_price, quarterly_price, yearly_price, telegram_channel
+      display_name, bio, long_description, trading_style, main_instruments, risk_level,
+      monthly_price, quarterly_price, yearly_price, 
+      // Community link - where buyers get access after purchase
+      community_link, community_platform, community_instructions,
+      // Additional details for attractive listing
+      experience_years, trading_pairs, signal_frequency, average_signals_per_day,
+      screenshots, testimonials, avatar_url, cover_image_url
     } = req.body;
+
+    // Validate required fields for signal listing
+    if (!display_name) {
+      return res.status(400).json({ error: 'Display name is required' });
+    }
+    if (!bio || bio.length < 50) {
+      return res.status(400).json({ error: 'Bio must be at least 50 characters' });
+    }
+    if (!community_link) {
+      return res.status(400).json({ error: 'Community link (Telegram, WhatsApp, etc.) is required' });
+    }
+    if (!community_platform) {
+      return res.status(400).json({ error: 'Community platform type is required' });
+    }
 
     // Check if already a provider
     const existing = await pool.query('SELECT id FROM signal_providers WHERE user_id = $1', [userId]);
@@ -530,14 +593,21 @@ router.post('/signals/providers', authenticate, requireSellerSubscription, apiLi
 
     const result = await pool.query(`
       INSERT INTO signal_providers (
-        user_id, display_name, slug, bio, trading_style, main_instruments,
-        risk_level, monthly_price, quarterly_price, yearly_price, telegram_channel
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        user_id, display_name, slug, bio, long_description, trading_style, main_instruments,
+        risk_level, monthly_price, quarterly_price, yearly_price,
+        community_link, community_platform, community_instructions,
+        experience_years, trading_pairs, signal_frequency, average_signals_per_day,
+        screenshots, testimonials, avatar_url, cover_image_url
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
       RETURNING *
     `, [
-      userId, display_name, `${slug}-${Date.now().toString(36)}`, bio,
+      userId, display_name, `${slug}-${Date.now().toString(36)}`, bio, long_description,
       trading_style, main_instruments || ['XAUUSD'], risk_level || 'moderate',
-      monthly_price || 0, quarterly_price || 0, yearly_price || 0, telegram_channel
+      monthly_price || 0, quarterly_price || 0, yearly_price || 0,
+      community_link, community_platform, community_instructions,
+      experience_years || 0, trading_pairs || main_instruments || ['XAUUSD'],
+      signal_frequency || 'daily', average_signals_per_day || 5,
+      screenshots || [], testimonials || null, avatar_url, cover_image_url
     ]);
 
     auditLog(userId, 'SIGNAL_PROVIDER_CREATED', { providerId: result.rows[0].id }, req);
@@ -776,9 +846,20 @@ router.get('/products/:slug', optionalAuthenticate, async (req, res) => {
       ORDER BY r.created_at DESC LIMIT 10
     `, [product.rows[0].id]);
 
+    // Create sanitized product object - hide download files unless owned
+    const productData = { ...product.rows[0] };
+    if (!owned) {
+      // Hide sensitive delivery info from non-owners
+      delete productData.download_files;
+      delete productData.delivery_instructions;
+      delete productData.license_terms;
+      delete productData.file_url;
+      delete productData.additional_files;
+    }
+
     res.json({
       success: true,
-      product: product.rows[0],
+      product: productData,
       reviews: reviews.rows,
       owned
     });
@@ -796,8 +877,26 @@ router.post('/products', authenticate, requireSellerSubscription, apiLimiter, as
       name, description, short_description, product_type,
       price, compare_at_price, category, subcategory, tags,
       thumbnail_url, preview_images, preview_video_url,
-      course_modules, total_duration_minutes
+      course_modules, total_duration_minutes,
+      // NEW: File uploads for product delivery
+      download_files, // [{name, url, size_bytes, file_type}]
+      delivery_instructions,
+      license_terms
     } = req.body;
+
+    // Validate required fields
+    if (!name || !description) {
+      return res.status(400).json({ error: 'Name and description are required' });
+    }
+    if (!description || description.length < 100) {
+      return res.status(400).json({ error: 'Description must be at least 100 characters' });
+    }
+    if (!product_type) {
+      return res.status(400).json({ error: 'Product type is required' });
+    }
+    if (!download_files || download_files.length === 0) {
+      return res.status(400).json({ error: 'You must upload at least one file for delivery' });
+    }
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
@@ -806,14 +905,16 @@ router.post('/products', authenticate, requireSellerSubscription, apiLimiter, as
         seller_id, name, slug, description, short_description,
         product_type, price, compare_at_price, category, subcategory, tags,
         thumbnail_url, preview_images, preview_video_url,
-        course_modules, total_duration_minutes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        course_modules, total_duration_minutes,
+        download_files, delivery_instructions, license_terms
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       RETURNING *
     `, [
       userId, name, `${slug}-${Date.now().toString(36)}`, description, short_description,
       product_type, price, compare_at_price, category, subcategory, tags || [],
       thumbnail_url, preview_images || [], preview_video_url,
-      course_modules ? JSON.stringify(course_modules) : null, total_duration_minutes
+      course_modules ? JSON.stringify(course_modules) : null, total_duration_minutes,
+      download_files ? JSON.stringify(download_files) : null, delivery_instructions, license_terms
     ]);
 
     auditLog(userId, 'PRODUCT_LISTING_CREATED', { productId: result.rows[0].id, name }, req);
@@ -1786,14 +1887,15 @@ router.get('/purchases/:type/:id/access', authenticate, async (req, res) => {
     const { type, id } = req.params;
     const itemId = parseInt(id);
 
-    let purchase, deliverables, accessInfo;
+    let purchase, deliverables, accessInfo, downloadFiles;
 
     if (type === 'bot') {
       // Verify purchase
       purchase = await pool.query(`
         SELECT bp.*, b.name, b.slug, b.thumbnail_url, b.setup_instructions,
                b.installation_guide_url, b.documentation_url, b.support_email, b.support_telegram,
-               b.supported_platforms, b.supported_pairs, b.bot_version, b.includes_source_code
+               b.supported_platforms, b.supported_pairs, b.bot_version, b.includes_source_code,
+               b.download_files, b.delivery_instructions, b.setup_guide
         FROM marketplace_bot_purchases bp
         JOIN marketplace_bots b ON bp.bot_id = b.id
         WHERE bp.bot_id = $1 AND bp.buyer_id = $2
@@ -1803,7 +1905,10 @@ router.get('/purchases/:type/:id/access', authenticate, async (req, res) => {
         return res.status(403).json({ error: 'You have not purchased this bot' });
       }
 
-      // Get deliverables
+      // Get download files from bot record
+      downloadFiles = purchase.rows[0].download_files;
+
+      // Get deliverables (legacy support)
       deliverables = await pool.query(`
         SELECT * FROM product_deliverables 
         WHERE bot_id = $1 AND is_active = TRUE
@@ -1820,7 +1925,7 @@ router.get('/purchases/:type/:id/access', authenticate, async (req, res) => {
       purchase = await pool.query(`
         SELECT pp.*, p.name, p.slug, p.thumbnail_url, p.product_type,
                p.delivery_instructions, p.support_email, p.course_modules,
-               p.total_duration_minutes
+               p.total_duration_minutes, p.download_files, p.license_terms
         FROM marketplace_product_purchases pp
         JOIN marketplace_products p ON pp.product_id = p.id
         WHERE pp.product_id = $1 AND pp.buyer_id = $2
@@ -1829,6 +1934,9 @@ router.get('/purchases/:type/:id/access', authenticate, async (req, res) => {
       if (purchase.rows.length === 0) {
         return res.status(403).json({ error: 'You have not purchased this product' });
       }
+
+      // Get download files from product record
+      downloadFiles = purchase.rows[0].download_files;
 
       deliverables = await pool.query(`
         SELECT * FROM product_deliverables 
@@ -1844,8 +1952,8 @@ router.get('/purchases/:type/:id/access', authenticate, async (req, res) => {
     } else if (type === 'signal') {
       purchase = await pool.query(`
         SELECT ss.*, sp.display_name, sp.slug, sp.avatar_url,
-               sp.telegram_invite_link, sp.discord_invite_link, sp.signal_delivery_method,
-               sp.analysis_included, sp.educational_content
+               sp.community_link, sp.community_platform, sp.community_instructions,
+               sp.telegram_channel, sp.twitter_handle, sp.website_url
         FROM signal_subscriptions ss
         JOIN signal_providers sp ON ss.provider_id = sp.id
         WHERE ss.provider_id = $1 AND ss.subscriber_id = $2 AND ss.status = 'active'
@@ -1854,6 +1962,9 @@ router.get('/purchases/:type/:id/access', authenticate, async (req, res) => {
       if (purchase.rows.length === 0) {
         return res.status(403).json({ error: 'You do not have an active subscription' });
       }
+
+      // For signals, the "download" is the community link
+      downloadFiles = null; // No file downloads for signals
 
       deliverables = await pool.query(`
         SELECT * FROM product_deliverables 
@@ -1873,6 +1984,7 @@ router.get('/purchases/:type/:id/access', authenticate, async (req, res) => {
     res.json({
       success: true,
       purchase: purchase.rows[0],
+      download_files: downloadFiles, // Files to download (products/bots)
       deliverables: deliverables.rows,
       access: accessInfo.rows[0] || null,
       whatYouGet: generateWhatYouGet(type, purchase.rows[0], deliverables.rows)

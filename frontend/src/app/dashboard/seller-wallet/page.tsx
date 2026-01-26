@@ -117,6 +117,7 @@ export default function SellerWalletPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isSeller, setIsSeller] = useState<boolean | null>(null);
 
   // Withdrawal dialog state
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
@@ -126,6 +127,32 @@ export default function SellerWalletPage() {
   const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+  const checkSellerStatus = useCallback(async () => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const response = await fetch(`${API_URL}/api/profile/status/seller`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setIsSeller(data.is_seller);
+        if (!data.is_seller) {
+          setLoading(false);
+        }
+      } else {
+        setIsSeller(false);
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error('Failed to check seller status:', err);
+      setIsSeller(false);
+      setLoading(false);
+    }
+  }, [token, API_URL]);
 
   const fetchData = useCallback(async () => {
     if (!token) {
@@ -198,8 +225,14 @@ export default function SellerWalletPage() {
   }, [token, API_URL]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    checkSellerStatus();
+  }, [checkSellerStatus]);
+
+  useEffect(() => {
+    if (isSeller) {
+      fetchData();
+    }
+  }, [isSeller, fetchData]);
 
   const handleSubmitWithdraw = async () => {
     if (!withdrawAmount || parseFloat(withdrawAmount) < 20) {
@@ -295,6 +328,44 @@ export default function SellerWalletPage() {
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
+      </Container>
+    );
+  }
+
+  // Show non-seller message if not a seller
+  if (isSeller === false) {
+    return (
+      <Container maxWidth="md" sx={{ py: 8 }}>
+        <Paper
+          sx={{
+            p: 6,
+            textAlign: 'center',
+            bgcolor: 'rgba(139, 92, 246, 0.1)',
+            border: '1px solid rgba(139, 92, 246, 0.3)',
+            borderRadius: 4,
+          }}
+        >
+          <WalletIcon sx={{ fontSize: 80, color: '#8B5CF6', mb: 3 }} />
+          <Typography variant="h4" fontWeight="bold" gutterBottom>
+            Seller Wallet
+          </Typography>
+          <Typography color="text.secondary" sx={{ mb: 4 }}>
+            You need to be an approved seller to access the seller wallet.
+            Start selling on AlgoEdge Marketplace to earn commissions!
+          </Typography>
+          <Button
+            variant="contained"
+            href="/dashboard/seller/apply"
+            sx={{
+              background: 'linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%)',
+              color: 'white',
+              fontWeight: 700,
+              px: 4,
+            }}
+          >
+            Apply to Become a Seller
+          </Button>
+        </Paper>
       </Container>
     );
   }

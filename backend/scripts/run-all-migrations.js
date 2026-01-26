@@ -35,6 +35,9 @@ const migrations = [
   '025_user_wallets.sql',
   '026_wallet_enhancements.sql',
   '027_seller_verification_system.sql',
+  '028_admin_wallet_system.sql',
+  '029_enhanced_product_delivery.sql',
+  '030_seller_affiliate_profiles.sql',
 ];
 
 async function runAllMigrations() {

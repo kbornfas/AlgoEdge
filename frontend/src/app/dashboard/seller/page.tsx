@@ -73,6 +73,7 @@ interface SellerStats {
   is_verified: boolean;
   verification_pending: boolean;
   profile_image?: string;
+  seller_slug?: string;
   totals: {
     bots: number;
     products: number;
@@ -137,6 +138,8 @@ export default function SellerDashboardPage() {
   const [success, setSuccess] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [isSeller, setIsSeller] = useState<boolean | null>(null);
+  const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -144,8 +147,42 @@ export default function SellerDashboardPage() {
     if (token && userData) {
       setUser(JSON.parse(userData));
     }
-    fetchSellerStats();
+    checkSellerStatus();
   }, []);
+
+  const checkSellerStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile/status/seller`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setIsSeller(data.is_seller);
+        if (data.application) {
+          setApplicationStatus(data.application.status);
+        }
+        
+        // Only fetch seller stats if user is a seller
+        if (data.is_seller) {
+          await fetchSellerStats();
+        } else {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error checking seller status:', error);
+      setLoading(false);
+    }
+  };
 
   const fetchSellerStats = async () => {
     try {
@@ -267,6 +304,92 @@ export default function SellerDashboardPage() {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <CircularProgress sx={{ color: '#8B5CF6' }} />
+      </Box>
+    );
+  }
+
+  // Show "Become a Seller" screen if user is not a seller
+  if (isSeller === false) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: 4 }}>
+        <Container maxWidth="md">
+          <Card sx={{ 
+            bgcolor: 'rgba(139, 92, 246, 0.1)', 
+            border: '1px solid rgba(139, 92, 246, 0.3)',
+            borderRadius: 4,
+            textAlign: 'center',
+            py: 8,
+            px: 4
+          }}>
+            <CardContent>
+              <Box sx={{ 
+                width: 100, height: 100, 
+                borderRadius: '50%', 
+                bgcolor: 'rgba(139, 92, 246, 0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                mx: 'auto', mb: 3
+              }}>
+                <Package size={48} color="#8B5CF6" />
+              </Box>
+              
+              <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, mb: 2 }}>
+                Become a Seller
+              </Typography>
+              
+              <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 4, maxWidth: 500, mx: 'auto' }}>
+                {applicationStatus === 'pending' 
+                  ? "Your seller application is being reviewed. You'll be notified once it's approved."
+                  : applicationStatus === 'rejected'
+                  ? "Your previous application was not approved. You can apply again with updated information."
+                  : "Join our marketplace and start selling your trading bots, educational content, signals, and more to thousands of traders worldwide."}
+              </Typography>
+
+              <Stack direction="row" spacing={2} justifyContent="center" sx={{ mb: 4 }}>
+                <Box sx={{ textAlign: 'center', p: 2 }}>
+                  <Typography variant="h5" sx={{ color: '#22C55E', fontWeight: 800 }}>80%</Typography>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Revenue Share</Typography>
+                </Box>
+                <Box sx={{ textAlign: 'center', p: 2 }}>
+                  <Typography variant="h5" sx={{ color: '#00D4FF', fontWeight: 800 }}>0</Typography>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Listing Fee</Typography>
+                </Box>
+                <Box sx={{ textAlign: 'center', p: 2 }}>
+                  <Typography variant="h5" sx={{ color: '#FF6B6B', fontWeight: 800 }}>24/7</Typography>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Support</Typography>
+                </Box>
+              </Stack>
+
+              {applicationStatus === 'pending' ? (
+                <Chip 
+                  label="Application Under Review" 
+                  color="warning" 
+                  sx={{ fontSize: 16, py: 2, px: 3 }}
+                />
+              ) : (
+                <Button
+                  variant="contained"
+                  size="large"
+                  component={Link}
+                  href="/dashboard/seller/apply"
+                  sx={{
+                    background: 'linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%)',
+                    color: 'white',
+                    fontWeight: 700,
+                    px: 6,
+                    py: 1.5,
+                    fontSize: 16,
+                    borderRadius: 2,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #7C3AED 0%, #0891B2 100%)',
+                    }
+                  }}
+                >
+                  Apply to Become a Seller
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </Container>
       </Box>
     );
   }
@@ -522,6 +645,133 @@ export default function SellerDashboardPage() {
             {success}
           </Alert>
         )}
+
+        {/* Share Your Links Card */}
+        <Card
+          sx={{
+            mb: 4,
+            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%)',
+            border: '1px solid rgba(34, 197, 94, 0.25)',
+          }}
+        >
+          <CardContent>
+            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+              <Box
+                sx={{
+                  p: 1.5,
+                  bgcolor: 'rgba(34, 197, 94, 0.2)',
+                  borderRadius: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <ArrowUpRight size={28} color="#22C55E" />
+              </Box>
+              <Box>
+                <Typography variant="h5" sx={{ color: 'white', fontWeight: 800 }}>
+                  Share Your Links
+                </Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                  Promote your profile and products on social media
+                </Typography>
+              </Box>
+            </Stack>
+
+            <Grid container spacing={2}>
+              {/* Seller Profile Link */}
+              <Grid item xs={12}>
+                <Paper sx={{ p: 2, bgcolor: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', mb: 1 }}>
+                    Your Seller Profile
+                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                      <Typography sx={{ color: '#22C55E', fontFamily: 'monospace', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {process.env.NEXT_PUBLIC_APP_URL || 'https://algoedgehub.com'}/sellers/{stats?.seller_slug || 'your-username'}
+                      </Typography>
+                    </Box>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_APP_URL || 'https://algoedgehub.com'}/sellers/${stats?.seller_slug || 'your-username'}`);
+                        setSuccess('Profile link copied!');
+                      }}
+                      sx={{ color: '#22C55E' }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                    </IconButton>
+                  </Stack>
+                </Paper>
+              </Grid>
+
+              {/* Product Links */}
+              {stats?.listings?.bots?.filter(b => b.status === 'approved')?.slice(0, 3).map((bot) => (
+                <Grid item xs={12} sm={6} md={4} key={`bot-${bot.id}`}>
+                  <Paper sx={{ p: 2, bgcolor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                      <Bot size={14} color="#8B5CF6" />
+                      <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {bot.name}
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', fontSize: '0.7rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        /marketplace/bots/{bot.slug}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_APP_URL || 'https://algoedgehub.com'}/marketplace/bots/${bot.slug}`);
+                          setSuccess('Link copied!');
+                        }}
+                        sx={{ color: '#8B5CF6', p: 0.5 }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                      </IconButton>
+                    </Stack>
+                  </Paper>
+                </Grid>
+              ))}
+              {stats?.listings?.products?.filter(p => p.status === 'approved')?.slice(0, 3).map((product) => (
+                <Grid item xs={12} sm={6} md={4} key={`product-${product.id}`}>
+                  <Paper sx={{ p: 2, bgcolor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                      <FileText size={14} color="#F59E0B" />
+                      <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {product.name}
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', fontSize: '0.7rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        /marketplace/products/{product.slug}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_APP_URL || 'https://algoedgehub.com'}/marketplace/products/${product.slug}`);
+                          setSuccess('Link copied!');
+                        }}
+                        sx={{ color: '#F59E0B', p: 0.5 }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                      </IconButton>
+                    </Stack>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          </CardContent>
+        </Card>
 
         {/* Wallet Stats */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
