@@ -12,6 +12,8 @@
     }
   },
   "env": {
-    "SKIP_DB_MIGRATIONS": "true"
+    "SKIP_DB_MIGRATIONS": "true",
+    "NEXT_PUBLIC_API_URL": "https://algoedge-production-a108.up.railway.app",
+    "BACKEND_URL": "https://algoedge-production-a108.up.railway.app"
   }
 }
