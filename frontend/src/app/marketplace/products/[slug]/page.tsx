@@ -737,15 +737,15 @@ export default function ProductDetailPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/products/${slug}`);
       if (res.ok) {
         const data = await res.json();
-        // Ensure numeric fields are properly typed
+        // Ensure numeric fields are properly typed - map API fields to frontend fields
         const productData = {
           ...data.product,
           price: parseFloat(data.product.price) || 0,
           discount_percentage: parseFloat(data.product.discount_percentage) || 0,
-          avg_rating: parseFloat(data.product.avg_rating) || 0,
+          avg_rating: parseFloat(data.product.rating_average || data.product.avg_rating) || 0,
           seller_rating: parseFloat(data.product.seller_rating) || 0,
-          total_purchases: parseInt(data.product.total_purchases) || 0,
-          total_reviews: parseInt(data.product.total_reviews) || 0,
+          total_purchases: parseInt(data.product.total_sales || data.product.total_purchases) || 0,
+          total_reviews: parseInt(data.product.rating_count || data.product.total_reviews) || 0,
           seller_total_sales: parseInt(data.product.seller_total_sales) || 0,
         };
         setProduct(productData);
@@ -780,9 +780,15 @@ export default function ProductDetailPage() {
       return;
     }
 
-    // Check if user has enough balance
+    // Only check balance if user is logged in and balance has been fetched
     if (walletBalance !== null && product && walletBalance < (discountedPrice || product.price)) {
       setInsufficientFunds(true);
+      return;
+    }
+
+    // If wallet balance hasn't loaded yet, fetch it first
+    if (walletBalance === null) {
+      await fetchWalletBalance();
       return;
     }
 
@@ -802,6 +808,10 @@ export default function ProductDetailPage() {
       if (res.ok) {
         // Success - redirect to purchases page
         router.push('/dashboard/purchases?success=true');
+      } else if (res.status === 401) {
+        // Token invalid or expired - clear and redirect to login
+        localStorage.removeItem('token');
+        router.push('/auth/login?redirect=/marketplace/products/' + slug);
       } else {
         if (data.error === 'Insufficient balance') {
           setInsufficientFunds(true);

@@ -592,15 +592,15 @@ export default function BotDetailPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/bots/${slug}`);
       if (res.ok) {
         const data = await res.json();
-        // Ensure numeric fields are properly typed
+        // Ensure numeric fields are properly typed - map API fields to frontend fields
         const botData = {
           ...data.bot,
           price: parseFloat(data.bot.price) || 0,
           discount_percentage: parseFloat(data.bot.discount_percentage) || 0,
-          avg_rating: parseFloat(data.bot.avg_rating) || 0,
+          avg_rating: parseFloat(data.bot.rating_average || data.bot.avg_rating) || 0,
           seller_rating: parseFloat(data.bot.seller_rating) || 0,
-          total_purchases: parseInt(data.bot.total_purchases) || 0,
-          total_reviews: parseInt(data.bot.total_reviews) || 0,
+          total_purchases: parseInt(data.bot.total_sales || data.bot.total_purchases) || 0,
+          total_reviews: parseInt(data.bot.rating_count || data.bot.total_reviews) || 0,
           seller_total_sales: parseInt(data.bot.seller_total_sales) || 0,
         };
         setBot(botData);
@@ -635,9 +635,16 @@ export default function BotDetailPage() {
       return;
     }
 
-    // Check if user has enough balance
+    // Only check balance if user is logged in and balance has been fetched
     if (walletBalance !== null && bot && !bot.is_free && walletBalance < (discountedPrice || bot.price)) {
       setInsufficientFunds(true);
+      return;
+    }
+
+    // If wallet balance hasn't loaded yet, fetch it first
+    if (walletBalance === null) {
+      await fetchWalletBalance();
+      // Re-check after fetch
       return;
     }
 
@@ -657,6 +664,10 @@ export default function BotDetailPage() {
       if (res.ok) {
         // Success - redirect to purchases page
         router.push('/dashboard/purchases?success=true');
+      } else if (res.status === 401) {
+        // Token invalid or expired - clear and redirect to login
+        localStorage.removeItem('token');
+        router.push('/auth/login?redirect=/marketplace/bots/' + slug);
       } else {
         if (data.error === 'Insufficient balance') {
           setInsufficientFunds(true);
