@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || 'http://localhost:3000';
     
     const response = await fetch(`${backendUrl}/api/auth/request-password-reset`, {
       method: 'POST',
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Forgot password error:', error);
+    console.error('[Forgot Password Error]:', error);
     return NextResponse.json(
       { error: 'Failed to send reset code. Please try again.' },
       { status: 500 }

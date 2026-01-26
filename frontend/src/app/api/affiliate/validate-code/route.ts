@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * POST /api/auth/reset-password
- * Proxy to backend to reset password with verification code
+ * POST /api/affiliate/validate-code
+ * Validate a referral code (public endpoint)
  */
 export async function POST(req: NextRequest) {
   try {
@@ -10,31 +10,23 @@ export async function POST(req: NextRequest) {
     
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || 'http://localhost:3000';
     
-    const response = await fetch(`${backendUrl}/api/auth/reset-password`, {
+    const response = await fetch(`${backendUrl}/api/affiliate/validate-code`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        email: body.email,
         code: body.code,
-        newPassword: body.newPassword,
       }),
     });
 
     const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(data, { status: response.status });
-    }
-
     return NextResponse.json(data);
   } catch (error) {
-    console.error('[Reset Password Error]:', error);
+    console.error('[Validate Code Error]:', error);
     return NextResponse.json(
-      { error: 'Failed to reset password. Please try again.' },
+      { valid: false, error: 'Failed to validate code' },
       { status: 500 }
     );
   }
 }
-

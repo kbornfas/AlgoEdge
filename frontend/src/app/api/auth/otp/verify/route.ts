@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || 'http://localhost:3000';
     
     const response = await fetch(`${backendUrl}/api/auth/verify-code`, {
       method: 'POST',
@@ -27,15 +27,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(data, { status: response.status });
     }
 
+    // Return the token and user data from backend
     return NextResponse.json({
       message: 'Email verified successfully',
-      user: {
+      token: data.token,
+      user: data.user || {
         email: body.email,
         isVerified: true,
       },
     });
   } catch (error) {
-    console.error('Verify OTP error:', error);
+    console.error('[OTP Verify Error]:', error);
     return NextResponse.json(
       { error: 'Verification failed. Please try again.' },
       { status: 500 }

@@ -8,10 +8,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || 'http://localhost:3000';
     
     // Create username from first and last name
-    const username = `${body.firstName?.toLowerCase() || ''}${body.lastName?.toLowerCase() || ''}`.replace(/[^a-z0-9]/g, '') || body.email?.split('@')[0];
+    const firstName = body.firstName?.trim() || '';
+    const lastName = body.lastName?.trim() || '';
+    const username = firstName && lastName 
+      ? `${firstName} ${lastName}` 
+      : body.email?.split('@')[0] || 'user';
     
     const response = await fetch(`${backendUrl}/api/auth/register`, {
       method: 'POST',
@@ -20,8 +24,11 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         username: username,
+        firstName: firstName,
+        lastName: lastName,
         email: body.email,
         password: body.password,
+        referralCode: body.referralCode || undefined,
       }),
     });
 
@@ -33,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('[Register API Error]:', error);
     return NextResponse.json(
       { error: 'Registration failed. Please try again.' },
       { status: 500 }

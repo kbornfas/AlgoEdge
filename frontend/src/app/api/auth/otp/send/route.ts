@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || 'http://localhost:3000';
     
     const response = await fetch(`${backendUrl}/api/auth/send-verification-code`, {
       method: 'POST',
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       email: body.email,
     });
   } catch (error) {
-    console.error('Send OTP error:', error);
+    console.error('[OTP Send Error]:', error);
     return NextResponse.json(
       { error: 'Failed to send verification code. Please try again.' },
       { status: 500 }

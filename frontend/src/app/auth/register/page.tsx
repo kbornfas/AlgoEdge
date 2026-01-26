@@ -99,7 +99,6 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
 
   // Password strength
   const passwordStrength = useMemo(() => 
@@ -189,11 +188,8 @@ export default function RegisterPage() {
       localStorage.setItem('pendingEmail', data.user.email);
       localStorage.setItem('pendingUser', JSON.stringify(data.user));
 
-      setSuccess(true);
-
-      setTimeout(() => {
-        router.push('/auth/verify-otp');
-      }, 1500);
+      // Silently redirect to OTP verification
+      router.push('/auth/verify-otp');
     } catch (err) {
       console.error('Registration error:', err);
       setError('Network error. Please try again.');
@@ -339,12 +335,6 @@ export default function RegisterPage() {
               </Alert>
             )}
 
-            {success && (
-              <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
-                Account created! Redirecting to email verification...
-              </Alert>
-            )}
-
             <Box component="form" onSubmit={handleSubmit} autoComplete="on" name="register">
               <Grid container spacing={2}>
                 {/* Name Fields */}
@@ -358,7 +348,7 @@ export default function RegisterPage() {
                     value={formData.firstName}
                     onChange={handleChange}
                     required
-                    disabled={loading || success}
+                    disabled={loading}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -379,7 +369,7 @@ export default function RegisterPage() {
                     value={formData.lastName}
                     onChange={handleChange}
                     required
-                    disabled={loading || success}
+                    disabled={loading}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -402,7 +392,7 @@ export default function RegisterPage() {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    disabled={loading || success}
+                    disabled={loading}
                     placeholder="you@example.com"
                     InputProps={{
                       startAdornment: (
@@ -426,7 +416,7 @@ export default function RegisterPage() {
                     value={formData.password}
                     onChange={handleChange}
                     required
-                    disabled={loading || success}
+                    disabled={loading}
                     placeholder="Create a strong password"
                     InputProps={{
                       startAdornment: (
@@ -501,7 +491,7 @@ export default function RegisterPage() {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     required
-                    disabled={loading || success}
+                    disabled={loading}
                     placeholder="Confirm your password"
                     error={formData.confirmPassword !== '' && formData.password !== formData.confirmPassword}
                     helperText={
@@ -552,7 +542,7 @@ export default function RegisterPage() {
                         setReferrerName('');
                       }
                     }}
-                    disabled={loading || success}
+                    disabled={loading}
                     placeholder="Enter referral code"
                     helperText={referrerName ? `✓ Referred by: ${referrerName}` : ''}
                     InputProps={{
@@ -596,7 +586,7 @@ export default function RegisterPage() {
                 fullWidth
                 variant="contained"
                 size="large"
-                disabled={loading || success || passwordStrength.score < 4}
+                disabled={loading || passwordStrength.score < 4}
                 sx={{ 
                   mt: 1,
                   mb: 2, 

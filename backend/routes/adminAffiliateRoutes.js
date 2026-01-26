@@ -2,6 +2,7 @@ import express from 'express';
 import pool from '../config/database.js';
 import { requireAdmin } from '../middleware/adminAuth.js';
 import { logAuditAction } from '../services/auditService.js';
+import { addAdminWalletTransaction } from '../services/adminWalletService.js';
 
 const router = express.Router();
 
@@ -443,6 +444,16 @@ router.post('/payouts/:id/approve', requireAdmin, async (req, res) => {
     await client.query(`
       SELECT add_wallet_transaction($1, 'withdrawal_completed', $2, 'payout', $3, 'Payout approved and processed', $4)
     `, [payout.user_id, payout.amount, id, adminId]);
+
+    // Deduct from admin wallet (this is money going out)
+    await addAdminWalletTransaction(
+      'affiliate_payout',
+      -payout.amount, // Negative because it's an outgoing payment
+      `Affiliate payout to user ${payout.user_id}`,
+      'payout',
+      id,
+      payout.user_id
+    );
 
     // Log the action
     await client.query(`

@@ -5,6 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { addAdminWalletTransaction } from '../services/adminWalletService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -333,6 +334,16 @@ router.post('/admin/requests/:id/approve', authenticateToken, requireAdmin, asyn
       `INSERT INTO platform_earnings (source_type, source_id, amount, description)
        VALUES ('verification_fee', $1, $2, 'Seller verification fee')`,
       [id, VERIFICATION_FEE]
+    );
+
+    // Credit admin wallet with verification fee
+    await addAdminWalletTransaction(
+      'verification_fee',
+      VERIFICATION_FEE,
+      'Seller verification fee',
+      'verification',
+      id,
+      request.user_id
     );
 
     await client.query('COMMIT');

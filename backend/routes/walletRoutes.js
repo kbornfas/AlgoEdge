@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
+import { addAdminWalletTransaction } from '../services/adminWalletService.js';
 
 const router = express.Router();
 
@@ -375,6 +376,16 @@ router.post('/purchase/bot/:botId', authenticate, async (req, res) => {
         [purchase.rows[0].id, platformCommission, `Commission from bot sale: ${item.name}`]
       );
 
+      // Credit admin wallet with platform commission
+      await addAdminWalletTransaction(
+        'marketplace_commission',
+        platformCommission,
+        `Bot sale commission: ${item.name}`,
+        'purchase',
+        purchase.rows[0].id,
+        userId
+      );
+
       // Also record in marketplace_bot_purchases for compatibility
       await client.query(
         `INSERT INTO marketplace_bot_purchases 
@@ -537,6 +548,16 @@ router.post('/purchase/product/:productId', authenticate, async (req, res) => {
         `INSERT INTO platform_earnings (source_type, source_id, amount, description)
          VALUES ('marketplace_commission', $1, $2, $3)`,
         [purchase.rows[0].id, platformCommission, `Commission from product sale: ${item.name}`]
+      );
+
+      // Credit admin wallet with platform commission
+      await addAdminWalletTransaction(
+        'marketplace_commission',
+        platformCommission,
+        `Product sale commission: ${item.name}`,
+        'purchase',
+        purchase.rows[0].id,
+        userId
       );
 
       // Also record in marketplace_product_purchases for compatibility
@@ -1066,6 +1087,16 @@ router.post('/withdrawal/request', authenticate, async (req, res) => {
       `INSERT INTO platform_earnings (source_type, source_id, amount, description)
        VALUES ('withdrawal_fee', $1, $2, $3)`,
       [withdrawal.rows[0].id, withdrawalFee, `Withdrawal fee from ${wallet_type} wallet`]
+    );
+
+    // Credit admin wallet with withdrawal fee
+    await addAdminWalletTransaction(
+      'withdrawal_fee',
+      withdrawalFee,
+      `Withdrawal fee from ${wallet_type} wallet`,
+      'withdrawal',
+      withdrawal.rows[0].id,
+      userId
     );
 
     await client.query('COMMIT');

@@ -68,7 +68,14 @@ export default function LoginPage() {
         }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Failed to parse login response:', parseError);
+        setError('Server returned invalid response. Please try again.');
+        return;
+      }
 
       if (!response.ok) {
         if (data.requires2FA) {
@@ -76,22 +83,21 @@ export default function LoginPage() {
           setError('');
         } else if (data.notFound) {
           setError('No account found with this email. Please create an account first.');
-        } else if (data.requiresActivation) {
-          if (!data.isVerified) {
-            setError('Please verify your email address. Check your inbox for the verification code.');
-          } else {
-            // User is verified but hasn't subscribed - take them to dashboard where they can upgrade
-            router.push('/dashboard');
-            return;
-          }
         } else if (data.details && Array.isArray(data.details)) {
           const fieldErrors = data.details
             .map((err: { field: string; message: string }) => `${err.field}: ${err.message}`)
             .join(', ');
           setError(fieldErrors || data.error || 'Login failed');
         } else {
-          setError(data.error || 'Login failed');
+          setError(data.error || 'Login failed. Please check your credentials.');
         }
+        return;
+      }
+
+      // Validate response has required fields
+      if (!data.token || !data.user) {
+        console.error('Invalid login response - missing token or user:', data);
+        setError('Login failed. Please try again.');
         return;
       }
 
@@ -103,12 +109,8 @@ export default function LoginPage() {
       document.cookie = 'pending_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       document.cookie = 'pending_user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 
-      if (data.hasActiveSubscription) {
-        router.push('/dashboard');
-      } else {
-        // Take users to dashboard with locked features - they can unlock from there
-        router.push('/dashboard');
-      }
+      // Redirect to dashboard - subscription status will be checked there
+      router.push('/dashboard');
     } catch (err) {
       console.error('Login error:', err);
       setError('Network error. Please try again.');

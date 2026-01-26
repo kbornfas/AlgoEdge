@@ -4,6 +4,7 @@ import { authenticate, optionalAuthenticate } from '../middleware/auth.js';
 import { apiLimiter } from '../middleware/rateLimiter.js';
 import { auditLog } from '../middleware/audit.js';
 import crypto from 'crypto';
+import { addAdminWalletTransaction } from '../services/adminWalletService.js';
 
 const router = express.Router();
 
@@ -1171,6 +1172,16 @@ router.post('/seller/request-verification', authenticate, async (req, res) => {
       `INSERT INTO seller_transactions (user_id, type, amount, description, status)
        VALUES ($1, 'verification_fee', $2, 'Seller Verification Badge Fee', 'completed')`,
       [userId, -VERIFICATION_FEE]
+    );
+
+    // Credit admin wallet with verification fee
+    await addAdminWalletTransaction(
+      'verification_fee',
+      VERIFICATION_FEE,
+      'Seller verification badge fee',
+      'verification',
+      null,
+      userId
     );
 
     // Set verification as pending (admin approval required)

@@ -10,6 +10,8 @@ export async function POST(req: NextRequest) {
     
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || 'http://localhost:3000';
     
+    console.log('[Login] Attempting login to:', backendUrl);
+    
     const response = await fetch(`${backendUrl}/api/auth/login`, {
       method: 'POST',
       headers: {
@@ -22,9 +24,12 @@ export async function POST(req: NextRequest) {
       }),
     });
 
+    console.log('[Login] Backend response status:', response.status);
+
     const data = await response.json();
 
     if (!response.ok) {
+      console.log('[Login] Login failed:', data.error);
       // Return user-friendly error messages
       const userFriendlyError = {
         ...data,
@@ -33,6 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(userFriendlyError, { status: response.status });
     }
 
+    console.log('[Login] Login successful for user:', data.user?.email);
     return NextResponse.json(data);
   } catch (error: any) {
     // Log detailed error on server side only

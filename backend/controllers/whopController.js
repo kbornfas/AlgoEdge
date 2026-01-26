@@ -236,11 +236,36 @@ const handleMembershipValid = async (data) => {
       const subscriptionId = subResult.rows[0]?.id;
 
       // Insert commission record
-      await pool.query(
+      const commissionResult = await pool.query(
         `INSERT INTO affiliate_commissions 
          (affiliate_user_id, referred_user_id, subscription_id, amount, commission_rate, status, period_start, period_end)
-         VALUES ($1, $2, $3, $4, $5, 'approved', NOW(), $6)`,
+         VALUES ($1, $2, $3, $4, $5, 'approved', NOW(), $6)
+         RETURNING id`,
         [referrer.id, userId, subscriptionId, commissionAmount, commissionRate, expiresAt]
+      );
+      const commissionId = commissionResult.rows[0].id;
+
+      // Update affiliate wallet balance and create transaction record
+      await pool.query(
+        `INSERT INTO affiliate_wallets (user_id, total_earned, available_balance)
+         VALUES ($1, $2, $2)
+         ON CONFLICT (user_id) DO UPDATE SET
+           total_earned = affiliate_wallets.total_earned + $2,
+           available_balance = affiliate_wallets.available_balance + $2,
+           updated_at = NOW()`,
+        [referrer.id, commissionAmount]
+      );
+
+      // Create wallet transaction record for audit trail
+      await pool.query(
+        `INSERT INTO affiliate_wallet_transactions 
+         (user_id, type, amount, balance_before, balance_after, reference_type, reference_id, description)
+         SELECT $1, 'commission_approved', $2, 
+                COALESCE(available_balance - $2, 0), 
+                available_balance,
+                'commission', $3, $4
+         FROM affiliate_wallets WHERE user_id = $1`,
+        [referrer.id, commissionAmount, commissionId, `Commission for ${planType} subscription`]
       );
 
       console.log(`Awarded $${commissionAmount.toFixed(2)} commission to affiliate ${referrer.id} (${referrer.username}) for ${planType} subscription`);

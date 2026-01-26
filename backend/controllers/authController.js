@@ -85,8 +85,18 @@ export const register = async (req, res) => {
     const otpCode = generateVerificationCode();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Generate unique referral code for new user
-    const newReferralCode = 'ALGO' + Math.random().toString(36).substring(2, 6).toUpperCase();
+    // Generate unique referral code for new user (retry if collision)
+    let newReferralCode;
+    let attempts = 0;
+    while (attempts < 5) {
+      newReferralCode = 'ALGO' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const existingCode = await client.query(
+        'SELECT id FROM users WHERE referral_code = $1',
+        [newReferralCode]
+      );
+      if (existingCode.rows.length === 0) break;
+      attempts++;
+    }
     
     // Create user with OTP (not verified yet)
     const result = await client.query(
