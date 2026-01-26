@@ -329,8 +329,44 @@ export default function SignalProviderPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/signals/providers/${providerId}`);
       if (res.ok) {
         const data = await res.json();
-        setProvider(data.provider);
-        setRecentSignals(data.recent_signals || demoSignals);
+        const p = data.provider;
+        
+        // Map backend fields to frontend interface
+        const mappedProvider: ProviderDetails = {
+          id: p.id,
+          user_id: p.user_id,
+          name: p.display_name || p.name || 'Unnamed Provider',
+          slug: p.slug,
+          description: p.long_description || p.bio || '',
+          bio: p.bio || '',
+          avatar_url: p.avatar_url || p.profile_image || '',
+          has_blue_badge: p.has_blue_badge,
+          trading_style: p.trading_style || 'Day Trading',
+          risk_level: p.risk_level || 'moderate',
+          instruments: p.main_instruments || p.trading_pairs || [],
+          performance_stats: {
+            win_rate: parseFloat(p.win_rate) || 0,
+            total_pips: parseFloat(p.total_pips) || 0,
+            avg_pips_per_trade: parseFloat(p.average_pips) || 0,
+            total_signals: p.total_signals || 0,
+            best_month_pips: parseFloat(p.best_month_pips) || 0,
+            worst_month_pips: parseFloat(p.worst_month_pips) || 0,
+          },
+          pricing: {
+            monthly: parseFloat(p.monthly_price) || 0,
+            quarterly: parseFloat(p.quarterly_price) || 0,
+            yearly: parseFloat(p.yearly_price) || 0,
+            lifetime: parseFloat(p.lifetime_price) || 0,
+          },
+          total_subscribers: p.subscriber_count || 0,
+          avg_rating: parseFloat(p.rating_average) || 0,
+          total_reviews: p.rating_count || 0,
+          is_verified: p.is_verified || p.status === 'approved',
+          created_at: p.created_at,
+        };
+        
+        setProvider(mappedProvider);
+        setRecentSignals(data.signals?.length > 0 ? data.signals : demoSignals);
         setReviews(data.reviews?.length > 0 ? data.reviews : demoReviews);
       } else {
         // Use demo data as fallback
@@ -508,13 +544,13 @@ export default function SignalProviderPage() {
                       {provider.avg_rating?.toFixed(1) || '0.0'}
                     </Typography>
                     <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                      ({provider.total_reviews} reviews)
+                      ({provider.total_reviews || 0} reviews)
                     </Typography>
                   </Stack>
                   <Stack direction="row" spacing={0.5} alignItems="center">
                     <Users size={16} color="rgba(255,255,255,0.5)" />
                     <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                      {provider.total_subscribers} subscribers
+                      {provider.total_subscribers || 0} subscribers
                     </Typography>
                   </Stack>
                 </Stack>
@@ -578,7 +614,7 @@ export default function SignalProviderPage() {
             >
               <Tab label="About" />
               <Tab label="Recent Signals" />
-              <Tab label={`Reviews (${provider.total_reviews})`} />
+              <Tab label={`Reviews (${provider.total_reviews || 0})`} />
             </Tabs>
 
             {/* About Tab */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -28,12 +28,15 @@ import {
   Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AuthBackground from '@/components/AuthBackground';
 import ThemeToggle from '@/components/ThemeToggle';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect');
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -125,8 +128,12 @@ export default function LoginPage() {
       document.cookie = 'pending_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       document.cookie = 'pending_user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 
-      // Redirect to dashboard - subscription status will be checked there
-      router.push('/dashboard');
+      // Redirect to the original page if there was one, otherwise dashboard
+      if (redirectUrl && redirectUrl.startsWith('/')) {
+        router.push(redirectUrl);
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err) {
       console.error('Login error:', err);
       setError('Network error. Please try again.');

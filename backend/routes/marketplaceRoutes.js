@@ -132,6 +132,50 @@ router.get('/featured', async (req, res) => {
   }
 });
 
+// Fast landing page data endpoint - returns all products needed for homepage in single request
+router.get('/landing', async (req, res) => {
+  try {
+    const [bots, providers, products] = await Promise.all([
+      pool.query(`
+        SELECT id, name, slug, short_description as description, thumbnail_url, price, price_type,
+               win_rate, monthly_return, rating_average, rating_count as total_reviews, total_sales, category
+        FROM marketplace_bots
+        WHERE status = 'approved'
+        ORDER BY is_featured DESC, total_sales DESC, rating_average DESC
+        LIMIT 3
+      `),
+      pool.query(`
+        SELECT sp.id, sp.display_name as name, sp.slug, sp.avatar_url, sp.monthly_price,
+               sp.win_rate, sp.total_pips, sp.subscriber_count, sp.rating_average,
+               sp.trading_style, sp.risk_level, sp.bio as description
+        FROM signal_providers sp
+        WHERE sp.status = 'approved'
+        ORDER BY sp.is_featured DESC, sp.subscriber_count DESC, sp.rating_average DESC
+        LIMIT 2
+      `),
+      pool.query(`
+        SELECT id, name, slug, short_description as description, thumbnail_url, price,
+               product_type as type, rating_average, rating_count as total_reviews, total_sales,
+               discount_percentage
+        FROM marketplace_products
+        WHERE status = 'approved'
+        ORDER BY is_featured DESC, total_sales DESC, rating_average DESC
+        LIMIT 3
+      `)
+    ]);
+
+    res.json({
+      success: true,
+      bots: bots.rows,
+      signals: providers.rows,
+      products: products.rows
+    });
+  } catch (error) {
+    console.error('Get landing data error:', error);
+    res.status(500).json({ error: 'Failed to get landing data' });
+  }
+});
+
 // ============================================================================
 // BOT MARKETPLACE
 // ============================================================================
@@ -250,9 +294,11 @@ router.get('/bots/:slug', optionalAuthenticate, async (req, res) => {
     // Increment view count
     await pool.query('UPDATE marketplace_bots SET view_count = view_count + 1 WHERE slug = $1', [slug]);
 
-    // Get reviews
+    // Get reviews with avatars
     const reviews = await pool.query(`
-      SELECT r.*, u.username
+      SELECT r.id, r.rating, r.title, r.review, r.created_at,
+             COALESCE(r.reviewer_name, u.username) as user_name,
+             COALESCE(r.reviewer_avatar, u.profile_picture) as avatar
       FROM marketplace_bot_reviews r
       JOIN users u ON r.user_id = u.id
       WHERE r.bot_id = $1 AND r.status = 'published'
@@ -516,9 +562,11 @@ router.get('/signals/providers/:idOrSlug', optionalAuthenticate, async (req, res
       signals = signalsResult.rows;
     }
 
-    // Get reviews
+    // Get reviews with avatars
     const reviews = await pool.query(`
-      SELECT r.*, u.username
+      SELECT r.id, r.rating, r.title, r.review, r.created_at,
+             COALESCE(r.reviewer_name, u.username) as user_name,
+             COALESCE(r.reviewer_avatar, u.profile_picture) as avatar
       FROM signal_provider_reviews r
       JOIN users u ON r.user_id = u.id
       WHERE r.provider_id = $1
@@ -837,9 +885,11 @@ router.get('/products/:slug', optionalAuthenticate, async (req, res) => {
       owned = purchase.rows.length > 0;
     }
 
-    // Get reviews
+    // Get reviews with avatars
     const reviews = await pool.query(`
-      SELECT r.*, u.username
+      SELECT r.id, r.rating, r.title, r.review, r.created_at,
+             COALESCE(r.reviewer_name, u.username) as user_name,
+             COALESCE(r.reviewer_avatar, u.profile_picture) as avatar
       FROM marketplace_product_reviews r
       JOIN users u ON r.user_id = u.id
       WHERE r.product_id = $1

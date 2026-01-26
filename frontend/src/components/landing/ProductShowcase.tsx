@@ -37,27 +37,36 @@ const GlassCard = ({
   </Box>
 );
 
-// Bot thumbnail images for display
+// Bot thumbnail images for display - unique images for each bot
 const botImages: Record<string, string> = {
-  'ema-pullback': 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=250&fit=crop',
-  'break-retest': 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=400&h=250&fit=crop',
-  'liquidity-sweep': 'https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=400&h=250&fit=crop',
-  'london-breakout': 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=400&h=250&fit=crop',
-  'order-block': 'https://images.unsplash.com/photo-1535320903710-d993d3d77d29?w=400&h=250&fit=crop',
-  'vwap-reversion': 'https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?w=400&h=250&fit=crop',
-  'fib-continuation': 'https://images.unsplash.com/photo-1559526324-593bc073d938?w=400&h=250&fit=crop',
-  'rsi-divergence': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop',
+  // Actual database bots
+  'gold-scalper-pro': 'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=400&h=250&fit=crop', // Gold bars
+  'silver-trend-rider': 'https://images.unsplash.com/photo-1589656966895-2f33e7653819?w=400&h=250&fit=crop', // Silver coins
+  'multi-metal-portfolio': 'https://images.unsplash.com/photo-1624365168968-f283d506c6b6?w=400&h=250&fit=crop', // Multiple precious metals
+  'news-trading-sniper': 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&h=250&fit=crop', // News/newspaper
+  'risk-manager-pro': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=250&fit=crop', // Dashboard analytics
+  // Fallback demo bots
+  'ema-pullback': 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=250&fit=crop', // Trading chart
+  'break-retest': 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=400&h=250&fit=crop', // Stock market
+  'liquidity-sweep': 'https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=400&h=250&fit=crop', // Data visualization
+  'london-breakout': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=250&fit=crop', // London city
+  'order-block': 'https://images.unsplash.com/photo-1535320903710-d993d3d77d29?w=400&h=250&fit=crop', // Trading floor
+  'vwap-reversion': 'https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?w=400&h=250&fit=crop', // Charts
+  'fib-continuation': 'https://images.unsplash.com/photo-1559526324-593bc073d938?w=400&h=250&fit=crop', // Finance
+  'rsi-divergence': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop', // Analytics
   'default': 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=250&fit=crop',
 };
 
-// Product type images
+// Product type images - unique for each category
 const productImages: Record<string, string> = {
   'course': 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=200&fit=crop',
-  'video course': 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=200&fit=crop',
-  'ebook': 'https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=400&h=200&fit=crop',
+  'video course': 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=200&fit=crop', // Learning/education
+  'video_course': 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=200&fit=crop',
+  'ebook': 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&h=200&fit=crop', // Book
   'indicator': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop',
   'indicators': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop',
   'template': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=200&fit=crop',
+  'strategy_guide': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=200&fit=crop', // Strategy planning
   'default': 'https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=400&h=200&fit=crop',
 };
 
@@ -197,35 +206,17 @@ export default function ProductShowcase() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [botsRes, featuredRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/bots?limit=3`).catch(() => null),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/featured`).catch(() => null),
-        ]);
-
-        if (botsRes?.ok) {
-          const data = await botsRes.json();
-          if (data.bots?.length > 0) {
-            setBots(data.bots.slice(0, 3));
-          } else {
-            setBots(fallbackBots);
-          }
+        // Single optimized endpoint for all landing page data
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/landing`);
+        
+        if (res?.ok) {
+          const data = await res.json();
+          setBots(data.bots?.length > 0 ? data.bots : fallbackBots);
+          setSignals(data.signals?.length > 0 ? data.signals : fallbackSignals);
+          setProducts(data.products?.length > 0 ? data.products : fallbackProducts);
         } else {
+          // Fallback to demo data
           setBots(fallbackBots);
-        }
-
-        if (featuredRes?.ok) {
-          const data = await featuredRes.json();
-          if (data.featured?.products?.length > 0) {
-            setProducts(data.featured.products.slice(0, 3));
-          } else {
-            setProducts(fallbackProducts);
-          }
-          if (data.featured?.signalProviders?.length > 0) {
-            setSignals(data.featured.signalProviders.slice(0, 2));
-          } else {
-            setSignals(fallbackSignals);
-          }
-        } else {
           setProducts(fallbackProducts);
           setSignals(fallbackSignals);
         }
@@ -301,7 +292,15 @@ export default function ProductShowcase() {
             ))
           ) : (
             bots.map((bot) => {
-              const imageUrl = botImages[bot.slug] || botImages['default'];
+              // Use slug-specific image, then category-based fallback, then default
+              const categoryImages: Record<string, string> = {
+                'scalper': 'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=400&h=250&fit=crop',
+                'trend': 'https://images.unsplash.com/photo-1589656966895-2f33e7653819?w=400&h=250&fit=crop',
+                'portfolio': 'https://images.unsplash.com/photo-1624365168968-f283d506c6b6?w=400&h=250&fit=crop',
+                'news': 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&h=250&fit=crop',
+                'utility': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=250&fit=crop',
+              };
+              const imageUrl = botImages[bot.slug] || categoryImages[bot.category?.toLowerCase()] || botImages['default'];
               return (
                 <Grid item xs={12} md={4} key={bot.id}>
                   <GlassCard
@@ -421,9 +420,9 @@ export default function ProductShowcase() {
                       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
                         <Stack direction="row" alignItems="center" spacing={0.5}>
                           <Star size={16} fill="#EAB308" color="#EAB308" />
-                          <Typography sx={{ color: '#FFFFFF', fontWeight: 600 }}>{bot.rating || bot.avg_rating || 4.8}</Typography>
+                          <Typography sx={{ color: '#FFFFFF', fontWeight: 600 }}>{bot.rating_average || bot.rating || 4.8}</Typography>
                           <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
-                            ({bot.sales || bot.total_purchases || 0} sales)
+                            ({bot.total_sales || bot.sales || 0} sales)
                           </Typography>
                         </Stack>
                       </Stack>
@@ -719,10 +718,10 @@ export default function ProductShowcase() {
                       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
                         <Star size={14} fill="#EAB308" color="#EAB308" />
                         <Typography sx={{ color: '#FFFFFF', fontSize: '0.85rem', fontWeight: 600 }}>
-                          {product.rating || product.rating_average || 4.8}
+                          {product.rating_average || product.rating || 4.8}
                         </Typography>
                         <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
-                          ({product.sales || product.total_sales || 0} sold)
+                          ({product.total_sales || product.sales || 0} sold)
                         </Typography>
                       </Stack>
 
