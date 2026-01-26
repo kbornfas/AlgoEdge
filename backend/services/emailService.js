@@ -1,7 +1,12 @@
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+// Check if Resend is configured (preferred for cloud platforms like Railway)
+const resendApiKey = process.env.RESEND_API_KEY;
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 // Check if SMTP is configured (support both SMTP_PASS and SMTP_PASSWORD)
 const smtpPassword = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
@@ -22,20 +27,22 @@ const transporter = isSmtpConfigured ? nodemailer.createTransport({
   socketTimeout: 15000,
 }) : null;
 
-// Verify email configuration (non-blocking)
-if (transporter) {
+// Log email configuration status
+if (resend) {
+  console.log('✅ Resend email service configured (recommended for Railway)');
+} else if (transporter) {
   transporter.verify()
     .then(() => {
-      console.log('✅ Email service ready');
+      console.log('✅ SMTP email service ready');
     })
     .catch((error) => {
-      console.log('⚠️  Email verification failed, but service will still attempt to send emails.');
-      console.log('   Error:', error.message);
-      console.log('   Tip: For Gmail, try SMTP_PORT=465 with SSL or use a service like SendGrid/Resend');
+      console.log('⚠️  SMTP verification failed:', error.message);
+      console.log('   Tip: Use Resend for cloud platforms - set RESEND_API_KEY');
     });
 } else {
-  console.log('⚠️  Email service not configured. Missing SMTP environment variables.');
-  console.log('   Required: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM');
+  console.log('⚠️  Email service not configured.');
+  console.log('   Option 1: Set RESEND_API_KEY (recommended for Railway)');
+  console.log('   Option 2: Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS');
 }
 
 // Email templates
@@ -561,21 +568,50 @@ const emailTemplates = {
   }),
 };
 
-// Send email function
+// Send email function - uses Resend (HTTP) with SMTP fallback
 export const sendEmail = async (to, template, data) => {
   try {
     const emailContent = emailTemplates[template](...data);
-    const fromAddress = process.env.SMTP_FROM || `"AlgoEdge" <${process.env.SMTP_USER}>`;
+    const fromAddress = process.env.RESEND_FROM || process.env.SMTP_FROM || `AlgoEdge <${process.env.SMTP_USER}>`;
     
-    await transporter.sendMail({
-      from: fromAddress,
-      to,
-      subject: emailContent.subject,
-      html: emailContent.html,
-    });
+    // Try Resend first (HTTP-based, works on Railway)
+    if (resend) {
+      try {
+        const { data: resendData, error } = await resend.emails.send({
+          from: fromAddress,
+          to: [to],
+          subject: emailContent.subject,
+          html: emailContent.html,
+        });
 
-    console.log(`✅ Email sent to ${to}: ${emailContent.subject}`);
-    return true;
+        if (error) {
+          console.error(`❌ Resend error:`, error);
+          throw new Error(error.message);
+        }
+
+        console.log(`✅ Email sent via Resend to ${to}: ${emailContent.subject} (id: ${resendData?.id})`);
+        return true;
+      } catch (resendError) {
+        console.error(`⚠️ Resend failed, trying SMTP fallback:`, resendError.message);
+        // Fall through to SMTP
+      }
+    }
+    
+    // Fallback to SMTP (nodemailer)
+    if (transporter) {
+      await transporter.sendMail({
+        from: fromAddress,
+        to,
+        subject: emailContent.subject,
+        html: emailContent.html,
+      });
+
+      console.log(`✅ Email sent via SMTP to ${to}: ${emailContent.subject}`);
+      return true;
+    }
+    
+    console.error(`❌ No email service configured (both Resend and SMTP unavailable)`);
+    return false;
   } catch (error) {
     // Log error without exposing sensitive config
     console.error(`❌ Email error sending to ${to}:`, error.message);
