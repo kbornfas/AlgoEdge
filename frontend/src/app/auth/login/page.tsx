@@ -94,6 +94,13 @@ export default function LoginPage() {
         return;
       }
 
+      // Check for 2FA requirement (status 200 with requires2FA)
+      if (data.requires2FA) {
+        setRequires2FA(true);
+        setError('');
+        return;
+      }
+
       // Validate response has required fields
       if (!data.token || !data.user) {
         console.error('Invalid login response - missing token or user:', data);
