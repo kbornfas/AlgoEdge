@@ -351,7 +351,7 @@ export default function ListingTemplate({
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <Star size={16} fill="#F59E0B" color="#F59E0B" />
                         <Typography sx={{ color: 'white', fontWeight: 700 }}>
-                          {listing.avg_rating?.toFixed(1) || '0.0'}
+                          {Number(listing.avg_rating || 0).toFixed(1)}
                         </Typography>
                         <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
                           ({listing.total_reviews || 0} reviews)
@@ -668,9 +668,9 @@ export default function ListingTemplate({
                   <Grid container spacing={3} alignItems="center">
                     <Grid item xs={12} md={4} sx={{ textAlign: 'center' }}>
                       <Typography variant="h2" sx={{ color: '#22C55E', fontWeight: 900 }}>
-                        {listing.avg_rating?.toFixed(1) || '0.0'}
+                        {Number(listing.avg_rating || 0).toFixed(1)}
                       </Typography>
-                      <Rating value={listing.avg_rating || 0} readOnly precision={0.1} size="large" sx={{ mb: 1 }} />
+                      <Rating value={Number(listing.avg_rating) || 0} readOnly precision={0.1} size="large" sx={{ mb: 1 }} />
                       <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
                         {listing.total_reviews || reviews.length} reviews
                       </Typography>
@@ -838,7 +838,7 @@ export default function ListingTemplate({
                             </Stack>
                           )}
                           <Typography variant="h3" sx={{ color: '#22C55E', fontWeight: 900, textAlign: 'center' }}>
-                            ${discountedPrice?.toFixed(2)}
+                            ${Number(discountedPrice || 0).toFixed(2)}
                           </Typography>
                         </>
                       )}
@@ -854,7 +854,7 @@ export default function ListingTemplate({
                         Your Wallet Balance
                       </Typography>
                       <Typography sx={{ color: '#1D9BF0', fontWeight: 700 }}>
-                        ${walletBalance.toFixed(2)}
+                        ${Number(walletBalance || 0).toFixed(2)}
                       </Typography>
                     </Stack>
                   </Paper>
@@ -919,7 +919,7 @@ export default function ListingTemplate({
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Star size={14} fill="#F59E0B" color="#F59E0B" />
                         <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
-                          {listing.seller_rating?.toFixed(1)} • {listing.seller_total_sales} sales
+                          {Number(listing.seller_rating || 0).toFixed(1)} • {listing.seller_total_sales} sales
                         </Typography>
                       </Stack>
                     </Box>

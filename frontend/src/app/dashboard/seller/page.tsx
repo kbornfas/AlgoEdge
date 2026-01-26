@@ -792,7 +792,7 @@ export default function SellerDashboardPage() {
                   Available Balance
                 </Typography>
                 <Typography variant="h4" sx={{ color: 'white', fontWeight: 800 }}>
-                  ${stats?.wallet?.available_balance?.toFixed(2) || '0.00'}
+                  ${Number(stats?.wallet?.available_balance || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
@@ -814,7 +814,7 @@ export default function SellerDashboardPage() {
                   Pending Earnings
                 </Typography>
                 <Typography variant="h4" sx={{ color: 'white', fontWeight: 800 }}>
-                  ${stats?.wallet?.pending_earnings?.toFixed(2) || '0.00'}
+                  ${Number(stats?.wallet?.pending_earnings || 0).toFixed(2)}
                 </Typography>
                 <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>
                   Clears after 14 days
@@ -834,7 +834,7 @@ export default function SellerDashboardPage() {
                   Total Earnings
                 </Typography>
                 <Typography variant="h4" sx={{ color: 'white', fontWeight: 800 }}>
-                  ${stats?.wallet?.total_earnings?.toFixed(2) || '0.00'}
+                  ${Number(stats?.wallet?.total_earnings || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
@@ -851,7 +851,7 @@ export default function SellerDashboardPage() {
                   Total Paid Out
                 </Typography>
                 <Typography variant="h4" sx={{ color: 'white', fontWeight: 800 }}>
-                  ${stats?.wallet?.total_payouts?.toFixed(2) || '0.00'}
+                  ${Number(stats?.wallet?.total_payouts || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
@@ -914,7 +914,7 @@ export default function SellerDashboardPage() {
                     Avg Rating
                   </Typography>
                   <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1.25rem' }}>
-                    {stats?.totals?.avg_rating?.toFixed(1) || '0.0'} ★
+                    {Number(stats?.totals?.avg_rating || 0).toFixed(1)} ★
                   </Typography>
                 </Box>
               </Stack>
@@ -992,7 +992,7 @@ export default function SellerDashboardPage() {
                       <TableCell>
                         <Stack direction="row" alignItems="center" spacing={0.5}>
                           <Star size={14} fill="#F59E0B" color="#F59E0B" />
-                          <Typography sx={{ color: 'white' }}>{bot.avg_rating?.toFixed(1) || '0.0'}</Typography>
+                          <Typography sx={{ color: 'white' }}>{Number(bot.avg_rating || 0).toFixed(1)}</Typography>
                         </Stack>
                       </TableCell>
                       <TableCell>
@@ -1078,7 +1078,7 @@ export default function SellerDashboardPage() {
                       <TableCell>
                         <Stack direction="row" alignItems="center" spacing={0.5}>
                           <Star size={14} fill="#F59E0B" color="#F59E0B" />
-                          <Typography sx={{ color: 'white' }}>{product.avg_rating?.toFixed(1) || '0.0'}</Typography>
+                          <Typography sx={{ color: 'white' }}>{Number(product.avg_rating || 0).toFixed(1)}</Typography>
                         </Stack>
                       </TableCell>
                       <TableCell>
@@ -1147,7 +1147,7 @@ export default function SellerDashboardPage() {
                             fontWeight: 600,
                           }}
                         >
-                          {tx.type === 'sale' ? '+' : '-'}${Math.abs(tx.amount).toFixed(2)}
+                          {tx.type === 'sale' ? '+' : '-'}${Number(Math.abs(tx.amount) || 0).toFixed(2)}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -1230,7 +1230,7 @@ export default function SellerDashboardPage() {
               </Alert>
             )}
             <Typography sx={{ color: 'rgba(255,255,255,0.6)', mb: 3 }}>
-              Available balance: <strong style={{ color: '#22C55E' }}>${stats?.wallet?.available_balance?.toFixed(2) || '0.00'}</strong>
+              Available balance: <strong style={{ color: '#22C55E' }}>${Number(stats?.wallet?.available_balance || 0).toFixed(2)}</strong>
             </Typography>
             <TextField
               label="Amount"

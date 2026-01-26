@@ -592,7 +592,18 @@ export default function BotDetailPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/bots/${slug}`);
       if (res.ok) {
         const data = await res.json();
-        setBot(data.bot);
+        // Ensure numeric fields are properly typed
+        const botData = {
+          ...data.bot,
+          price: parseFloat(data.bot.price) || 0,
+          discount_percentage: parseFloat(data.bot.discount_percentage) || 0,
+          avg_rating: parseFloat(data.bot.avg_rating) || 0,
+          seller_rating: parseFloat(data.bot.seller_rating) || 0,
+          total_purchases: parseInt(data.bot.total_purchases) || 0,
+          total_reviews: parseInt(data.bot.total_reviews) || 0,
+          seller_total_sales: parseInt(data.bot.seller_total_sales) || 0,
+        };
+        setBot(botData);
         setReviews(data.reviews?.length > 0 ? data.reviews : demoBotReviews);
       } else {
         // Use demo data as fallback
@@ -660,9 +671,9 @@ export default function BotDetailPage() {
     }
   };
 
-  const discountedPrice = bot?.discount_percentage 
-    ? bot.price * (1 - bot.discount_percentage / 100)
-    : bot?.price;
+  const discountedPrice = bot?.discount_percentage && bot?.price
+    ? Number(bot.price) * (1 - Number(bot.discount_percentage) / 100)
+    : Number(bot?.price) || 0;
 
   if (loading) {
     return (
@@ -737,10 +748,10 @@ export default function BotDetailPage() {
                   <Stack direction="row" spacing={0.5} alignItems="center">
                     <Star size={18} fill="#F59E0B" color="#F59E0B" />
                     <Typography sx={{ color: 'white', fontWeight: 600 }}>
-                      {bot.avg_rating?.toFixed(1) || '0.0'}
+                      {Number(bot.avg_rating || 0).toFixed(1)}
                     </Typography>
                     <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                      ({bot.total_reviews} reviews)
+                      ({bot.total_reviews || 0} reviews)
                     </Typography>
                   </Stack>
                   <Stack direction="row" spacing={0.5} alignItems="center">
@@ -903,9 +914,9 @@ export default function BotDetailPage() {
                   <Grid container spacing={3} alignItems="center">
                     <Grid item xs={12} md={4} sx={{ textAlign: 'center' }}>
                       <Typography variant="h2" sx={{ color: '#22C55E', fontWeight: 900 }}>
-                        {bot.avg_rating?.toFixed(1) || '4.7'}
+                        {Number(bot.avg_rating || 4.7).toFixed(1)}
                       </Typography>
-                      <Rating value={bot.avg_rating || 4.7} readOnly precision={0.1} size="large" sx={{ mb: 1 }} />
+                      <Rating value={Number(bot.avg_rating) || 4.7} readOnly precision={0.1} size="large" sx={{ mb: 1 }} />
                       <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
                         {bot.total_reviews || reviews.length} reviews
                       </Typography>
@@ -1029,7 +1040,7 @@ export default function BotDetailPage() {
                         </Stack>
                       )}
                       <Typography variant="h3" sx={{ color: '#22C55E', fontWeight: 900 }}>
-                        ${discountedPrice?.toFixed(2)}
+                        ${Number(discountedPrice || 0).toFixed(2)}
                       </Typography>
                     </>
                   )}
@@ -1051,7 +1062,7 @@ export default function BotDetailPage() {
                       </Button>
                     }
                   >
-                    Insufficient wallet balance. You need ${(discountedPrice || bot.price).toFixed(2)} but have ${walletBalance?.toFixed(2) || '0.00'}.
+                    Insufficient wallet balance. You need ${Number(discountedPrice || bot.price || 0).toFixed(2)} but have ${Number(walletBalance || 0).toFixed(2)}.
                   </Alert>
                 )}
 
@@ -1062,7 +1073,7 @@ export default function BotDetailPage() {
                         Your Wallet Balance
                       </Typography>
                       <Typography sx={{ color: '#1D9BF0', fontWeight: 700 }}>
-                        ${walletBalance.toFixed(2)}
+                        ${Number(walletBalance || 0).toFixed(2)}
                       </Typography>
                     </Stack>
                   </Paper>
@@ -1151,7 +1162,7 @@ export default function BotDetailPage() {
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Star size={14} fill="#F59E0B" color="#F59E0B" />
                         <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
-                          {bot.seller_rating?.toFixed(1)} • {bot.seller_total_sales} sales
+                          {Number(bot.seller_rating || 0).toFixed(1)} • {bot.seller_total_sales || 0} sales
                         </Typography>
                       </Stack>
                     </Box>

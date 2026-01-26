@@ -316,7 +316,8 @@ export default function SignalProviderPage() {
   const [activeTab, setActiveTab] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'quarterly' | 'yearly' | 'lifetime'>('monthly');
   const [subscribing, setSubscribing] = useState(false);
-  const [error, setError] = useState('');
+  const [subscribeError, setSubscribeError] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     if (providerId) {
@@ -375,7 +376,7 @@ export default function SignalProviderPage() {
           setRecentSignals(demoSignals);
           setReviews(demoReviews);
         } else {
-          setError('Provider not found');
+          setLoadError('Provider not found');
         }
       }
     } catch (error) {
@@ -386,7 +387,7 @@ export default function SignalProviderPage() {
         setRecentSignals(demoSignals);
         setReviews(demoReviews);
       } else {
-        setError('Failed to load provider details');
+        setLoadError('Failed to load provider details');
       }
     } finally {
       setLoading(false);
@@ -401,6 +402,7 @@ export default function SignalProviderPage() {
     }
 
     setSubscribing(true);
+    setSubscribeError('');
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/signals/providers/${providerId}/subscribe`, {
         method: 'POST',
@@ -419,10 +421,10 @@ export default function SignalProviderPage() {
           router.push('/dashboard/signals');
         }
       } else {
-        setError(data.error || 'Failed to subscribe');
+        setSubscribeError(data.error || 'Failed to subscribe');
       }
     } catch (error) {
-      setError('Network error. Please try again.');
+      setSubscribeError('Network error. Please try again.');
     } finally {
       setSubscribing(false);
     }
@@ -450,11 +452,11 @@ export default function SignalProviderPage() {
     );
   }
 
-  if (error || !provider) {
+  if (loadError || !provider) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: 8 }}>
         <Container maxWidth="md">
-          <Alert severity="error" sx={{ mb: 3 }}>{error || 'Provider not found'}</Alert>
+          <Alert severity="error" sx={{ mb: 3 }}>{loadError || 'Provider not found'}</Alert>
           <Button component={Link} href="/marketplace/signals" startIcon={<ArrowLeft size={18} />}>
             Back to Signal Providers
           </Button>
@@ -541,7 +543,7 @@ export default function SignalProviderPage() {
                   <Stack direction="row" spacing={0.5} alignItems="center">
                     <Star size={18} fill="#F59E0B" color="#F59E0B" />
                     <Typography sx={{ color: 'white', fontWeight: 600 }}>
-                      {provider.avg_rating?.toFixed(1) || '0.0'}
+                      {Number(provider.avg_rating || 0).toFixed(1)}
                     </Typography>
                     <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
                       ({provider.total_reviews || 0} reviews)
@@ -746,9 +748,9 @@ export default function SignalProviderPage() {
                   <Grid container spacing={3} alignItems="center">
                     <Grid item xs={12} md={4} sx={{ textAlign: 'center' }}>
                       <Typography variant="h2" sx={{ color: '#22C55E', fontWeight: 900 }}>
-                        {provider.avg_rating?.toFixed(1) || '4.8'}
+                        {Number(provider.avg_rating || 4.8).toFixed(1)}
                       </Typography>
-                      <Rating value={provider.avg_rating || 4.8} readOnly precision={0.1} size="large" sx={{ mb: 1 }} />
+                      <Rating value={Number(provider.avg_rating) || 4.8} readOnly precision={0.1} size="large" sx={{ mb: 1 }} />
                       <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
                         {provider.total_reviews || reviews.length} reviews
                       </Typography>
@@ -901,6 +903,13 @@ export default function SignalProviderPage() {
                     </Typography>
                   )}
                 </Box>
+
+                {/* Subscribe Error */}
+                {subscribeError && (
+                  <Alert severity="error" sx={{ mb: 2 }} onClose={() => setSubscribeError('')}>
+                    {subscribeError}
+                  </Alert>
+                )}
 
                 {/* Subscribe Button */}
                 <Button

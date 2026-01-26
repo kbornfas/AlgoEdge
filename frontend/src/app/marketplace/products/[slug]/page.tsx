@@ -737,7 +737,18 @@ export default function ProductDetailPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/products/${slug}`);
       if (res.ok) {
         const data = await res.json();
-        setProduct(data.product);
+        // Ensure numeric fields are properly typed
+        const productData = {
+          ...data.product,
+          price: parseFloat(data.product.price) || 0,
+          discount_percentage: parseFloat(data.product.discount_percentage) || 0,
+          avg_rating: parseFloat(data.product.avg_rating) || 0,
+          seller_rating: parseFloat(data.product.seller_rating) || 0,
+          total_purchases: parseInt(data.product.total_purchases) || 0,
+          total_reviews: parseInt(data.product.total_reviews) || 0,
+          seller_total_sales: parseInt(data.product.seller_total_sales) || 0,
+        };
+        setProduct(productData);
         setReviews(data.reviews?.length > 0 ? data.reviews : demoReviews);
       } else {
         // Use demo data as fallback
@@ -812,9 +823,9 @@ export default function ProductDetailPage() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  const discountedPrice = product?.discount_percentage 
-    ? product.price * (1 - product.discount_percentage / 100)
-    : product?.price;
+  const discountedPrice = product?.discount_percentage && product?.price
+    ? Number(product.price) * (1 - Number(product.discount_percentage) / 100)
+    : Number(product?.price) || 0;
 
   const TypeIcon = product?.product_type ? productTypeIcons[product.product_type] || File : File;
 
@@ -901,10 +912,10 @@ export default function ProductDetailPage() {
                   <Stack direction="row" spacing={0.5} alignItems="center">
                     <Star size={18} fill="#F59E0B" color="#F59E0B" />
                     <Typography sx={{ color: 'white', fontWeight: 600 }}>
-                      {product.avg_rating?.toFixed(1) || '0.0'}
+                      {Number(product.avg_rating || 0).toFixed(1)}
                     </Typography>
                     <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                      ({product.total_reviews} reviews)
+                      ({product.total_reviews || 0} reviews)
                     </Typography>
                   </Stack>
                   <Stack direction="row" spacing={0.5} alignItems="center">
@@ -1022,9 +1033,9 @@ export default function ProductDetailPage() {
                   <Grid container spacing={3} alignItems="center">
                     <Grid item xs={12} md={4} sx={{ textAlign: 'center' }}>
                       <Typography variant="h2" sx={{ color: '#22C55E', fontWeight: 900 }}>
-                        {product.avg_rating?.toFixed(1) || '4.8'}
+                        {Number(product.avg_rating || 4.8).toFixed(1)}
                       </Typography>
-                      <Rating value={product.avg_rating || 4.8} readOnly precision={0.1} size="large" sx={{ mb: 1 }} />
+                      <Rating value={Number(product.avg_rating) || 4.8} readOnly precision={0.1} size="large" sx={{ mb: 1 }} />
                       <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
                         {product.total_reviews || reviews.length} reviews
                       </Typography>
@@ -1142,7 +1153,7 @@ export default function ProductDetailPage() {
                     </Stack>
                   )}
                   <Typography variant="h3" sx={{ color: '#22C55E', fontWeight: 900 }}>
-                    ${discountedPrice?.toFixed(2)}
+                    ${Number(discountedPrice || 0).toFixed(2)}
                   </Typography>
                 </Box>
 
@@ -1162,7 +1173,7 @@ export default function ProductDetailPage() {
                       </Button>
                     }
                   >
-                    Insufficient wallet balance. You need ${(discountedPrice || product.price).toFixed(2)} but have ${walletBalance?.toFixed(2) || '0.00'}.
+                    Insufficient wallet balance. You need ${Number(discountedPrice || product.price || 0).toFixed(2)} but have ${Number(walletBalance || 0).toFixed(2)}.
                   </Alert>
                 )}
 
@@ -1173,7 +1184,7 @@ export default function ProductDetailPage() {
                         Your Wallet Balance
                       </Typography>
                       <Typography sx={{ color: '#1D9BF0', fontWeight: 700 }}>
-                        ${walletBalance.toFixed(2)}
+                        ${Number(walletBalance || 0).toFixed(2)}
                       </Typography>
                     </Stack>
                   </Paper>
@@ -1254,7 +1265,7 @@ export default function ProductDetailPage() {
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Star size={14} fill="#F59E0B" color="#F59E0B" />
                         <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
-                          {product.seller_rating?.toFixed(1)} • {product.seller_total_sales} sales
+                          {Number(product.seller_rating || 0).toFixed(1)} • {product.seller_total_sales || 0} sales
                         </Typography>
                       </Stack>
                     </Box>

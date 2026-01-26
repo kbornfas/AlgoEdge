@@ -246,7 +246,7 @@ export default function SellerProfilePage() {
                     <Stack direction="row" spacing={0.5} alignItems="center">
                       <Star size={18} fill="#F59E0B" color="#F59E0B" />
                       <Typography sx={{ color: 'white', fontWeight: 600 }}>
-                        {seller.seller_rating_average?.toFixed(1) || '0.0'}
+                        {Number(seller.seller_rating_average || 0).toFixed(1)}
                       </Typography>
                       <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
                         ({seller.seller_total_reviews || 0} reviews)
@@ -391,7 +391,7 @@ export default function SellerProfilePage() {
                   <Grid item xs={6}>
                     <Paper sx={{ p: 2, bgcolor: 'rgba(245, 158, 11, 0.1)', textAlign: 'center' }}>
                       <Typography sx={{ color: '#F59E0B', fontSize: '1.5rem', fontWeight: 800 }}>
-                        {seller.seller_rating_average?.toFixed(1) || '0.0'}
+                        {Number(seller.seller_rating_average || 0).toFixed(1)}
                       </Typography>
                       <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
                         Avg Rating
@@ -479,7 +479,7 @@ export default function SellerProfilePage() {
                           <Stack direction="row" spacing={0.5} alignItems="center">
                             <Star size={14} fill="#F59E0B" color="#F59E0B" />
                             <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
-                              {product.rating_average?.toFixed(1) || '0.0'} • {product.total_sales || 0} sales
+                              {Number(product.rating_average || 0).toFixed(1)} • {product.total_sales || 0} sales
                             </Typography>
                           </Stack>
                           <Typography sx={{ color: '#22C55E', fontWeight: 800 }}>

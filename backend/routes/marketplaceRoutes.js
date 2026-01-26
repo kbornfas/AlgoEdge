@@ -155,8 +155,7 @@ router.get('/landing', async (req, res) => {
       `),
       pool.query(`
         SELECT id, name, slug, short_description as description, thumbnail_url, price,
-               product_type as type, rating_average, rating_count as total_reviews, total_sales,
-               discount_percentage
+               product_type as type, rating_average, rating_count as total_reviews, total_sales
         FROM marketplace_products
         WHERE status = 'approved'
         ORDER BY is_featured DESC, total_sales DESC, rating_average DESC
