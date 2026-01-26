@@ -887,16 +887,34 @@ export default function ProductDetailPage() {
           <Grid item xs={12} md={8}>
             {/* Header */}
             <Box sx={{ display: 'flex', gap: 3, mb: 4 }}>
-              <Avatar
-                sx={{
-                  width: 100,
-                  height: 100,
-                  bgcolor: 'rgba(59, 130, 246, 0.2)',
-                  fontSize: '2rem',
-                }}
-              >
-                <TypeIcon size={50} color="#3B82F6" />
-              </Avatar>
+              {(product as any).thumbnail_url ? (
+                <Box
+                  sx={{
+                    width: 100,
+                    height: 100,
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                  }}
+                >
+                  <img
+                    src={(product as any).thumbnail_url}
+                    alt={product.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </Box>
+              ) : (
+                <Avatar
+                  sx={{
+                    width: 100,
+                    height: 100,
+                    bgcolor: 'rgba(59, 130, 246, 0.2)',
+                    fontSize: '2rem',
+                  }}
+                >
+                  <TypeIcon size={50} color="#3B82F6" />
+                </Avatar>
+              )}
               <Box sx={{ flex: 1 }}>
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                   <Chip

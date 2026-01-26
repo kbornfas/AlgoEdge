@@ -734,16 +734,34 @@ export default function BotDetailPage() {
           <Grid item xs={12} md={8}>
             {/* Header */}
             <Box sx={{ display: 'flex', gap: 3, mb: 4 }}>
-              <Avatar
-                sx={{
-                  width: 100,
-                  height: 100,
-                  bgcolor: 'rgba(139, 92, 246, 0.2)',
-                  fontSize: '2rem',
-                }}
-              >
-                <Bot size={50} color="#8B5CF6" />
-              </Avatar>
+              {bot.thumbnail_url ? (
+                <Box
+                  sx={{
+                    width: 100,
+                    height: 100,
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                  }}
+                >
+                  <img
+                    src={bot.thumbnail_url}
+                    alt={bot.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </Box>
+              ) : (
+                <Avatar
+                  sx={{
+                    width: 100,
+                    height: 100,
+                    bgcolor: 'rgba(139, 92, 246, 0.2)',
+                    fontSize: '2rem',
+                  }}
+                >
+                  <Bot size={50} color="#8B5CF6" />
+                </Avatar>
+              )}
               <Box sx={{ flex: 1 }}>
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                   {bot.category && <Chip label={bot.category} size="small" sx={{ bgcolor: 'rgba(139, 92, 246, 0.2)', color: '#8B5CF6' }} />}
