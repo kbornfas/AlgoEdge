@@ -58,19 +58,29 @@ export default function Error({
             We encountered an unexpected error. Please try again or contact support if the problem persists.
           </Typography>
           
-          {process.env.NODE_ENV === 'development' && error.message && (
+          {/* Show error details for debugging */}
+          {error.message && (
             <Box
               sx={{
                 mb: 4,
                 p: 2,
-                bgcolor: 'error.light',
+                bgcolor: 'rgba(239, 68, 68, 0.1)',
                 borderRadius: 1,
                 textAlign: 'left',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
               }}
             >
-              <Typography variant="caption" component="pre" sx={{ fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}>
+              <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600 }}>
+                Error Details:
+              </Typography>
+              <Typography variant="caption" component="pre" sx={{ fontSize: '0.75rem', whiteSpace: 'pre-wrap', color: 'text.secondary', mt: 1 }}>
                 {error.message}
               </Typography>
+              {error.digest && (
+                <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mt: 1 }}>
+                  Error ID: {error.digest}
+                </Typography>
+              )}
             </Box>
           )}
           

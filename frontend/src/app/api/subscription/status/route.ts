@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    console.log('Calling backend subscription status at:', `${API_URL}/api/whop/subscription/status`);
+    
     const response = await fetch(`${API_URL}/api/whop/subscription/status`, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -26,7 +28,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
-      console.error('Failed to fetch subscription status:', response.status);
+      console.error('Backend subscription status error:', response.status, await response.text().catch(() => 'no body'));
       return NextResponse.json({ 
         status: 'trial', 
         plan: null, 
@@ -39,6 +41,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error fetching subscription status:', error);
+    // Return safe default instead of throwing
     return NextResponse.json({ 
       status: 'trial', 
       plan: null, 

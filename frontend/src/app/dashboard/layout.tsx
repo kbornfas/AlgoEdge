@@ -130,10 +130,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [lockedFeature, setLockedFeature] = useState<string>('');
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    } else {
+    try {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      } else {
+        router.push('/auth/login');
+      }
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
       router.push('/auth/login');
     }
   }, [router]);
