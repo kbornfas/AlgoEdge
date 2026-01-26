@@ -5,6 +5,11 @@ import { addAdminWalletTransaction } from '../services/adminWalletService.js';
 
 const router = express.Router();
 
+// Helper function to check if user is admin
+const isAdmin = (req) => {
+  return req.user?.isAdmin || req.user?.is_admin || req.user?.role === 'admin';
+};
+
 // ============================================================================
 // COMMISSION CONFIGURATION
 // Platform receives 20%, Seller receives 80%
@@ -654,12 +659,7 @@ router.get('/owns/:itemType/:itemId', authenticate, async (req, res) => {
 // Admin: Get pending deposit requests
 router.get('/admin/deposits/pending', authenticate, async (req, res) => {
   try {
-    const adminCheck = await pool.query(
-      'SELECT is_admin FROM users WHERE id = $1',
-      [req.user.id]
-    );
-
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -684,12 +684,7 @@ router.get('/admin/deposits/pending', authenticate, async (req, res) => {
 // Admin: Approve deposit
 router.post('/admin/deposits/:id/approve', authenticate, async (req, res) => {
   try {
-    const adminCheck = await pool.query(
-      'SELECT is_admin FROM users WHERE id = $1',
-      [req.user.id]
-    );
-
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -778,12 +773,7 @@ router.post('/admin/deposits/:id/approve', authenticate, async (req, res) => {
 // Admin: Reject deposit
 router.post('/admin/deposits/:id/reject', authenticate, async (req, res) => {
   try {
-    const adminCheck = await pool.query(
-      'SELECT is_admin FROM users WHERE id = $1',
-      [req.user.id]
-    );
-
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -815,12 +805,7 @@ router.post('/admin/deposits/:id/reject', authenticate, async (req, res) => {
 // Admin: Get platform earnings summary
 router.get('/admin/earnings', authenticate, async (req, res) => {
   try {
-    const adminCheck = await pool.query(
-      'SELECT is_admin FROM users WHERE id = $1',
-      [req.user.id]
-    );
-
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -878,12 +863,7 @@ router.get('/admin/earnings', authenticate, async (req, res) => {
 // Admin: Update payment account
 router.put('/admin/payment-accounts/:id', authenticate, async (req, res) => {
   try {
-    const adminCheck = await pool.query(
-      'SELECT is_admin FROM users WHERE id = $1',
-      [req.user.id]
-    );
-
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -1189,8 +1169,7 @@ router.post('/withdrawal/:id/cancel', authenticate, async (req, res) => {
 // Admin: Get all wallets overview
 router.get('/admin/wallets', authenticate, async (req, res) => {
   try {
-    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -1256,8 +1235,7 @@ router.get('/admin/wallets', authenticate, async (req, res) => {
 // Admin: Get single user wallet details
 router.get('/admin/wallets/:userId', authenticate, async (req, res) => {
   try {
-    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -1296,8 +1274,7 @@ router.post('/admin/wallets/:userId/deposit', authenticate, async (req, res) => 
   const client = await pool.connect();
   
   try {
-    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -1372,8 +1349,7 @@ router.post('/admin/wallets/:userId/deduct', authenticate, async (req, res) => {
   const client = await pool.connect();
   
   try {
-    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -1435,8 +1411,7 @@ router.post('/admin/wallets/:userId/deduct', authenticate, async (req, res) => {
 // Admin: Freeze wallet
 router.post('/admin/wallets/:userId/freeze', authenticate, async (req, res) => {
   try {
-    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -1470,8 +1445,7 @@ router.post('/admin/wallets/:userId/freeze', authenticate, async (req, res) => {
 // Admin: Unfreeze wallet
 router.post('/admin/wallets/:userId/unfreeze', authenticate, async (req, res) => {
   try {
-    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -1501,8 +1475,7 @@ router.post('/admin/wallets/:userId/unfreeze', authenticate, async (req, res) =>
 // Admin: Get pending withdrawals
 router.get('/admin/withdrawals/pending', authenticate, async (req, res) => {
   try {
-    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -1526,8 +1499,7 @@ router.post('/admin/withdrawals/:id/complete', authenticate, async (req, res) =>
   const client = await pool.connect();
   
   try {
-    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -1585,8 +1557,7 @@ router.post('/admin/withdrawals/:id/reject', authenticate, async (req, res) => {
   const client = await pool.connect();
   
   try {
-    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -1648,8 +1619,7 @@ router.post('/admin/withdrawals/:id/reject', authenticate, async (req, res) => {
 // Admin: Get adjustment history (audit log)
 router.get('/admin/adjustments', authenticate, async (req, res) => {
   try {
-    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
-    if (!adminCheck.rows[0]?.is_admin) {
+    if (!isAdmin(req)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 

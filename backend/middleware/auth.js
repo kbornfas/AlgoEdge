@@ -18,7 +18,7 @@ export const authenticate = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     const result = await pool.query(
-      'SELECT id, username, email, two_fa_enabled FROM users WHERE id = $1',
+      'SELECT id, username, email, two_fa_enabled, is_admin, role FROM users WHERE id = $1',
       [decoded.userId]
     );
 
@@ -27,6 +27,8 @@ export const authenticate = async (req, res, next) => {
     }
 
     req.user = result.rows[0];
+    // Also set isAdmin flag for convenience
+    req.user.isAdmin = req.user.is_admin || req.user.role === 'admin';
     next();
   } catch (error) {
     // Log detailed error on server side only
