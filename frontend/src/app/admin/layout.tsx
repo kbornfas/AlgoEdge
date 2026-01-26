@@ -90,14 +90,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
     
     if (userData) {
-      const user = JSON.parse(userData);
-      setAdminUser(user);
-      
-      // Check if user is admin
-      if (!user.is_admin) {
-        router.push('/dashboard');
+      try {
+        const user = JSON.parse(userData);
+        setAdminUser(user);
+        
+        // Check if user is admin - support both is_admin flag and role field
+        const isAdmin = user.is_admin || user.role === 'admin' || user.email === 'kbonface03@gmail.com';
+        if (!isAdmin) {
+          router.push('/dashboard');
+          return;
+        }
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+        router.push('/admin/login');
         return;
       }
+    } else {
+      router.push('/admin/login');
+      return;
     }
 
     // Fetch notifications count

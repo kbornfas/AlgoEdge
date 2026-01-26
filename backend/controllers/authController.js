@@ -247,6 +247,8 @@ export const login = async (req, res) => {
         username: user.username,
         email: user.email,
         isVerified: user.is_verified,
+        role: user.role,
+        is_admin: isAdmin,
       },
       hasActiveSubscription,
     });
