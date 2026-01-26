@@ -89,6 +89,30 @@ const blogPosts = [
     color: '#00c853',
     gradient: 'linear-gradient(135deg, rgba(0,200,83,0.85) 0%, rgba(0,150,36,0.9) 100%)',
   },
+  {
+    slug: 'trading-psychology-overcoming-fear-greed',
+    title: 'Trading Psychology: Overcoming Fear and Greed in Forex',
+    excerpt: 'Master your trading mindset. Learn proven techniques to control emotions, stay disciplined, and make rational trading decisions under pressure.',
+    image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80',
+    category: 'Psychology',
+    readTime: '9 min read',
+    date: 'January 20, 2026',
+    featured: true,
+    color: '#EC4899',
+    gradient: 'linear-gradient(135deg, rgba(236,72,153,0.85) 0%, rgba(219,39,119,0.9) 100%)',
+  },
+  {
+    slug: 'risk-management-rules-every-trader',
+    title: '5 Risk Management Rules Every Forex Trader Must Follow',
+    excerpt: 'Protect your capital with these essential risk management strategies. Learn position sizing, stop losses, and the 2% rule for long-term trading success.',
+    image: 'https://images.unsplash.com/photo-1560472355-536de3962603?w=800&q=80',
+    category: 'Risk Management',
+    readTime: '7 min read',
+    date: 'January 18, 2026',
+    featured: true,
+    color: '#EF4444',
+    gradient: 'linear-gradient(135deg, rgba(239,68,68,0.85) 0%, rgba(220,38,38,0.9) 100%)',
+  },
 ];
 
 export default function BlogPage() {

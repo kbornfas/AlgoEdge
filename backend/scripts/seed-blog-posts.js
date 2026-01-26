@@ -10,7 +10,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const ADMIN_USER_ID = 1;
+const ADMIN_USER_ID = 12; // Admin user ID in production database
 
 const blogPosts = [
   {
@@ -461,6 +461,177 @@ Explore our [trading psychology course](/marketplace/products/trading-psychology
     category: 'education',
     tags: ['psychology', 'emotions', 'fear', 'greed', 'mindset'],
     cover_image: '/images/blog/psychology.jpg',
+    is_featured: true,
+  },
+  {
+    title: 'Gold Trading Strategies: How to Profit from XAUUSD',
+    slug: 'gold-trading-strategies-profit-xauusd',
+    excerpt: 'Master gold trading with proven strategies, understand market drivers, and learn optimal entry techniques for XAUUSD.',
+    content: `# Gold Trading Strategies: How to Profit from XAUUSD
+
+Gold (XAUUSD) is one of the most popular trading instruments, offering unique opportunities for both short-term and long-term traders.
+
+## Why Trade Gold?
+
+### High Volatility
+Gold provides excellent trading opportunities with daily ranges often exceeding 200+ pips.
+
+### Safe Haven Asset
+During market uncertainty, gold tends to appreciate, making it a hedge against economic instability.
+
+### 24-Hour Market
+Gold trades nearly 24 hours a day, allowing flexibility in trading schedules.
+
+### Strong Technical Patterns
+Gold respects technical levels well, making it ideal for technical analysis.
+
+## Key Gold Trading Strategies
+
+### 1. London Session Breakout
+The London session often sets the daily direction:
+- Mark the Asian session high and low
+- Trade the breakout in London with momentum
+- Use the opposite level as your stop loss
+
+### 2. Dollar Correlation Trading
+Gold has an inverse relationship with USD:
+- Strong DXY = bearish gold
+- Weak DXY = bullish gold
+- Monitor Fed announcements for direction
+
+### 3. Support/Resistance Scalping
+Gold respects round numbers and historical levels:
+- Key levels: $1800, $1900, $2000, etc.
+- Use limit orders at these levels
+- Tight stop losses (10-15 pips)
+
+### 4. News Trading
+Gold reacts strongly to:
+- Fed interest rate decisions
+- NFP employment data
+- CPI inflation reports
+- Geopolitical events
+
+## Risk Management for Gold
+
+Gold's volatility requires strict risk management:
+- Use wider stop losses (20-50 pips)
+- Reduce position size accordingly
+- Consider 0.5-1% risk per trade
+
+## Best Times to Trade Gold
+
+1. **London Session (3-11 AM EST)** - Highest volume
+2. **NY Overlap (8-11 AM EST)** - Maximum volatility
+3. **News Events** - High opportunity, high risk
+
+## Automated Gold Trading
+
+Our [Gold Scalper Pro](/marketplace/bots/gold-scalper-pro) bot implements these strategies automatically with professional risk management.
+
+## Conclusion
+
+Gold trading offers exceptional opportunities for disciplined traders. Combine these strategies with proper risk management for consistent results.`,
+    category: 'strategy',
+    tags: ['gold', 'XAUUSD', 'trading strategies', 'precious metals'],
+    cover_image: '/images/blog/gold-trading.jpg',
+    is_featured: true,
+  },
+  {
+    title: 'Building a Passive Income with Signal Subscriptions',
+    slug: 'building-passive-income-signal-subscriptions',
+    excerpt: 'Learn how to generate consistent passive income by subscribing to professional trading signals and copying expert traders.',
+    content: `# Building a Passive Income with Signal Subscriptions
+
+Imagine having professional traders work for you 24/7, executing profitable trades while you sleep. That's the power of signal subscriptions.
+
+## What Are Trading Signals?
+
+Trading signals are real-time trade alerts from experienced traders:
+- Entry price and direction (buy/sell)
+- Stop loss level
+- Take profit targets
+- Risk percentage
+
+## Benefits of Signal Subscriptions
+
+### 1. No Experience Required
+Professional traders make the decisions while you copy their trades.
+
+### 2. Time Freedom
+No need to analyze charts for hours - signals do the work.
+
+### 3. Learn While You Earn
+Observe professional setups and learn market analysis.
+
+### 4. Diversification
+Subscribe to multiple signal providers across different strategies.
+
+## How to Choose Signal Providers
+
+### Check Track Record
+- Minimum 6 months of verified results
+- Consistent monthly returns (5-15%)
+- Reasonable drawdown (<20%)
+
+### Verify Authenticity
+- Look for verified performance badges
+- Check subscriber reviews
+- Test with small capital first
+
+### Match Your Style
+- Day trading vs swing trading
+- Conservative vs aggressive risk
+- Specific pairs or diversified
+
+## Setting Up Signal Copying
+
+### Step 1: Choose Your Platform
+AlgoEdge integrates signals directly with MT5 for automatic copying.
+
+### Step 2: Set Risk Parameters
+- Define max risk per trade (1-2%)
+- Set maximum daily exposure
+- Configure lot size multiplier
+
+### Step 3: Monitor Performance
+- Review weekly results
+- Adjust allocations as needed
+- Remove underperformers
+
+## Expected Returns
+
+Realistic expectations with quality signals:
+- **Conservative:** 5-10% monthly
+- **Moderate:** 10-20% monthly
+- **Aggressive:** 20-30% monthly (higher risk)
+
+## Managing Multiple Signal Sources
+
+For true passive income, diversify:
+
+1. **Gold Specialist** - XAUUSD focused signals
+2. **Forex Major** - EUR/USD, GBP/USD strategies
+3. **Swing Trader** - Longer-term positions
+4. **Scalper** - Quick in-and-out trades
+
+## Protecting Your Capital
+
+- Never allocate 100% to signals
+- Start with minimum capital per provider
+- Keep 50% in reserve
+- Stop copying if drawdown exceeds 15%
+
+## Getting Started Today
+
+Browse our [Signal Providers Marketplace](/marketplace/signals) to find verified traders matching your goals.
+
+## Conclusion
+
+Signal subscriptions offer a legitimate path to passive trading income. Start small, diversify wisely, and let professionals grow your account.`,
+    category: 'income',
+    tags: ['passive income', 'signals', 'copy trading', 'subscriptions'],
+    cover_image: '/images/blog/passive-income.jpg',
     is_featured: true,
   },
 ];
