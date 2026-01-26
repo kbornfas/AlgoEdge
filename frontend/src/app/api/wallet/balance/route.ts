@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
-      console.error('Failed to fetch wallet balance:', response.status);
+      // Log error on server side only
+      console.error('[Wallet Balance Error]:', response.status);
       return NextResponse.json({ 
         wallet: { balance: 0 }
       });
@@ -32,8 +33,9 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
-    console.error('Error fetching wallet balance:', error);
+  } catch (error: any) {
+    // Log detailed error on server side only
+    console.error('[Wallet Balance Error]:', error.message || error);
     return NextResponse.json({ 
       wallet: { balance: 0 }
     });

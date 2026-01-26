@@ -35,7 +35,8 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
-      console.error('Backend subscription status error:', response.status, await response.text().catch(() => 'no body'));
+      // Log error on server side only
+      console.error('[Subscription Status Error]:', response.status);
       return NextResponse.json({ 
         status: 'trial', 
         plan: null, 
@@ -46,8 +47,9 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
-    console.error('Error fetching subscription status:', error);
+  } catch (error: any) {
+    // Log detailed error on server side only
+    console.error('[Subscription Status Error]:', error.message || error);
     // Return safe default instead of throwing
     return NextResponse.json({ 
       status: 'trial', 

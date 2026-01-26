@@ -25,14 +25,22 @@ export async function POST(req: NextRequest) {
     const data = await response.json();
 
     if (!response.ok) {
-      return NextResponse.json(data, { status: response.status });
+      // Return user-friendly error messages
+      const userFriendlyError = {
+        ...data,
+        error: data.error || 'Login failed. Please check your credentials.',
+      };
+      return NextResponse.json(userFriendlyError, { status: response.status });
     }
 
     return NextResponse.json(data);
-  } catch (error) {
-    console.error('Login error:', error);
+  } catch (error: any) {
+    // Log detailed error on server side only
+    console.error('[Login API Error]:', error.message || error);
+    
+    // Return user-friendly message to frontend
     return NextResponse.json(
-      { error: 'Login failed. Please try again.' },
+      { error: 'Unable to connect to server. Please try again later.' },
       { status: 500 }
     );
   }
