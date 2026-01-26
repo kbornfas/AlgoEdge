@@ -3,8 +3,9 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Check if SMTP is configured
-const isSmtpConfigured = process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS;
+// Check if SMTP is configured (support both SMTP_PASS and SMTP_PASSWORD)
+const smtpPassword = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
+const isSmtpConfigured = process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && smtpPassword;
 
 // Create email transporter with standardized env vars
 // For Gmail, use 'smtp.gmail.com' with port 465 (SSL) or 587 (TLS)
@@ -14,7 +15,7 @@ const transporter = isSmtpConfigured ? nodemailer.createTransport({
   secure: parseInt(process.env.SMTP_PORT) === 465, // true for 465, false for other ports
   auth: {
     user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
+    pass: smtpPassword,
   },
   connectionTimeout: 10000, // 10 seconds
   greetingTimeout: 10000,
