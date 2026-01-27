@@ -648,6 +648,213 @@ router.post('/purchase/product/:productId', authenticate, async (req, res) => {
   }
 });
 
+// Subscribe to a signal provider
+router.post('/purchase/signal/:providerId', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { providerId } = req.params;
+    const { plan_type } = req.body;
+
+    if (!plan_type || !['monthly', 'quarterly', 'yearly'].includes(plan_type)) {
+      return res.status(400).json({ error: 'Invalid plan type. Must be monthly, quarterly, or yearly.' });
+    }
+
+    // Get provider details
+    const provider = await pool.query(
+      `SELECT sp.*, u.id as seller_id, u.email as seller_email
+       FROM signal_providers sp
+       JOIN users u ON sp.user_id = u.id
+       WHERE sp.id = $1 AND sp.status = 'approved'`,
+      [providerId]
+    );
+
+    if (provider.rows.length === 0) {
+      return res.status(404).json({ error: 'Signal provider not found or not available' });
+    }
+
+    const item = provider.rows[0];
+
+    // Check if user is the provider
+    if (item.user_id === userId) {
+      return res.status(400).json({ error: 'You cannot subscribe to your own signals' });
+    }
+
+    // Check if already subscribed
+    const existingSub = await pool.query(
+      `SELECT id FROM signal_provider_subscriptions 
+       WHERE provider_id = $1 AND subscriber_id = $2 AND status = 'active'`,
+      [providerId, userId]
+    );
+
+    if (existingSub.rows.length > 0) {
+      return res.status(400).json({ error: 'You already have an active subscription to this provider' });
+    }
+
+    // Get price based on plan
+    let price = 0;
+    let expiresAt = new Date();
+    switch (plan_type) {
+      case 'monthly':
+        price = parseFloat(item.monthly_price) || 0;
+        expiresAt.setMonth(expiresAt.getMonth() + 1);
+        break;
+      case 'quarterly':
+        price = parseFloat(item.quarterly_price) || 0;
+        expiresAt.setMonth(expiresAt.getMonth() + 3);
+        break;
+      case 'yearly':
+        price = parseFloat(item.yearly_price) || 0;
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        break;
+    }
+
+    if (price <= 0) {
+      return res.status(400).json({ error: 'This plan is not available' });
+    }
+
+    // Get user wallet
+    const wallet = await pool.query(
+      'SELECT * FROM user_wallets WHERE user_id = $1',
+      [userId]
+    );
+
+    if (wallet.rows.length === 0 || parseFloat(wallet.rows[0].balance) < price) {
+      return res.status(400).json({ 
+        error: 'Insufficient balance',
+        required: price,
+        current: wallet.rows.length > 0 ? parseFloat(wallet.rows[0].balance) : 0,
+        shortfall: price - (wallet.rows.length > 0 ? parseFloat(wallet.rows[0].balance) : 0)
+      });
+    }
+
+    if (wallet.rows[0].is_frozen) {
+      return res.status(400).json({ error: 'Your wallet is frozen. Contact support.' });
+    }
+
+    // Start transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Calculate commissions: 20% platform, 80% provider
+      const platformCommission = price * (COMMISSION_RATE / 100);
+      const providerEarnings = price - platformCommission;
+
+      const currentBalance = parseFloat(wallet.rows[0].balance);
+      const newBalance = currentBalance - price;
+
+      // Deduct from buyer wallet
+      await client.query(
+        `UPDATE user_wallets 
+         SET balance = $1, total_spent = total_spent + $2, updated_at = NOW()
+         WHERE user_id = $3`,
+        [newBalance, price, userId]
+      );
+
+      // Record buyer transaction
+      const buyerTx = await client.query(
+        `INSERT INTO wallet_transactions 
+         (user_id, type, amount, balance_before, balance_after, description, reference_type, reference_id)
+         VALUES ($1, 'purchase', $2, $3, $4, $5, 'signal_subscription', $6)
+         RETURNING id`,
+        [userId, -price, currentBalance, newBalance, `Signal subscription: ${item.display_name} (${plan_type})`, providerId]
+      );
+
+      // Get or create seller wallet
+      let sellerWallet = await client.query(
+        'SELECT * FROM seller_wallets WHERE user_id = $1',
+        [item.user_id]
+      );
+
+      if (sellerWallet.rows.length === 0) {
+        await client.query(
+          `INSERT INTO seller_wallets (user_id, balance, pending_balance, total_earned)
+           VALUES ($1, 0, 0, 0)`,
+          [item.user_id]
+        );
+      }
+
+      // Credit seller pending balance (7-day hold)
+      await client.query(
+        `UPDATE seller_wallets 
+         SET pending_balance = pending_balance + $1, 
+             total_earned = total_earned + $1,
+             updated_at = NOW()
+         WHERE user_id = $2`,
+        [providerEarnings, item.user_id]
+      );
+
+      // Record seller transaction
+      await client.query(
+        `INSERT INTO seller_transactions 
+         (user_id, type, amount, description, status)
+         VALUES ($1, 'sale', $2, $3, 'completed')`,
+        [item.user_id, providerEarnings, `Signal subscription: ${item.display_name} (${plan_type}) - Commission: $${platformCommission.toFixed(2)}`]
+      );
+
+      // Create subscription
+      const subscription = await client.query(
+        `INSERT INTO signal_provider_subscriptions 
+         (provider_id, subscriber_id, plan_type, price_paid, platform_commission, provider_earnings, expires_at, payment_reference)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'wallet_payment')
+         RETURNING *`,
+        [providerId, userId, plan_type, price, platformCommission, providerEarnings, expiresAt]
+      );
+
+      // Update provider stats
+      await client.query(
+        `UPDATE signal_providers 
+         SET subscriber_count = subscriber_count + 1, total_revenue = total_revenue + $1
+         WHERE id = $2`,
+        [price, providerId]
+      );
+
+      // Record platform earnings
+      await client.query(
+        `INSERT INTO platform_earnings (source_type, source_id, amount, description)
+         VALUES ('marketplace_commission', $1, $2, $3)`,
+        [subscription.rows[0].id, platformCommission, `Commission from signal subscription: ${item.display_name}`]
+      );
+
+      // Credit admin wallet with platform commission
+      await addAdminWalletTransaction(
+        'marketplace_commission',
+        platformCommission,
+        `Signal subscription commission: ${item.display_name} (${plan_type})`,
+        'purchase',
+        subscription.rows[0].id,
+        userId
+      );
+
+      // Also record in marketplace_purchases for unified purchase history
+      await client.query(
+        `INSERT INTO marketplace_purchases 
+         (buyer_id, seller_id, item_type, item_id, item_name, price, platform_commission, seller_earnings, commission_rate, wallet_transaction_id)
+         VALUES ($1, $2, 'signal', $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT DO NOTHING`,
+        [userId, item.user_id, providerId, item.display_name, price, platformCommission, providerEarnings, COMMISSION_RATE, buyerTx.rows[0].id]
+      );
+
+      await client.query('COMMIT');
+
+      res.json({
+        success: true,
+        message: 'Subscription successful!',
+        subscription: subscription.rows[0],
+        new_balance: newBalance,
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Signal subscription error:', error);
+    res.status(500).json({ error: 'Failed to complete subscription' });
+  }
+});
+
 // Get user's purchases
 router.get('/purchases', authenticate, async (req, res) => {
   try {
@@ -659,6 +866,7 @@ router.get('/purchases', authenticate, async (req, res) => {
              CASE 
                WHEN mp.item_type = 'bot' THEN (SELECT name FROM marketplace_bots WHERE id = mp.item_id)
                WHEN mp.item_type = 'product' THEN (SELECT name FROM marketplace_products WHERE id = mp.item_id)
+               WHEN mp.item_type = 'signal' THEN (SELECT display_name FROM signal_providers WHERE id = mp.item_id)
              END as current_name
       FROM marketplace_purchases mp
       WHERE mp.buyer_id = $1

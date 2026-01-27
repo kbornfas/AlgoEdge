@@ -417,6 +417,7 @@ router.post('/bots/:id/purchase', authenticate, apiLimiter, async (req, res) => 
     }
 
     const botData = bot.rows[0];
+    const price = parseFloat(botData.price) || 0;
     
     // Check if already purchased
     const existing = await pool.query(
@@ -427,46 +428,109 @@ router.post('/bots/:id/purchase', authenticate, apiLimiter, async (req, res) => 
       return res.status(400).json({ error: 'You already own this bot' });
     }
 
-    // Calculate commissions: 20% platform, 80% seller
-    const platformCommission = botData.price * (COMMISSION_RATE / 100);
-    const sellerEarnings = botData.price - platformCommission;
+    if (price <= 0) {
+      return res.status(400).json({ error: 'This bot is not available for purchase' });
+    }
 
-    // Generate license key
-    const licenseKey = `AE-BOT-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
+    // Get or create user wallet
+    let wallet = await pool.query('SELECT * FROM user_wallets WHERE user_id = $1', [userId]);
+    if (wallet.rows.length === 0) {
+      wallet = await pool.query(
+        'INSERT INTO user_wallets (user_id, balance) VALUES ($1, 0) RETURNING *',
+        [userId]
+      );
+    }
+    const userWallet = wallet.rows[0];
 
-    // Create purchase record
-    const purchase = await pool.query(`
-      INSERT INTO marketplace_bot_purchases (
-        bot_id, buyer_id, seller_id, purchase_type, price_paid,
-        platform_commission, seller_earnings, commission_rate,
-        license_key, payment_reference, subscription_start,
-        subscription_end
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(),
-        CASE WHEN $4 = 'subscription' THEN NOW() + INTERVAL '30 days' ELSE NULL END
-      ) RETURNING *
-    `, [
-      botId, userId, botData.seller_id, botData.price_type, botData.price,
-      platformCommission, sellerEarnings, COMMISSION_RATE,
-      licenseKey, payment_reference
-    ]);
+    // Check if wallet is frozen
+    if (userWallet.is_frozen) {
+      return res.status(400).json({ error: 'Your wallet is frozen. Please contact support.' });
+    }
 
-    // Update bot stats
-    await pool.query(`
-      UPDATE marketplace_bots 
-      SET total_sales = total_sales + 1, 
-          total_revenue = total_revenue + $1,
-          active_subscriptions = CASE WHEN $2 = 'subscription' THEN active_subscriptions + 1 ELSE active_subscriptions END
-      WHERE id = $3
-    `, [botData.price, botData.price_type, botId]);
+    // Check balance
+    if (parseFloat(userWallet.balance) < price) {
+      return res.status(400).json({ 
+        error: 'Insufficient balance',
+        required: price,
+        current_balance: parseFloat(userWallet.balance),
+        shortfall: price - parseFloat(userWallet.balance)
+      });
+    }
 
-    // Credit seller wallet
-    await pool.query(`SELECT record_marketplace_sale($1, $2, $3, 'bot_purchase', $4, $5)`, [
-      botData.seller_id, sellerEarnings, COMMISSION_RATE, purchase.rows[0].id, `Bot sale: ${botData.name}`
-    ]);
+    // Start transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    auditLog(userId, 'BOT_PURCHASED', { botId, price: botData.price }, req);
+      // Deduct from user wallet
+      const balanceBefore = parseFloat(userWallet.balance);
+      const balanceAfter = balanceBefore - price;
 
-    res.json({ success: true, purchase: purchase.rows[0], licenseKey });
+      await client.query(
+        'UPDATE user_wallets SET balance = $1, total_spent = total_spent + $2, updated_at = NOW() WHERE user_id = $3',
+        [balanceAfter, price, userId]
+      );
+
+      // Record wallet transaction
+      await client.query(`
+        INSERT INTO wallet_transactions (user_id, type, amount, balance_before, balance_after, description, reference_type)
+        VALUES ($1, 'purchase', $2, $3, $4, $5, 'bot_purchase')
+      `, [userId, -price, balanceBefore, balanceAfter, `Bot purchase: ${botData.name}`]);
+
+      // Calculate commissions: 20% platform, 80% seller
+      const platformCommission = price * (COMMISSION_RATE / 100);
+      const sellerEarnings = price - platformCommission;
+
+      // Generate license key
+      const licenseKey = `AE-BOT-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
+
+      // Create purchase record
+      const purchase = await client.query(`
+        INSERT INTO marketplace_bot_purchases (
+          bot_id, buyer_id, seller_id, purchase_type, price_paid,
+          platform_commission, seller_earnings, commission_rate,
+          license_key, payment_reference, subscription_start,
+          subscription_end
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(),
+          CASE WHEN $4 = 'subscription' THEN NOW() + INTERVAL '30 days' ELSE NULL END
+        ) RETURNING *
+      `, [
+        botId, userId, botData.seller_id, botData.price_type, price,
+        platformCommission, sellerEarnings, COMMISSION_RATE,
+        licenseKey, payment_reference || 'wallet_payment'
+      ]);
+
+      // Update bot stats
+      await client.query(`
+        UPDATE marketplace_bots 
+        SET total_sales = total_sales + 1, 
+            total_revenue = total_revenue + $1,
+            active_subscriptions = CASE WHEN $2 = 'subscription' THEN active_subscriptions + 1 ELSE active_subscriptions END
+        WHERE id = $3
+      `, [price, botData.price_type, botId]);
+
+      // Credit seller wallet
+      await client.query(`SELECT record_marketplace_sale($1, $2, $3, 'bot_purchase', $4, $5)`, [
+        botData.seller_id, sellerEarnings, COMMISSION_RATE, purchase.rows[0].id, `Bot sale: ${botData.name}`
+      ]);
+
+      await client.query('COMMIT');
+
+      auditLog(userId, 'BOT_PURCHASED', { botId, price }, req);
+
+      res.json({ 
+        success: true, 
+        purchase: purchase.rows[0], 
+        licenseKey,
+        message: 'Purchase successful!',
+        new_balance: balanceAfter
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error('Purchase bot error:', error);
     res.status(500).json({ error: 'Failed to purchase bot' });
@@ -708,59 +772,126 @@ router.post('/signals/providers/:idOrSlug/subscribe', authenticate, apiLimiter, 
     const providerData = provider.rows[0];
     const providerId = providerData.id;
 
+    // Check if already subscribed
+    const existingSub = await pool.query(
+      'SELECT id FROM signal_provider_subscriptions WHERE provider_id = $1 AND subscriber_id = $2 AND status = $3',
+      [providerId, userId, 'active']
+    );
+    if (existingSub.rows.length > 0) {
+      return res.status(400).json({ error: 'You already have an active subscription to this provider' });
+    }
+
     // Get price based on plan
     let price = 0;
     let expiresAt = new Date();
     switch (plan_type) {
       case 'monthly':
-        price = providerData.monthly_price;
+        price = parseFloat(providerData.monthly_price) || 0;
         expiresAt.setMonth(expiresAt.getMonth() + 1);
         break;
       case 'quarterly':
-        price = providerData.quarterly_price;
+        price = parseFloat(providerData.quarterly_price) || 0;
         expiresAt.setMonth(expiresAt.getMonth() + 3);
         break;
       case 'yearly':
-        price = providerData.yearly_price;
+        price = parseFloat(providerData.yearly_price) || 0;
         expiresAt.setFullYear(expiresAt.getFullYear() + 1);
         break;
       default:
         return res.status(400).json({ error: 'Invalid plan type' });
     }
 
-    // Calculate commissions: 20% platform, 80% provider
-    const platformCommission = price * (COMMISSION_RATE / 100);
-    const providerEarnings = price - platformCommission;
+    if (price <= 0) {
+      return res.status(400).json({ error: 'This plan is not available' });
+    }
 
-    const subscription = await pool.query(`
-      INSERT INTO signal_provider_subscriptions (
-        provider_id, subscriber_id, plan_type, price_paid,
-        platform_commission, provider_earnings, expires_at, payment_reference
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      ON CONFLICT (provider_id, subscriber_id) 
-      DO UPDATE SET 
-        plan_type = EXCLUDED.plan_type,
-        price_paid = EXCLUDED.price_paid,
-        expires_at = EXCLUDED.expires_at,
-        status = 'active',
-        updated_at = NOW()
-      RETURNING *
-    `, [providerId, userId, plan_type, price, platformCommission, providerEarnings, expiresAt, payment_reference]);
+    // Get or create user wallet
+    let wallet = await pool.query('SELECT * FROM user_wallets WHERE user_id = $1', [userId]);
+    if (wallet.rows.length === 0) {
+      wallet = await pool.query(
+        'INSERT INTO user_wallets (user_id, balance) VALUES ($1, 0) RETURNING *',
+        [userId]
+      );
+    }
+    const userWallet = wallet.rows[0];
 
-    // Update provider stats
-    await pool.query(`
-      UPDATE signal_providers 
-      SET subscriber_count = subscriber_count + 1,
-          total_revenue = total_revenue + $1
-      WHERE id = $2
-    `, [price, providerId]);
+    // Check if wallet is frozen
+    if (userWallet.is_frozen) {
+      return res.status(400).json({ error: 'Your wallet is frozen. Please contact support.' });
+    }
 
-    // Credit provider wallet
-    await pool.query(`SELECT record_marketplace_sale($1, $2, $3, 'signal_subscription', $4, $5)`, [
-      providerData.user_id, providerEarnings, COMMISSION_RATE, subscription.rows[0].id, `Signal subscription: ${plan_type}`
-    ]);
+    // Check balance
+    if (parseFloat(userWallet.balance) < price) {
+      return res.status(400).json({ 
+        error: 'Insufficient balance',
+        required: price,
+        current_balance: parseFloat(userWallet.balance),
+        shortfall: price - parseFloat(userWallet.balance)
+      });
+    }
 
-    res.json({ success: true, subscription: subscription.rows[0] });
+    // Start transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Deduct from user wallet
+      const balanceBefore = parseFloat(userWallet.balance);
+      const balanceAfter = balanceBefore - price;
+
+      await client.query(
+        'UPDATE user_wallets SET balance = $1, total_spent = total_spent + $2, updated_at = NOW() WHERE user_id = $3',
+        [balanceAfter, price, userId]
+      );
+
+      // Record wallet transaction
+      await client.query(`
+        INSERT INTO wallet_transactions (user_id, type, amount, balance_before, balance_after, description, reference_type)
+        VALUES ($1, 'purchase', $2, $3, $4, $5, 'signal_subscription')
+      `, [userId, -price, balanceBefore, balanceAfter, `Signal subscription: ${providerData.display_name} (${plan_type})`]);
+
+      // Calculate commissions: 20% platform, 80% provider
+      const platformCommission = price * (COMMISSION_RATE / 100);
+      const providerEarnings = price - platformCommission;
+
+      // Create subscription
+      const subscription = await client.query(`
+        INSERT INTO signal_provider_subscriptions (
+          provider_id, subscriber_id, plan_type, price_paid,
+          platform_commission, provider_earnings, expires_at, payment_reference
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING *
+      `, [providerId, userId, plan_type, price, platformCommission, providerEarnings, expiresAt, payment_reference || 'wallet_payment']);
+
+      // Update provider stats
+      await client.query(`
+        UPDATE signal_providers 
+        SET subscriber_count = subscriber_count + 1,
+            total_revenue = total_revenue + $1
+        WHERE id = $2
+      `, [price, providerId]);
+
+      // Credit provider wallet
+      await client.query(`SELECT record_marketplace_sale($1, $2, $3, 'signal_subscription', $4, $5)`, [
+        providerData.user_id, providerEarnings, COMMISSION_RATE, subscription.rows[0].id, `Signal subscription: ${plan_type}`
+      ]);
+
+      await client.query('COMMIT');
+
+      auditLog(userId, 'SIGNAL_SUBSCRIPTION_PURCHASED', { providerId, price, plan_type }, req);
+
+      res.json({ 
+        success: true, 
+        subscription: subscription.rows[0],
+        message: 'Subscription successful!',
+        new_balance: balanceAfter
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error('Subscribe to provider error:', error);
     res.status(500).json({ error: 'Failed to subscribe' });
@@ -1559,7 +1690,10 @@ router.get('/purchases', authenticate, async (req, res) => {
         ORDER BY pp.created_at DESC
       `, [userId]),
       pool.query(`
-        SELECT ss.*, sp.display_name, sp.slug, sp.avatar_url
+        SELECT ss.*, sp.display_name, sp.slug, sp.avatar_url,
+               sp.community_platform, sp.trading_style, sp.risk_level,
+               ss.expires_at as subscription_end,
+               CASE WHEN ss.expires_at > NOW() AND ss.status = 'active' THEN 'active' ELSE 'expired' END as subscription_status
         FROM signal_provider_subscriptions ss
         JOIN signal_providers sp ON ss.provider_id = sp.id
         WHERE ss.subscriber_id = $1
@@ -2117,7 +2251,22 @@ function generateWhatYouGet(type, purchase, deliverables) {
     }
   } else if (type === 'signal') {
     items.push({ icon: '📡', text: `${purchase.display_name} Signals` });
-    if (purchase.signal_delivery_method?.includes('telegram') && purchase.telegram_invite_link) {
+    
+    // Prominent community access
+    if (purchase.community_link) {
+      const platformEmoji = 
+        purchase.community_platform?.toLowerCase() === 'telegram' ? '✈️' :
+        purchase.community_platform?.toLowerCase() === 'discord' ? '🎮' :
+        purchase.community_platform?.toLowerCase() === 'whatsapp' ? '💬' :
+        '🔗';
+      items.push({ 
+        icon: platformEmoji, 
+        text: `${purchase.community_platform || 'Community'} Access Included`,
+        description: 'Click "Access Signals" to get your invite link'
+      });
+    }
+    
+    if (purchase.telegram_channel) {
       items.push({ icon: '✈️', text: 'Telegram Channel Access' });
     }
     if (purchase.signal_delivery_method?.includes('discord') && purchase.discord_invite_link) {

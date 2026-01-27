@@ -677,6 +677,73 @@ export default function MyPurchasesPage() {
                     </Box>
 
                     {/* Downloadable Files */}
+                    {/* Signal Community Link - Most Important for Signals */}
+                    {selectedPurchase?.type === 'signal' && accessDetails.purchase?.community_link && (
+                      <Box sx={{ 
+                        mb: 4, 
+                        p: 3, 
+                        bgcolor: 'rgba(59, 130, 246, 0.15)', 
+                        borderRadius: 3,
+                        border: '2px solid rgba(59, 130, 246, 0.4)'
+                      }}>
+                        <Typography sx={{ color: 'white', fontWeight: 700, mb: 2, fontSize: '1.1rem' }}>
+                          🎉 Your Trading Community Access
+                        </Typography>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 3 }}>
+                          Click the button below to join the {accessDetails.purchase.community_platform || 'trading'} community and start receiving signals!
+                        </Typography>
+                        
+                        {accessDetails.purchase.community_instructions && (
+                          <Box sx={{ 
+                            mb: 3, 
+                            p: 2, 
+                            bgcolor: 'rgba(255,255,255,0.05)', 
+                            borderRadius: 2,
+                            border: '1px solid rgba(255,255,255,0.1)'
+                          }}>
+                            <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
+                              📋 <strong>Instructions:</strong> {accessDetails.purchase.community_instructions}
+                            </Typography>
+                          </Box>
+                        )}
+
+                        <Button
+                          variant="contained"
+                          size="large"
+                          fullWidth
+                          href={accessDetails.purchase.community_link}
+                          target="_blank"
+                          startIcon={
+                            accessDetails.purchase.community_platform?.toLowerCase() === 'telegram' ? <MessageCircle size={20} /> :
+                            accessDetails.purchase.community_platform?.toLowerCase() === 'discord' ? <MessageCircle size={20} /> :
+                            <ExternalLink size={20} />
+                          }
+                          sx={{
+                            bgcolor: accessDetails.purchase.community_platform?.toLowerCase() === 'telegram' ? '#0088cc' :
+                                    accessDetails.purchase.community_platform?.toLowerCase() === 'discord' ? '#5865F2' :
+                                    accessDetails.purchase.community_platform?.toLowerCase() === 'whatsapp' ? '#25D366' :
+                                    '#3B82F6',
+                            '&:hover': { 
+                              bgcolor: accessDetails.purchase.community_platform?.toLowerCase() === 'telegram' ? '#006699' :
+                                      accessDetails.purchase.community_platform?.toLowerCase() === 'discord' ? '#4752C4' :
+                                      accessDetails.purchase.community_platform?.toLowerCase() === 'whatsapp' ? '#128C7E' :
+                                      '#2563EB'
+                            },
+                            fontWeight: 700,
+                            py: 1.5,
+                            fontSize: '1rem'
+                          }}
+                        >
+                          Join {accessDetails.purchase.community_platform || 'Community'} Now
+                        </Button>
+
+                        <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', mt: 2, textAlign: 'center' }}>
+                          Your subscription is active until {new Date(accessDetails.purchase.expires_at).toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {/* Downloadable Files & Access */}
                     {accessDetails.deliverables.length > 0 && (
                       <Box>
                         <Typography sx={{ color: 'white', fontWeight: 700, mb: 2 }}>

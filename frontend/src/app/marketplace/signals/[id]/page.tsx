@@ -404,7 +404,8 @@ export default function SignalProviderPage() {
     setSubscribing(true);
     setSubscribeError('');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/signals/providers/${providerId}/subscribe`, {
+      // Use wallet endpoint for purchase
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/wallet/purchase/signal/${providerId}`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -415,13 +416,15 @@ export default function SignalProviderPage() {
       
       const data = await res.json();
       if (res.ok) {
-        if (data.payment_url) {
-          window.location.href = data.payment_url;
-        } else {
-          router.push('/dashboard/signals');
-        }
+        // Subscription successful - redirect to purchases page
+        router.push('/dashboard/purchases?type=signal&success=true');
       } else {
-        setSubscribeError(data.error || 'Failed to subscribe');
+        // Handle specific errors
+        if (data.error === 'Insufficient balance') {
+          setSubscribeError(`Insufficient balance. You need $${data.required?.toFixed(2)} but only have $${data.current?.toFixed(2)}. Please deposit $${data.shortfall?.toFixed(2)} more.`);
+        } else {
+          setSubscribeError(data.error || 'Failed to subscribe');
+        }
       }
     } catch (error) {
       setSubscribeError('Network error. Please try again.');
