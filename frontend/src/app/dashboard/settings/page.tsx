@@ -337,10 +337,12 @@ export default function SettingsPage() {
 
   // Password State
   const [passwords, setPasswords] = useState({
-    currentPassword: '',
+    verificationCode: '',
     newPassword: '',
     confirmPassword: '',
   });
+  const [passwordStep, setPasswordStep] = useState<'initial' | 'code-sent'>('initial');
+  const [maskedEmail, setMaskedEmail] = useState('');
 
   // Password Strength
   const [passwordStrength, setPasswordStrength] = useState(0);
@@ -561,7 +563,7 @@ export default function SettingsPage() {
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/user/profile`, {
+      const response = await fetch(`${API_URL}/api/users/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -610,7 +612,7 @@ export default function SettingsPage() {
   const fetchSessions = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/user/sessions`, {
+      const response = await fetch(`${API_URL}/api/users/sessions`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -645,7 +647,7 @@ export default function SettingsPage() {
         date_of_birth: profile.dateOfBirth || null,
       };
       
-      const response = await fetch(`${API_URL}/api/user/profile`, {
+      const response = await fetch(`${API_URL}/api/users/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -673,6 +675,37 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSendPasswordCode = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/users/send-password-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(`Verification code sent to ${data.email}`);
+        setMaskedEmail(data.email);
+        setPasswordStep('code-sent');
+      } else {
+        setError(data.error || 'Failed to send verification code');
+      }
+    } catch (err) {
+      setError('Failed to send verification code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleChangePassword = async () => {
     if (passwords.newPassword !== passwords.confirmPassword) {
       setError('New passwords do not match');
@@ -684,27 +717,33 @@ export default function SettingsPage() {
       return;
     }
 
+    if (!passwords.verificationCode || passwords.verificationCode.length !== 6) {
+      setError('Please enter the 6-digit verification code');
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/user/change-password`, {
+      const response = await fetch(`${API_URL}/api/users/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          currentPassword: passwords.currentPassword,
+          code: passwords.verificationCode,
           newPassword: passwords.newPassword,
         }),
       });
 
       if (response.ok) {
         setSuccess('Password changed successfully');
-        setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setPasswords({ verificationCode: '', newPassword: '', confirmPassword: '' });
+        setPasswordStep('initial');
       } else {
         const data = await response.json();
         setError(data.error || 'Failed to change password');
@@ -723,7 +762,7 @@ export default function SettingsPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/user/settings`, {
+      const response = await fetch(`${API_URL}/api/users/settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1272,28 +1311,58 @@ export default function SettingsPage() {
               </Box>
             </Card>
 
-            <SettingCard icon={<Lock size={24} color="white" />} title="Password" description="Change your account password" status={security.lastPasswordChange ? 'enabled' : 'warning'} expandable defaultExpanded>
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <TextField fullWidth type={showPassword ? 'text' : 'password'} label="Current Password" value={passwords.currentPassword} onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })} InputProps={{ endAdornment: <InputAdornment position="end"><IconButton onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</IconButton></InputAdornment> }} />
-                </Grid>
-                <Grid item xs={12} md={6} />
-                <Grid item xs={12} md={6}>
-                  <TextField fullWidth type={showNewPassword ? 'text' : 'password'} label="New Password" value={passwords.newPassword} onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })} InputProps={{ endAdornment: <InputAdornment position="end"><IconButton onClick={() => setShowNewPassword(!showNewPassword)}>{showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}</IconButton></InputAdornment> }} />
-                  {passwords.newPassword && (
-                    <Box sx={{ mt: 1 }}>
-                      <LinearProgress variant="determinate" value={passwordStrength} sx={{ height: 4, borderRadius: 2, bgcolor: alpha(passwordStrength > 60 ? theme.palette.success.main : theme.palette.warning.main, 0.2), '& .MuiLinearProgress-bar': { bgcolor: passwordStrength > 60 ? 'success.main' : passwordStrength > 30 ? 'warning.main' : 'error.main' } }} />
-                      <Typography variant="caption" color="text.secondary">Password strength: {passwordStrength > 60 ? 'Strong' : passwordStrength > 30 ? 'Medium' : 'Weak'}</Typography>
-                    </Box>
-                  )}
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField fullWidth type="password" label="Confirm New Password" value={passwords.confirmPassword} onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })} error={passwords.confirmPassword !== '' && passwords.newPassword !== passwords.confirmPassword} helperText={passwords.confirmPassword !== '' && passwords.newPassword !== passwords.confirmPassword ? 'Passwords do not match' : ''} />
-                </Grid>
-              </Grid>
-              <Box sx={{ mt: 3 }}>
-                <Button variant="contained" startIcon={<Lock size={18} />} onClick={handleChangePassword} disabled={loading || !passwords.currentPassword || !passwords.newPassword || passwords.newPassword !== passwords.confirmPassword}>Change Password</Button>
-              </Box>
+            <SettingCard icon={<Lock size={24} color="white" />} title="Password" description="Change your account password via email verification" status={security.lastPasswordChange ? 'enabled' : 'warning'} expandable defaultExpanded>
+              {passwordStep === 'initial' ? (
+                <Box sx={{ textAlign: 'center', py: 2 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Click the button below to receive a verification code at your registered email address.
+                  </Typography>
+                  <Button variant="contained" startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <Mail size={18} />} onClick={handleSendPasswordCode} disabled={loading}>
+                    {loading ? 'Sending...' : 'Send Verification Code'}
+                  </Button>
+                </Box>
+              ) : (
+                <>
+                  <Alert severity="info" sx={{ mb: 3 }}>
+                    A 6-digit code has been sent to <strong>{maskedEmail}</strong>. Enter it below along with your new password.
+                  </Alert>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} md={6}>
+                      <TextField 
+                        fullWidth 
+                        label="Verification Code" 
+                        value={passwords.verificationCode} 
+                        onChange={(e) => setPasswords({ ...passwords, verificationCode: e.target.value.replace(/\D/g, '').slice(0, 6) })} 
+                        placeholder="Enter 6-digit code"
+                        inputProps={{ maxLength: 6 }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Button variant="text" size="small" onClick={handleSendPasswordCode} disabled={loading}>
+                        Resend Code
+                      </Button>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField fullWidth type={showNewPassword ? 'text' : 'password'} label="New Password" value={passwords.newPassword} onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })} InputProps={{ endAdornment: <InputAdornment position="end"><IconButton onClick={() => setShowNewPassword(!showNewPassword)}>{showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}</IconButton></InputAdornment> }} />
+                      {passwords.newPassword && (
+                        <Box sx={{ mt: 1 }}>
+                          <LinearProgress variant="determinate" value={passwordStrength} sx={{ height: 4, borderRadius: 2, bgcolor: alpha(passwordStrength > 60 ? theme.palette.success.main : theme.palette.warning.main, 0.2), '& .MuiLinearProgress-bar': { bgcolor: passwordStrength > 60 ? 'success.main' : passwordStrength > 30 ? 'warning.main' : 'error.main' } }} />
+                          <Typography variant="caption" color="text.secondary">Password strength: {passwordStrength > 60 ? 'Strong' : passwordStrength > 30 ? 'Medium' : 'Weak'}</Typography>
+                        </Box>
+                      )}
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField fullWidth type="password" label="Confirm New Password" value={passwords.confirmPassword} onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })} error={passwords.confirmPassword !== '' && passwords.newPassword !== passwords.confirmPassword} helperText={passwords.confirmPassword !== '' && passwords.newPassword !== passwords.confirmPassword ? 'Passwords do not match' : ''} />
+                    </Grid>
+                  </Grid>
+                  <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+                    <Button variant="outlined" onClick={() => { setPasswordStep('initial'); setPasswords({ verificationCode: '', newPassword: '', confirmPassword: '' }); }}>Cancel</Button>
+                    <Button variant="contained" startIcon={<Lock size={18} />} onClick={handleChangePassword} disabled={loading || !passwords.verificationCode || passwords.verificationCode.length !== 6 || !passwords.newPassword || passwords.newPassword !== passwords.confirmPassword}>
+                      {loading ? <CircularProgress size={18} /> : 'Change Password'}
+                    </Button>
+                  </Box>
+                </>
+              )}
             </SettingCard>
 
             <SettingCard icon={<Key size={24} color="white" />} title="Two-Factor Authentication (2FA)" description="Add an extra layer of security with authenticator app" status={security.twoFactorEnabled ? 'enabled' : 'disabled'} action={security.twoFactorEnabled ? <Button variant="outlined" color="error" size="small" onClick={handleDisable2FA}>Disable</Button> : <Button variant="contained" size="small" startIcon={<QrCode size={16} />} onClick={handleEnable2FA}>Enable</Button>} />

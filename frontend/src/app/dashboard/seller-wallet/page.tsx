@@ -193,6 +193,22 @@ export default function SellerWalletPage() {
         withdrawRes.json(),
       ]);
 
+      // Check if API says user is not a seller - show zeros and redirect to become seller
+      if (walletData.is_seller === false) {
+        setIsSeller(false);
+        setWallet({
+          balance: 0,
+          pending_balance: 0,
+          total_earned: 0,
+          total_withdrawn: 0,
+          is_frozen: false,
+          pending_withdrawals: 0,
+        });
+        setRecentSales([]);
+        setWithdrawals([]);
+        return;
+      }
+
       // Ensure wallet has all required fields with defaults
       const walletWithDefaults: SellerWallet = {
         balance: walletData.wallet?.balance ?? 0,

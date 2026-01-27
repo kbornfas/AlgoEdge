@@ -10,6 +10,8 @@ import {
   updateRobotConfig,
   listAllUsers,
   setUserBlocked,
+  changePassword,
+  sendPasswordChangeCode,
 } from '../controllers/userController.js';
 import { authenticate } from '../middleware/auth.js';
 import { apiLimiter } from '../middleware/rateLimiter.js';
@@ -90,6 +92,8 @@ router.use(authenticate);
 // Profile
 router.get('/profile', apiLimiter, getProfile);
 router.put('/profile', apiLimiter, updateProfile);
+router.post('/send-password-code', apiLimiter, sendPasswordChangeCode);
+router.post('/change-password', apiLimiter, changePassword);
 
 // Settings
 router.get('/settings', apiLimiter, getSettings);

@@ -35,6 +35,96 @@ export const setUserBlocked = async (req, res) => {
 };
 import pool from '../config/database.js';
 import { auditLog } from '../middleware/audit.js';
+import bcrypt from 'bcryptjs';
+import { sendVerificationCodeEmail, generateVerificationCode } from '../services/emailService.js';
+
+// Send Password Change Code (to user's email)
+export const sendPasswordChangeCode = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get user email
+    const userResult = await pool.query(
+      'SELECT email, username FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const { email, username } = userResult.rows[0];
+
+    // Generate 6-digit code
+    const code = generateVerificationCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Store code in database
+    await pool.query(
+      `INSERT INTO verification_codes (user_id, code, type, expires_at)
+       VALUES ($1, $2, 'password_change', $3)
+       ON CONFLICT (user_id, type) DO UPDATE SET code = $2, expires_at = $3, created_at = CURRENT_TIMESTAMP`,
+      [userId, code, expiresAt]
+    );
+
+    // Send email
+    await sendVerificationCodeEmail(email, username || 'User', code, 10);
+
+    res.json({ message: 'Verification code sent to your email', email: email.replace(/(.{2})(.*)(@.*)/, '$1***$3') });
+  } catch (error) {
+    console.error('Send password change code error:', error);
+    res.status(500).json({ error: 'Failed to send verification code' });
+  }
+};
+
+// Change Password (with email verification code)
+export const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { code, newPassword } = req.body;
+
+    if (!code || !newPassword) {
+      return res.status(400).json({ error: 'Verification code and new password are required' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters' });
+    }
+
+    // Verify the code
+    const codeResult = await pool.query(
+      `SELECT * FROM verification_codes 
+       WHERE user_id = $1 AND code = $2 AND type = 'password_change' AND expires_at > NOW()`,
+      [userId, code]
+    );
+
+    if (codeResult.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired verification code' });
+    }
+
+    // Delete used code
+    await pool.query(
+      `DELETE FROM verification_codes WHERE user_id = $1 AND type = 'password_change'`,
+      [userId]
+    );
+
+    // Hash new password
+    const newPasswordHash = await bcrypt.hash(newPassword, 12);
+
+    // Update password
+    await pool.query(
+      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [newPasswordHash, userId]
+    );
+
+    auditLog(userId, 'PASSWORD_CHANGED', {}, req);
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+};
 
 // Get User Profile
 export const getProfile = async (req, res) => {
