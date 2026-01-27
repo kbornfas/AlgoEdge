@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -20,6 +20,7 @@ import {
   TextField,
   InputAdornment,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   BookOpen,
@@ -34,6 +35,7 @@ import {
   Lock,
   Check,
   Crown,
+  Unlock,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -195,7 +197,7 @@ const faqs = [
   },
   {
     question: 'Who can access the Learning Hub?',
-    answer: 'The Learning Hub is exclusively available to Monthly and above subscribers. Subscribe to unlock all courses and premium educational content.',
+    answer: 'The Learning Hub is exclusively available to Monthly, Yearly, and Lifetime subscribers. Free and Weekly subscribers do not have access to courses. Upgrade to Monthly or above to unlock all educational content.',
   },
 ];
 
@@ -211,8 +213,64 @@ const getLevelColor = (level: string) => {
 export default function LearningHubPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [isPremium, setIsPremium] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const categories = ['All', 'Forex Basics', 'Technical Analysis', 'Risk Management', 'Advanced Strategies', 'Psychology', 'Commodities', 'Algorithmic Trading', 'Fundamental Analysis'];
+
+  // Check user subscription status
+  useEffect(() => {
+    const checkAccess = async () => {
+      try {
+        // Check localStorage for user data
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          // Check if admin - admins always have access
+          if (user.isAdmin || user.is_admin) {
+            setIsAdmin(true);
+            setIsPremium(true);
+          }
+          // Check subscription plan - only monthly, yearly, lifetime have access (NOT free or weekly)
+          const plan = (user.subscriptionPlan || user.subscription_plan || '').toLowerCase();
+          if (plan === 'monthly' || plan === 'yearly' || plan === 'lifetime' || plan === 'premium') {
+            setIsPremium(true);
+          }
+        }
+
+        // Also check via API for most up-to-date status
+        const token = localStorage.getItem('token');
+        if (token) {
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+          const response = await fetch(`${API_URL}/api/user/profile`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            const user = data.user || data;
+            if (user.is_admin || user.isAdmin) {
+              setIsAdmin(true);
+              setIsPremium(true);
+            }
+            // Only monthly, yearly, lifetime plans have access
+            const plan = (user.plan || user.subscription_plan || user.subscriptionPlan || '').toLowerCase();
+            if (plan === 'monthly' || plan === 'yearly' || plan === 'lifetime' || plan === 'premium') {
+              setIsPremium(true);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error checking access:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAccess();
+  }, []);
+
+  const hasAccess = isPremium || isAdmin;
 
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -221,13 +279,21 @@ export default function LearningHubPage() {
     return matchesSearch && matchesCategory;
   });
 
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <CircularProgress color="primary" />
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ textAlign: 'center', mb: 4 }}>
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, mb: 2, px: 2, py: 0.5, borderRadius: 2, bgcolor: 'rgba(34, 197, 94, 0.1)' }}>
-          <Crown size={18} color="#22C55E" />
-          <Typography variant="body2" sx={{ color: '#22C55E', fontWeight: 600 }}>
-            Premium Content
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, mb: 2, px: 2, py: 0.5, borderRadius: 2, bgcolor: hasAccess ? 'rgba(34, 197, 94, 0.1)' : 'rgba(245, 158, 11, 0.1)' }}>
+          {hasAccess ? <Unlock size={18} color="#22C55E" /> : <Crown size={18} color="#F59E0B" />}
+          <Typography variant="body2" sx={{ color: hasAccess ? '#22C55E' : '#F59E0B', fontWeight: 600 }}>
+            {hasAccess ? 'Premium Unlocked' : 'Premium Content'}
           </Typography>
         </Box>
         <Typography variant="h3" fontWeight={800} gutterBottom>
@@ -239,21 +305,39 @@ export default function LearningHubPage() {
       </Box>
 
       {/* Premium Notice */}
-      <Alert 
-        severity="info" 
-        icon={<Crown size={20} />}
-        sx={{ 
-          mb: 4, 
-          bgcolor: 'rgba(0, 102, 255, 0.1)', 
-          border: '1px solid rgba(0, 102, 255, 0.3)',
-          '& .MuiAlert-icon': { color: '#0066FF' }
-        }}
-      >
-        <Typography variant="body2">
-          <strong>Premium Access Required:</strong> All courses are available exclusively to Monthly subscribers and above. 
-          Upgrade your subscription to unlock unlimited access to all educational content.
-        </Typography>
-      </Alert>
+      {!hasAccess ? (
+        <Alert 
+          severity="info" 
+          icon={<Crown size={20} />}
+          sx={{ 
+            mb: 4, 
+            bgcolor: 'rgba(0, 102, 255, 0.1)', 
+            border: '1px solid rgba(0, 102, 255, 0.3)',
+            '& .MuiAlert-icon': { color: '#0066FF' }
+          }}
+        >
+          <Typography variant="body2">
+            <strong>Premium Access Required:</strong> All courses are available exclusively to Monthly subscribers and above. 
+            Upgrade your subscription to unlock unlimited access to all educational content.
+          </Typography>
+        </Alert>
+      ) : (
+        <Alert 
+          severity="success" 
+          icon={<Unlock size={20} />}
+          sx={{ 
+            mb: 4, 
+            bgcolor: 'rgba(34, 197, 94, 0.1)', 
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            '& .MuiAlert-icon': { color: '#22C55E' }
+          }}
+        >
+          <Typography variant="body2">
+            <strong>Premium Access Unlocked!</strong> You have full access to all courses and educational content. 
+            Enjoy learning and trading!
+          </Typography>
+        </Alert>
+      )}
 
       {/* Search and Filter */}
       <Box sx={{ mb: 4 }}>
@@ -289,12 +373,21 @@ export default function LearningHubPage() {
         <Typography variant="h5" fontWeight={700}>
           Courses ({filteredCourses.length})
         </Typography>
-        <Chip 
-          icon={<Lock size={14} />} 
-          label="All Courses Locked" 
-          size="small"
-          sx={{ bgcolor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' }}
-        />
+        {hasAccess ? (
+          <Chip 
+            icon={<Unlock size={14} />} 
+            label="All Courses Unlocked" 
+            size="small"
+            sx={{ bgcolor: 'rgba(34, 197, 94, 0.1)', color: '#22C55E' }}
+          />
+        ) : (
+          <Chip 
+            icon={<Lock size={14} />} 
+            label="All Courses Locked" 
+            size="small"
+            sx={{ bgcolor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' }}
+          />
+        )}
       </Box>
       <Grid container spacing={3} sx={{ mb: 6 }}>
         {filteredCourses.map((course) => (
@@ -310,7 +403,7 @@ export default function LearningHubPage() {
                 },
               }}
             >
-              {/* Lock Badge */}
+              {/* Lock/Unlock Badge */}
               <Box
                 sx={{
                   position: 'absolute',
@@ -327,10 +420,21 @@ export default function LearningHubPage() {
                   gap: 0.5,
                 }}
               >
-                <Lock size={14} color="#F59E0B" />
-                <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 600 }}>
-                  Premium
-                </Typography>
+                {hasAccess ? (
+                  <>
+                    <Unlock size={14} color="#22C55E" />
+                    <Typography variant="caption" sx={{ color: '#22C55E', fontWeight: 600 }}>
+                      Unlocked
+                    </Typography>
+                  </>
+                ) : (
+                  <>
+                    <Lock size={14} color="#F59E0B" />
+                    <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 600 }}>
+                      Premium
+                    </Typography>
+                  </>
+                )}
               </Box>
               
               {/* Course Image */}
@@ -424,24 +528,41 @@ export default function LearningHubPage() {
                   </Box>
                 </Box>
                 
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  color="warning"
-                  startIcon={<Lock size={16} />}
-                  component={Link}
-                  href="/auth/pricing"
-                  sx={{
-                    borderColor: '#F59E0B',
-                    color: '#F59E0B',
-                    '&:hover': {
-                      borderColor: '#D97706',
-                      bgcolor: 'rgba(245, 158, 11, 0.1)',
-                    },
-                  }}
-                >
-                  Subscribe to Unlock
-                </Button>
+                {hasAccess ? (
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    color="success"
+                    startIcon={<Play size={16} />}
+                    sx={{
+                      bgcolor: '#22C55E',
+                      '&:hover': {
+                        bgcolor: '#16A34A',
+                      },
+                    }}
+                  >
+                    Start Learning
+                  </Button>
+                ) : (
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    color="warning"
+                    startIcon={<Lock size={16} />}
+                    component={Link}
+                    href="/auth/pricing"
+                    sx={{
+                      borderColor: '#F59E0B',
+                      color: '#F59E0B',
+                      '&:hover': {
+                        borderColor: '#D97706',
+                        bgcolor: 'rgba(245, 158, 11, 0.1)',
+                      },
+                    }}
+                  >
+                    Subscribe to Unlock
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </Grid>

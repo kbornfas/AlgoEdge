@@ -60,5 +60,35 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.8,
     },
+    {
+      url: `${baseUrl}/blog/best-trading-api-2026`,
+      lastModified: '2026-01-25T00:00:00Z',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/best-forex-signals-2026`,
+      lastModified: '2026-01-25T00:00:00Z',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/forex-trading-courses-2026`,
+      lastModified: '2026-01-25T00:00:00Z',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/risk-management-rules-every-trader`,
+      lastModified: '2026-01-18T00:00:00Z',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/trading-psychology-overcoming-fear-greed`,
+      lastModified: '2026-01-20T00:00:00Z',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
   ];
 }

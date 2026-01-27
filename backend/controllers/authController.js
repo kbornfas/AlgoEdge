@@ -31,8 +31,8 @@ export const register = async (req, res) => {
     
     // Strong password validation
     const passwordErrors = [];
-    if (password.length < 12) {
-      passwordErrors.push('Password must be at least 12 characters');
+    if (password.length < 8) {
+      passwordErrors.push('Password must be at least 8 characters');
     }
     if (!/[A-Z]/.test(password)) {
       passwordErrors.push('Password must contain at least one uppercase letter');

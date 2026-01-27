@@ -566,22 +566,24 @@ export default function SettingsPage() {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const responseData = await response.json();
+        // Backend returns user object nested under 'user' key
+        const data = responseData.user || responseData;
         setProfile({
-          fullName: data.fullName || '',
+          fullName: data.full_name || data.fullName || '',
           email: data.email || '',
           username: data.username || '',
           phone: data.phone || '',
           bio: data.bio || '',
           country: data.country || '',
-          dateOfBirth: data.dateOfBirth || '',
-          avatarUrl: data.avatarUrl || '',
+          dateOfBirth: data.date_of_birth || data.dateOfBirth || '',
+          avatarUrl: data.avatar_url || data.avatarUrl || '',
         });
         
         setSecurity(prev => ({
           ...prev,
-          twoFactorEnabled: data.twoFaEnabled === true,
-          lastPasswordChange: data.lastPasswordChange || '',
+          twoFactorEnabled: data.two_fa_enabled === true || data.twoFaEnabled === true,
+          lastPasswordChange: data.last_password_change || data.lastPasswordChange || '',
         }));
         
         if (data.settings) {
@@ -634,13 +636,22 @@ export default function SettingsPage() {
 
     try {
       const token = localStorage.getItem('token');
+      // Send with snake_case for backend compatibility
+      const profileData = {
+        full_name: profile.fullName,
+        phone: profile.phone,
+        country: profile.country,
+        bio: profile.bio,
+        date_of_birth: profile.dateOfBirth || null,
+      };
+      
       const response = await fetch(`${API_URL}/api/user/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(profile),
+        body: JSON.stringify(profileData),
       });
 
       if (response.ok) {

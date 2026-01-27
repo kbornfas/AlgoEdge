@@ -309,7 +309,7 @@ console.log(signals);
 
                   <Button
                     component={Link}
-                    href={plan.price_monthly === 0 ? '/auth/register' : '/dashboard/api'}
+                    href="/dashboard/api"
                     fullWidth
                     variant={plan.is_featured ? 'contained' : 'outlined'}
                     sx={{
@@ -322,7 +322,7 @@ console.log(signals);
                       },
                     }}
                   >
-                    {plan.price_monthly === 0 ? 'Get Started Free' : 'Subscribe'}
+                    Subscribe
                   </Button>
                 </CardContent>
               </Card>
@@ -486,7 +486,7 @@ console.log(signals);
             Ready to Build?
           </Typography>
           <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 3 }}>
-            Start with our free tier and upgrade as you grow.
+            Subscribe to an API plan to start building powerful trading applications.
           </Typography>
           <Stack direction="row" spacing={2} justifyContent="center">
             <Button

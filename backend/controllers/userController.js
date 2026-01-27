@@ -43,7 +43,8 @@ export const getProfile = async (req, res) => {
 
     const result = await pool.query(
       `SELECT u.id, u.username, u.email, u.full_name, u.phone, u.country, u.timezone,
-              u.is_verified, u.two_fa_enabled, u.created_at,
+              u.is_verified, u.two_fa_enabled, u.created_at, u.bio, u.date_of_birth,
+              u.profile_picture as avatar_url,
               s.plan, s.status as subscription_status, s.current_period_end
        FROM users u
        LEFT JOIN subscriptions s ON u.id = s.user_id
@@ -66,7 +67,11 @@ export const getProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { full_name, phone, country, timezone } = req.body;
+    const { full_name, fullName, phone, country, timezone, bio, date_of_birth, dateOfBirth } = req.body;
+    
+    // Support both camelCase and snake_case
+    const finalFullName = full_name || fullName;
+    const finalDateOfBirth = date_of_birth || dateOfBirth;
 
     const result = await pool.query(
       `UPDATE users 
@@ -74,10 +79,12 @@ export const updateProfile = async (req, res) => {
            phone = COALESCE($2, phone),
            country = COALESCE($3, country),
            timezone = COALESCE($4, timezone),
+           bio = COALESCE($5, bio),
+           date_of_birth = COALESCE($6, date_of_birth),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $5
-       RETURNING id, username, email, full_name, phone, country, timezone`,
-      [full_name, phone, country, timezone, userId]
+       WHERE id = $7
+       RETURNING id, username, email, full_name, phone, country, timezone, bio, date_of_birth, profile_picture as avatar_url`,
+      [finalFullName, phone, country, timezone, bio, finalDateOfBirth, userId]
     );
 
     auditLog(userId, 'PROFILE_UPDATED', req.body, req);

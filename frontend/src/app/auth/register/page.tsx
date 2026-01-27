@@ -54,7 +54,7 @@ interface PasswordStrength {
 
 const checkPasswordStrength = (password: string): PasswordStrength => {
   const requirements = {
-    length: password.length >= 12,
+    length: password.length >= 8,
     uppercase: /[A-Z]/.test(password),
     lowercase: /[a-z]/.test(password),
     number: /[0-9]/.test(password),
@@ -469,7 +469,7 @@ export default function RegisterPage() {
                       
                       {/* Password Requirements */}
                       <Box sx={{ mt: 1.5, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5 }}>
-                        <RequirementItem met={passwordStrength.requirements.length} text="12+ characters" />
+                        <RequirementItem met={passwordStrength.requirements.length} text="8+ characters" />
                         <RequirementItem met={passwordStrength.requirements.uppercase} text="Uppercase (A-Z)" />
                         <RequirementItem met={passwordStrength.requirements.lowercase} text="Lowercase (a-z)" />
                         <RequirementItem met={passwordStrength.requirements.number} text="Number (0-9)" />

@@ -77,7 +77,7 @@ router.get('/stats', async (req, res) => {
         (SELECT COUNT(*) FROM signal_tiers WHERE is_active = true) as total_signal_providers,
         (SELECT COUNT(*) FROM marketplace_products WHERE status = 'approved' AND category NOT IN ('bot')) as total_products,
         (SELECT COUNT(DISTINCT buyer_id) FROM marketplace_bot_purchases) +
-        (SELECT COUNT(DISTINCT user_id) FROM signal_subscriptions) +
+        (SELECT COUNT(DISTINCT subscriber_id) FROM signal_provider_subscriptions) +
         (SELECT COUNT(DISTINCT buyer_id) FROM marketplace_product_purchases) as total_customers,
         (SELECT COALESCE(SUM(total_revenue), 0) FROM marketplace_bots) +
         (SELECT COALESCE(SUM(total_revenue), 0) FROM signal_providers) +
@@ -195,7 +195,12 @@ router.get('/bots', async (req, res) => {
     } = req.query;
 
     let query = `
-      SELECT b.*, u.username as seller_name
+      SELECT b.*, 
+             u.username as seller_name,
+             u.profile_picture as seller_avatar,
+             u.is_verified_seller as seller_verified,
+             COALESCE(u.seller_rating_average, 0) as seller_rating,
+             COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM marketplace_bots b
       JOIN users u ON b.seller_id = u.id
       WHERE b.status = 'approved'
@@ -280,7 +285,13 @@ router.get('/bots/:slug', optionalAuthenticate, async (req, res) => {
     const { slug } = req.params;
 
     const bot = await pool.query(`
-      SELECT b.*, u.username as seller_name, u.created_at as seller_since
+      SELECT b.*, 
+             u.username as seller_name, 
+             u.created_at as seller_since,
+             u.profile_picture as seller_avatar,
+             u.is_verified_seller as seller_verified,
+             COALESCE(u.seller_rating_average, 0) as seller_rating,
+             COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM marketplace_bots b
       JOIN users u ON b.seller_id = u.id
       WHERE b.slug = $1 AND b.status = 'approved'
@@ -472,7 +483,12 @@ router.get('/signals/providers', async (req, res) => {
     const { trading_style, risk_level, sort = 'popular', page = 1, limit = 12 } = req.query;
 
     let query = `
-      SELECT sp.*, u.username
+      SELECT sp.*, 
+             u.username,
+             u.profile_picture as seller_avatar,
+             u.is_verified_seller as seller_verified,
+             COALESCE(u.seller_rating_average, 0) as seller_rating,
+             COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM signal_providers sp
       JOIN users u ON sp.user_id = u.id
       WHERE sp.status = 'approved'
@@ -527,7 +543,13 @@ router.get('/signals/providers/:idOrSlug', optionalAuthenticate, async (req, res
     // Support both numeric ID and slug
     const isNumeric = /^\d+$/.test(idOrSlug);
     const provider = await pool.query(`
-      SELECT sp.*, u.username, u.created_at as member_since
+      SELECT sp.*, 
+             u.username, 
+             u.created_at as member_since,
+             u.profile_picture as seller_avatar,
+             u.is_verified_seller as seller_verified,
+             COALESCE(u.seller_rating_average, 0) as seller_rating,
+             COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM signal_providers sp
       JOIN users u ON sp.user_id = u.id
       WHERE ${isNumeric ? 'sp.id = $1' : 'sp.slug = $1'} AND sp.status = 'approved'
@@ -540,7 +562,7 @@ router.get('/signals/providers/:idOrSlug', optionalAuthenticate, async (req, res
     // Get recent signals (free ones or if subscribed)
     let signals = [];
     const isSubscribed = req.user ? await pool.query(
-      'SELECT id FROM signal_subscriptions WHERE provider_id = $1 AND subscriber_id = $2 AND status = $3',
+      'SELECT id FROM signal_provider_subscriptions WHERE provider_id = $1 AND subscriber_id = $2 AND status = $3',
       [provider.rows[0].id, req.user.id, 'active']
     ) : { rows: [] };
 
@@ -711,7 +733,7 @@ router.post('/signals/providers/:idOrSlug/subscribe', authenticate, apiLimiter, 
     const providerEarnings = price - platformCommission;
 
     const subscription = await pool.query(`
-      INSERT INTO signal_subscriptions (
+      INSERT INTO signal_provider_subscriptions (
         provider_id, subscriber_id, plan_type, price_paid,
         platform_commission, provider_earnings, expires_at, payment_reference
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -800,7 +822,12 @@ router.get('/products', async (req, res) => {
     const { product_type, category, min_price, max_price, sort = 'popular', page = 1, limit = 12 } = req.query;
 
     let query = `
-      SELECT p.*, u.username as seller_name
+      SELECT p.*, 
+             u.username as seller_name,
+             u.profile_picture as seller_avatar,
+             u.is_verified_seller as seller_verified,
+             COALESCE(u.seller_rating_average, 0) as seller_rating,
+             COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM marketplace_products p
       JOIN users u ON p.seller_id = u.id
       WHERE p.status = 'approved'
@@ -861,7 +888,12 @@ router.get('/products/:slug', optionalAuthenticate, async (req, res) => {
     const { slug } = req.params;
 
     const product = await pool.query(`
-      SELECT p.*, u.username as seller_name
+      SELECT p.*, 
+             u.username as seller_name,
+             u.profile_picture as seller_avatar,
+             u.is_verified_seller as seller_verified,
+             COALESCE(u.seller_rating_average, 0) as seller_rating,
+             COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM marketplace_products p
       JOIN users u ON p.seller_id = u.id
       WHERE p.slug = $1 AND p.status = 'approved'
@@ -1033,10 +1065,10 @@ router.post('/products/:id/purchase', authenticate, apiLimiter, async (req, res)
 // API KEYS & MONETIZATION
 // ============================================================================
 
-// Get API plans (public)
+// Get API plans (public) - exclude free tier plans
 router.get('/api-plans', async (req, res) => {
   try {
-    const plans = await pool.query('SELECT * FROM api_plans WHERE is_active = TRUE ORDER BY price_monthly ASC');
+    const plans = await pool.query('SELECT * FROM api_plans WHERE is_active = TRUE AND price_monthly > 0 ORDER BY price_monthly ASC');
     res.json({ success: true, plans: plans.rows });
   } catch (error) {
     console.error('Get API plans error:', error);
@@ -1528,7 +1560,7 @@ router.get('/purchases', authenticate, async (req, res) => {
       `, [userId]),
       pool.query(`
         SELECT ss.*, sp.display_name, sp.slug, sp.avatar_url
-        FROM signal_subscriptions ss
+        FROM signal_provider_subscriptions ss
         JOIN signal_providers sp ON ss.provider_id = sp.id
         WHERE ss.subscriber_id = $1
         ORDER BY ss.created_at DESC
@@ -2003,7 +2035,7 @@ router.get('/purchases/:type/:id/access', authenticate, async (req, res) => {
         SELECT ss.*, sp.display_name, sp.slug, sp.avatar_url,
                sp.community_link, sp.community_platform, sp.community_instructions,
                sp.telegram_channel, sp.twitter_handle, sp.website_url
-        FROM signal_subscriptions ss
+        FROM signal_provider_subscriptions ss
         JOIN signal_providers sp ON ss.provider_id = sp.id
         WHERE ss.provider_id = $1 AND ss.subscriber_id = $2 AND ss.status = 'active'
       `, [itemId, userId]);
@@ -2132,7 +2164,7 @@ router.get('/downloads/:deliverableId', authenticate, async (req, res) => {
       FROM product_deliverables pd
       LEFT JOIN marketplace_bot_purchases mbp ON pd.bot_id = mbp.bot_id AND mbp.buyer_id = $2
       LEFT JOIN marketplace_product_purchases mpp ON pd.product_id = mpp.product_id AND mpp.buyer_id = $2
-      LEFT JOIN signal_subscriptions ss ON pd.provider_id = ss.provider_id AND ss.subscriber_id = $2 AND ss.status = 'active'
+      LEFT JOIN signal_provider_subscriptions ss ON pd.provider_id = ss.provider_id AND ss.subscriber_id = $2 AND ss.status = 'active'
       WHERE pd.id = $1
     `, [deliverableId, userId]);
 
