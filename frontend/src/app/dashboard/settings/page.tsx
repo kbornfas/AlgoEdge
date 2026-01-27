@@ -1014,28 +1014,29 @@ export default function SettingsPage() {
   }
 
   return (
-    <Box>
+    <Box sx={{ px: { xs: 0, sm: 2, md: 3 } }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: { xs: 2, md: 4 } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
           <Box
             sx={{
-              width: 48,
-              height: 48,
+              width: { xs: 40, md: 48 },
+              height: { xs: 40, md: 48 },
               borderRadius: 2,
               background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
             <Settings size={24} color="white" />
           </Box>
           <Box>
-            <Typography variant="h4" fontWeight={700}>
+            <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: '1.5rem', md: '2rem' } }}>
               Settings
             </Typography>
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body1" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>
               Manage your account, preferences, and security settings
             </Typography>
           </Box>
@@ -1063,6 +1064,7 @@ export default function SettingsPage() {
           backdropFilter: 'blur(20px)',
           border: '1px solid',
           borderColor: alpha(theme.palette.divider, 0.1),
+          overflow: 'hidden',
         }}
       >
         <Tabs
@@ -1070,27 +1072,33 @@ export default function SettingsPage() {
           onChange={(_, newValue) => setTabValue(newValue)}
           variant="scrollable"
           scrollButtons="auto"
+          allowScrollButtonsMobile
           sx={{ 
             borderBottom: 1, 
             borderColor: 'divider', 
-            px: 2,
+            px: { xs: 0, sm: 2 },
             '& .MuiTab-root': {
-              minHeight: 64,
+              minHeight: { xs: 48, md: 64 },
+              minWidth: { xs: 'auto', sm: 'unset' },
               textTransform: 'none',
-              fontSize: '0.875rem',
+              fontSize: { xs: '0.7rem', md: '0.875rem' },
               fontWeight: 500,
+              px: { xs: 1, sm: 2 },
+            },
+            '& .MuiTabs-scrollButtons': {
+              '&.Mui-disabled': { opacity: 0.3 },
             },
           }}
         >
-          <Tab icon={<User size={18} />} label="Profile" iconPosition="start" />
-          <Tab icon={<TrendingUp size={18} />} label="Trading" iconPosition="start" />
-          <Tab icon={<Shield size={18} />} label="Security" iconPosition="start" />
-          <Tab icon={<Bell size={18} />} label="Notifications" iconPosition="start" />
-          <Tab icon={<Palette size={18} />} label="Appearance" iconPosition="start" />
-          <Tab icon={<Globe size={18} />} label="Localization" iconPosition="start" />
-          <Tab icon={<Lock size={18} />} label="Privacy" iconPosition="start" />
-          <Tab icon={<Monitor size={18} />} label="Sessions" iconPosition="start" />
-          <Tab icon={<AlertTriangle size={18} />} label="Danger Zone" iconPosition="start" sx={{ color: 'error.main' }} />
+          <Tab icon={<User size={16} />} label={<Box sx={{ display: { xs: 'none', sm: 'block' } }}>Profile</Box>} iconPosition="start" />
+          <Tab icon={<TrendingUp size={16} />} label={<Box sx={{ display: { xs: 'none', sm: 'block' } }}>Trading</Box>} iconPosition="start" />
+          <Tab icon={<Shield size={16} />} label={<Box sx={{ display: { xs: 'none', sm: 'block' } }}>Security</Box>} iconPosition="start" />
+          <Tab icon={<Bell size={16} />} label={<Box sx={{ display: { xs: 'none', sm: 'block' } }}>Notifications</Box>} iconPosition="start" />
+          <Tab icon={<Palette size={16} />} label={<Box sx={{ display: { xs: 'none', sm: 'block' } }}>Appearance</Box>} iconPosition="start" />
+          <Tab icon={<Globe size={16} />} label={<Box sx={{ display: { xs: 'none', sm: 'block' } }}>Localization</Box>} iconPosition="start" />
+          <Tab icon={<Lock size={16} />} label={<Box sx={{ display: { xs: 'none', sm: 'block' } }}>Privacy</Box>} iconPosition="start" />
+          <Tab icon={<Monitor size={16} />} label={<Box sx={{ display: { xs: 'none', sm: 'block' } }}>Sessions</Box>} iconPosition="start" />
+          <Tab icon={<AlertTriangle size={16} />} label={<Box sx={{ display: { xs: 'none', sm: 'block' } }}>Danger</Box>} iconPosition="start" sx={{ color: 'error.main' }} />
         </Tabs>
 
         {/* Profile Tab */}
@@ -1099,12 +1107,14 @@ export default function SettingsPage() {
             <Box 
               sx={{ 
                 display: 'flex', 
-                alignItems: 'center', 
-                gap: 3, 
-                mb: 4,
-                p: 3,
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: { xs: 'center', sm: 'flex-start' }, 
+                gap: { xs: 2, md: 3 }, 
+                mb: { xs: 3, md: 4 },
+                p: { xs: 2, md: 3 },
                 borderRadius: 3,
                 background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
+                textAlign: { xs: 'center', sm: 'left' },
               }}
             >
               <Badge
@@ -1114,17 +1124,17 @@ export default function SettingsPage() {
                   <IconButton
                     size="small"
                     onClick={() => setShowAvatarDialog(true)}
-                    sx={{ bgcolor: 'primary.main', color: 'white', width: 32, height: 32 }}
+                    sx={{ bgcolor: 'primary.main', color: 'white', width: 28, height: 28 }}
                   >
-                    <Camera size={16} />
+                    <Camera size={14} />
                   </IconButton>
                 }
               >
                 <Avatar
                   sx={{ 
-                    width: 100, 
-                    height: 100, 
-                    fontSize: '2.5rem',
+                    width: { xs: 80, md: 100 }, 
+                    height: { xs: 80, md: 100 }, 
+                    fontSize: { xs: '2rem', md: '2.5rem' },
                     background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
                   }}
                   src={profile.avatarUrl}
@@ -1132,20 +1142,20 @@ export default function SettingsPage() {
                   {profile.fullName?.charAt(0) || profile.username?.charAt(0) || 'U'}
                 </Avatar>
               </Badge>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="h5" fontWeight={700}>{profile.fullName || profile.username}</Typography>
-                <Typography color="text.secondary" sx={{ mb: 1 }}>{profile.email}</Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  <Chip icon={<User size={14} />} label={`@${profile.username}`} size="small" />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.2rem', md: '1.5rem' }, wordBreak: 'break-word' }}>{profile.fullName || profile.username}</Typography>
+                <Typography color="text.secondary" sx={{ mb: 1, fontSize: { xs: '0.85rem', md: '1rem' }, wordBreak: 'break-all' }}>{profile.email}</Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: { xs: 'center', sm: 'flex-start' } }}>
+                  <Chip icon={<User size={14} />} label={`@${profile.username}`} size="small" sx={{ maxWidth: '100%', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }} />
                   {profile.country && <Chip icon={<MapPin size={14} />} label={profile.country} size="small" />}
                 </Box>
               </Box>
             </Box>
 
-            <Typography variant="h6" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <User size={20} /> Personal Information
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '1rem', md: '1.25rem' } }}>
+              <User size={18} /> Personal Information
             </Typography>
-            <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid container spacing={{ xs: 2, md: 3 }} sx={{ mb: { xs: 3, md: 4 } }}>
               <Grid item xs={12} md={6}>
                 <TextField fullWidth label="Full Name" value={profile.fullName} onChange={(e) => setProfile({ ...profile, fullName: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><User size={18} /></InputAdornment> }} />
               </Grid>
@@ -1169,7 +1179,7 @@ export default function SettingsPage() {
               </Grid>
             </Grid>
 
-            <Typography variant="h6" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '1rem', md: '1.25rem' } }}>
               <Clock size={20} /> Timezone
             </Typography>
             <Grid container spacing={3} sx={{ mb: 4 }}>

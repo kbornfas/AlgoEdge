@@ -279,46 +279,46 @@ export default function DashboardAffiliatePage() {
 
   if (isAffiliate === false) {
     return (
-      <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: 8, position: 'relative' }}>
+      <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 3, sm: 8 }, position: 'relative' }}>
         <AnimatedBackground />
-        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
-          <GlassCard borderColor="rgba(34, 197, 94, 0.3)" sx={{ p: 6, textAlign: 'center' }}>
-            <Share2 size={64} color="#22C55E" style={{ marginBottom: 24 }} />
+        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1, px: { xs: 1.5, sm: 3 } }}>
+          <GlassCard borderColor="rgba(34, 197, 94, 0.3)" sx={{ p: { xs: 2.5, sm: 4, md: 6 }, textAlign: 'center' }}>
+            <Share2 size={isMobile ? 48 : 64} color="#22C55E" style={{ marginBottom: isMobile ? 16 : 24 }} />
             
-            <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, mb: 2 }}>
+            <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, mb: 1.5, fontSize: { xs: '1.3rem', sm: '1.8rem', md: '2rem' } }}>
               Become an Affiliate
             </Typography>
             
-            <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 4, maxWidth: 500, mx: 'auto' }}>
-              Join our affiliate program and earn commissions by referring new users to AlgoEdge. 
+            <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 3, maxWidth: 500, mx: 'auto', fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1rem' } }}>
+              Join our affiliate program and earn commissions by referring new users. 
               Start earning passive income today!
             </Typography>
 
             {applicationStatus === 'pending' && (
-              <Alert severity="info" sx={{ mb: 4, maxWidth: 400, mx: 'auto' }}>
-                Your affiliate application is under review. We&apos;ll notify you once it&apos;s approved.
+              <Alert severity="info" sx={{ mb: 3, maxWidth: 400, mx: 'auto', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                Your affiliate application is under review. We&apos;ll notify you once approved.
               </Alert>
             )}
 
-            <Box sx={{ mb: 4 }}>
-              <Grid container spacing={3} justifyContent="center">
+            <Box sx={{ mb: 3 }}>
+              <Grid container spacing={{ xs: 1.5, sm: 3 }} justifyContent="center">
                 {tiers.slice(0, 3).map((tier) => (
-                  <Grid item xs={12} sm={4} key={tier.name}>
+                  <Grid item xs={4} sm={4} key={tier.name}>
                     <Box sx={{ 
-                      p: 2, 
+                      p: { xs: 1.25, sm: 2 }, 
                       borderRadius: 2, 
                       bgcolor: 'rgba(255,255,255,0.03)',
                       border: '1px solid rgba(255,255,255,0.1)'
                     }}>
-                      <Typography sx={{ fontSize: '1.5rem', mb: 1 }}>{tier.emoji}</Typography>
-                      <Typography sx={{ color: tier.color, fontWeight: 700, mb: 0.5 }}>
+                      <Typography sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' }, mb: 0.5 }}>{tier.emoji}</Typography>
+                      <Typography sx={{ color: tier.color, fontWeight: 700, mb: 0.25, fontSize: { xs: '0.65rem', sm: '0.85rem' } }}>
                         {tier.name}
                       </Typography>
-                      <Typography sx={{ color: '#22C55E', fontWeight: 800, fontSize: '1.2rem' }}>
+                      <Typography sx={{ color: '#22C55E', fontWeight: 800, fontSize: { xs: '0.9rem', sm: '1.2rem' } }}>
                         {tier.commission}
                       </Typography>
-                      <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
-                        {tier.minReferrals}+ referrals
+                      <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.55rem', sm: '0.75rem' } }}>
+                        {tier.minReferrals}+ refs
                       </Typography>
                     </Box>
                   </Grid>
@@ -326,45 +326,46 @@ export default function DashboardAffiliatePage() {
               </Grid>
             </Box>
 
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CheckCircle size={16} color="#22C55E" />
-                <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>
-                  Earn up to 20% commission
+            <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <CheckCircle size={14} color="#22C55E" />
+                <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.65rem', sm: '0.85rem' } }}>
+                  Up to 20% commission
                 </Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CheckCircle size={16} color="#22C55E" />
-                <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <CheckCircle size={14} color="#22C55E" />
+                <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.65rem', sm: '0.85rem' } }}>
                   Weekly payouts
                 </Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CheckCircle size={16} color="#22C55E" />
-                <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>
-                  Unique referral link
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <CheckCircle size={14} color="#22C55E" />
+                <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.65rem', sm: '0.85rem' } }}>
+                  Unique link
                 </Typography>
               </Box>
             </Box>
 
             <Button
               variant="contained"
-              size="large"
+              size={isMobile ? 'medium' : 'large'}
               component={Link}
               href="/dashboard/affiliate/apply"
               disabled={applicationStatus === 'pending'}
               sx={{
-                mt: 4,
+                mt: { xs: 2.5, sm: 4 },
                 background: applicationStatus === 'pending' 
                   ? 'rgba(255,255,255,0.1)' 
                   : 'linear-gradient(135deg, #22C55E 0%, #0066FF 100%)',
                 color: 'white',
                 fontWeight: 700,
-                px: 6,
-                py: 1.5,
+                px: { xs: 3, sm: 6 },
+                py: { xs: 1, sm: 1.5 },
+                fontSize: { xs: '0.8rem', sm: '1rem' },
               }}
             >
-              {applicationStatus === 'pending' ? 'Application Pending' : 'Apply to Become an Affiliate'}
+              {applicationStatus === 'pending' ? 'Application Pending' : (isMobile ? 'Apply Now' : 'Apply to Become an Affiliate')}
             </Button>
           </GlassCard>
         </Container>
@@ -376,16 +377,16 @@ export default function DashboardAffiliatePage() {
     <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', position: 'relative' }}>
       <AnimatedBackground />
       
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, py: { xs: 1.5, md: 4 }, px: { xs: 1, sm: 2, md: 3 } }}>
         {/* Header with Stats */}
-        <GlassCard borderColor="rgba(34, 197, 94, 0.2)" sx={{ p: { xs: 2, md: 3 }, mb: 2 }}>
+        <GlassCard borderColor="rgba(34, 197, 94, 0.2)" sx={{ p: { xs: 1.5, sm: 2, md: 3 }, mb: 2 }}>
           {/* Tier Badge */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-            <Typography sx={{ fontSize: '1.2rem' }}>{currentTier.emoji}</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5, flexWrap: 'wrap' }}>
+            <Typography sx={{ fontSize: { xs: '1rem', sm: '1.2rem' } }}>{currentTier.emoji}</Typography>
             <Chip
-              label={`${currentTier.name} Partner • ${currentTier.commission}`}
+              label={`${currentTier.name} • ${currentTier.commission}`}
               size="small"
-              sx={{ bgcolor: `${currentTier.color}20`, color: currentTier.color, fontWeight: 700 }}
+              sx={{ bgcolor: `${currentTier.color}20`, color: currentTier.color, fontWeight: 700, fontSize: { xs: '0.65rem', sm: '0.75rem' }, height: { xs: 22, sm: 26 } }}
             />
           </Box>
 
@@ -394,8 +395,8 @@ export default function DashboardAffiliatePage() {
             variant="h5"
             sx={{
               fontWeight: 800,
-              fontSize: { xs: '1.3rem', md: '1.8rem' },
-              mb: 1,
+              fontSize: { xs: '1.1rem', sm: '1.3rem', md: '1.8rem' },
+              mb: 0.5,
               background: 'linear-gradient(135deg, #22C55E 0%, #0066FF 100%)',
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
@@ -405,47 +406,48 @@ export default function DashboardAffiliatePage() {
             Affiliate Dashboard
           </Typography>
           
-          <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', mb: 2 }}>
+          <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.85rem' }, mb: 1.5 }}>
             Share your link and earn {currentTier.commission} on every subscription
           </Typography>
 
           {/* Referral Link */}
           <Box
             sx={{
-              p: 1.5,
+              p: { xs: 1, sm: 1.5 },
               borderRadius: 1.5,
               bgcolor: 'rgba(0,0,0,0.3)',
               border: '1px solid rgba(34, 197, 94, 0.3)',
               display: 'flex',
               alignItems: 'center',
-              gap: 1,
-              mb: 2,
+              gap: { xs: 0.5, sm: 1 },
+              mb: 1.5,
             }}
           >
-            <Box sx={{ flex: 1, overflow: 'hidden' }}>
+            <Box sx={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
               <Typography
                 sx={{
                   color: 'white',
-                  fontSize: { xs: '0.7rem', md: '0.85rem' },
+                  fontSize: { xs: '0.6rem', sm: '0.7rem', md: '0.85rem' },
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                 }}
               >
-                {loading ? 'Loading your referral link...' : (stats?.referralLink || 'Sign up to get your referral link')}
+                {loading ? 'Loading...' : (stats?.referralLink || 'Sign up to get your referral link')}
               </Typography>
             </Box>
             <Button
               size="small"
               onClick={() => stats?.referralLink && copyToClipboard(stats.referralLink)}
-              startIcon={copied ? <CheckCircle size={14} /> : <Copy size={14} />}
+              startIcon={copied ? <CheckCircle size={12} /> : <Copy size={12} />}
               sx={{
                 minWidth: 'auto',
-                px: 1.5,
+                px: { xs: 1, sm: 1.5 },
                 py: 0.5,
                 bgcolor: copied ? '#22C55E' : 'rgba(34, 197, 94, 0.2)',
                 color: copied ? 'white' : '#22C55E',
-                fontSize: '0.75rem',
+                fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                flexShrink: 0,
                 '&:hover': { bgcolor: '#22C55E', color: 'white' },
               }}
             >
@@ -454,23 +456,23 @@ export default function DashboardAffiliatePage() {
           </Box>
 
           {/* Stats Grid - 2x2 on mobile */}
-          <Grid container spacing={1}>
+          <Grid container spacing={0.75}>
             {[
               { label: 'Balance', value: `$${Number(stats?.availableBalance || 0).toFixed(2)}`, color: '#22C55E' },
-              { label: 'Total Earned', value: `$${Number(stats?.totalEarnings || 0).toFixed(2)}`, color: '#0066FF' },
+              { label: 'Earned', value: `$${Number(stats?.totalEarnings || 0).toFixed(2)}`, color: '#0066FF' },
               { label: 'Referrals', value: stats?.totalReferrals || 0, color: '#FFD700' },
               { label: 'Active', value: stats?.activeReferrals || 0, color: '#A000FF' },
             ].map((stat, i) => (
               <Grid item xs={6} sm={3} key={i}>
-                <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
+                <Box sx={{ p: { xs: 1, sm: 1.5 }, borderRadius: 1.5, bgcolor: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
                   {loading ? (
                     <Skeleton width="60%" sx={{ mx: 'auto', bgcolor: 'rgba(255,255,255,0.1)' }} />
                   ) : (
-                    <Typography sx={{ fontSize: { xs: '1.1rem', md: '1.4rem' }, fontWeight: 800, color: stat.color }}>
+                    <Typography sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem', md: '1.4rem' }, fontWeight: 800, color: stat.color }}>
                       {stat.value}
                     </Typography>
                   )}
-                  <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{stat.label}</Typography>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.6rem', sm: '0.7rem' } }}>{stat.label}</Typography>
                 </Box>
               </Grid>
             ))}
@@ -481,30 +483,30 @@ export default function DashboardAffiliatePage() {
             fullWidth
             size="small"
             onClick={() => setPayoutDialog(true)}
-            startIcon={<Wallet size={16} />}
+            startIcon={<Wallet size={14} />}
             disabled={!stats || stats.availableBalance < 50}
             sx={{
-              mt: 2,
-              py: 1,
+              mt: 1.5,
+              py: { xs: 0.75, sm: 1 },
               bgcolor: '#22C55E',
               fontWeight: 700,
-              fontSize: '0.85rem',
+              fontSize: { xs: '0.7rem', sm: '0.85rem' },
               '&:hover': { bgcolor: '#16A34A' },
               '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
             }}
           >
-            {stats && Number(stats.availableBalance) >= 50 ? 'Request Payout' : `$${(50 - Number(stats?.availableBalance || 0)).toFixed(2)} more to withdraw`}
+            {stats && Number(stats.availableBalance) >= 50 ? 'Request Payout' : `$${(50 - Number(stats?.availableBalance || 0)).toFixed(0)} more to withdraw`}
           </Button>
         </GlassCard>
 
         {/* Tier Progress */}
         {nextTier && (
-          <GlassCard sx={{ p: 2, mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-              <Typography sx={{ color: 'white', fontSize: '0.85rem', fontWeight: 600 }}>
-                {currentTier.emoji} → {nextTier.emoji} Progress
+          <GlassCard sx={{ p: { xs: 1.5, sm: 2 }, mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.75 }}>
+              <Typography sx={{ color: 'white', fontSize: { xs: '0.75rem', sm: '0.85rem' }, fontWeight: 600 }}>
+                {currentTier.emoji} → {nextTier.emoji}
               </Typography>
-              <Typography sx={{ color: nextTier.color, fontSize: '0.8rem', fontWeight: 700 }}>
+              <Typography sx={{ color: nextTier.color, fontSize: { xs: '0.7rem', sm: '0.8rem' }, fontWeight: 700 }}>
                 {stats?.activeReferrals || 0}/{nextTier.minReferrals}
               </Typography>
             </Box>
@@ -512,36 +514,36 @@ export default function DashboardAffiliatePage() {
               variant="determinate"
               value={Math.min(((stats?.activeReferrals || 0) / nextTier.minReferrals) * 100, 100)}
               sx={{
-                height: 8,
+                height: { xs: 6, sm: 8 },
                 borderRadius: 4,
                 bgcolor: 'rgba(255,255,255,0.1)',
                 '& .MuiLinearProgress-bar': { bgcolor: nextTier.color, borderRadius: 4 },
               }}
             />
-            <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', mt: 0.5 }}>
-              {nextTier.minReferrals - (stats?.activeReferrals || 0)} more for {nextTier.commission} commission
+            <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.6rem', sm: '0.7rem' }, mt: 0.5 }}>
+              {nextTier.minReferrals - (stats?.activeReferrals || 0)} more for {nextTier.commission}
             </Typography>
           </GlassCard>
         )}
 
         {/* Commission Rates - Horizontal scroll on mobile */}
-        <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1rem', mb: 1.5 }}>
+        <Typography sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '0.85rem', sm: '1rem' }, mb: 1 }}>
           Commission Rates
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1.5, mb: 3, overflowX: 'auto', pb: 1, '::-webkit-scrollbar': { height: 4 } }}>
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, overflowX: 'auto', pb: 0.5, mx: { xs: -1, sm: 0 }, px: { xs: 1, sm: 0 }, '::-webkit-scrollbar': { height: 4 } }}>
           {commissionRates.map((rate) => (
             <GlassCard
               key={rate.plan}
               borderColor={`${rate.color}30`}
-              sx={{ p: 2, minWidth: { xs: 120, md: 150 }, textAlign: 'center', flex: { xs: '0 0 auto', md: 1 } }}
+              sx={{ p: { xs: 1.25, sm: 2 }, minWidth: { xs: 90, sm: 120, md: 150 }, textAlign: 'center', flex: { xs: '0 0 auto', md: 1 } }}
             >
-              <Typography sx={{ color: rate.color, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>
+              <Typography sx={{ color: rate.color, fontSize: { xs: '0.6rem', sm: '0.75rem' }, fontWeight: 600, textTransform: 'uppercase' }}>
                 {rate.plan}
               </Typography>
-              <Typography sx={{ color: 'white', fontSize: '1.5rem', fontWeight: 900 }}>
+              <Typography sx={{ color: 'white', fontSize: { xs: '1.1rem', sm: '1.5rem' }, fontWeight: 900 }}>
                 ${rate.commission.toFixed(2)}
               </Typography>
-              <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: { xs: '0.55rem', sm: '0.65rem' } }}>
                 per referral
               </Typography>
             </GlassCard>
@@ -549,29 +551,29 @@ export default function DashboardAffiliatePage() {
         </Box>
 
         {/* Tier System - Compact horizontal scroll */}
-        <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1rem', mb: 1.5 }}>
+        <Typography sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '0.85rem', sm: '1rem' }, mb: 1 }}>
           Tier System
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1.5, mb: 3, overflowX: 'auto', pb: 1, '::-webkit-scrollbar': { height: 4 } }}>
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, overflowX: 'auto', pb: 0.5, mx: { xs: -1, sm: 0 }, px: { xs: 1, sm: 0 }, '::-webkit-scrollbar': { height: 4 } }}>
           {tiers.map((tier) => (
             <GlassCard
               key={tier.name}
               borderColor={tier.name === currentTier.name ? tier.color : `${tier.color}30`}
               sx={{
-                p: 1.5,
-                minWidth: 100,
+                p: { xs: 1, sm: 1.5 },
+                minWidth: { xs: 70, sm: 100 },
                 textAlign: 'center',
                 flex: '0 0 auto',
                 ...(tier.name === currentTier.name && { boxShadow: `0 0 15px ${tier.color}40` }),
               }}
             >
               {tier.name === currentTier.name && (
-                <Chip label="YOU" size="small" sx={{ bgcolor: tier.color, color: '#000', fontSize: '0.6rem', height: 16, mb: 0.5 }} />
+                <Chip label="YOU" size="small" sx={{ bgcolor: tier.color, color: '#000', fontSize: '0.5rem', height: 14, mb: 0.25 }} />
               )}
-              <Typography sx={{ fontSize: '1.5rem' }}>{tier.emoji}</Typography>
-              <Typography sx={{ color: tier.color, fontSize: '0.75rem', fontWeight: 700 }}>{tier.name}</Typography>
-              <Typography sx={{ color: 'white', fontSize: '1.1rem', fontWeight: 800 }}>{tier.commission}</Typography>
-              <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem' }}>
+              <Typography sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>{tier.emoji}</Typography>
+              <Typography sx={{ color: tier.color, fontSize: { xs: '0.6rem', sm: '0.75rem' }, fontWeight: 700 }}>{tier.name}</Typography>
+              <Typography sx={{ color: 'white', fontSize: { xs: '0.85rem', sm: '1.1rem' }, fontWeight: 800 }}>{tier.commission}</Typography>
+              <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: { xs: '0.5rem', sm: '0.6rem' } }}>
                 {tier.minReferrals}+ refs
               </Typography>
             </GlassCard>
@@ -579,29 +581,29 @@ export default function DashboardAffiliatePage() {
         </Box>
 
         {/* How It Works - Compact */}
-        <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1rem', mb: 1.5 }}>
+        <Typography sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '0.85rem', sm: '1rem' }, mb: 1 }}>
           How It Works
         </Typography>
-        <Grid container spacing={1.5} sx={{ mb: 3 }}>
+        <Grid container spacing={1} sx={{ mb: 2 }}>
           {[
-            { step: 1, title: 'Copy Link', icon: <Copy size={18} />, color: '#22C55E' },
-            { step: 2, title: 'Share', icon: <Share2 size={18} />, color: '#0066FF' },
-            { step: 3, title: 'Earn', icon: <DollarSign size={18} />, color: '#FFD700' },
+            { step: 1, title: 'Copy Link', icon: <Copy size={14} />, color: '#22C55E' },
+            { step: 2, title: 'Share', icon: <Share2 size={14} />, color: '#0066FF' },
+            { step: 3, title: 'Earn', icon: <DollarSign size={14} />, color: '#FFD700' },
           ].map((item) => (
             <Grid item xs={4} key={item.step}>
-              <GlassCard borderColor={`${item.color}30`} sx={{ p: 1.5, textAlign: 'center' }}>
+              <GlassCard borderColor={`${item.color}30`} sx={{ p: { xs: 1, sm: 1.5 }, textAlign: 'center' }}>
                 <Box
                   sx={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: '10px',
+                    width: { xs: 28, sm: 36 },
+                    height: { xs: 28, sm: 36 },
+                    borderRadius: '8px',
                     bgcolor: `${item.color}20`,
                     border: `1px solid ${item.color}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     mx: 'auto',
-                    mb: 1,
+                    mb: 0.5,
                     color: item.color,
                     position: 'relative',
                   }}
@@ -610,14 +612,14 @@ export default function DashboardAffiliatePage() {
                   <Box
                     sx={{
                       position: 'absolute',
-                      top: -6,
-                      right: -6,
-                      width: 16,
-                      height: 16,
+                      top: -4,
+                      right: -4,
+                      width: { xs: 12, sm: 16 },
+                      height: { xs: 12, sm: 16 },
                       borderRadius: '50%',
                       bgcolor: item.color,
                       color: item.color === '#FFD700' ? '#000' : 'white',
-                      fontSize: '0.6rem',
+                      fontSize: { xs: '0.5rem', sm: '0.6rem' },
                       fontWeight: 800,
                       display: 'flex',
                       alignItems: 'center',
@@ -627,40 +629,41 @@ export default function DashboardAffiliatePage() {
                     {item.step}
                   </Box>
                 </Box>
-                <Typography sx={{ color: 'white', fontSize: '0.75rem', fontWeight: 600 }}>{item.title}</Typography>
+                <Typography sx={{ color: 'white', fontSize: { xs: '0.6rem', sm: '0.75rem' }, fontWeight: 600 }}>{item.title}</Typography>
               </GlassCard>
             </Grid>
           ))}
         </Grid>
 
         {/* Benefits - 2 column grid */}
-        <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1rem', mb: 1.5 }}>
+        <Typography sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '0.85rem', sm: '1rem' }, mb: 1 }}>
           Why Join?
         </Typography>
-        <Grid container spacing={1.5} sx={{ mb: 3 }}>
+        <Grid container spacing={0.75} sx={{ mb: 2 }}>
           {[
-            { icon: <DollarSign size={18} />, title: '10% Commission', color: '#22C55E' },
-            { icon: <Clock size={18} />, title: 'Lifetime Earnings', color: '#0066FF' },
-            { icon: <Zap size={18} />, title: 'Fast Payouts', color: '#FFD700' },
-            { icon: <Shield size={18} />, title: '90-Day Tracking', color: '#A000FF' },
+            { icon: <DollarSign size={14} />, title: '10% Commission', color: '#22C55E' },
+            { icon: <Clock size={14} />, title: 'Lifetime Earn', color: '#0066FF' },
+            { icon: <Zap size={14} />, title: 'Fast Payouts', color: '#FFD700' },
+            { icon: <Shield size={14} />, title: '90-Day Track', color: '#A000FF' },
           ].map((benefit, i) => (
             <Grid item xs={6} key={i}>
-              <GlassCard borderColor={`${benefit.color}30`} sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <GlassCard borderColor={`${benefit.color}30`} sx={{ p: { xs: 1, sm: 1.5 }, display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
                 <Box
                   sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '8px',
+                    width: { xs: 24, sm: 32 },
+                    height: { xs: 24, sm: 32 },
+                    borderRadius: '6px',
                     bgcolor: `${benefit.color}20`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: benefit.color,
+                    flexShrink: 0,
                   }}
                 >
                   {benefit.icon}
                 </Box>
-                <Typography sx={{ color: 'white', fontSize: '0.75rem', fontWeight: 600 }}>{benefit.title}</Typography>
+                <Typography sx={{ color: 'white', fontSize: { xs: '0.6rem', sm: '0.75rem' }, fontWeight: 600 }}>{benefit.title}</Typography>
               </GlassCard>
             </Grid>
           ))}
@@ -668,43 +671,45 @@ export default function DashboardAffiliatePage() {
 
         {/* Referrals Table - Mobile optimized */}
         {stats?.referrals && stats.referrals.length > 0 && (
-          <GlassCard sx={{ p: 2, mb: 2, overflowX: 'auto' }}>
-            <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1rem', mb: 1.5 }}>
+          <GlassCard sx={{ p: { xs: 1.25, sm: 2 }, mb: 2 }}>
+            <Typography sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '0.85rem', sm: '1rem' }, mb: 1 }}>
               Your Referrals
             </Typography>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', borderColor: 'rgba(255,255,255,0.1)', py: 1, px: 1, fontSize: '0.7rem' }}>User</TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', borderColor: 'rgba(255,255,255,0.1)', py: 1, px: 1, fontSize: '0.7rem' }}>Status</TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', borderColor: 'rgba(255,255,255,0.1)', py: 1, px: 1, fontSize: '0.7rem' }} align="right">Earned</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {stats.referrals.slice(0, 5).map((referral) => (
-                  <TableRow key={referral.id}>
-                    <TableCell sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.1)', py: 1, px: 1, fontSize: '0.75rem' }}>
-                      {referral.username.substring(0, 10)}...
-                    </TableCell>
-                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.1)', py: 1, px: 1 }}>
-                      <Chip
-                        label={referral.status}
-                        size="small"
-                        sx={{
-                          height: 20,
-                          fontSize: '0.6rem',
-                          bgcolor: referral.status === 'active' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255,255,255,0.1)',
-                          color: referral.status === 'active' ? '#22C55E' : 'rgba(255,255,255,0.5)',
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell sx={{ color: '#22C55E', fontWeight: 700, borderColor: 'rgba(255,255,255,0.1)', py: 1, px: 1, fontSize: '0.75rem' }} align="right">
-                      ${Number(referral.commission || 0).toFixed(2)}
-                    </TableCell>
+            <Box sx={{ overflowX: 'auto', mx: { xs: -0.5, sm: 0 } }}>
+              <Table size="small" sx={{ minWidth: { xs: 240, sm: 'auto' } }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ color: 'rgba(255,255,255,0.6)', borderColor: 'rgba(255,255,255,0.1)', py: 0.75, px: { xs: 0.5, sm: 1 }, fontSize: { xs: '0.6rem', sm: '0.7rem' } }}>User</TableCell>
+                    <TableCell sx={{ color: 'rgba(255,255,255,0.6)', borderColor: 'rgba(255,255,255,0.1)', py: 0.75, px: { xs: 0.5, sm: 1 }, fontSize: { xs: '0.6rem', sm: '0.7rem' } }}>Status</TableCell>
+                    <TableCell sx={{ color: 'rgba(255,255,255,0.6)', borderColor: 'rgba(255,255,255,0.1)', py: 0.75, px: { xs: 0.5, sm: 1 }, fontSize: { xs: '0.6rem', sm: '0.7rem' } }} align="right">Earned</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHead>
+                <TableBody>
+                  {stats.referrals.slice(0, 5).map((referral) => (
+                    <TableRow key={referral.id}>
+                      <TableCell sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.1)', py: 0.75, px: { xs: 0.5, sm: 1 }, fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
+                        {referral.username.substring(0, 8)}...
+                      </TableCell>
+                      <TableCell sx={{ borderColor: 'rgba(255,255,255,0.1)', py: 0.75, px: { xs: 0.5, sm: 1 } }}>
+                        <Chip
+                          label={referral.status}
+                          size="small"
+                          sx={{
+                            height: { xs: 16, sm: 20 },
+                            fontSize: { xs: '0.5rem', sm: '0.6rem' },
+                            bgcolor: referral.status === 'active' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255,255,255,0.1)',
+                            color: referral.status === 'active' ? '#22C55E' : 'rgba(255,255,255,0.5)',
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ color: '#22C55E', fontWeight: 700, borderColor: 'rgba(255,255,255,0.1)', py: 0.75, px: { xs: 0.5, sm: 1 }, fontSize: { xs: '0.65rem', sm: '0.75rem' } }} align="right">
+                        ${Number(referral.commission || 0).toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
           </GlassCard>
         )}
 

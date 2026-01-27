@@ -214,12 +214,12 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Skeleton variant="rectangular" height={200} sx={{ mb: 2, borderRadius: 2 }} />
-        <Grid container spacing={3}>
+      <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
+        <Skeleton variant="rectangular" height={{ xs: 120, sm: 160, md: 200 }} sx={{ mb: 2, borderRadius: 2 }} />
+        <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }}>
           {[1, 2, 3, 4].map((i) => (
-            <Grid item xs={12} sm={6} md={3} key={i}>
-              <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 2 }} />
+            <Grid item xs={6} sm={6} md={3} key={i}>
+              <Skeleton variant="rectangular" height={{ xs: 100, sm: 110, md: 120 }} sx={{ borderRadius: 2 }} />
             </Grid>
           ))}
         </Grid>
@@ -229,7 +229,7 @@ export default function AnalyticsPage() {
 
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
         <Alert severity="error">
           <AlertTitle>Error</AlertTitle>
           {error}
@@ -259,14 +259,14 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: { xs: 2, sm: 3 }, gap: { xs: 1, sm: 0 } }}>
         <Box>
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
+          <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' } }}>
             📊 Signal Analytics
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
             Real-time strategy performance and protection system status
           </Typography>
         </Box>
@@ -283,7 +283,7 @@ export default function AnalyticsPage() {
       {analytics?.protectionStatus.killSwitch.active && (
         <Alert
           severity={analytics.protectionStatus.killSwitch.level === 'emergency' ? 'error' : 'warning'}
-          sx={{ mb: 3 }}
+          sx={{ mb: { xs: 2, sm: 3 }, '& .MuiAlert-message': { fontSize: { xs: '0.8rem', sm: '0.875rem' } } }}
           action={
             <Button color="inherit" size="small" onClick={handleResetKillSwitch}>
               RESET
@@ -300,74 +300,74 @@ export default function AnalyticsPage() {
       )}
 
       {/* Today's Stats */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: { xs: 2, sm: 3 } }}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Zap size={20} color="white" />
-                <Typography variant="body2" sx={{ ml: 1, color: 'rgba(255,255,255,0.8)' }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 } }}>
+                <Zap size={16} color="white" />
+                <Typography variant="body2" sx={{ ml: 1, color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
                   Signals Today
                 </Typography>
               </Box>
-              <Typography variant="h3" fontWeight="bold" color="white">
+              <Typography variant="h3" fontWeight="bold" color="white" sx={{ fontSize: { xs: '1.75rem', sm: '2rem', md: '3rem' } }}>
                 {analytics?.today.signals || 0}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                 Total: {analytics?.totalSignals || 0}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Target size={20} color="white" />
-                <Typography variant="body2" sx={{ ml: 1, color: 'rgba(255,255,255,0.8)' }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 } }}>
+                <Target size={16} color="white" />
+                <Typography variant="body2" sx={{ ml: 1, color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
                   Trades Today
                 </Typography>
               </Box>
-              <Typography variant="h3" fontWeight="bold" color="white">
+              <Typography variant="h3" fontWeight="bold" color="white" sx={{ fontSize: { xs: '1.75rem', sm: '2rem', md: '3rem' } }}>
                 {analytics?.today.trades || 0}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                 Win Rate: {analytics?.today.winRate || 'N/A'}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card sx={{ height: '100%', background: parseFloat(analytics?.today.profit || '0') >= 0 
             ? 'linear-gradient(135deg, #00b09b 0%, #96c93d 100%)'
             : 'linear-gradient(135deg, #eb3349 0%, #f45c43 100%)' 
           }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 } }}>
                 {parseFloat(analytics?.today.profit || '0') >= 0 ? (
-                  <TrendingUp size={20} color="white" />
+                  <TrendingUp size={16} color="white" />
                 ) : (
-                  <TrendingDown size={20} color="white" />
+                  <TrendingDown size={16} color="white" />
                 )}
-                <Typography variant="body2" sx={{ ml: 1, color: 'rgba(255,255,255,0.8)' }}>
+                <Typography variant="body2" sx={{ ml: 1, color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
                   Today's P&L
                 </Typography>
               </Box>
-              <Typography variant="h3" fontWeight="bold" color="white">
+              <Typography variant="h3" fontWeight="bold" color="white" sx={{ fontSize: { xs: '1.75rem', sm: '2rem', md: '3rem' } }}>
                 ${analytics?.today.profit || '0.00'}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 } }}>
                 {getKillSwitchIcon()}
-                <Typography variant="body2" sx={{ ml: 1 }} color="text.secondary">
+                <Typography variant="body2" sx={{ ml: 1, fontSize: { xs: '0.7rem', sm: '0.875rem' } }} color="text.secondary">
                   Protection Status
                 </Typography>
               </Box>
@@ -376,9 +376,10 @@ export default function AnalyticsPage() {
                   ? `${analytics.protectionStatus.killSwitch.level?.toUpperCase()} ACTIVE`
                   : 'NORMAL'}
                 color={getKillSwitchColor()}
-                sx={{ fontWeight: 'bold', mt: 1 }}
+                sx={{ fontWeight: 'bold', mt: { xs: 0.5, sm: 1 }, fontSize: { xs: '0.65rem', sm: '0.8125rem' } }}
+                size="small"
               />
-              <Typography variant="caption" display="block" sx={{ mt: 1 }} color="text.secondary">
+              <Typography variant="caption" display="block" sx={{ mt: { xs: 0.5, sm: 1 }, fontSize: { xs: '0.65rem', sm: '0.75rem' } }} color="text.secondary">
                 Losses: {analytics?.protectionStatus.equity.consecutiveLosses || 0} consecutive
               </Typography>
             </CardContent>
@@ -387,52 +388,54 @@ export default function AnalyticsPage() {
       </Grid>
 
       {/* Strategy Performance & Active Positions */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: { xs: 2, sm: 3 } }}>
         {/* Strategy Performance Table */}
         <Grid item xs={12} md={8}>
           <Card>
-            <CardContent>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 📈 Strategy Performance
               </Typography>
-              <TableContainer>
-                <Table size="small">
+              <TableContainer sx={{ maxWidth: '100%', overflowX: 'auto' }}>
+                <Table size="small" sx={{ minWidth: { xs: 400, sm: 'auto' } }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Strategy</TableCell>
-                      <TableCell align="center">Signals</TableCell>
-                      <TableCell align="center">Trades</TableCell>
-                      <TableCell align="center">Win Rate</TableCell>
-                      <TableCell align="center">Status</TableCell>
+                      <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' }, p: { xs: 1, sm: 2 } }}>Strategy</TableCell>
+                      <TableCell align="center" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' }, p: { xs: 1, sm: 2 } }}>Signals</TableCell>
+                      <TableCell align="center" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' }, p: { xs: 1, sm: 2 } }}>Trades</TableCell>
+                      <TableCell align="center" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' }, p: { xs: 1, sm: 2 } }}>Win Rate</TableCell>
+                      <TableCell align="center" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' }, p: { xs: 1, sm: 2 } }}>Status</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {strategyPerformance && Object.entries(strategyPerformance).map(([strategy, stats]) => (
                       <TableRow key={strategy} hover>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="medium">
+                        <TableCell sx={{ p: { xs: 1, sm: 2 } }}>
+                          <Typography variant="body2" fontWeight="medium" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
                             {strategy}
                           </Typography>
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" sx={{ p: { xs: 1, sm: 2 }, fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
                           {stats.signals || 0}
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" sx={{ p: { xs: 1, sm: 2 }, fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
                           {stats.totalTrades}
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" sx={{ p: { xs: 1, sm: 2 } }}>
                           <Chip
                             label={stats.winRate}
                             size="small"
                             color={parseFloat(stats.winRate) >= 60 ? 'success' : parseFloat(stats.winRate) >= 50 ? 'warning' : 'error'}
                             variant="outlined"
+                            sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }}
                           />
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" sx={{ p: { xs: 1, sm: 2 } }}>
                           <Chip
                             label={stats.totalTrades > 10 ? 'Active' : 'Limited Data'}
                             size="small"
                             color={stats.totalTrades > 10 ? 'success' : 'default'}
+                            sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }}
                           />
                         </TableCell>
                       </TableRow>
@@ -456,33 +459,33 @@ export default function AnalyticsPage() {
         {/* Active Position Management */}
         <Grid item xs={12} md={4}>
           <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 🎯 Active Management
               </Typography>
               
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
+              <Box sx={{ mb: { xs: 1.5, sm: 2 } }}>
+                <Typography variant="body2" color="text.secondary" gutterBottom sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Partial Profit Active
                 </Typography>
-                <Typography variant="h4" fontWeight="bold">
+                <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
                   {analytics?.activePositions.partial || 0}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                   positions with partial closes pending
                 </Typography>
               </Box>
 
-              <Divider sx={{ my: 2 }} />
+              <Divider sx={{ my: { xs: 1.5, sm: 2 } }} />
 
               <Box>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
+                <Typography variant="body2" color="text.secondary" gutterBottom sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Smart Trailing Active
                 </Typography>
-                <Typography variant="h4" fontWeight="bold">
+                <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
                   {analytics?.activePositions.trailing || 0}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                   positions being trailed
                 </Typography>
               </Box>
@@ -492,80 +495,86 @@ export default function AnalyticsPage() {
       </Grid>
 
       {/* Protection Configuration */}
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }}>
         {/* Profit Maximization Status - New Section */}
         <Grid item xs={12}>
           <Card sx={{ background: 'linear-gradient(135deg, rgba(46, 125, 50, 0.1) 0%, rgba(76, 175, 80, 0.1) 100%)' }}>
-            <CardContent>
-              <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 🚀 Profit Maximization Engine
                 <Chip 
                   label={analytics?.profitMaximization?.isHighVolume ? 'HIGH VOLUME SESSION' : analytics?.profitMaximization?.isLowVolume ? 'LOW VOLUME' : 'NORMAL'} 
                   color={analytics?.profitMaximization?.isHighVolume ? 'success' : analytics?.profitMaximization?.isLowVolume ? 'warning' : 'default'}
                   size="small"
+                  sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}
                 />
               </Typography>
               
-              <Grid container spacing={2}>
+              <Grid container spacing={{ xs: 1, sm: 2 }}>
                 {/* Current Session */}
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'background.paper' }}>
-                    <Typography variant="body2" color="text.secondary">Current Session</Typography>
-                    <Typography variant="h6" fontWeight="bold">
+                <Grid item xs={6} sm={6} md={3}>
+                  <Box sx={{ p: { xs: 1, sm: 2 }, borderRadius: 2, bgcolor: 'background.paper' }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>Current Session</Typography>
+                    <Typography variant="h6" fontWeight="bold" sx={{ fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>
                       {analytics?.profitMaximization?.currentSession || 'N/A'}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>
                       Confidence boost: +{analytics?.profitMaximization?.confidenceBoost || 0}%
                     </Typography>
                   </Box>
                 </Grid>
 
                 {/* Active Filters */}
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'background.paper' }}>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>Active Filters</Typography>
+                <Grid item xs={6} sm={6} md={3}>
+                  <Box sx={{ p: { xs: 1, sm: 2 }, borderRadius: 2, bgcolor: 'background.paper' }}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>Active Filters</Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       <Chip 
                         label="HTF Trend" 
                         size="small" 
                         color={analytics?.profitMaximization?.htfTrendFilter === 'Active' ? 'success' : 'default'}
                         variant={analytics?.profitMaximization?.htfTrendFilter === 'Active' ? 'filled' : 'outlined'}
+                        sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }}
                       />
                       <Chip 
                         label="ADX" 
                         size="small" 
                         color={analytics?.profitMaximization?.trendStrengthFilter === 'Active' ? 'success' : 'default'}
                         variant={analytics?.profitMaximization?.trendStrengthFilter === 'Active' ? 'filled' : 'outlined'}
+                        sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }}
                       />
                       <Chip 
                         label="Momentum" 
                         size="small" 
                         color={analytics?.profitMaximization?.momentumExplosion === 'Active' ? 'success' : 'default'}
                         variant={analytics?.profitMaximization?.momentumExplosion === 'Active' ? 'filled' : 'outlined'}
+                        sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }}
                       />
                     </Box>
                   </Box>
                 </Grid>
 
                 {/* Profit Protection */}
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'background.paper' }}>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>Profit Protection</Typography>
+                <Grid item xs={6} sm={6} md={3}>
+                  <Box sx={{ p: { xs: 1, sm: 2 }, borderRadius: 2, bgcolor: 'background.paper' }}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>Profit Protection</Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       <Chip 
                         label="Profit Lock" 
                         size="small" 
                         color={analytics?.profitMaximization?.profitLock === 'Active' ? 'success' : 'default'}
                         variant={analytics?.profitMaximization?.profitLock === 'Active' ? 'filled' : 'outlined'}
+                        sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }}
                       />
                       <Chip 
                         label="Re-entry" 
                         size="small" 
                         color={analytics?.profitMaximization?.reentryLogic === 'Active' ? 'success' : 'default'}
                         variant={analytics?.profitMaximization?.reentryLogic === 'Active' ? 'filled' : 'outlined'}
+                        sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }}
                       />
                     </Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>
                       Runners active: {analytics?.activePositions?.runners || 0}
                     </Typography>
                   </Box>
@@ -573,24 +582,24 @@ export default function AnalyticsPage() {
 
                 {/* Streak Status */}
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'background.paper' }}>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>Symbol Streaks</Typography>
+                  <Box sx={{ p: { xs: 1, sm: 2 }, borderRadius: 2, bgcolor: 'background.paper' }}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>Symbol Streaks</Typography>
                     {analytics?.profitMaximization?.streaks && Object.keys(analytics.profitMaximization.streaks).length > 0 ? (
                       Object.entries(analytics.profitMaximization.streaks).map(([symbol, streak]) => (
                         <Box key={symbol} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                          <Typography variant="caption">{symbol}</Typography>
+                          <Typography variant="caption" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>{symbol}</Typography>
                           <Box>
                             {streak.consecutiveWins > 0 && (
-                              <Chip label={`${streak.consecutiveWins}W`} size="small" color="success" sx={{ height: 20, fontSize: '0.65rem' }} />
+                              <Chip label={`${streak.consecutiveWins}W`} size="small" color="success" sx={{ height: { xs: 16, sm: 20 }, fontSize: { xs: '0.55rem', sm: '0.65rem' } }} />
                             )}
                             {streak.consecutiveLosses > 0 && (
-                              <Chip label={`${streak.consecutiveLosses}L`} size="small" color="error" sx={{ height: 20, fontSize: '0.65rem' }} />
+                              <Chip label={`${streak.consecutiveLosses}L`} size="small" color="error" sx={{ height: { xs: 16, sm: 20 }, fontSize: { xs: '0.55rem', sm: '0.65rem' } }} />
                             )}
                           </Box>
                         </Box>
                       ))
                     ) : (
-                      <Typography variant="caption" color="text.secondary">No streak data yet</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>No streak data yet</Typography>
                     )}
                   </Box>
                 </Grid>
@@ -599,83 +608,83 @@ export default function AnalyticsPage() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={6} md={4}>
           <Card>
-            <CardContent>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 🛡️ Kill Switch Config
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary">Soft Drawdown</Typography>
-                  <Chip label={analytics?.config.killSwitch.softDrawdown} size="small" color="warning" />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 0.75, sm: 1 } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Soft Drawdown</Typography>
+                  <Chip label={analytics?.config.killSwitch.softDrawdown} size="small" color="warning" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }} />
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary">Hard Drawdown</Typography>
-                  <Chip label={analytics?.config.killSwitch.hardDrawdown} size="small" color="error" />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Hard Drawdown</Typography>
+                  <Chip label={analytics?.config.killSwitch.hardDrawdown} size="small" color="error" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }} />
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary">Emergency</Typography>
-                  <Chip label={analytics?.config.killSwitch.emergencyDrawdown} size="small" color="error" variant="filled" />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Emergency</Typography>
+                  <Chip label={analytics?.config.killSwitch.emergencyDrawdown} size="small" color="error" variant="filled" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }} />
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary">Max Session Losses</Typography>
-                  <Typography variant="body2">{analytics?.config.killSwitch.maxLossesPerSession}</Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Max Session Losses</Typography>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{analytics?.config.killSwitch.maxLossesPerSession}</Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={6} md={4}>
           <Card>
-            <CardContent>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 📈 Partial Profit Levels
               </Typography>
               {analytics?.config.partialProfit.levels.map((level, idx) => (
-                <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
+                <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: { xs: 0.75, sm: 1 } }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     +{level.atr} ATR
                   </Typography>
-                  <Box>
-                    <Chip label={`${(level.closePercent * 100).toFixed(0)}%`} size="small" sx={{ mr: 0.5 }} />
-                    <Typography variant="caption" color="text.secondary">
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Chip label={`${(level.closePercent * 100).toFixed(0)}%`} size="small" sx={{ mr: 0.5, fontSize: { xs: '0.65rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }} />
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                       SL → {level.moveSlTo}
                     </Typography>
                   </Box>
                 </Box>
               ))}
-              <Divider sx={{ my: 1 }} />
-              <Typography variant="caption" color="text.secondary">
+              <Divider sx={{ my: { xs: 0.75, sm: 1 } }} />
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                 Min profit: ${analytics?.config.partialProfit.minProfitDollars}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={6} md={4}>
           <Card>
-            <CardContent>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 💎 Equity Protection
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary">Min Equity</Typography>
-                  <Chip label={analytics?.config.equityProtection.minEquityPercent} size="small" />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 0.75, sm: 1 } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Min Equity</Typography>
+                  <Chip label={analytics?.config.equityProtection.minEquityPercent} size="small" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }} />
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary">Max Floating Loss</Typography>
-                  <Chip label={analytics?.config.equityProtection.maxFloatingLoss} size="small" color="warning" />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Max Floating Loss</Typography>
+                  <Chip label={analytics?.config.equityProtection.maxFloatingLoss} size="small" color="warning" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }} />
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary">Peak Drawdown Limit</Typography>
-                  <Chip label={analytics?.config.equityProtection.peakDrawdownLimit} size="small" />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Peak Drawdown Limit</Typography>
+                  <Chip label={analytics?.config.equityProtection.peakDrawdownLimit} size="small" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }} />
                 </Box>
               </Box>
-              <Divider sx={{ my: 1 }} />
-              <Typography variant="caption" color="text.secondary">
+              <Divider sx={{ my: { xs: 0.75, sm: 1 } }} />
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                 Trailing activates after {analytics?.config.trailing.activateAfterATR} ATR profit
               </Typography>
             </CardContent>
@@ -685,36 +694,36 @@ export default function AnalyticsPage() {
         {/* Multi-Timeframe Strategy Configuration */}
         <Grid item xs={12}>
           <Card sx={{ background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(66, 165, 245, 0.05) 100%)' }}>
-            <CardContent>
-              <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 📊 Multi-Timeframe Strategy Engine
-                <Chip label="8 Strategies" color="primary" size="small" />
+                <Chip label="8 Strategies" color="primary" size="small" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }} />
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: { xs: 1.5, sm: 2 }, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                 Each strategy operates on its optimal timeframe to capture different market moves
               </Typography>
               
-              <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
+              <TableContainer component={Paper} variant="outlined" sx={{ maxWidth: '100%', overflowX: 'auto' }}>
+                <Table size="small" sx={{ minWidth: { xs: 550, sm: 650, md: 'auto' } }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: 'action.hover' }}>
-                      <TableCell><strong>Strategy</strong></TableCell>
-                      <TableCell align="center"><strong>Timeframe</strong></TableCell>
-                      <TableCell><strong>Description</strong></TableCell>
-                      <TableCell align="center"><strong>SL/TP</strong></TableCell>
-                      <TableCell align="center"><strong>Max Hold</strong></TableCell>
-                      <TableCell align="center"><strong>Trading Hours</strong></TableCell>
+                      <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' }, p: { xs: 0.75, sm: 1, md: 2 } }}><strong>Strategy</strong></TableCell>
+                      <TableCell align="center" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' }, p: { xs: 0.75, sm: 1, md: 2 } }}><strong>Timeframe</strong></TableCell>
+                      <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' }, p: { xs: 0.75, sm: 1, md: 2 }, display: { xs: 'none', sm: 'table-cell' } }}><strong>Description</strong></TableCell>
+                      <TableCell align="center" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' }, p: { xs: 0.75, sm: 1, md: 2 } }}><strong>SL/TP</strong></TableCell>
+                      <TableCell align="center" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' }, p: { xs: 0.75, sm: 1, md: 2 } }}><strong>Max Hold</strong></TableCell>
+                      <TableCell align="center" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' }, p: { xs: 0.75, sm: 1, md: 2 }, display: { xs: 'none', md: 'table-cell' } }}><strong>Trading Hours</strong></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {analytics?.config.strategyTimeframes?.map((strat) => (
                       <TableRow key={strat.strategy} hover>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="medium">
+                        <TableCell sx={{ p: { xs: 0.75, sm: 1, md: 2 } }}>
+                          <Typography variant="body2" fontWeight="medium" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' } }}>
                             {strat.strategy}
                           </Typography>
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" sx={{ p: { xs: 0.75, sm: 1, md: 2 } }}>
                           <Chip 
                             label={strat.timeframe.toUpperCase()} 
                             size="small" 
@@ -724,25 +733,26 @@ export default function AnalyticsPage() {
                               strat.timeframe === 'h1' ? 'info' : 'success'
                             }
                             variant="filled"
+                            sx={{ fontSize: { xs: '0.6rem', sm: '0.7rem' }, height: { xs: 18, sm: 24 } }}
                           />
                         </TableCell>
-                        <TableCell>
-                          <Typography variant="caption" color="text.secondary">
+                        <TableCell sx={{ p: { xs: 0.75, sm: 1, md: 2 }, display: { xs: 'none', sm: 'table-cell' } }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>
                             {strat.description}
                           </Typography>
                         </TableCell>
-                        <TableCell align="center">
-                          <Typography variant="caption">
+                        <TableCell align="center" sx={{ p: { xs: 0.75, sm: 1, md: 2 } }}>
+                          <Typography variant="caption" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>
                             {strat.slMultiplier}x / {strat.tpMultiplier}x ATR
                           </Typography>
                         </TableCell>
-                        <TableCell align="center">
-                          <Typography variant="caption">
+                        <TableCell align="center" sx={{ p: { xs: 0.75, sm: 1, md: 2 } }}>
+                          <Typography variant="caption" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>
                             {strat.maxHoldingPeriod}
                           </Typography>
                         </TableCell>
-                        <TableCell align="center">
-                          <Typography variant="caption" color="text.secondary">
+                        <TableCell align="center" sx={{ p: { xs: 0.75, sm: 1, md: 2 }, display: { xs: 'none', md: 'table-cell' } }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>
                             {strat.tradingHours}
                           </Typography>
                         </TableCell>
@@ -760,22 +770,22 @@ export default function AnalyticsPage() {
                 </Table>
               </TableContainer>
 
-              <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <Box sx={{ mt: { xs: 1.5, sm: 2 }, display: 'flex', flexWrap: 'wrap', gap: { xs: 0.5, sm: 1 } }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Chip label="M1-M5" size="small" color="error" variant="filled" />
-                  <Typography variant="caption">Scalping</Typography>
+                  <Chip label="M1-M5" size="small" color="error" variant="filled" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, height: { xs: 18, sm: 24 } }} />
+                  <Typography variant="caption" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>Scalping</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Chip label="M15-M30" size="small" color="warning" variant="filled" />
-                  <Typography variant="caption">Intraday</Typography>
+                  <Chip label="M15-M30" size="small" color="warning" variant="filled" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, height: { xs: 18, sm: 24 } }} />
+                  <Typography variant="caption" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>Intraday</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Chip label="H1" size="small" color="info" variant="filled" />
-                  <Typography variant="caption">Day Trading</Typography>
+                  <Chip label="H1" size="small" color="info" variant="filled" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, height: { xs: 18, sm: 24 } }} />
+                  <Typography variant="caption" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>Day Trading</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Chip label="H4" size="small" color="success" variant="filled" />
-                  <Typography variant="caption">Swing Trading</Typography>
+                  <Chip label="H4" size="small" color="success" variant="filled" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, height: { xs: 18, sm: 24 } }} />
+                  <Typography variant="caption" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>Swing Trading</Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -784,8 +794,8 @@ export default function AnalyticsPage() {
       </Grid>
 
       {/* Last Updated */}
-      <Box sx={{ mt: 3, textAlign: 'center' }}>
-        <Typography variant="caption" color="text.secondary">
+      <Box sx={{ mt: { xs: 2, sm: 3 }, textAlign: 'center' }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
           <Clock size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
           Last updated: {analytics?.lastUpdated ? new Date(analytics.lastUpdated).toLocaleString() : 'N/A'}
         </Typography>

@@ -249,74 +249,74 @@ export default function MT5ConnectionPage() {
   }
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
+    <Box sx={{ px: { xs: 1, sm: 2, md: 0 } }}>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' } }}>
         MT5 Connection
       </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: { xs: 2, sm: 3, md: 4 }, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
         Connect your MetaTrader 5 account to enable automated trading
       </Typography>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
+        <Alert severity="error" sx={{ mb: { xs: 2, md: 3 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }} onClose={() => setError('')}>
           {error}
         </Alert>
       )}
 
       {success && (
-        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>
+        <Alert severity="success" sx={{ mb: { xs: 2, md: 3 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }} onClose={() => setSuccess('')}>
           {success}
         </Alert>
       )}
 
       {account ? (
         // Connected Account View
-        <Paper sx={{ p: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-            <CheckCircle size={32} color="#4caf50" />
-            <Box sx={{ ml: 2 }}>
-              <Typography variant="h6">Account Connected</Typography>
+        <Paper sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 2, md: 3 } }}>
+            <CheckCircle size={32} color="#4caf50" style={{ minWidth: 32 }} />
+            <Box sx={{ ml: { xs: 1.5, md: 2 } }}>
+              <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.15rem', md: '1.25rem' } }}>Account Connected</Typography>
               <Chip label={account.status} color="success" size="small" sx={{ mt: 0.5 }} />
             </Box>
           </Box>
 
-          <Divider sx={{ my: 3 }} />
+          <Divider sx={{ my: { xs: 2, md: 3 } }} />
 
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+          <Grid container spacing={{ xs: 2, md: 3 }}>
+            <Grid item xs={12} sm={6} md={6}>
               <Card variant="outlined">
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <User size={20} />
-                    <Typography sx={{ ml: 1, fontWeight: 500 }}>Account ID</Typography>
+                <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 1, md: 2 } }}>
+                    <User size={20} style={{ minWidth: 20 }} />
+                    <Typography sx={{ ml: 1, fontWeight: 500, fontSize: { xs: '0.875rem', md: '1rem' } }}>Account ID</Typography>
                   </Box>
-                  <Typography variant="h6">{account.accountId}</Typography>
+                  <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' }, wordBreak: 'break-all' }}>{account.accountId}</Typography>
                 </CardContent>
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} sm={6} md={6}>
               <Card variant="outlined">
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Server size={20} />
-                    <Typography sx={{ ml: 1, fontWeight: 500 }}>Server</Typography>
+                <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 1, md: 2 } }}>
+                    <Server size={20} style={{ minWidth: 20 }} />
+                    <Typography sx={{ ml: 1, fontWeight: 500, fontSize: { xs: '0.875rem', md: '1rem' } }}>Server</Typography>
                   </Box>
-                  <Typography variant="h6">{account.server}</Typography>
+                  <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' }, wordBreak: 'break-all' }}>{account.server}</Typography>
                 </CardContent>
               </Card>
             </Grid>
 
             {account.balance !== undefined && (
-              <Grid item xs={12} md={6}>
+              <Grid item xs={6} sm={6} md={6}>
                 <Card variant="outlined">
-                  <CardContent>
-                    <Typography color="text.secondary" gutterBottom>Balance</Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+                    <Typography color="text.secondary" gutterBottom sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Balance</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.3rem', md: '1.5rem' } }}>
                       ${account.balance?.toLocaleString()}
                     </Typography>
                     {account.balance === 0 && (
-                      <Typography variant="caption" color="warning.main">
+                      <Typography variant="caption" color="warning.main" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                         Balance may take 1-2 min to sync. Click Refresh.
                       </Typography>
                     )}
@@ -326,11 +326,11 @@ export default function MT5ConnectionPage() {
             )}
 
             {account.equity !== undefined && (
-              <Grid item xs={12} md={6}>
+              <Grid item xs={6} sm={6} md={6}>
                 <Card variant="outlined">
-                  <CardContent>
-                    <Typography color="text.secondary" gutterBottom>Equity</Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+                    <Typography color="text.secondary" gutterBottom sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Equity</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.3rem', md: '1.5rem' } }}>
                       ${account.equity?.toLocaleString()}
                     </Typography>
                   </CardContent>
@@ -339,12 +339,14 @@ export default function MT5ConnectionPage() {
             )}
           </Grid>
 
-          <Box sx={{ mt: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ mt: { xs: 2, md: 4 }, display: 'flex', gap: { xs: 1, md: 2 }, flexWrap: 'wrap' }}>
             <Button
               variant="outlined"
               startIcon={refreshing ? <CircularProgress size={18} /> : <RefreshCw size={18} />}
               onClick={handleRefresh}
               disabled={refreshing}
+              size="small"
+              sx={{ fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.875rem' }, px: { xs: 1.5, md: 2 } }}
             >
               {refreshing ? 'Refreshing...' : 'Refresh'}
             </Button>
@@ -353,6 +355,8 @@ export default function MT5ConnectionPage() {
               color="error"
               startIcon={<Unlink size={18} />}
               onClick={handleDisconnect}
+              size="small"
+              sx={{ fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.875rem' }, px: { xs: 1.5, md: 2 } }}
             >
               Disconnect
             </Button>
@@ -360,6 +364,8 @@ export default function MT5ConnectionPage() {
               variant="outlined"
               color="secondary"
               onClick={handleDebug}
+              size="small"
+              sx={{ fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.875rem' }, px: { xs: 1.5, md: 2 } }}
             >
               Debug
             </Button>
@@ -367,13 +373,13 @@ export default function MT5ConnectionPage() {
         </Paper>
       ) : (
         // No Account Connected View
-        <Paper sx={{ p: 4 }}>
-          <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Paper sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+          <Box sx={{ textAlign: 'center', py: { xs: 2, md: 4 } }}>
             <AlertCircle size={64} color="#ff9800" style={{ marginBottom: 16 }} />
-            <Typography variant="h5" gutterBottom>
+            <Typography variant="h5" gutterBottom sx={{ fontSize: { xs: '1.2rem', sm: '1.4rem', md: '1.5rem' } }}>
               No MT5 Account Connected
             </Typography>
-            <Typography color="text.secondary" sx={{ mb: 4 }}>
+            <Typography color="text.secondary" sx={{ mb: { xs: 2, md: 4 }, fontSize: { xs: '0.875rem', md: '1rem' }, px: { xs: 1, md: 0 } }}>
               Connect your MetaTrader 5 account to start automated trading with AlgoEdge robots
             </Typography>
             <Button
@@ -381,25 +387,32 @@ export default function MT5ConnectionPage() {
               size="large"
               startIcon={<LinkIcon size={20} />}
               onClick={() => setDialogOpen(true)}
+              sx={{ fontSize: { xs: '0.875rem', md: '1rem' }, px: { xs: 2, md: 3 } }}
             >
               Connect MT5 Account
             </Button>
           </Box>
 
-          <Divider sx={{ my: 4 }} />
+          <Divider sx={{ my: { xs: 2, md: 4 } }} />
 
-          <Alert severity="info" icon={<Shield size={20} />}>
-            <AlertTitle>Secure Connection</AlertTitle>
+          <Alert severity="info" icon={<Shield size={20} />} sx={{ '& .MuiAlert-message': { fontSize: { xs: '0.8rem', sm: '0.875rem' } } }}>
+            <AlertTitle sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>Secure Connection</AlertTitle>
             Your MT5 credentials are encrypted and securely stored. We use MetaAPI for safe broker connectivity.
           </Alert>
         </Paper>
       )}
 
       {/* Connect Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Connect MT5 Account</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
+      <Dialog 
+        open={dialogOpen} 
+        onClose={() => setDialogOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        sx={{ '& .MuiDialog-paper': { mx: { xs: 1, sm: 2 }, width: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 32px)' } } }}
+      >
+        <DialogTitle sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' }, px: { xs: 2, md: 3 }, pt: { xs: 2, md: 2 } }}>Connect MT5 Account</DialogTitle>
+        <DialogContent sx={{ px: { xs: 2, md: 3 } }}>
+          <Box sx={{ pt: { xs: 1, md: 2 } }}>
             <TextField
               fullWidth
               label="Account ID"
@@ -407,6 +420,8 @@ export default function MT5ConnectionPage() {
               value={formData.accountId}
               onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
               margin="normal"
+              size="small"
+              sx={{ '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', md: '1rem' } }, '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', md: '1rem' } } }}
             />
             <TextField
               fullWidth
@@ -416,6 +431,8 @@ export default function MT5ConnectionPage() {
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               margin="normal"
+              size="small"
+              sx={{ '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', md: '1rem' } }, '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', md: '1rem' } } }}
             />
             <TextField
               fullWidth
@@ -424,17 +441,20 @@ export default function MT5ConnectionPage() {
               value={formData.server}
               onChange={(e) => setFormData({ ...formData, server: e.target.value })}
               margin="normal"
+              size="small"
               helperText="Enter your broker's MT5 server name"
+              sx={{ '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', md: '1rem' } }, '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', md: '1rem' } }, '& .MuiFormHelperText-root': { fontSize: { xs: '0.7rem', md: '0.75rem' } } }}
             />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+        <DialogActions sx={{ px: { xs: 2, md: 3 }, pb: { xs: 2, md: 2 }, gap: { xs: 1, md: 0 } }}>
+          <Button onClick={() => setDialogOpen(false)} sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}>Cancel</Button>
           <Button
             variant="contained"
             onClick={handleConnect}
             disabled={connecting}
             startIcon={connecting ? <CircularProgress size={16} /> : <LinkIcon size={16} />}
+            sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}
           >
             {connecting ? 'Connecting...' : 'Connect'}
           </Button>

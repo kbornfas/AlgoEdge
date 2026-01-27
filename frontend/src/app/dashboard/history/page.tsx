@@ -81,12 +81,12 @@ const StatCard = ({
   prefix?: string;
   suffix?: string;
 }) => (
-  <GlassCard sx={{ p: 2.5, flex: '1 1 180px', minWidth: 160 }}>
-    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.5 }}>
+  <GlassCard sx={{ p: { xs: 1.5, sm: 2, md: 2.5 }, flex: { xs: '1 1 calc(50% - 8px)', sm: '1 1 calc(50% - 8px)', md: '1 1 180px' }, minWidth: { xs: 'calc(50% - 8px)', sm: 140, md: 160 } }}>
+    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: { xs: 1, md: 1.5 } }}>
       <Box
         sx={{
-          width: 44,
-          height: 44,
+          width: { xs: 36, md: 44 },
+          height: { xs: 36, md: 44 },
           borderRadius: 2,
           background: alpha(color, 0.15),
           display: 'flex',
@@ -102,7 +102,7 @@ const StatCard = ({
             display: 'flex',
             alignItems: 'center',
             gap: 0.3,
-            px: 1,
+            px: { xs: 0.5, md: 1 },
             py: 0.3,
             borderRadius: 1,
             bgcolor: trend === 'up' ? alpha('#10B981', 0.15) : alpha('#EF4444', 0.15),
@@ -116,10 +116,10 @@ const StatCard = ({
         </Box>
       )}
     </Box>
-    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 0.5, fontSize: '0.8rem' }}>
+    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 0.5, fontSize: { xs: '0.7rem', md: '0.8rem' } }}>
       {label}
     </Typography>
-    <Typography variant="h5" sx={{ fontWeight: 700, color: trend ? (trend === 'up' ? '#10B981' : '#EF4444') : 'white' }}>
+    <Typography variant="h5" sx={{ fontWeight: 700, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }, color: trend ? (trend === 'up' ? '#10B981' : '#EF4444') : 'white' }}>
       {prefix}{typeof value === 'number' ? value.toLocaleString() : value}{suffix}
     </Typography>
   </GlassCard>
@@ -361,17 +361,21 @@ export default function TradesPage() {
   const tableHeadCellSx = {
     color: 'rgba(255,255,255,0.7)',
     fontWeight: 600,
-    fontSize: '0.75rem',
+    fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
     borderBottom: '1px solid rgba(255,255,255,0.1)',
     bgcolor: 'rgba(255,255,255,0.02)',
-    py: 1.5,
+    py: { xs: 1, md: 1.5 },
+    px: { xs: 1, sm: 1.5, md: 2 },
+    whiteSpace: 'nowrap',
   };
 
   const tableCellSx = {
     borderBottom: '1px solid rgba(255,255,255,0.05)',
-    py: 1.5,
+    py: { xs: 1, md: 1.5 },
+    px: { xs: 1, sm: 1.5, md: 2 },
+    fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.875rem' },
   };
 
   return (
@@ -383,14 +387,14 @@ export default function TradesPage() {
       boxSizing: 'border-box',
     }}>
       {/* Header Section */}
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
+      <Box sx={{ mb: { xs: 2, md: 4 }, px: { xs: 1.5, sm: 2, md: 0 } }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: { xs: 1.5, md: 2 }, flexDirection: { xs: 'column', sm: 'row' } }}>
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, mb: 1 }}>
               <Box
                 sx={{
-                  width: 48,
-                  height: 48,
+                  width: { xs: 40, md: 48 },
+                  height: { xs: 40, md: 48 },
                   borderRadius: 2,
                   background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                   display: 'flex',
@@ -401,29 +405,29 @@ export default function TradesPage() {
                 <Activity size={24} color="white" />
               </Box>
               <Box>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: 'white', lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: 'white', lineHeight: 1.2, fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' } }}>
                   Trade History
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mt: 0.3 }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mt: 0.3, fontSize: { xs: '0.75rem', md: '0.875rem' }, display: { xs: 'none', sm: 'block' } }}>
                   Monitor your open positions and trading performance
                 </Typography>
               </Box>
             </Box>
           </Box>
           
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 }, width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'flex-end', sm: 'flex-start' } }}>
             {lastUpdated && (
               <Box sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
-                gap: 1, 
-                px: 2, 
-                py: 0.75, 
+                gap: { xs: 0.5, md: 1 }, 
+                px: { xs: 1, md: 2 }, 
+                py: { xs: 0.5, md: 0.75 }, 
                 borderRadius: 2,
                 bgcolor: 'rgba(255,255,255,0.05)',
               }}>
                 <Zap size={14} color="#10B981" />
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
                   Live • {lastUpdated.toLocaleTimeString()}
                 </Typography>
               </Box>
@@ -432,16 +436,19 @@ export default function TradesPage() {
               <IconButton
                 onClick={handleRefresh}
                 disabled={refreshing}
+                size="small"
                 sx={{
                   bgcolor: 'rgba(16, 185, 129, 0.1)',
                   border: '1px solid rgba(16, 185, 129, 0.3)',
                   '&:hover': { bgcolor: 'rgba(16, 185, 129, 0.2)' },
+                  width: { xs: 36, md: 40 },
+                  height: { xs: 36, md: 40 },
                 }}
               >
                 {refreshing ? (
-                  <CircularProgress size={20} color="inherit" />
+                  <CircularProgress size={18} color="inherit" />
                 ) : (
-                  <RefreshCw size={20} color="#10B981" />
+                  <RefreshCw size={18} color="#10B981" />
                 )}
               </IconButton>
             </Tooltip>
@@ -450,40 +457,40 @@ export default function TradesPage() {
       </Box>
 
       {/* Account Summary Card */}
-      <GlassCard sx={{ mb: 4, overflow: 'hidden' }}>
+      <GlassCard sx={{ mb: { xs: 2, md: 4 }, overflow: 'hidden', mx: { xs: 1.5, sm: 2, md: 0 } }}>
         <Box
           sx={{
             background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)',
             borderBottom: '1px solid rgba(16, 185, 129, 0.2)',
-            p: 3,
+            p: { xs: 2, sm: 2.5, md: 3 },
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: { xs: 1.5, md: 2 } }}>
             <Wallet size={20} color="#10B981" />
-            <Typography variant="h6" sx={{ fontWeight: 600, color: 'white' }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'white', fontSize: { xs: '1rem', md: '1.25rem' } }}>
               Account Overview
             </Typography>
           </Box>
           
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            <Box sx={{ minWidth: 150 }}>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 0.5 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 2, sm: 3, md: 4 } }}>
+            <Box sx={{ minWidth: { xs: 'calc(50% - 8px)', sm: 120, md: 150 }, flex: { xs: '1 1 calc(50% - 8px)', sm: 'none' } }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 0.5, fontSize: { xs: '0.7rem', md: '0.875rem' } }}>
                 Account Balance
               </Typography>
-              <Typography variant="h4" sx={{ color: 'white', fontWeight: 700 }}>
+              <Typography variant="h4" sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2.125rem' } }}>
                 ${accountInfo?.balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
               </Typography>
             </Box>
-            <Box sx={{ minWidth: 150 }}>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 0.5 }}>
+            <Box sx={{ minWidth: { xs: 'calc(50% - 8px)', sm: 120, md: 150 }, flex: { xs: '1 1 calc(50% - 8px)', sm: 'none' } }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 0.5, fontSize: { xs: '0.7rem', md: '0.875rem' } }}>
                 Account Equity
               </Typography>
-              <Typography variant="h4" sx={{ color: 'white', fontWeight: 700 }}>
+              <Typography variant="h4" sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2.125rem' } }}>
                 ${accountInfo?.equity?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
               </Typography>
             </Box>
-            <Box sx={{ minWidth: 150 }}>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 0.5 }}>
+            <Box sx={{ minWidth: { xs: '100%', sm: 120, md: 150 }, flex: { xs: '1 1 100%', sm: 'none' } }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 0.5, fontSize: { xs: '0.7rem', md: '0.875rem' } }}>
                 Floating P/L
               </Typography>
               <Typography 
@@ -491,6 +498,7 @@ export default function TradesPage() {
                 sx={{ 
                   color: openProfit >= 0 ? '#10B981' : '#EF4444', 
                   fontWeight: 700,
+                  fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2.125rem' },
                 }}
               >
                 {openProfit >= 0 ? '+' : ''}${openProfit.toFixed(2)}
@@ -503,11 +511,12 @@ export default function TradesPage() {
       {/* Stats Row */}
       <Box sx={{ 
         display: 'flex', 
-        gap: 2, 
-        mb: 4, 
+        gap: { xs: 1, sm: 1.5, md: 2 }, 
+        mb: { xs: 2, md: 4 }, 
         flexWrap: 'wrap',
-        overflowX: 'auto',
+        overflowX: { xs: 'visible', md: 'auto' },
         pb: 1,
+        px: { xs: 1.5, sm: 2, md: 0 },
       }}>
         <StatCard
           icon={Activity}
@@ -547,22 +556,24 @@ export default function TradesPage() {
       </Box>
 
       {/* Open Positions Section */}
-      <GlassCard sx={{ mb: 4 }}>
+      <GlassCard sx={{ mb: { xs: 2, md: 4 }, mx: { xs: 1.5, sm: 2, md: 0 } }}>
         <Box 
           sx={{ 
-            p: 2.5, 
+            p: { xs: 1.5, sm: 2, md: 2.5 }, 
             borderBottom: '1px solid rgba(255,255,255,0.1)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
+            flexWrap: { xs: 'wrap', sm: 'nowrap' },
+            gap: { xs: 1, sm: 0 },
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
             <Box
               sx={{
-                width: 36,
-                height: 36,
+                width: { xs: 32, md: 36 },
+                height: { xs: 32, md: 36 },
                 borderRadius: 1.5,
                 bgcolor: alpha('#3B82F6', 0.2),
                 display: 'flex',
@@ -573,10 +584,10 @@ export default function TradesPage() {
               <Clock size={18} color="#3B82F6" />
             </Box>
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: 'white' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: 'white', fontSize: { xs: '0.95rem', md: '1.25rem' } }}>
                 Open Positions
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
                 {openPositions.length} active trade{openPositions.length !== 1 ? 's' : ''}
               </Typography>
             </Box>
@@ -589,25 +600,26 @@ export default function TradesPage() {
                 bgcolor: openProfit >= 0 ? alpha('#10B981', 0.2) : alpha('#EF4444', 0.2),
                 color: openProfit >= 0 ? '#10B981' : '#EF4444',
                 fontWeight: 600,
+                fontSize: { xs: '0.7rem', md: '0.8125rem' },
               }}
             />
           )}
         </Box>
         
-        <Box sx={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <Table size="small" sx={{ minWidth: 900 }}>
+        <Box sx={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', '&::-webkit-scrollbar': { height: 6 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 3 } }}>
+          <Table size="small" sx={{ minWidth: { xs: 700, md: 900 } }}>
             <TableHead>
               <TableRow>
                 <TableCell sx={tableHeadCellSx}>Symbol</TableCell>
                 <TableCell sx={tableHeadCellSx}>Type</TableCell>
-                <TableCell sx={tableHeadCellSx}>Robot</TableCell>
+                <TableCell sx={{ ...tableHeadCellSx, display: { xs: 'none', md: 'table-cell' } }}>Robot</TableCell>
                 <TableCell sx={tableHeadCellSx}>Volume</TableCell>
                 <TableCell sx={tableHeadCellSx}>Open Price</TableCell>
-                <TableCell sx={tableHeadCellSx}>Current Price</TableCell>
-                <TableCell sx={tableHeadCellSx}>SL</TableCell>
-                <TableCell sx={tableHeadCellSx}>TP</TableCell>
+                <TableCell sx={tableHeadCellSx}>Current</TableCell>
+                <TableCell sx={{ ...tableHeadCellSx, display: { xs: 'none', sm: 'table-cell' } }}>SL</TableCell>
+                <TableCell sx={{ ...tableHeadCellSx, display: { xs: 'none', sm: 'table-cell' } }}>TP</TableCell>
                 <TableCell sx={tableHeadCellSx}>P/L</TableCell>
-                <TableCell sx={tableHeadCellSx}>Open Time</TableCell>
+                <TableCell sx={{ ...tableHeadCellSx, display: { xs: 'none', md: 'table-cell' } }}>Open Time</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -642,50 +654,51 @@ export default function TradesPage() {
                       }}
                     >
                       <TableCell sx={tableCellSx}>
-                        <Typography sx={{ fontWeight: 600, color: 'white' }}>{position.symbol}</Typography>
+                        <Typography sx={{ fontWeight: 600, color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>{position.symbol}</Typography>
                       </TableCell>
                       <TableCell sx={tableCellSx}>
                         <Chip
-                          icon={displayType === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                          icon={displayType === 'BUY' ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                           label={displayType}
                           size="small"
                           sx={{
                             bgcolor: displayType === 'BUY' ? alpha('#10B981', 0.15) : alpha('#EF4444', 0.15),
                             color: displayType === 'BUY' ? '#10B981' : '#EF4444',
                             fontWeight: 600,
+                            fontSize: { xs: '0.65rem', md: '0.8125rem' },
                             '& .MuiChip-icon': { color: 'inherit' },
                           }}
                         />
                       </TableCell>
-                      <TableCell sx={tableCellSx}>
+                      <TableCell sx={{ ...tableCellSx, display: { xs: 'none', md: 'table-cell' } }}>
                         <Chip
                           label={position.comment?.replace('AlgoEdge-', '') || 'Manual'}
                           size="small"
                           sx={{
                             bgcolor: 'rgba(139, 92, 246, 0.15)',
                             color: '#A78BFA',
-                            fontSize: '0.7rem',
+                            fontSize: '0.65rem',
                           }}
                         />
                       </TableCell>
                       <TableCell sx={tableCellSx}>
-                        <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>{position.volume}</Typography>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>{position.volume}</Typography>
                       </TableCell>
                       <TableCell sx={tableCellSx}>
-                        <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>{position.openPrice?.toFixed(5)}</Typography>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>{position.openPrice?.toFixed(5)}</Typography>
                       </TableCell>
                       <TableCell sx={tableCellSx}>
-                        <Typography sx={{ color: '#3B82F6', fontWeight: 500 }}>
+                        <Typography sx={{ color: '#3B82F6', fontWeight: 500, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           {position.currentPrice?.toFixed(5) || '-'}
                         </Typography>
                       </TableCell>
-                      <TableCell sx={tableCellSx}>
-                        <Typography sx={{ color: '#EF4444' }}>
+                      <TableCell sx={{ ...tableCellSx, display: { xs: 'none', sm: 'table-cell' } }}>
+                        <Typography sx={{ color: '#EF4444', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           {position.stopLoss?.toFixed(5) || '-'}
                         </Typography>
                       </TableCell>
-                      <TableCell sx={tableCellSx}>
-                        <Typography sx={{ color: '#10B981' }}>
+                      <TableCell sx={{ ...tableCellSx, display: { xs: 'none', sm: 'table-cell' } }}>
+                        <Typography sx={{ color: '#10B981', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           {position.takeProfit?.toFixed(5) || '-'}
                         </Typography>
                       </TableCell>
@@ -694,12 +707,13 @@ export default function TradesPage() {
                           sx={{
                             color: position.profit >= 0 ? '#10B981' : '#EF4444',
                             fontWeight: 600,
+                            fontSize: { xs: '0.75rem', md: '0.875rem' },
                           }}
                         >
                           {position.profit >= 0 ? '+' : ''}${position.profit.toFixed(2)}
                         </Typography>
                       </TableCell>
-                      <TableCell sx={tableCellSx}>
+                      <TableCell sx={{ ...tableCellSx, display: { xs: 'none', md: 'table-cell' } }}>
                         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
                           {position.openTime ? new Date(position.openTime).toLocaleString() : '-'}
                         </Typography>
@@ -714,20 +728,20 @@ export default function TradesPage() {
       </GlassCard>
 
       {/* Trade History Section */}
-      <GlassCard>
+      <GlassCard sx={{ mx: { xs: 1.5, sm: 2, md: 0 } }}>
         <Box 
           sx={{ 
-            p: 2.5, 
+            p: { xs: 1.5, sm: 2, md: 2.5 }, 
             borderBottom: '1px solid rgba(255,255,255,0.1)',
             background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)',
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: { xs: 1.5, md: 2 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
               <Box
                 sx={{
-                  width: 36,
-                  height: 36,
+                  width: { xs: 32, md: 36 },
+                  height: { xs: 32, md: 36 },
                   borderRadius: 1.5,
                   bgcolor: alpha('#8B5CF6', 0.2),
                   display: 'flex',
@@ -738,17 +752,17 @@ export default function TradesPage() {
                 <History size={18} color="#8B5CF6" />
               </Box>
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 600, color: 'white' }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: 'white', fontSize: { xs: '0.95rem', md: '1.25rem' } }}>
                   Trade History
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
                   {closedTrades.length} completed trade{closedTrades.length !== 1 ? 's' : ''}
                 </Typography>
               </Box>
             </Box>
             
             {/* Filters */}
-            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', gap: { xs: 1, md: 1.5 }, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
               <TextField
                 placeholder="Search symbol..."
                 value={searchTerm}
@@ -757,30 +771,39 @@ export default function TradesPage() {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Search size={18} color="rgba(255,255,255,0.4)" />
+                      <Search size={16} color="rgba(255,255,255,0.4)" />
                     </InputAdornment>
                   ),
                 }}
                 sx={{ 
-                  minWidth: 180,
+                  minWidth: { xs: 0, sm: 150, md: 180 },
+                  flex: { xs: 1, sm: 'none' },
                   '& .MuiOutlinedInput-root': {
                     bgcolor: 'rgba(255,255,255,0.05)',
                     '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
                     '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                     '&.Mui-focused fieldset': { borderColor: '#8B5CF6' },
                   },
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '0.8rem', md: '0.875rem' },
+                    py: { xs: 0.75, md: 1 },
+                  },
                 }}
               />
-              <FormControl size="small" sx={{ minWidth: 100 }}>
+              <FormControl size="small" sx={{ minWidth: { xs: 90, md: 100 } }}>
                 <Select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
                   displayEmpty
                   sx={{
                     bgcolor: 'rgba(255,255,255,0.05)',
+                    fontSize: { xs: '0.8rem', md: '0.875rem' },
                     '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.1)' },
                     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#8B5CF6' },
+                    '& .MuiSelect-select': {
+                      py: { xs: 0.75, md: 1 },
+                    },
                   }}
                 >
                   <MenuItem value="all">All Types</MenuItem>
@@ -792,18 +815,18 @@ export default function TradesPage() {
           </Box>
         </Box>
 
-        <Box sx={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <Table size="small" sx={{ minWidth: 800 }}>
+        <Box sx={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', '&::-webkit-scrollbar': { height: 6 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 3 } }}>
+          <Table size="small" sx={{ minWidth: { xs: 500, md: 800 } }}>
             <TableHead>
               <TableRow>
                 <TableCell sx={tableHeadCellSx}>Symbol</TableCell>
                 <TableCell sx={tableHeadCellSx}>Type</TableCell>
-                <TableCell sx={tableHeadCellSx}>Volume</TableCell>
-                <TableCell sx={tableHeadCellSx}>Open Price</TableCell>
-                <TableCell sx={tableHeadCellSx}>Close Price</TableCell>
+                <TableCell sx={{ ...tableHeadCellSx, display: { xs: 'none', sm: 'table-cell' } }}>Volume</TableCell>
+                <TableCell sx={{ ...tableHeadCellSx, display: { xs: 'none', md: 'table-cell' } }}>Open Price</TableCell>
+                <TableCell sx={tableHeadCellSx}>Close</TableCell>
                 <TableCell sx={tableHeadCellSx}>P/L</TableCell>
-                <TableCell sx={tableHeadCellSx}>Open Time</TableCell>
-                <TableCell sx={tableHeadCellSx}>Close Time</TableCell>
+                <TableCell sx={{ ...tableHeadCellSx, display: { xs: 'none', md: 'table-cell' } }}>Open Time</TableCell>
+                <TableCell sx={{ ...tableHeadCellSx, display: { xs: 'none', sm: 'table-cell' } }}>Close Time</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -836,46 +859,48 @@ export default function TradesPage() {
                     }}
                   >
                     <TableCell sx={tableCellSx}>
-                      <Typography sx={{ fontWeight: 600, color: 'white' }}>{trade.symbol}</Typography>
+                      <Typography sx={{ fontWeight: 600, color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>{trade.symbol}</Typography>
                     </TableCell>
                     <TableCell sx={tableCellSx}>
                       <Chip
-                        icon={trade.type === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                        icon={trade.type === 'BUY' ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                         label={trade.type}
                         size="small"
                         sx={{
                           bgcolor: trade.type === 'BUY' ? alpha('#10B981', 0.15) : alpha('#EF4444', 0.15),
                           color: trade.type === 'BUY' ? '#10B981' : '#EF4444',
                           fontWeight: 600,
+                          fontSize: { xs: '0.65rem', md: '0.8125rem' },
                           '& .MuiChip-icon': { color: 'inherit' },
                         }}
                       />
                     </TableCell>
-                    <TableCell sx={tableCellSx}>
-                      <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>{trade.lotSize ?? trade.volume ?? '-'}</Typography>
+                    <TableCell sx={{ ...tableCellSx, display: { xs: 'none', sm: 'table-cell' } }}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>{trade.lotSize ?? trade.volume ?? '-'}</Typography>
+                    </TableCell>
+                    <TableCell sx={{ ...tableCellSx, display: { xs: 'none', md: 'table-cell' } }}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>{trade.openPrice?.toFixed(5) ?? '-'}</Typography>
                     </TableCell>
                     <TableCell sx={tableCellSx}>
-                      <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>{trade.openPrice?.toFixed(5) ?? '-'}</Typography>
-                    </TableCell>
-                    <TableCell sx={tableCellSx}>
-                      <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>{trade.closePrice?.toFixed(5) ?? '-'}</Typography>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>{trade.closePrice?.toFixed(5) ?? '-'}</Typography>
                     </TableCell>
                     <TableCell sx={tableCellSx}>
                       <Typography
                         sx={{
                           color: (trade.profit || 0) >= 0 ? '#10B981' : '#EF4444',
                           fontWeight: 600,
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
                         }}
                       >
                         {(trade.profit || 0) >= 0 ? '+' : ''}${(trade.profit || 0).toFixed(2)}
                       </Typography>
                     </TableCell>
-                    <TableCell sx={tableCellSx}>
+                    <TableCell sx={{ ...tableCellSx, display: { xs: 'none', md: 'table-cell' } }}>
                       <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
                         {trade.openTime ? new Date(trade.openTime).toLocaleString() : '-'}
                       </Typography>
                     </TableCell>
-                    <TableCell sx={tableCellSx}>
+                    <TableCell sx={{ ...tableCellSx, display: { xs: 'none', sm: 'table-cell' } }}>
                       <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
                         {trade.closeTime ? new Date(trade.closeTime).toLocaleString() : '-'}
                       </Typography>
@@ -892,16 +917,22 @@ export default function TradesPage() {
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'center', 
-            p: 2,
+            p: { xs: 1.5, md: 2 },
             borderTop: '1px solid rgba(255,255,255,0.05)',
           }}>
             <Pagination
               count={Math.ceil(filteredClosedTrades.length / rowsPerPage)}
               page={page}
               onChange={(_, value) => setPage(value)}
+              size="small"
+              siblingCount={0}
+              boundaryCount={1}
               sx={{
                 '& .MuiPaginationItem-root': {
                   color: 'rgba(255,255,255,0.7)',
+                  minWidth: { xs: 28, md: 32 },
+                  height: { xs: 28, md: 32 },
+                  fontSize: { xs: '0.75rem', md: '0.875rem' },
                   '&.Mui-selected': {
                     bgcolor: alpha('#8B5CF6', 0.3),
                     color: 'white',

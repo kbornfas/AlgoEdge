@@ -218,52 +218,55 @@ export default function SupportPage() {
   })).filter(category => category.questions.length > 0);
 
   return (
-    <Box sx={{ minHeight: '100vh' }}>
+    <Box sx={{ minHeight: '100vh', px: { xs: 1, sm: 2, md: 0 } }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: '#FFFFFF' }}>
+      <Box sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: '#FFFFFF', fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' } }}>
           Help & Support
         </Typography>
-        <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>
+        <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' } }}>
           Find answers to common questions or get in touch with our support team
         </Typography>
       </Box>
 
       {/* Search Bar */}
-      <GlassCard sx={{ p: 3, mb: 4 }}>
+      <GlassCard sx={{ p: { xs: 2, sm: 2.5, md: 3 }, mb: { xs: 2, sm: 3, md: 4 } }}>
         <TextField
           fullWidth
           placeholder="Search for help articles, FAQs, or topics..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          size="small"
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <Search size={20} color="#6B7280" />
+                <Search size={18} color="#6B7280" />
               </InputAdornment>
             ),
           }}
           sx={{
             '& .MuiOutlinedInput-root': {
               bgcolor: 'rgba(0,0,0,0.3)',
+              fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' },
               '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
               '&:hover fieldset': { borderColor: 'rgba(16, 185, 129, 0.5)' },
               '&.Mui-focused fieldset': { borderColor: '#10B981' },
             },
+            '& input::placeholder': { fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1rem' } },
           }}
         />
       </GlassCard>
 
       {/* Support Channels */}
-      <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#FFFFFF' }}>
+      <Typography variant="h6" sx={{ fontWeight: 600, mb: { xs: 2, sm: 2.5, md: 3 }, color: '#FFFFFF', fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' } }}>
         Contact Support
       </Typography>
-      <Grid container spacing={3} sx={{ mb: 5 }}>
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: { xs: 3, sm: 4, md: 5 } }}>
         {supportChannels.map((channel, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
+          <Grid item xs={6} sm={6} md={3} key={index}>
             <GlassCard
               sx={{
-                p: 3,
+                p: { xs: 2, sm: 2.5, md: 3 },
                 height: '100%',
                 cursor: 'pointer',
                 border: channel.primary ? `2px solid ${channel.color}` : undefined,
@@ -278,48 +281,56 @@ export default function SupportPage() {
             >
               <Box
                 sx={{
-                  width: 56,
-                  height: 56,
+                  width: { xs: 40, sm: 48, md: 56 },
+                  height: { xs: 40, sm: 48, md: 56 },
                   borderRadius: 2,
                   bgcolor: alpha(channel.color, 0.2),
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  mb: 2,
+                  mb: { xs: 1, sm: 1.5, md: 2 },
                   color: channel.color,
+                  '& svg': { width: { xs: 20, sm: 24, md: 28 }, height: { xs: 20, sm: 24, md: 28 } },
                 }}
               >
                 {channel.icon}
               </Box>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: '#FFFFFF', mb: 0.5 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: '#FFFFFF', mb: 0.5, fontSize: { xs: '0.85rem', sm: '0.95rem', md: '1.25rem' } }}>
                 {channel.title}
               </Typography>
-              <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', mb: 1 }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.9rem' }, mb: 1, display: { xs: 'none', sm: 'block' } }}>
                 {channel.description}
               </Typography>
               <Chip
-                icon={<Clock size={12} />}
+                icon={<Clock size={10} />}
                 label={channel.availability}
                 size="small"
                 sx={{
                   bgcolor: 'rgba(255,255,255,0.1)',
                   color: 'rgba(255,255,255,0.7)',
-                  fontSize: '0.75rem',
-                  mb: 2,
+                  fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.75rem' },
+                  mb: { xs: 1.5, sm: 2, md: 2 },
+                  height: { xs: 20, sm: 24, md: 24 },
+                  display: { xs: 'none', sm: 'flex' },
+                  '& .MuiChip-icon': { fontSize: { xs: 10, sm: 12, md: 12 } },
                 }}
               />
               <Button
                 fullWidth
                 variant={channel.primary ? 'contained' : 'outlined'}
+                size="small"
                 sx={{
                   bgcolor: channel.primary ? channel.color : 'transparent',
                   borderColor: channel.color,
                   color: channel.primary ? '#fff' : channel.color,
+                  fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' },
+                  py: { xs: 0.5, sm: 0.75, md: 1 },
                   '&:hover': {
                     bgcolor: channel.primary ? alpha(channel.color, 0.8) : alpha(channel.color, 0.1),
                   },
+                  '& .MuiButton-endIcon': { display: { xs: 'none', sm: 'inherit' } },
                 }}
-                endIcon={<ExternalLink size={16} />}
+                endIcon={<ExternalLink size={14} />}
               >
                 {channel.action}
               </Button>
@@ -329,29 +340,30 @@ export default function SupportPage() {
       </Grid>
 
       {/* Quick Links */}
-      <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#FFFFFF' }}>
+      <Typography variant="h6" sx={{ fontWeight: 600, mb: { xs: 2, sm: 2.5, md: 3 }, color: '#FFFFFF', fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' } }}>
         Quick Links
       </Typography>
-      <Grid container spacing={2} sx={{ mb: 5 }}>
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 2 }} sx={{ mb: { xs: 3, sm: 4, md: 5 } }}>
         {quickLinks.map((link, index) => (
           <Grid item xs={6} sm={3} key={index}>
             <GlassCard
               component="a"
               href={link.href}
               sx={{
-                p: 2.5,
+                p: { xs: 1.5, sm: 2, md: 2.5 },
                 display: 'flex',
-                alignItems: 'center',
-                gap: 2,
+                alignItems: { xs: 'flex-start', sm: 'center' },
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 1, sm: 2, md: 2 },
                 textDecoration: 'none',
               }}
             >
-              <Box sx={{ color: '#10B981' }}>{link.icon}</Box>
+              <Box sx={{ color: '#10B981', '& svg': { width: { xs: 18, sm: 20, md: 20 }, height: { xs: 18, sm: 20, md: 20 } } }}>{link.icon}</Box>
               <Box>
-                <Typography sx={{ color: '#FFFFFF', fontWeight: 600, fontSize: '0.9rem' }}>
+                <Typography sx={{ color: '#FFFFFF', fontWeight: 600, fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem' } }}>
                   {link.title}
                 </Typography>
-                <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.8rem' }, display: { xs: 'none', sm: 'block' } }}>
                   {link.description}
                 </Typography>
               </Box>
@@ -361,25 +373,25 @@ export default function SupportPage() {
       </Grid>
 
       {/* FAQs */}
-      <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#FFFFFF' }}>
+      <Typography variant="h6" sx={{ fontWeight: 600, mb: { xs: 2, sm: 2.5, md: 3 }, color: '#FFFFFF', fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' } }}>
         Frequently Asked Questions
       </Typography>
-      <Grid container spacing={3} sx={{ mb: 5 }}>
+      <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }} sx={{ mb: { xs: 3, sm: 4, md: 5 } }}>
         {(searchQuery ? filteredFaqs : faqs).map((category) => (
           <Grid item xs={12} md={6} key={category.category}>
             <GlassCard sx={{ overflow: 'hidden' }}>
               <Box
                 sx={{
-                  p: 2,
+                  p: { xs: 1.5, sm: 2, md: 2 },
                   bgcolor: alpha(category.color, 0.1),
                   borderBottom: '1px solid rgba(255,255,255,0.1)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 2,
+                  gap: { xs: 1.5, sm: 2, md: 2 },
                 }}
               >
-                <Box sx={{ color: category.color }}>{category.icon}</Box>
-                <Typography sx={{ fontWeight: 600, color: '#FFFFFF' }}>
+                <Box sx={{ color: category.color, '& svg': { width: { xs: 16, sm: 18, md: 20 }, height: { xs: 16, sm: 18, md: 20 } } }}>{category.icon}</Box>
+                <Typography sx={{ fontWeight: 600, color: '#FFFFFF', fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' } }}>
                   {category.category}
                 </Typography>
               </Box>
@@ -393,17 +405,19 @@ export default function SupportPage() {
                   }}
                 >
                   <AccordionSummary
-                    expandIcon={<ChevronDown size={18} color="#6B7280" />}
+                    expandIcon={<ChevronDown size={16} color="#6B7280" />}
                     sx={{
+                      minHeight: { xs: 40, sm: 48, md: 48 },
+                      px: { xs: 1.5, sm: 2, md: 2 },
                       '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
                     }}
                   >
-                    <Typography sx={{ color: '#FFFFFF', fontSize: '0.95rem' }}>
+                    <Typography sx={{ color: '#FFFFFF', fontSize: { xs: '0.8rem', sm: '0.875rem', md: '0.95rem' } }}>
                       {faq.question}
                     </Typography>
                   </AccordionSummary>
-                  <AccordionDetails sx={{ pt: 0 }}>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', lineHeight: 1.7 }}>
+                  <AccordionDetails sx={{ pt: 0, px: { xs: 1.5, sm: 2, md: 2 }, pb: { xs: 1.5, sm: 2, md: 2 } }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.75rem', sm: '0.85rem', md: '0.9rem' }, lineHeight: 1.7 }}>
                       {faq.answer}
                     </Typography>
                   </AccordionDetails>
@@ -415,44 +429,45 @@ export default function SupportPage() {
       </Grid>
 
       {/* Contact Form */}
-      <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#FFFFFF' }}>
+      <Typography variant="h6" sx={{ fontWeight: 600, mb: { xs: 2, sm: 2.5, md: 3 }, color: '#FFFFFF', fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' } }}>
         Submit a Support Ticket
       </Typography>
-      <GlassCard sx={{ p: 4 }}>
+      <GlassCard sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
         {submitted ? (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Box sx={{ textAlign: 'center', py: { xs: 2, sm: 3, md: 4 } }}>
             <Box
               sx={{
-                width: 80,
-                height: 80,
+                width: { xs: 60, sm: 70, md: 80 },
+                height: { xs: 60, sm: 70, md: 80 },
                 borderRadius: '50%',
                 bgcolor: alpha('#10B981', 0.2),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 mx: 'auto',
-                mb: 3,
+                mb: { xs: 2, sm: 2.5, md: 3 },
               }}
             >
-              <Check size={40} color="#10B981" />
+              <Check size={32} color="#10B981" />
             </Box>
-            <Typography variant="h5" sx={{ fontWeight: 600, color: '#FFFFFF', mb: 1 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600, color: '#FFFFFF', mb: 1, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}>
               Ticket Submitted!
             </Typography>
-            <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 3 }}>
+            <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: { xs: 2, sm: 2.5, md: 3 }, fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' } }}>
               We've received your message and will respond within 24 hours.
             </Typography>
             <Button
               variant="outlined"
               onClick={() => setSubmitted(false)}
-              sx={{ borderColor: '#10B981', color: '#10B981' }}
+              size="small"
+              sx={{ borderColor: '#10B981', color: '#10B981', fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' } }}
             >
               Submit Another Ticket
             </Button>
           </Box>
         ) : (
           <form onSubmit={handleSubmitTicket}>
-            <Grid container spacing={3}>
+            <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
@@ -460,12 +475,14 @@ export default function SupportPage() {
                   value={contactForm.name}
                   onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
                   required
+                  size="small"
                   sx={{
                     '& .MuiOutlinedInput-root': {
+                      fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' },
                       '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                       '&:hover fieldset': { borderColor: 'rgba(16, 185, 129, 0.5)' },
                     },
-                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' } },
                   }}
                 />
               </Grid>
@@ -477,12 +494,14 @@ export default function SupportPage() {
                   value={contactForm.email}
                   onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
                   required
+                  size="small"
                   sx={{
                     '& .MuiOutlinedInput-root': {
+                      fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' },
                       '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                       '&:hover fieldset': { borderColor: 'rgba(16, 185, 129, 0.5)' },
                     },
-                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' } },
                   }}
                 />
               </Grid>
@@ -493,12 +512,14 @@ export default function SupportPage() {
                   value={contactForm.subject}
                   onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
                   required
+                  size="small"
                   sx={{
                     '& .MuiOutlinedInput-root': {
+                      fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' },
                       '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                       '&:hover fieldset': { borderColor: 'rgba(16, 185, 129, 0.5)' },
                     },
-                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' } },
                   }}
                 />
               </Grid>
@@ -507,16 +528,17 @@ export default function SupportPage() {
                   fullWidth
                   label="Message"
                   multiline
-                  rows={5}
+                  rows={4}
                   value={contactForm.message}
                   onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
                   required
                   sx={{
                     '& .MuiOutlinedInput-root': {
+                      fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' },
                       '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                       '&:hover fieldset': { borderColor: 'rgba(16, 185, 129, 0.5)' },
                     },
-                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' } },
                   }}
                 />
               </Grid>
@@ -526,11 +548,13 @@ export default function SupportPage() {
                   variant="contained"
                   size="large"
                   disabled={submitting}
-                  startIcon={submitting ? <CircularProgress size={20} /> : <Send size={20} />}
+                  startIcon={submitting ? <CircularProgress size={18} /> : <Send size={18} />}
                   sx={{
                     bgcolor: '#10B981',
-                    px: 4,
-                    py: 1.5,
+                    px: { xs: 3, sm: 3.5, md: 4 },
+                    py: { xs: 1, sm: 1.25, md: 1.5 },
+                    fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' },
+                    width: { xs: '100%', sm: 'auto' },
                     '&:hover': { bgcolor: '#059669' },
                   }}
                 >
@@ -543,9 +567,9 @@ export default function SupportPage() {
       </GlassCard>
 
       {/* Business Hours */}
-      <Box sx={{ mt: 4, textAlign: 'center' }}>
-        <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>
-          <Clock size={14} style={{ verticalAlign: 'middle', marginRight: 8 }} />
+      <Box sx={{ mt: { xs: 3, sm: 3.5, md: 4 }, textAlign: 'center' }}>
+        <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem' } }}>
+          <Clock size={12} style={{ verticalAlign: 'middle', marginRight: 6 }} />
           Support available 24/7 via Live Chat and Telegram. Email responses within 24 hours.
         </Typography>
       </Box>

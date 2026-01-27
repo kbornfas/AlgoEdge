@@ -131,12 +131,12 @@ const StatCard = ({
       }}
       onClick={onClick}
     >
-      <CardContent sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+      <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: { xs: 1.5, md: 2 } }}>
           <Box
             sx={{
-              width: 48,
-              height: 48,
+              width: { xs: 40, md: 48 },
+              height: { xs: 40, md: 48 },
               borderRadius: 2,
               display: 'flex',
               alignItems: 'center',
@@ -171,7 +171,7 @@ const StatCard = ({
         {loading ? (
           <Skeleton width={100} height={36} />
         ) : (
-          <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: '-0.5px', mb: 0.5 }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: '-0.5px', mb: 0.5, fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' } }}>
             {value}
           </Typography>
         )}
@@ -514,8 +514,8 @@ export default function DashboardPage() {
   return (
     <Box>
       {/* Header Section */}
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
+      <Box sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: { xs: 1.5, md: 2 } }}>
           <Box>
             <Typography 
               variant="h4" 
@@ -527,11 +527,12 @@ export default function DashboardPage() {
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 mb: 0.5,
+                fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' },
               }}
             >
               Welcome back, {user?.username || 'Trader'}
             </Typography>
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body1" color="text.secondary" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>
               Monitor your automated trading performance and manage your bots.
             </Typography>
           </Box>
@@ -542,8 +543,9 @@ export default function DashboardPage() {
             disabled={refreshing}
             sx={{
               borderRadius: 2,
-              px: 2.5,
-              py: 1,
+              px: { xs: 1.5, md: 2.5 },
+              py: { xs: 0.75, md: 1 },
+              fontSize: { xs: '0.8rem', md: '0.875rem' },
               borderColor: alpha(theme.palette.primary.main, 0.3),
               '&:hover': {
                 borderColor: 'primary.main',
@@ -596,8 +598,8 @@ export default function DashboardPage() {
       )}
 
       {/* Stats Grid */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} lg={3}>
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
+        <Grid item xs={6} sm={6} lg={3}>
           <StatCard
             title="Account Balance"
             value={isAccountConnected ? `$${mt5Account?.balance?.toLocaleString() ?? '0'}` : '--'}
@@ -607,7 +609,7 @@ export default function DashboardPage() {
             loading={loading}
           />
         </Grid>
-        <Grid item xs={12} sm={6} lg={3}>
+        <Grid item xs={6} sm={6} lg={3}>
           <StatCard
             title="Total Profit"
             value={isAccountConnected ? `${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}` : '--'}
@@ -619,7 +621,7 @@ export default function DashboardPage() {
             loading={loading}
           />
         </Grid>
-        <Grid item xs={12} sm={6} lg={3}>
+        <Grid item xs={6} sm={6} lg={3}>
           <StatCard
             title="Active Robots"
             value={`${activeRobots}/${robots.length}`}
@@ -630,7 +632,7 @@ export default function DashboardPage() {
             onClick={() => router.push('/dashboard/robots')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} lg={3}>
+        <Grid item xs={6} sm={6} lg={3}>
           <StatCard
             title="Total Trades"
             value={isAccountConnected ? totalTrades.toString() : '--'}
@@ -654,20 +656,20 @@ export default function DashboardPage() {
       ) : (
       <Card 
         sx={{ 
-          mb: 4, 
+          mb: { xs: 2, sm: 3, md: 4 }, 
           borderRadius: 3, 
           border: '1px solid',
           borderColor: alpha(theme.palette.divider, 0.1),
           overflow: 'hidden',
         }}
       >
-        <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: alpha(theme.palette.divider, 0.1) }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, borderBottom: '1px solid', borderColor: alpha(theme.palette.divider, 0.1) }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 } }}>
               <Box
                 sx={{
-                  width: 44,
-                  height: 44,
+                  width: { xs: 36, md: 44 },
+                  height: { xs: 36, md: 44 },
                   borderRadius: 2,
                   display: 'flex',
                   alignItems: 'center',
@@ -678,10 +680,10 @@ export default function DashboardPage() {
                 <Bot size={24} color="#0066FF" />
               </Box>
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1rem', md: '1.25rem' } }}>
                   Trading Robots
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                   {activeRobots} of {robots.length} bots active
                 </Typography>
               </Box>
@@ -700,7 +702,7 @@ export default function DashboardPage() {
           </Box>
         </Box>
         
-        <CardContent sx={{ p: 3 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
           {!isAccountConnected ? (
             <Alert 
               severity="info" 
@@ -714,25 +716,25 @@ export default function DashboardPage() {
               Connect your MT5 account to activate and manage trading robots.
             </Alert>
           ) : loading ? (
-            <Grid container spacing={2}>
+            <Grid container spacing={{ xs: 1.5, sm: 2 }}>
               {[1, 2, 3, 4].map((i) => (
-                <Grid item xs={12} sm={6} lg={3} key={i}>
-                  <Skeleton variant="rounded" height={120} sx={{ borderRadius: 2 }} />
+                <Grid item xs={6} sm={6} lg={3} key={i}>
+                  <Skeleton variant="rounded" height={{ xs: 100, md: 120 }} sx={{ borderRadius: 2 }} />
                 </Grid>
               ))}
             </Grid>
           ) : robots.length > 0 ? (
-            <Grid container spacing={2}>
+            <Grid container spacing={{ xs: 1.5, sm: 2 }}>
               {robots.slice(0, 8).map((robot) => {
                 const isRunning = robot.status === 'running';
                 const colors = robotColors[robot.id] || robotColors['ema-pullback'];
                 
                 return (
-                  <Grid item xs={12} sm={6} lg={3} key={robot.id}>
+                  <Grid item xs={6} sm={6} lg={3} key={robot.id}>
                     <Box
                       sx={{
-                        p: 2.5,
-                        borderRadius: 3,
+                        p: { xs: 1.5, sm: 2, md: 2.5 },
+                        borderRadius: { xs: 2, md: 3 },
                         border: '1px solid',
                         borderColor: isRunning ? colors.border : alpha(colors.border, 0.3),
                         background: isRunning 
@@ -748,13 +750,14 @@ export default function DashboardPage() {
                         },
                       }}
                     >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: { xs: 1, md: 1.5 } }}>
                         <Typography 
                           variant="subtitle2" 
                           sx={{ 
                             fontWeight: 700, 
                             color: isRunning ? 'white' : 'text.primary',
                             lineHeight: 1.2,
+                            fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.875rem' },
                           }}
                         >
                           {robot.name}
@@ -763,8 +766,8 @@ export default function DashboardPage() {
                           label={isRunning ? 'LIVE' : 'OFF'}
                           size="small"
                           sx={{
-                            height: 22,
-                            fontSize: '0.65rem',
+                            height: { xs: 18, md: 22 },
+                            fontSize: { xs: '0.55rem', md: '0.65rem' },
                             fontWeight: 700,
                             bgcolor: isRunning ? 'rgba(255,255,255,0.2)' : alpha(theme.palette.text.secondary, 0.1),
                             color: isRunning ? 'white' : 'text.secondary',
@@ -776,10 +779,11 @@ export default function DashboardPage() {
                         variant="caption" 
                         sx={{ 
                           color: isRunning ? 'rgba(255,255,255,0.8)' : 'text.secondary',
-                          display: 'block',
-                          mb: 2,
-                          minHeight: 32,
+                          display: { xs: 'none', sm: 'block' },
+                          mb: { xs: 1, md: 2 },
+                          minHeight: { xs: 'auto', sm: 32 },
                           lineHeight: 1.4,
+                          fontSize: { xs: '0.65rem', md: '0.75rem' },
                         }}
                       >
                         {robot.strategy || 'AI-Powered Strategy'}
@@ -791,8 +795,8 @@ export default function DashboardPage() {
                         onClick={() => isRunning ? stopRobot(robot.id) : startRobot(robot.id)}
                         startIcon={isRunning ? <Square size={14} /> : <Play size={14} />}
                         sx={{
-                          height: 36,
-                          fontSize: '0.8rem',
+                          height: { xs: 28, sm: 32, md: 36 },
+                          fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.8rem' },
                           fontWeight: 600,
                           borderRadius: 2,
                           background: isRunning 
@@ -834,7 +838,7 @@ export default function DashboardPage() {
       )}
 
       {/* Bottom Grid - Recent Trades & Quick Actions */}
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 2, md: 3 }}>
         {/* Recent Trades */}
         <Grid item xs={12} lg={7}>
           <Card 
@@ -845,12 +849,12 @@ export default function DashboardPage() {
               borderColor: alpha(theme.palette.divider, 0.1),
             }}
           >
-            <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: alpha(theme.palette.divider, 0.1) }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, borderBottom: '1px solid', borderColor: alpha(theme.palette.divider, 0.1) }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 } }}>
                 <Box
                   sx={{
-                    width: 44,
-                    height: 44,
+                    width: { xs: 36, md: 44 },
+                    height: { xs: 36, md: 44 },
                     borderRadius: 2,
                     display: 'flex',
                     alignItems: 'center',
@@ -861,17 +865,17 @@ export default function DashboardPage() {
                   <Activity size={24} color="#22C55E" />
                 </Box>
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1rem', md: '1.25rem' } }}>
                     Recent Trades
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                     Your latest trading activity
                   </Typography>
                 </Box>
               </Box>
             </Box>
             
-            <CardContent sx={{ p: 3 }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
               {!isAccountConnected ? (
                 <Alert 
                   severity="info"
@@ -899,8 +903,8 @@ export default function DashboardPage() {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        p: 2,
-                        mb: index < recentTrades.length - 1 ? 1.5 : 0,
+                        p: { xs: 1.5, md: 2 },
+                        mb: index < recentTrades.length - 1 ? { xs: 1, md: 1.5 } : 0,
                         borderRadius: 2,
                         bgcolor: alpha(theme.palette.background.paper, 0.5),
                         border: '1px solid',
@@ -912,26 +916,26 @@ export default function DashboardPage() {
                         },
                       }}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 } }}>
                         <Avatar
                           sx={{
-                            width: 40,
-                            height: 40,
+                            width: { xs: 32, md: 40 },
+                            height: { xs: 32, md: 40 },
                             bgcolor: trade.type === 'BUY' 
                               ? alpha('#22C55E', 0.1)
                               : alpha('#EF4444', 0.1),
                             color: trade.type === 'BUY' ? '#22C55E' : '#EF4444',
                             fontWeight: 700,
-                            fontSize: '0.75rem',
+                            fontSize: { xs: '0.65rem', md: '0.75rem' },
                           }}
                         >
                           {trade.type}
                         </Avatar>
                         <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
                             {trade.symbol}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
                             {trade.volume} lots • {getTimeAgo(trade.openTime)}
                           </Typography>
                         </Box>
@@ -941,6 +945,7 @@ export default function DashboardPage() {
                         sx={{
                           fontWeight: 700,
                           color: trade.profit >= 0 ? '#22C55E' : '#EF4444',
+                          fontSize: { xs: '0.8rem', md: '0.875rem' },
                         }}
                       >
                         {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
@@ -971,7 +976,7 @@ export default function DashboardPage() {
 
         {/* Quick Actions */}
         <Grid item xs={12} lg={5}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, height: '100%' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2, md: 3 }, height: '100%' }}>
             {/* WhatsApp Card */}
             <Card
               sx={{
@@ -988,12 +993,12 @@ export default function DashboardPage() {
               }}
               onClick={() => window.open(process.env.NEXT_PUBLIC_WHATSAPP_URL || 'https://wa.me/', '_blank')}
             >
-              <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 }, mb: { xs: 1, md: 1.5 } }}>
                   <Box
                     sx={{
-                      width: 44,
-                      height: 44,
+                      width: { xs: 36, md: 44 },
+                      height: { xs: 36, md: 44 },
                       borderRadius: 2,
                       display: 'flex',
                       alignItems: 'center',
@@ -1004,10 +1009,10 @@ export default function DashboardPage() {
                     <Signal size={24} />
                   </Box>
                   <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1rem', md: '1.25rem' } }}>
                       Need Help?
                     </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    <Typography variant="body2" sx={{ opacity: 0.9, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                       Chat with our support team
                     </Typography>
                   </Box>
@@ -1046,12 +1051,12 @@ export default function DashboardPage() {
               }}
               onClick={() => window.open(process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://instagram.com/', '_blank')}
             >
-              <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 }, mb: { xs: 1, md: 1.5 } }}>
                   <Box
                     sx={{
-                      width: 44,
-                      height: 44,
+                      width: { xs: 36, md: 44 },
+                      height: { xs: 36, md: 44 },
                       borderRadius: 2,
                       display: 'flex',
                       alignItems: 'center',
@@ -1062,10 +1067,10 @@ export default function DashboardPage() {
                     <Zap size={24} />
                   </Box>
                   <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1rem', md: '1.25rem' } }}>
                       Follow Us
                     </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    <Typography variant="body2" sx={{ opacity: 0.9, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                       Stay updated with latest news
                     </Typography>
                   </Box>
@@ -1105,12 +1110,12 @@ export default function DashboardPage() {
               }}
               onClick={() => router.push('/dashboard/wallet')}
             >
-              <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 }, mb: { xs: 1, md: 1.5 } }}>
                   <Box
                     sx={{
-                      width: 44,
-                      height: 44,
+                      width: { xs: 36, md: 44 },
+                      height: { xs: 36, md: 44 },
                       borderRadius: 2,
                       display: 'flex',
                       alignItems: 'center',
@@ -1121,10 +1126,10 @@ export default function DashboardPage() {
                     <Wallet size={24} color="#0066FF" />
                   </Box>
                   <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1rem', md: '1.25rem' } }}>
                       Your Wallet
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                       Manage deposits & withdrawals
                     </Typography>
                   </Box>

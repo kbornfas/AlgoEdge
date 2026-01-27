@@ -648,26 +648,54 @@ export default function RobotsPage() {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4, px: { xs: 1, sm: 2, md: 3 }, overflowX: 'auto' }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1, sm: 2, md: 3 }, overflowX: 'auto' }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Bot size={40} />
+      <Box sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
+        <Typography 
+          variant="h4" 
+          fontWeight="bold" 
+          gutterBottom 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: { xs: 1, sm: 2 },
+            fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' },
+          }}
+        >
+          <Bot size={32} style={{ minWidth: 32 }} />
           Trading Robots
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" color="text.secondary" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
           Select and configure AI-powered trading robots. Each robot supports multiple timeframes from M1 to W1.
         </Typography>
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+        <Alert 
+          severity="error" 
+          sx={{ 
+            mb: { xs: 2, sm: 3 },
+            fontSize: { xs: '0.8rem', sm: '0.875rem' },
+            py: { xs: 0.5, sm: 1 },
+            '& .MuiAlert-message': { wordBreak: 'break-word' },
+          }} 
+          onClose={() => setError(null)}
+        >
           {error}
         </Alert>
       )}
 
       {success && (
-        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
+        <Alert 
+          severity="success" 
+          sx={{ 
+            mb: { xs: 2, sm: 3 },
+            fontSize: { xs: '0.8rem', sm: '0.875rem' },
+            py: { xs: 0.5, sm: 1 },
+            '& .MuiAlert-message': { wordBreak: 'break-word' },
+          }} 
+          onClose={() => setSuccess(null)}
+        >
           {success}
         </Alert>
       )}
@@ -675,12 +703,18 @@ export default function RobotsPage() {
       {runningRobots.size > 0 && (
         <Alert 
           severity="info" 
-          sx={{ mb: 3, overflow: 'hidden', '& .MuiAlert-message': { overflow: 'hidden', width: '100%' } }}
+          sx={{ 
+            mb: { xs: 2, sm: 3 }, 
+            overflow: 'hidden', 
+            '& .MuiAlert-message': { overflow: 'hidden', width: '100%' },
+            py: { xs: 0.5, sm: 1 },
+            fontSize: { xs: '0.8rem', sm: '0.875rem' },
+          }}
           action={
             <Button 
               color="inherit" 
               size="small"
-              sx={{ whiteSpace: 'nowrap', minWidth: 'auto', fontSize: { xs: '0.7rem', sm: '0.875rem' } }}
+              sx={{ whiteSpace: 'nowrap', minWidth: 'auto', fontSize: { xs: '0.65rem', sm: '0.875rem' }, px: { xs: 1, sm: 2 } }}
               onClick={async () => {
                 try {
                   setError(null);
@@ -716,19 +750,30 @@ export default function RobotsPage() {
       )}
 
       {/* Timeframes Legend */}
-      <Card sx={{ mb: 4, bgcolor: 'background.paper' }}>
-        <CardContent sx={{ py: 2 }}>
-          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Clock size={16} />
+      <Card sx={{ mb: { xs: 2, sm: 3, md: 4 }, bgcolor: 'background.paper' }}>
+        <CardContent sx={{ py: { xs: 1.5, sm: 2 }, px: { xs: 1.5, sm: 2, md: 3 } }}>
+          <Typography 
+            variant="subtitle2" 
+            color="text.secondary" 
+            sx={{ 
+              mb: 1, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1,
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            }}
+          >
+            <Clock size={14} />
             Available Timeframes:
           </Typography>
-          <Box display="flex" gap={1} flexWrap="wrap">
+          <Box display="flex" gap={{ xs: 0.5, sm: 1 }} flexWrap="wrap">
             {ALL_TIMEFRAMES.map((tf) => (
               <Chip 
                 key={tf} 
                 label={tf} 
                 size="small" 
                 variant="outlined"
+                sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}
               />
             ))}
           </Box>
@@ -736,7 +781,7 @@ export default function RobotsPage() {
       </Card>
 
       {/* Robots Grid */}
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 2, sm: 2, md: 3 }}>
         {robots.map((robot) => {
           const config = robotConfigs[robot.id] || {
             selectedTimeframe: robot.timeframe,
@@ -748,7 +793,7 @@ export default function RobotsPage() {
           const gradient = getRobotGradient(robot.id, isRunning);
 
           return (
-            <Grid item xs={12} md={6} lg={3} key={robot.id}>
+            <Grid item xs={12} sm={6} md={6} lg={3} key={robot.id}>
               <Card 
                 sx={{ 
                   height: '100%',
@@ -771,13 +816,13 @@ export default function RobotsPage() {
                     sx={{
                       position: 'absolute',
                       top: -10,
-                      right: 16,
+                      right: { xs: 10, sm: 16 },
                       background: `linear-gradient(135deg, ${gradient.border}, ${gradient.border}dd)`,
                       color: 'white',
-                      px: 2,
+                      px: { xs: 1.5, sm: 2 },
                       py: 0.5,
                       borderRadius: 2,
-                      fontSize: '0.75rem',
+                      fontSize: { xs: '0.65rem', sm: '0.75rem' },
                       fontWeight: 'bold',
                       display: 'flex',
                       alignItems: 'center',
@@ -803,51 +848,71 @@ export default function RobotsPage() {
                   </Box>
                 )}
                 
-                <CardContent>
+                <CardContent sx={{ p: { xs: 2, sm: 2, md: 3 } }}>
                   {/* Robot Header */}
-                  <Box display="flex" alignItems="flex-start" mb={2}>
+                  <Box display="flex" alignItems="flex-start" mb={{ xs: 1.5, sm: 2 }}>
                     <Box
                       sx={{
-                        width: 48,
-                        height: 48,
+                        width: { xs: 40, sm: 48 },
+                        height: { xs: 40, sm: 48 },
                         borderRadius: 2,
                         background: `linear-gradient(135deg, ${gradient.border}44, ${gradient.border}22)`,
                         border: `1px solid ${gradient.border}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        mr: 2,
+                        mr: { xs: 1.5, sm: 2 },
                         color: gradient.border,
+                        flexShrink: 0,
                       }}
                     >
                       {getStrategyIcon(robot.strategy || 'Default')}
                     </Box>
-                    <Box flex={1}>
-                      <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+                    <Box flex={1} minWidth={0}>
+                      <Typography 
+                        variant="h6" 
+                        fontWeight="bold" 
+                        sx={{ 
+                          lineHeight: 1.2,
+                          fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1.25rem' },
+                          wordBreak: 'break-word',
+                        }}
+                      >
                         {robot.name}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                         {robot.strategy || 'AI Trading'}
                       </Typography>
                     </Box>
                   </Box>
 
                   {/* Description */}
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary" 
+                    sx={{ 
+                      mb: { xs: 1.5, sm: 2 }, 
+                      minHeight: { xs: 'auto', sm: 40 },
+                      fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.875rem' },
+                      lineHeight: 1.4,
+                    }}
+                  >
                     {robot.description}
                   </Typography>
 
                   {/* Stats Row */}
-                  <Box display="flex" gap={1} mb={2} flexWrap="wrap">
+                  <Box display="flex" gap={{ xs: 0.5, sm: 1 }} mb={{ xs: 1.5, sm: 2 }} flexWrap="wrap">
                     <Chip 
                       label={`Win Rate: ${robot.winRate || 75}%`}
                       size="small"
-                      icon={<TrendingUp size={14} />}
+                      icon={<TrendingUp size={12} />}
                       sx={{
                         background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1))',
                         border: '1px solid rgba(16, 185, 129, 0.5)',
                         color: '#10b981',
                         '& .MuiChip-icon': { color: '#10b981' },
+                        fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                        height: { xs: 24, sm: 28 },
                       }}
                     />
                     <Chip 
@@ -857,15 +922,24 @@ export default function RobotsPage() {
                         background: `linear-gradient(135deg, ${gradient.border}33, ${gradient.border}11)`,
                         border: `1px solid ${gradient.border}88`,
                         color: gradient.border,
+                        fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                        height: { xs: 24, sm: 28 },
                       }}
                     />
                   </Box>
 
                   {/* Supported Timeframes - SELECT YOUR TIMEFRAME */}
-                  <Typography variant="caption" color="text.secondary" display="block" mb={1} fontWeight="bold">
+                  <Typography 
+                    variant="caption" 
+                    color="text.secondary" 
+                    display="block" 
+                    mb={0.5} 
+                    fontWeight="bold"
+                    sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}
+                  >
                     Select Timeframe:
                   </Typography>
-                  <Box display="flex" gap={0.5} mb={2} flexWrap="wrap">
+                  <Box display="flex" gap={0.5} mb={{ xs: 1.5, sm: 2 }} flexWrap="wrap">
                     {(robot.timeframes || [robot.timeframe]).map((tf) => (
                       <Chip 
                         key={tf}
@@ -880,6 +954,8 @@ export default function RobotsPage() {
                             : 'rgba(255,255,255,0.05)',
                           border: `1px solid ${config.selectedTimeframe === tf ? gradient.border : 'rgba(255,255,255,0.2)'}`,
                           color: config.selectedTimeframe === tf ? 'white' : 'rgba(255,255,255,0.7)',
+                          fontSize: { xs: '0.6rem', sm: '0.7rem' },
+                          height: { xs: 22, sm: 26 },
                           '&:hover': {
                             background: config.selectedTimeframe === tf 
                               ? `linear-gradient(135deg, ${gradient.border}, ${gradient.border}cc)`
@@ -891,17 +967,24 @@ export default function RobotsPage() {
                   </Box>
 
                   {/* Trading Pairs */}
-                  <Typography variant="caption" color="text.secondary" display="block" mb={1}>
+                  <Typography 
+                    variant="caption" 
+                    color="text.secondary" 
+                    display="block" 
+                    mb={0.5}
+                    sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}
+                  >
                     Trading Pairs:
                   </Typography>
-                  <Box display="flex" gap={0.5} mb={3} flexWrap="wrap">
+                  <Box display="flex" gap={0.5} mb={{ xs: 2, sm: 3 }} flexWrap="wrap">
                     {(robot.pairs || ['EURUSD']).slice(0, 4).map((pair) => (
                       <Chip 
                         key={pair}
                         label={pair}
                         size="small"
                         sx={{ 
-                          fontSize: '0.7rem',
+                          fontSize: { xs: '0.6rem', sm: '0.7rem' },
+                          height: { xs: 20, sm: 24 },
                           background: 'rgba(255,255,255,0.05)',
                           border: '1px solid rgba(255,255,255,0.15)',
                           color: 'rgba(255,255,255,0.8)',
@@ -913,7 +996,8 @@ export default function RobotsPage() {
                         label={`+${robot.pairs.length - 4}`}
                         size="small"
                         sx={{ 
-                          fontSize: '0.7rem',
+                          fontSize: { xs: '0.6rem', sm: '0.7rem' },
+                          height: { xs: 20, sm: 24 },
                           background: `${gradient.border}22`,
                           border: `1px solid ${gradient.border}44`,
                           color: gradient.border,
@@ -923,7 +1007,13 @@ export default function RobotsPage() {
                   </Box>
 
                   {/* Risk Slider */}
-                  <Typography variant="caption" color="text.secondary" gutterBottom display="block">
+                  <Typography 
+                    variant="caption" 
+                    color="text.secondary" 
+                    gutterBottom 
+                    display="block"
+                    sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}
+                  >
                     Risk per Trade: {config.riskPercent}%
                   </Typography>
                   <Slider
@@ -939,10 +1029,13 @@ export default function RobotsPage() {
                     ]}
                     disabled={isRunning}
                     sx={{ 
-                      mb: 2,
+                      mb: { xs: 1.5, sm: 2 },
+                      width: '100%',
                       color: gradient.border,
                       '& .MuiSlider-thumb': {
                         background: gradient.border,
+                        width: { xs: 16, sm: 20 },
+                        height: { xs: 16, sm: 20 },
                         '&:hover, &.Mui-focusVisible': {
                           boxShadow: `0 0 10px ${gradient.border}`,
                         },
@@ -950,13 +1043,15 @@ export default function RobotsPage() {
                       '& .MuiSlider-track': {
                         background: `linear-gradient(90deg, ${gradient.border}, ${gradient.border}cc)`,
                         border: 'none',
+                        height: { xs: 4, sm: 6 },
                       },
                       '& .MuiSlider-rail': {
                         background: 'rgba(255,255,255,0.15)',
+                        height: { xs: 4, sm: 6 },
                       },
                       '& .MuiSlider-markLabel': {
                         color: 'rgba(255,255,255,0.5)',
-                        fontSize: '0.7rem',
+                        fontSize: { xs: '0.6rem', sm: '0.7rem' },
                       },
                     }}
                   />
@@ -968,10 +1063,12 @@ export default function RobotsPage() {
                         variant="contained"
                         fullWidth
                         onClick={() => stopRobot(robot)}
-                        startIcon={<Square size={16} />}
+                        startIcon={<Square size={14} />}
                         sx={{
                           background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
                           border: '1px solid #ef4444',
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                          py: { xs: 0.75, sm: 1 },
                           '&:hover': {
                             background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                             boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)',
@@ -986,10 +1083,12 @@ export default function RobotsPage() {
                         fullWidth
                         onClick={() => startRobot(robot)}
                         disabled={isStarting}
-                        startIcon={isStarting ? <CircularProgress size={16} color="inherit" /> : <Play size={16} />}
+                        startIcon={isStarting ? <CircularProgress size={14} color="inherit" /> : <Play size={14} />}
                         sx={{
                           background: `linear-gradient(135deg, ${gradient.border} 0%, ${gradient.border}cc 100%)`,
                           border: `1px solid ${gradient.border}`,
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                          py: { xs: 0.75, sm: 1 },
                           '&:hover': {
                             background: `linear-gradient(135deg, ${gradient.border}ee 0%, ${gradient.border} 100%)`,
                             boxShadow: `0 4px 15px ${gradient.border}66`,
@@ -1017,47 +1116,54 @@ export default function RobotsPage() {
         onClose={() => setTradeDialogOpen(false)}
         maxWidth="md"
         fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            m: { xs: 1, sm: 2, md: 3 },
+            width: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 32px)' },
+            maxHeight: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 64px)' },
+          },
+        }}
       >
-        <DialogTitle>
-          <Box display="flex" alignItems="center" justifyContent="space-between">
-            <Box display="flex" alignItems="center" gap={1}>
-              <CheckCircle color="green" size={24} />
-              <Typography variant="h6">
+        <DialogTitle sx={{ p: { xs: 1.5, sm: 2 } }}>
+          <Box display="flex" alignItems="center" justifyContent="space-between" gap={1}>
+            <Box display="flex" alignItems="center" gap={{ xs: 0.5, sm: 1 }} minWidth={0}>
+              <CheckCircle color="green" size={20} style={{ flexShrink: 0 }} />
+              <Typography variant="h6" sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem', md: '1.25rem' }, wordBreak: 'break-word' }}>
                 {selectedRobot?.name} - Started Successfully
               </Typography>
             </Box>
-            <IconButton onClick={() => setTradeDialogOpen(false)}>
-              <X size={20} />
+            <IconButton onClick={() => setTradeDialogOpen(false)} size="small" sx={{ flexShrink: 0 }}>
+              <X size={18} />
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent>
-          <Alert severity="success" sx={{ mb: 2 }}>
+        <DialogContent sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
+          <Alert severity="success" sx={{ mb: 2, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
             Robot started successfully! It is now analyzing the market.
           </Alert>
-          <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
-            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+          <Box sx={{ p: { xs: 1.5, sm: 2 }, bgcolor: 'background.paper', borderRadius: 1 }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
               Robot Configuration:
             </Typography>
-            <Typography variant="body2">
+            <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
               • <strong>Timeframe:</strong> {robotConfigs[selectedRobot?.id || '']?.selectedTimeframe || 'N/A'}
             </Typography>
-            <Typography variant="body2">
+            <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
               • <strong>Risk per Trade:</strong> {robotConfigs[selectedRobot?.id || '']?.riskPercent || 1}%
             </Typography>
-            <Typography variant="body2">
+            <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
               • <strong>Trading Pairs:</strong> {selectedRobot?.pairs?.join(', ') || 'N/A'}
             </Typography>
           </Box>
-          <Alert severity="info" sx={{ mt: 2 }}>
-            <Typography variant="body2">
+          <Alert severity="info" sx={{ mt: 2, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+            <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
               The robot will open positions when market conditions match its strategy.
               Check the <strong>Open Positions</strong> section above for real-time P/L updates.
             </Typography>
           </Alert>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setTradeDialogOpen(false)} variant="contained">
+        <DialogActions sx={{ p: { xs: 1.5, sm: 2 } }}>
+          <Button onClick={() => setTradeDialogOpen(false)} variant="contained" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
             Got it!
           </Button>
         </DialogActions>

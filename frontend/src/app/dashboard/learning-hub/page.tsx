@@ -288,18 +288,18 @@ export default function LearningHubPage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ textAlign: 'center', mb: 4 }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1.5, sm: 2, md: 3 } }}>
+      <Box sx={{ textAlign: 'center', mb: { xs: 2, sm: 3, md: 4 } }}>
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, mb: 2, px: 2, py: 0.5, borderRadius: 2, bgcolor: hasAccess ? 'rgba(34, 197, 94, 0.1)' : 'rgba(245, 158, 11, 0.1)' }}>
           {hasAccess ? <Unlock size={18} color="#22C55E" /> : <Crown size={18} color="#F59E0B" />}
-          <Typography variant="body2" sx={{ color: hasAccess ? '#22C55E' : '#F59E0B', fontWeight: 600 }}>
+          <Typography variant="body2" sx={{ color: hasAccess ? '#22C55E' : '#F59E0B', fontWeight: 600, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
             {hasAccess ? 'Premium Unlocked' : 'Premium Content'}
           </Typography>
         </Box>
-        <Typography variant="h3" fontWeight={800} gutterBottom>
+        <Typography variant="h3" fontWeight={800} gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2rem', md: '3rem' } }}>
           Learning Hub
         </Typography>
-        <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
+        <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', fontSize: { xs: '0.875rem', sm: '1rem', md: '1.25rem' } }}>
           Master the art of trading with our comprehensive courses and resources
         </Typography>
       </Box>
@@ -310,13 +310,14 @@ export default function LearningHubPage() {
           severity="info" 
           icon={<Crown size={20} />}
           sx={{ 
-            mb: 4, 
+            mb: { xs: 2, sm: 3, md: 4 }, 
             bgcolor: 'rgba(0, 102, 255, 0.1)', 
             border: '1px solid rgba(0, 102, 255, 0.3)',
-            '& .MuiAlert-icon': { color: '#0066FF' }
+            '& .MuiAlert-icon': { color: '#0066FF' },
+            '& .MuiAlert-message': { fontSize: { xs: '0.75rem', sm: '0.875rem' } }
           }}
         >
-          <Typography variant="body2">
+          <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
             <strong>Premium Access Required:</strong> All courses are available exclusively to Monthly subscribers and above. 
             Upgrade your subscription to unlock unlimited access to all educational content.
           </Typography>
@@ -326,13 +327,14 @@ export default function LearningHubPage() {
           severity="success" 
           icon={<Unlock size={20} />}
           sx={{ 
-            mb: 4, 
+            mb: { xs: 2, sm: 3, md: 4 }, 
             bgcolor: 'rgba(34, 197, 94, 0.1)', 
             border: '1px solid rgba(34, 197, 94, 0.3)',
-            '& .MuiAlert-icon': { color: '#22C55E' }
+            '& .MuiAlert-icon': { color: '#22C55E' },
+            '& .MuiAlert-message': { fontSize: { xs: '0.75rem', sm: '0.875rem' } }
           }}
         >
-          <Typography variant="body2">
+          <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
             <strong>Premium Access Unlocked!</strong> You have full access to all courses and educational content. 
             Enjoy learning and trading!
           </Typography>
@@ -340,7 +342,7 @@ export default function LearningHubPage() {
       )}
 
       {/* Search and Filter */}
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
         <TextField
           fullWidth
           placeholder="Search courses..."
@@ -353,24 +355,24 @@ export default function LearningHubPage() {
               </InputAdornment>
             ),
           }}
-          sx={{ mb: 2 }}
+          sx={{ mb: 2, '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } } }}
         />
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', overflowX: 'auto', pb: 1 }}>
           {categories.map((category) => (
             <Chip
               key={category}
               label={category}
               onClick={() => setSelectedCategory(category)}
               color={selectedCategory === category ? 'primary' : 'default'}
-              sx={{ fontWeight: selectedCategory === category ? 600 : 400 }}
+              sx={{ fontWeight: selectedCategory === category ? 600 : 400, fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, flexShrink: 0 }}
             />
           ))}
         </Box>
       </Box>
 
       {/* Courses Grid */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h5" fontWeight={700}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: { xs: 2, sm: 3 }, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1, sm: 0 } }}>
+        <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}>
           Courses ({filteredCourses.length})
         </Typography>
         {hasAccess ? (
@@ -389,7 +391,7 @@ export default function LearningHubPage() {
           />
         )}
       </Box>
-      <Grid container spacing={3} sx={{ mb: 6 }}>
+      <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }} sx={{ mb: { xs: 4, sm: 5, md: 6 } }}>
         {filteredCourses.map((course) => (
           <Grid item xs={12} sm={6} md={4} key={course.id}>
             <Card 
@@ -440,7 +442,7 @@ export default function LearningHubPage() {
               {/* Course Image */}
               <Box
                 sx={{
-                  height: 180,
+                  height: { xs: 140, sm: 160, md: 180 },
                   position: 'relative',
                   overflow: 'hidden',
                 }}
@@ -484,8 +486,8 @@ export default function LearningHubPage() {
                 </Box>
               </Box>
               
-              <CardContent>
-                <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+              <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
                   <Chip
                     label={course.level}
                     size="small"
@@ -493,35 +495,35 @@ export default function LearningHubPage() {
                       bgcolor: `${getLevelColor(course.level)}20`,
                       color: getLevelColor(course.level),
                       fontWeight: 600,
-                      fontSize: '0.7rem',
+                      fontSize: { xs: '0.6rem', sm: '0.7rem' },
                     }}
                   />
                   <Chip 
                     label={course.category} 
                     size="small" 
                     variant="outlined" 
-                    sx={{ fontSize: '0.7rem' }}
+                    sx={{ fontSize: { xs: '0.6rem', sm: '0.7rem' } }}
                   />
                 </Box>
-                <Typography variant="h6" fontWeight={600} gutterBottom sx={{ lineHeight: 1.3 }}>
+                <Typography variant="h6" fontWeight={600} gutterBottom sx={{ lineHeight: 1.3, fontSize: { xs: '0.9rem', sm: '1rem', md: '1.25rem' } }}>
                   {course.title}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: { xs: 32, sm: 40 }, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   {course.description}
                 </Typography>
                 
                 {/* Instructor */}
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                   Instructor: <strong>{course.instructor}</strong>
                 </Typography>
                 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 } }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>
                       <Video size={14} />
                       {course.lessons} lessons
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>
                       <Clock size={14} />
                       {course.duration}
                     </Typography>
@@ -539,6 +541,8 @@ export default function LearningHubPage() {
                       '&:hover': {
                         bgcolor: '#16A34A',
                       },
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                      py: { xs: 0.75, sm: 1 },
                     }}
                   >
                     Start Learning
@@ -558,6 +562,8 @@ export default function LearningHubPage() {
                         borderColor: '#D97706',
                         bgcolor: 'rgba(245, 158, 11, 0.1)',
                       },
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                      py: { xs: 0.75, sm: 1 },
                     }}
                   >
                     Subscribe to Unlock
@@ -570,17 +576,17 @@ export default function LearningHubPage() {
       </Grid>
 
       {/* FAQs */}
-      <Typography variant="h5" fontWeight={700} gutterBottom>
+      <Typography variant="h5" fontWeight={700} gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}>
         Frequently Asked Questions
       </Typography>
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
         {faqs.map((faq, index) => (
           <Accordion key={index}>
             <AccordionSummary expandIcon={<ChevronDown />}>
-              <Typography fontWeight={600}>{faq.question}</Typography>
+              <Typography fontWeight={600} sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>{faq.question}</Typography>
             </AccordionSummary>
             <AccordionDetails>
-              <Typography color="text.secondary">{faq.answer}</Typography>
+              <Typography color="text.secondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{faq.answer}</Typography>
             </AccordionDetails>
           </Accordion>
         ))}

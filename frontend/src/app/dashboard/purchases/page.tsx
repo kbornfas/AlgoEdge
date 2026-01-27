@@ -250,21 +250,22 @@ export default function MyPurchasesPage() {
   ];
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', pt: 12, pb: 8 }}>
-      <Container maxWidth="lg">
+    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', pt: { xs: 8, md: 12 }, pb: 8 }}>
+      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 } }}>
         {/* Header */}
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: { xs: 2, md: 4 } }}>
           <Typography
             variant="h3"
             sx={{
               fontWeight: 800,
               color: 'white',
               mb: 1,
+              fontSize: { xs: '1.5rem', md: '2.5rem' },
             }}
           >
             📦 My Purchases
           </Typography>
-          <Typography sx={{ color: 'rgba(255,255,255,0.6)' }}>
+          <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.875rem', md: '1rem' } }}>
             Access your purchased bots, products, and subscriptions
           </Typography>
         </Box>
@@ -273,10 +274,16 @@ export default function MyPurchasesPage() {
         <Tabs
           value={activeTab}
           onChange={(_, v) => setActiveTab(v)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           sx={{
-            mb: 4,
+            mb: { xs: 2, md: 4 },
             '& .MuiTabs-indicator': {
               bgcolor: '#22C55E',
+            },
+            '& .MuiTabs-scroller': {
+              overflow: 'auto !important',
             },
           }}
         >
@@ -284,17 +291,19 @@ export default function MyPurchasesPage() {
             <Tab
               key={index}
               label={
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <tab.icon size={18} />
-                  <span>{tab.label}</span>
+                <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 'max-content' }}>
+                  <tab.icon size={16} />
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{tab.label}</Box>
+                  <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>{tab.label.split(' ')[0]}</Box>
                   <Chip
                     label={tab.count}
                     size="small"
                     sx={{
                       bgcolor: 'rgba(34, 197, 94, 0.2)',
                       color: '#22C55E',
-                      height: 20,
-                      fontSize: '0.75rem',
+                      height: 18,
+                      fontSize: '0.7rem',
+                      '& .MuiChip-label': { px: 0.75 },
                     }}
                   />
                 </Stack>
@@ -302,6 +311,9 @@ export default function MyPurchasesPage() {
               sx={{
                 color: 'rgba(255,255,255,0.6)',
                 '&.Mui-selected': { color: 'white' },
+                minWidth: { xs: 'auto', sm: 120 },
+                px: { xs: 1, sm: 2 },
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
               }}
             />
           ))}

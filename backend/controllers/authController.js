@@ -22,11 +22,23 @@ export const register = async (req, res) => {
   try {
     const { username, firstName, lastName, email, password, referralCode } = req.body;
     
-    // Support both username field or firstName+lastName
-    const finalUsername = username || (firstName && lastName ? `${firstName.trim()} ${lastName.trim()}` : null);
+    // Build full name from firstName+lastName
+    const fullName = (firstName && lastName) ? `${firstName.trim()} ${lastName.trim()}` : username || '';
     
-    if (!finalUsername || !email || !password) {
-      return res.status(400).json({ error: 'All fields are required' });
+    // Generate a unique username from email prefix or provided username
+    // If username is provided and doesn't contain spaces, use it directly
+    // Otherwise, generate from email prefix
+    let baseUsername = username && !username.includes(' ') 
+      ? username.toLowerCase().replace(/[^a-z0-9._-]/g, '')
+      : email.split('@')[0].toLowerCase().replace(/[^a-z0-9._-]/g, '');
+    
+    // Ensure username is at least 3 characters
+    if (baseUsername.length < 3) {
+      baseUsername = baseUsername + Math.random().toString(36).substring(2, 5);
+    }
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
     }
     
     // Strong password validation
@@ -55,14 +67,28 @@ export const register = async (req, res) => {
     }
     
     await client.query('BEGIN');
-    // Check if user exists
-    const existingUser = await client.query(
-      'SELECT id FROM users WHERE email = $1 OR username = $2',
-      [email, finalUsername]
+    
+    // Generate unique username (add numbers if collision)
+    let finalUsername = baseUsername;
+    let usernameAttempts = 0;
+    while (usernameAttempts < 10) {
+      const existingUsername = await client.query(
+        'SELECT id FROM users WHERE username = $1',
+        [finalUsername]
+      );
+      if (existingUsername.rows.length === 0) break;
+      usernameAttempts++;
+      finalUsername = baseUsername + Math.floor(Math.random() * 9999);
+    }
+    
+    // Check if email already exists
+    const existingEmail = await client.query(
+      'SELECT id FROM users WHERE email = $1',
+      [email]
     );
-    if (existingUser.rows.length > 0) {
+    if (existingEmail.rows.length > 0) {
       await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'User already exists' });
+      return res.status(400).json({ error: 'An account with this email already exists' });
     }
 
     // Check referral code if provided
@@ -100,10 +126,10 @@ export const register = async (req, res) => {
     
     // Create user with OTP (not verified yet)
     const result = await client.query(
-      `INSERT INTO users (username, email, password_hash, is_verified, verification_token, verification_expires, referred_by, referral_code)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, username, email, created_at`,
-      [finalUsername, email, passwordHash, false, otpCode, otpExpires, referrerId, newReferralCode]
+      `INSERT INTO users (username, email, password_hash, full_name, is_verified, verification_token, verification_expires, referred_by, referral_code)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id, username, email, full_name, created_at`,
+      [finalUsername, email, passwordHash, fullName, false, otpCode, otpExpires, referrerId, newReferralCode]
     );
     const user = result.rows[0];
     // Create default subscription
@@ -121,27 +147,28 @@ export const register = async (req, res) => {
     // Notify referrer via Telegram if they have it connected
     if (referrerId) {
       try {
-        await sendNewReferralTelegram(referrerId, { username: finalUsername });
+        await sendNewReferralTelegram(referrerId, { username: fullName || finalUsername });
       } catch (err) {
         console.warn('Failed to send referral notification:', err);
       }
     }
     
-    // Send OTP verification email
-    const emailSent = await sendVerificationCodeEmail(email, finalUsername, otpCode, 10);
+    // Send OTP verification email - use full name for greeting
+    const emailSent = await sendVerificationCodeEmail(email, fullName || finalUsername, otpCode, 10);
     
     if (!emailSent) {
       console.warn(`⚠️  OTP email failed for ${email}, but registration completed`);
     }
     
     // Audit log
-    auditLog(user.id, 'USER_REGISTERED', { email, username: finalUsername, referredBy: referrerId }, req);
+    auditLog(user.id, 'USER_REGISTERED', { email, username: finalUsername, fullName, referredBy: referrerId }, req);
     
     res.status(201).json({
       message: 'Registration successful! Please check your email for the verification code.',
       user: {
         id: user.id,
         username: user.username,
+        fullName: user.full_name,
         email: user.email,
         isVerified: false
       },
@@ -170,7 +197,7 @@ export const login = async (req, res) => {
 
     // Get user
     const result = await pool.query(
-      `SELECT id, username, email, password_hash, two_fa_enabled, two_fa_secret, is_verified, COALESCE(role, 'user') as role
+      `SELECT id, username, email, full_name, password_hash, two_fa_enabled, two_fa_secret, is_verified, COALESCE(role, 'user') as role
        FROM users WHERE username = $1 OR email = $1`,
       [username]
     );
@@ -268,6 +295,7 @@ export const login = async (req, res) => {
       user: {
         id: user.id,
         username: user.username,
+        fullName: user.full_name,
         email: user.email,
         isVerified: user.is_verified,
         role: user.role,

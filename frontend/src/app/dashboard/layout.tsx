@@ -633,8 +633,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Box>
             </Tooltip>
 
-            <ThemeToggle />
-
             <IconButton 
               onClick={handleProfileMenuOpen} 
               sx={{ 

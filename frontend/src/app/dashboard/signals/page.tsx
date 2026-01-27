@@ -258,18 +258,18 @@ export default function SignalsPage() {
   const completedSignals = signals.filter(s => s.status === 'hit_tp' || s.status === 'hit_sl' || s.status === 'expired');
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
       {/* Header */}
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+      <Box sx={{ mb: { xs: 2, md: 4 }, display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, flexWrap: 'wrap', gap: 2 }}>
         <Box>
-          <Typography variant="h4" fontWeight={700} gutterBottom>
+          <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' } }} fontWeight={700} gutterBottom>
             Trading Signals & Alerts
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body1" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }} color="text.secondary">
             Real-time trading signals powered by AI and technical analysis
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: { xs: 1, md: 2 }, alignItems: 'center', width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'space-between', sm: 'flex-end' } }}>
           <Tooltip title={notificationsEnabled ? 'Notifications On' : 'Notifications Off'}>
             <IconButton
               onClick={() => setNotificationsEnabled(!notificationsEnabled)}
@@ -296,77 +296,77 @@ export default function SignalsPage() {
       </Box>
 
       {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: { xs: 2, md: 4 } }}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card sx={{
             background: `linear-gradient(135deg, ${alpha('#00C853', 0.1)} 0%, ${alpha('#00C853', 0.05)} 100%)`,
             border: `1px solid ${alpha('#00C853', 0.2)}`,
           }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha('#00C853', 0.2) }}>
+            <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
+                <Box sx={{ p: { xs: 1, md: 1.5 }, borderRadius: 2, bgcolor: alpha('#00C853', 0.2) }}>
                   <Zap size={24} color="#00C853" />
                 </Box>
                 <Box>
-                  <Typography variant="h4" fontWeight={700}>{activeSignals.length}</Typography>
-                  <Typography variant="body2" color="text.secondary">Active Signals</Typography>
+                  <Typography variant="h4" sx={{ fontSize: { xs: '1.25rem', md: '2.125rem' } }} fontWeight={700}>{activeSignals.length}</Typography>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.7rem', md: '0.875rem' } }} color="text.secondary">Active Signals</Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card sx={{
             background: `linear-gradient(135deg, ${alpha('#2196F3', 0.1)} 0%, ${alpha('#2196F3', 0.05)} 100%)`,
             border: `1px solid ${alpha('#2196F3', 0.2)}`,
           }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha('#2196F3', 0.2) }}>
+            <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
+                <Box sx={{ p: { xs: 1, md: 1.5 }, borderRadius: 2, bgcolor: alpha('#2196F3', 0.2) }}>
                   <Target size={24} color="#2196F3" />
                 </Box>
                 <Box>
-                  <Typography variant="h4" fontWeight={700}>78%</Typography>
-                  <Typography variant="body2" color="text.secondary">Win Rate (30d)</Typography>
+                  <Typography variant="h4" sx={{ fontSize: { xs: '1.25rem', md: '2.125rem' } }} fontWeight={700}>78%</Typography>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.7rem', md: '0.875rem' } }} color="text.secondary">Win Rate (30d)</Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card sx={{
             background: `linear-gradient(135deg, ${alpha('#9C27B0', 0.1)} 0%, ${alpha('#9C27B0', 0.05)} 100%)`,
             border: `1px solid ${alpha('#9C27B0', 0.2)}`,
           }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha('#9C27B0', 0.2) }}>
+            <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
+                <Box sx={{ p: { xs: 1, md: 1.5 }, borderRadius: 2, bgcolor: alpha('#9C27B0', 0.2) }}>
                   <BarChart3 size={24} color="#9C27B0" />
                 </Box>
                 <Box>
-                  <Typography variant="h4" fontWeight={700}>156</Typography>
-                  <Typography variant="body2" color="text.secondary">Total Signals (30d)</Typography>
+                  <Typography variant="h4" sx={{ fontSize: { xs: '1.25rem', md: '2.125rem' } }} fontWeight={700}>156</Typography>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.7rem', md: '0.875rem' } }} color="text.secondary">Total Signals (30d)</Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card sx={{
             background: `linear-gradient(135deg, ${alpha('#FF9800', 0.1)} 0%, ${alpha('#FF9800', 0.05)} 100%)`,
             border: `1px solid ${alpha('#FF9800', 0.2)}`,
           }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha('#FF9800', 0.2) }}>
+            <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
+                <Box sx={{ p: { xs: 1, md: 1.5 }, borderRadius: 2, bgcolor: alpha('#FF9800', 0.2) }}>
                   <DollarSign size={24} color="#FF9800" />
                 </Box>
                 <Box>
-                  <Typography variant="h4" fontWeight={700}>+24.5%</Typography>
-                  <Typography variant="body2" color="text.secondary">Avg Return (30d)</Typography>
+                  <Typography variant="h4" sx={{ fontSize: { xs: '1.25rem', md: '2.125rem' } }} fontWeight={700}>+24.5%</Typography>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.7rem', md: '0.875rem' } }} color="text.secondary">Avg Return (30d)</Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -375,10 +375,10 @@ export default function SignalsPage() {
       </Grid>
 
       {/* Market Indicators */}
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Card sx={{ mb: { xs: 2, md: 4 } }}>
+        <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1, sm: 0 } }}>
+            <Typography variant="h6" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '0.95rem', md: '1.25rem' } }}>
               <Activity size={20} />
               Market Indicators ({selectedPair})
               {indicatorsLoading && <RefreshCw size={16} className="animate-spin" style={{ marginLeft: 8 }} />}
@@ -419,12 +419,12 @@ export default function SignalsPage() {
               <MenuItem value="NAS100">NAS100</MenuItem>
             </TextField>
           </Box>
-          <Divider sx={{ my: 2 }} />
-          <Grid container spacing={2}>
+          <Divider sx={{ my: { xs: 1, md: 2 } }} />
+          <Grid container spacing={{ xs: 1, md: 2 }}>
             {indicators.map((indicator, index) => (
-              <Grid item xs={6} sm={4} md={2} key={index}>
+              <Grid item xs={4} sm={4} md={2} key={index}>
                 <Box sx={{ 
-                  p: 2, 
+                  p: { xs: 1, md: 2 }, 
                   borderRadius: 2, 
                   bgcolor: alpha(indicator.color, 0.1),
                   border: `1px solid ${alpha(indicator.color, 0.3)}`,
@@ -432,21 +432,22 @@ export default function SignalsPage() {
                   opacity: indicatorsLoading ? 0.7 : 1,
                   transition: 'opacity 0.2s',
                 }}>
-                  <Typography variant="caption" color="text.secondary" display="block">
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: { xs: '0.6rem', md: '0.75rem' } }}>
                     {indicator.name}
                   </Typography>
-                  <Typography variant="body1" fontWeight={600}>
+                  <Typography variant="body1" fontWeight={600} sx={{ fontSize: { xs: '0.75rem', md: '1rem' } }}>
                     {indicator.value}
                   </Typography>
                   <Chip 
                     label={indicator.signal} 
                     size="small" 
                     sx={{ 
-                      mt: 1, 
+                      mt: { xs: 0.5, md: 1 }, 
                       bgcolor: alpha(indicator.color, 0.2),
                       color: indicator.color,
                       fontWeight: 600,
-                      fontSize: '0.7rem',
+                      fontSize: { xs: '0.55rem', md: '0.7rem' },
+                      height: { xs: 18, md: 24 },
                     }} 
                   />
                 </Box>
@@ -458,21 +459,25 @@ export default function SignalsPage() {
 
       {/* Signals Tabs */}
       <Card>
-        <CardContent>
+        <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
           <Tabs 
             value={activeTab} 
             onChange={(_, v) => setActiveTab(v)}
-            sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+            sx={{ mb: { xs: 2, md: 3 }, borderBottom: 1, borderColor: 'divider' }}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
           >
             <Tab 
               label={
                 <Badge badgeContent={activeSignals.length} color="success">
-                  <Box sx={{ pr: 2 }}>Active Signals</Box>
+                  <Box sx={{ pr: 2, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Active Signals</Box>
                 </Badge>
-              } 
+              }
+              sx={{ minWidth: { xs: 'auto', md: 90 }, px: { xs: 1, md: 2 } }}
             />
-            <Tab label="Signal History" />
-            <Tab label="My Alerts" />
+            <Tab label="Signal History" sx={{ minWidth: { xs: 'auto', md: 90 }, px: { xs: 1, md: 2 }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} />
+            <Tab label="My Alerts" sx={{ minWidth: { xs: 'auto', md: 90 }, px: { xs: 1, md: 2 }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} />
           </Tabs>
 
           {loading ? (
@@ -484,10 +489,10 @@ export default function SignalsPage() {
             <>
               {/* Active Signals Tab */}
               {activeTab === 0 && (
-                <Grid container spacing={2}>
+                <Grid container spacing={{ xs: 1.5, md: 2 }}>
                   {activeSignals.length === 0 ? (
                     <Grid item xs={12}>
-                      <Alert severity="info">
+                      <Alert severity="info" sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
                         No active signals at the moment. New signals will appear here automatically.
                       </Alert>
                     </Grid>
@@ -506,13 +511,13 @@ export default function SignalsPage() {
                           }}
                           onClick={() => setSelectedSignal(signal)}
                         >
-                          <CardContent>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: { xs: 1.5, md: 2 } }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
                                 <Box
                                   sx={{
-                                    width: 48,
-                                    height: 48,
+                                    width: { xs: 36, md: 48 },
+                                    height: { xs: 36, md: 48 },
                                     borderRadius: 2,
                                     bgcolor: alpha(getDirectionColor(signal.direction), 0.1),
                                     display: 'flex',
@@ -527,7 +532,7 @@ export default function SignalsPage() {
                                   )}
                                 </Box>
                                 <Box>
-                                  <Typography variant="h6" fontWeight={700}>{signal.symbol}</Typography>
+                                  <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>{signal.symbol}</Typography>
                                   <Chip
                                     label={signal.direction}
                                     size="small"
@@ -535,55 +540,57 @@ export default function SignalsPage() {
                                       bgcolor: getDirectionColor(signal.direction),
                                       color: '#fff',
                                       fontWeight: 700,
+                                      fontSize: { xs: '0.65rem', md: '0.8125rem' },
+                                      height: { xs: 20, md: 24 },
                                     }}
                                   />
                                 </Box>
                               </Box>
                               <Box sx={{ textAlign: 'right' }}>
-                                <Chip label={signal.timeframe} size="small" variant="outlined" sx={{ mb: 0.5 }} />
-                                <Typography variant="caption" display="block" color="text.secondary">
+                                <Chip label={signal.timeframe} size="small" variant="outlined" sx={{ mb: 0.5, fontSize: { xs: '0.65rem', md: '0.8125rem' }, height: { xs: 20, md: 24 } }} />
+                                <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
                                   {signal.strategy}
                                 </Typography>
                               </Box>
                             </Box>
 
-                            <Grid container spacing={1} sx={{ mb: 2 }}>
+                            <Grid container spacing={1} sx={{ mb: { xs: 1.5, md: 2 } }}>
                               <Grid item xs={6}>
-                                <Typography variant="caption" color="text.secondary">Entry</Typography>
-                                <Typography variant="body1" fontWeight={600}>{signal.entryPrice}</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>Entry</Typography>
+                                <Typography variant="body1" fontWeight={600} sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{signal.entryPrice}</Typography>
                               </Grid>
                               <Grid item xs={6}>
-                                <Typography variant="caption" color="text.secondary">Stop Loss</Typography>
-                                <Typography variant="body1" fontWeight={600} color="error.main">{signal.stopLoss}</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>Stop Loss</Typography>
+                                <Typography variant="body1" fontWeight={600} color="error.main" sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{signal.stopLoss}</Typography>
                               </Grid>
                               <Grid item xs={4}>
-                                <Typography variant="caption" color="text.secondary">TP1</Typography>
-                                <Typography variant="body2" fontWeight={600} color="success.main">{signal.takeProfit1}</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>TP1</Typography>
+                                <Typography variant="body2" fontWeight={600} color="success.main" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>{signal.takeProfit1}</Typography>
                               </Grid>
                               <Grid item xs={4}>
-                                <Typography variant="caption" color="text.secondary">TP2</Typography>
-                                <Typography variant="body2" fontWeight={600} color="success.main">{signal.takeProfit2}</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>TP2</Typography>
+                                <Typography variant="body2" fontWeight={600} color="success.main" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>{signal.takeProfit2}</Typography>
                               </Grid>
                               <Grid item xs={4}>
-                                <Typography variant="caption" color="text.secondary">TP3</Typography>
-                                <Typography variant="body2" fontWeight={600} color="success.main">{signal.takeProfit3}</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>TP3</Typography>
+                                <Typography variant="body2" fontWeight={600} color="success.main" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>{signal.takeProfit3}</Typography>
                               </Grid>
                             </Grid>
 
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: { xs: 0.5, md: 0 } }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, md: 1 } }}>
                                 <Clock size={14} />
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
                                   {new Date(signal.timestamp).toLocaleTimeString()}
                                 </Typography>
                               </Box>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography variant="caption" color="text.secondary">Confidence:</Typography>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, md: 1 } }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>Confidence:</Typography>
                                 <Chip
                                   label={`${signal.confidence}%`}
                                   size="small"
                                   color={signal.confidence >= 85 ? 'success' : signal.confidence >= 70 ? 'warning' : 'default'}
-                                  sx={{ fontWeight: 600 }}
+                                  sx={{ fontWeight: 600, fontSize: { xs: '0.65rem', md: '0.8125rem' }, height: { xs: 20, md: 24 } }}
                                 />
                               </Box>
                             </Box>
@@ -597,15 +604,15 @@ export default function SignalsPage() {
 
               {/* Signal History Tab */}
               {activeTab === 1 && (
-                <Box>
+                <Box sx={{ overflowX: 'auto' }}>
                   {completedSignals.length === 0 ? (
-                    <Alert severity="info">No signal history available yet.</Alert>
+                    <Alert severity="info" sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}>No signal history available yet.</Alert>
                   ) : (
                     completedSignals.map((signal) => (
                       <Box
                         key={signal.id}
                         sx={{
-                          p: 2,
+                          p: { xs: 1.5, md: 2 },
                           mb: 1,
                           borderRadius: 2,
                           bgcolor: 'background.default',
@@ -614,15 +621,15 @@ export default function SignalsPage() {
                           alignItems: 'center',
                         }}
                       >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
                           {signal.direction === 'BUY' ? (
                             <ArrowUpRight size={20} color="#00C853" />
                           ) : (
                             <ArrowDownRight size={20} color="#FF5252" />
                           )}
                           <Box>
-                            <Typography fontWeight={600}>{signal.symbol}</Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography fontWeight={600} sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>{signal.symbol}</Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
                               {signal.strategy} • {signal.timeframe}
                             </Typography>
                           </Box>
@@ -631,6 +638,7 @@ export default function SignalsPage() {
                           label={signal.status.replace('_', ' ').toUpperCase()}
                           size="small"
                           color={getStatusColor(signal.status) as any}
+                          sx={{ fontSize: { xs: '0.65rem', md: '0.8125rem' }, height: { xs: 20, md: 24 } }}
                         />
                       </Box>
                     ))
@@ -645,7 +653,7 @@ export default function SignalsPage() {
                     <Box
                       key={index}
                       sx={{
-                        p: 2,
+                        p: { xs: 1.5, md: 2 },
                         mb: 1,
                         borderRadius: 2,
                         bgcolor: 'background.default',
@@ -655,8 +663,8 @@ export default function SignalsPage() {
                       }}
                     >
                       <Box>
-                        <Typography fontWeight={600}>{setting.type}</Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography fontWeight={600} sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>{setting.type}</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
                           {setting.conditions.join(' • ')}
                         </Typography>
                       </Box>
@@ -664,6 +672,7 @@ export default function SignalsPage() {
                         checked={setting.enabled}
                         onChange={() => handleAlertToggle(index)}
                         color="success"
+                        size="small"
                       />
                     </Box>
                   ))}
@@ -675,14 +684,26 @@ export default function SignalsPage() {
       </Card>
 
       {/* Signal Detail Dialog */}
-      <Dialog open={!!selectedSignal} onClose={() => setSelectedSignal(null)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={!!selectedSignal} 
+        onClose={() => setSelectedSignal(null)} 
+        maxWidth="sm" 
+        fullWidth
+        fullScreen={typeof window !== 'undefined' && window.innerWidth < 600}
+        sx={{
+          '& .MuiDialog-paper': {
+            m: { xs: 0, sm: 2 },
+            maxHeight: { xs: '100%', sm: 'calc(100% - 64px)' },
+          }
+        }}
+      >
         {selectedSignal && (
           <>
-            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 }, fontSize: { xs: '1rem', md: '1.25rem' }, p: { xs: 2, md: 3 } }}>
               <Box
                 sx={{
-                  width: 40,
-                  height: 40,
+                  width: { xs: 32, md: 40 },
+                  height: { xs: 32, md: 40 },
                   borderRadius: 2,
                   bgcolor: alpha(getDirectionColor(selectedSignal.direction), 0.1),
                   display: 'flex',
@@ -698,50 +719,50 @@ export default function SignalsPage() {
               </Box>
               {selectedSignal.symbol} - {selectedSignal.direction}
             </DialogTitle>
-            <DialogContent dividers>
-              <Grid container spacing={2}>
+            <DialogContent dividers sx={{ p: { xs: 2, md: 3 } }}>
+              <Grid container spacing={{ xs: 1.5, md: 2 }}>
                 <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">Entry Price</Typography>
-                  <Typography variant="h6" fontWeight={700}>{selectedSignal.entryPrice}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>Entry Price</Typography>
+                  <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>{selectedSignal.entryPrice}</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">Stop Loss</Typography>
-                  <Typography variant="h6" fontWeight={700} color="error.main">{selectedSignal.stopLoss}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>Stop Loss</Typography>
+                  <Typography variant="h6" fontWeight={700} color="error.main" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>{selectedSignal.stopLoss}</Typography>
                 </Grid>
                 <Grid item xs={4}>
-                  <Typography variant="caption" color="text.secondary">Take Profit 1</Typography>
-                  <Typography variant="body1" fontWeight={600} color="success.main">{selectedSignal.takeProfit1}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>Take Profit 1</Typography>
+                  <Typography variant="body1" fontWeight={600} color="success.main" sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{selectedSignal.takeProfit1}</Typography>
                 </Grid>
                 <Grid item xs={4}>
-                  <Typography variant="caption" color="text.secondary">Take Profit 2</Typography>
-                  <Typography variant="body1" fontWeight={600} color="success.main">{selectedSignal.takeProfit2}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>Take Profit 2</Typography>
+                  <Typography variant="body1" fontWeight={600} color="success.main" sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{selectedSignal.takeProfit2}</Typography>
                 </Grid>
                 <Grid item xs={4}>
-                  <Typography variant="caption" color="text.secondary">Take Profit 3</Typography>
-                  <Typography variant="body1" fontWeight={600} color="success.main">{selectedSignal.takeProfit3}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>Take Profit 3</Typography>
+                  <Typography variant="body1" fontWeight={600} color="success.main" sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{selectedSignal.takeProfit3}</Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Divider sx={{ my: 1 }} />
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">Strategy</Typography>
-                  <Typography variant="body1">{selectedSignal.strategy}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>Strategy</Typography>
+                  <Typography variant="body1" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>{selectedSignal.strategy}</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">Timeframe</Typography>
-                  <Typography variant="body1">{selectedSignal.timeframe}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>Timeframe</Typography>
+                  <Typography variant="body1" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>{selectedSignal.timeframe}</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">Confidence</Typography>
-                  <Typography variant="body1">{selectedSignal.confidence}%</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>Confidence</Typography>
+                  <Typography variant="body1" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>{selectedSignal.confidence}%</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">Generated At</Typography>
-                  <Typography variant="body1">{new Date(selectedSignal.timestamp).toLocaleString()}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>Generated At</Typography>
+                  <Typography variant="body1" sx={{ fontSize: { xs: '0.75rem', md: '1rem' } }}>{new Date(selectedSignal.timestamp).toLocaleString()}</Typography>
                 </Grid>
               </Grid>
 
-              <Alert severity="info" sx={{ mt: 3 }}>
+              <Alert severity="info" sx={{ mt: { xs: 2, md: 3 }, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                 <Typography variant="body2">
                   <strong>Risk Management:</strong> Never risk more than 1-2% of your account on a single trade. 
                   Always use proper position sizing and follow your trading plan.
@@ -759,10 +780,22 @@ export default function SignalsPage() {
       </Dialog>
 
       {/* Settings Dialog */}
-      <Dialog open={settingsOpen} onClose={() => setSettingsOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Alert Settings</DialogTitle>
-        <DialogContent dividers>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+      <Dialog 
+        open={settingsOpen} 
+        onClose={() => setSettingsOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        fullScreen={typeof window !== 'undefined' && window.innerWidth < 600}
+        sx={{
+          '& .MuiDialog-paper': {
+            m: { xs: 0, sm: 2 },
+            maxHeight: { xs: '100%', sm: 'calc(100% - 64px)' },
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontSize: { xs: '1.1rem', md: '1.25rem' }, p: { xs: 2, md: 3 } }}>Alert Settings</DialogTitle>
+        <DialogContent dividers sx={{ p: { xs: 2, md: 3 } }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: { xs: 2, md: 3 }, fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
             Configure how you receive trading signal alerts and notifications.
           </Typography>
           
@@ -778,12 +811,12 @@ export default function SignalsPage() {
             sx={{ mb: 2, display: 'block' }}
           />
 
-          <Typography variant="subtitle2" gutterBottom>Alert Types</Typography>
+          <Typography variant="subtitle2" gutterBottom sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}>Alert Types</Typography>
           {alertSettings.map((setting, index) => (
             <Box
               key={index}
               sx={{
-                p: 2,
+                p: { xs: 1.5, md: 2 },
                 mb: 1,
                 borderRadius: 2,
                 bgcolor: 'background.default',
@@ -793,8 +826,8 @@ export default function SignalsPage() {
               }}
             >
               <Box>
-                <Typography fontWeight={500}>{setting.type}</Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography fontWeight={500} sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>{setting.type}</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
                   {setting.conditions.join(' • ')}
                 </Typography>
               </Box>
@@ -806,9 +839,9 @@ export default function SignalsPage() {
             </Box>
           ))}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSettingsOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setSettingsOpen(false)}>
+        <DialogActions sx={{ p: { xs: 2, md: 3 } }}>
+          <Button onClick={() => setSettingsOpen(false)} sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}>Cancel</Button>
+          <Button variant="contained" onClick={() => setSettingsOpen(false)} sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
             Save Settings
           </Button>
         </DialogActions>

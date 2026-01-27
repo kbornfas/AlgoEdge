@@ -161,26 +161,26 @@ export default function HelpSupportPage() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ textAlign: 'center', mb: 6 }}>
-        <Typography variant="h3" fontWeight={800} gutterBottom>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 2, sm: 3, md: 3 } }}>
+      <Box sx={{ textAlign: 'center', mb: { xs: 3, sm: 4, md: 6 } }}>
+        <Typography variant="h3" sx={{ fontWeight: 800, fontSize: { xs: '1.75rem', sm: '2.25rem', md: '3rem' } }} gutterBottom>
           Help & Support
         </Typography>
-        <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
+        <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', fontSize: { xs: '0.9rem', sm: '1rem', md: '1.25rem' }, px: { xs: 1, sm: 0 } }}>
           We're here to help. Find answers to common questions or contact our support team.
         </Typography>
       </Box>
 
       {/* Support Channels */}
-      <Grid container spacing={3} sx={{ mb: 6 }}>
+      <Grid container spacing={{ xs: 2, sm: 2, md: 3 }} sx={{ mb: { xs: 3, sm: 4, md: 6 } }}>
         {supportChannels.map((channel, index) => (
-          <Grid item xs={12} md={4} key={index}>
-            <Card sx={{ height: '100%', textAlign: 'center', py: 3 }}>
+          <Grid item xs={6} sm={6} md={4} key={index}>
+            <Card sx={{ height: '100%', textAlign: 'center', py: { xs: 2, sm: 2, md: 3 } }}>
               <CardContent>
                 <Box
                   sx={{
-                    width: 60,
-                    height: 60,
+                    width: { xs: 44, sm: 50, md: 60 },
+                    height: { xs: 44, sm: 50, md: 60 },
                     borderRadius: 2,
                     bgcolor: `${channel.color}20`,
                     color: channel.color,
@@ -188,21 +188,23 @@ export default function HelpSupportPage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     mx: 'auto',
-                    mb: 2,
+                    mb: { xs: 1, sm: 1.5, md: 2 },
                   }}
                 >
                   {channel.icon}
                 </Box>
-                <Typography variant="h6" fontWeight={600} gutterBottom>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '0.9rem', sm: '1rem', md: '1.25rem' } }} gutterBottom>
                   {channel.title}
                 </Typography>
-                <Typography color="text.secondary" sx={{ mb: 2 }}>
+                <Typography color="text.secondary" sx={{ mb: { xs: 1.5, sm: 2, md: 2 }, fontSize: { xs: '0.75rem', sm: '0.85rem', md: '1rem' }, display: { xs: 'none', sm: 'block' } }}>
                   {channel.description}
                 </Typography>
                 <Button
                   variant="outlined"
                   href={channel.link}
                   target={channel.link.startsWith('http') ? '_blank' : undefined}
+                  size="small"
+                  sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, px: { xs: 1.5, sm: 2, md: 2 } }}
                 >
                   {channel.action}
                 </Button>
@@ -212,24 +214,24 @@ export default function HelpSupportPage() {
         ))}
       </Grid>
 
-      <Grid container spacing={4}>
+      <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
         {/* FAQs */}
         <Grid item xs={12} md={7}>
-          <Typography variant="h5" fontWeight={700} gutterBottom>
+          <Typography variant="h5" sx={{ fontWeight: 700, fontSize: { xs: '1.1rem', sm: '1.3rem', md: '1.5rem' }, mb: { xs: 1.5, sm: 2, md: 2 } }}>
             Frequently Asked Questions
           </Typography>
           {faqs.map((category, categoryIndex) => (
-            <Box key={categoryIndex} sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" fontWeight={600} color="primary" gutterBottom>
+            <Box key={categoryIndex} sx={{ mb: { xs: 2, sm: 2.5, md: 3 } }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' } }} color="primary" gutterBottom>
                 {category.category}
               </Typography>
               {category.questions.map((faq, index) => (
-                <Accordion key={index}>
-                  <AccordionSummary expandIcon={<ChevronDown />}>
-                    <Typography fontWeight={500}>{faq.question}</Typography>
+                <Accordion key={index} sx={{ '& .MuiAccordionSummary-root': { minHeight: { xs: 40, sm: 48, md: 48 }, px: { xs: 1, sm: 2, md: 2 } } }}>
+                  <AccordionSummary expandIcon={<ChevronDown size={18} />}>
+                    <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' } }}>{faq.question}</Typography>
                   </AccordionSummary>
-                  <AccordionDetails>
-                    <Typography color="text.secondary">{faq.answer}</Typography>
+                  <AccordionDetails sx={{ px: { xs: 1, sm: 2, md: 2 }, py: { xs: 1, sm: 1.5, md: 2 } }}>
+                    <Typography color="text.secondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' }, lineHeight: 1.6 }}>{faq.answer}</Typography>
                   </AccordionDetails>
                 </Accordion>
               ))}
@@ -240,11 +242,11 @@ export default function HelpSupportPage() {
         {/* Contact Form */}
         <Grid item xs={12} md={5}>
           <Card>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} gutterBottom>
+            <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' } }} gutterBottom>
                 Submit a Support Ticket
               </Typography>
-              <Typography color="text.secondary" sx={{ mb: 3 }}>
+              <Typography color="text.secondary" sx={{ mb: { xs: 2, sm: 2.5, md: 3 }, fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' } }}>
                 Can't find what you're looking for? Send us a message.
               </Typography>
 
@@ -268,7 +270,8 @@ export default function HelpSupportPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    sx={{ mb: 2 }}
+                    size="small"
+                    sx={{ mb: { xs: 1.5, sm: 2, md: 2 }, '& .MuiInputBase-input': { fontSize: { xs: '0.9rem', sm: '1rem', md: '1rem' } } }}
                   />
                   <TextField
                     fullWidth
@@ -277,7 +280,8 @@ export default function HelpSupportPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    sx={{ mb: 2 }}
+                    size="small"
+                    sx={{ mb: { xs: 1.5, sm: 2, md: 2 }, '& .MuiInputBase-input': { fontSize: { xs: '0.9rem', sm: '1rem', md: '1rem' } } }}
                   />
                   <TextField
                     fullWidth
@@ -285,7 +289,8 @@ export default function HelpSupportPage() {
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     required
-                    sx={{ mb: 2 }}
+                    size="small"
+                    sx={{ mb: { xs: 1.5, sm: 2, md: 2 }, '& .MuiInputBase-input': { fontSize: { xs: '0.9rem', sm: '1rem', md: '1rem' } } }}
                   />
                   <TextField
                     fullWidth
@@ -295,14 +300,15 @@ export default function HelpSupportPage() {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     required
-                    sx={{ mb: 2 }}
+                    sx={{ mb: { xs: 1.5, sm: 2, md: 2 }, '& .MuiInputBase-input': { fontSize: { xs: '0.9rem', sm: '1rem', md: '1rem' } } }}
                   />
                   <Button
                     type="submit"
                     variant="contained"
                     fullWidth
                     disabled={submitting}
-                    startIcon={submitting ? <CircularProgress size={20} /> : <Send size={18} />}
+                    startIcon={submitting ? <CircularProgress size={18} /> : <Send size={16} />}
+                    sx={{ py: { xs: 1, sm: 1, md: 1.5 }, fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' } }}
                   >
                     {submitting ? 'Submitting...' : 'Submit Ticket'}
                   </Button>
@@ -311,9 +317,9 @@ export default function HelpSupportPage() {
             </CardContent>
           </Card>
 
-          <Card sx={{ mt: 3 }}>
-            <CardContent>
-              <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+          <Card sx={{ mt: { xs: 2, sm: 2.5, md: 3 } }}>
+            <CardContent sx={{ p: { xs: 2, sm: 2, md: 3 } }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: { xs: '0.9rem', sm: '1rem', md: '1rem' } }} gutterBottom>
                 Support Hours
               </Typography>
               <List dense>

@@ -111,8 +111,8 @@ export default function SellerEarningsPage() {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1.5, sm: 2, md: 3 } }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: { xs: 4, sm: 6, md: 8 } }}>
           <CircularProgress />
         </Box>
       </Container>
@@ -120,82 +120,86 @@ export default function SellerEarningsPage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" fontWeight={700} gutterBottom>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1.5, sm: 2, md: 3 } }}>
+      <Box sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
+        <Typography variant="h4" fontWeight={700} gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' } }}>
           Seller Earnings
         </Typography>
-        <Typography color="text.secondary">
+        <Typography color="text.secondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1rem' } }}>
           Track your sales performance and manage your earnings
         </Typography>
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="error" sx={{ mb: { xs: 2, sm: 3 } }}>
           {error}
         </Alert>
       )}
 
       {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card sx={{ background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)', color: 'white' }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Wallet size={32} />
-                <Box>
-                  <Typography variant="h4" fontWeight={700}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, flexDirection: { xs: 'column', sm: 'row' } }}>
+                <Box sx={{ display: { xs: 'none', sm: 'block' } }}><Wallet size={32} /></Box>
+                <Box sx={{ display: { xs: 'block', sm: 'none' } }}><Wallet size={24} /></Box>
+                <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
+                  <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2.125rem' } }}>
                     ${earnings?.availableBalance.toFixed(2) || '0.00'}
                   </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>Available Balance</Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' } }}>Available Balance</Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <DollarSign size={32} color="#0066FF" />
-                <Box>
-                  <Typography variant="h4" fontWeight={700}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, flexDirection: { xs: 'column', sm: 'row' } }}>
+                <Box sx={{ display: { xs: 'none', sm: 'block' } }}><DollarSign size={32} color="#0066FF" /></Box>
+                <Box sx={{ display: { xs: 'block', sm: 'none' } }}><DollarSign size={24} color="#0066FF" /></Box>
+                <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
+                  <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2.125rem' } }}>
                     ${earnings?.totalEarnings.toFixed(2) || '0.00'}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">Total Earnings</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' } }}>Total Earnings</Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <TrendingUp size={32} color="#A855F7" />
-                <Box>
-                  <Typography variant="h4" fontWeight={700}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, flexDirection: { xs: 'column', sm: 'row' } }}>
+                <Box sx={{ display: { xs: 'none', sm: 'block' } }}><TrendingUp size={32} color="#A855F7" /></Box>
+                <Box sx={{ display: { xs: 'block', sm: 'none' } }}><TrendingUp size={24} color="#A855F7" /></Box>
+                <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
+                  <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2.125rem' } }}>
                     ${earnings?.thisMonthEarnings.toFixed(2) || '0.00'}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">This Month</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' } }}>This Month</Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <ShoppingBag size={32} color="#F59E0B" />
-                <Box>
-                  <Typography variant="h4" fontWeight={700}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, flexDirection: { xs: 'column', sm: 'row' } }}>
+                <Box sx={{ display: { xs: 'none', sm: 'block' } }}><ShoppingBag size={32} color="#F59E0B" /></Box>
+                <Box sx={{ display: { xs: 'block', sm: 'none' } }}><ShoppingBag size={24} color="#F59E0B" /></Box>
+                <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
+                  <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2.125rem' } }}>
                     {earnings?.totalSales || 0}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">Total Sales</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' } }}>Total Sales</Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -205,59 +209,59 @@ export default function SellerEarningsPage() {
 
       {/* Pending Earnings Alert */}
       {earnings && earnings.pendingEarnings > 0 && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography fontWeight={600}>
+        <Alert severity="info" sx={{ mb: { xs: 2, sm: 3 } }}>
+          <Typography fontWeight={600} sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1rem' } }}>
             You have ${earnings.pendingEarnings.toFixed(2)} in pending earnings
           </Typography>
-          <Typography variant="body2">
+          <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.875rem' } }}>
             These earnings are being processed and will be available soon.
           </Typography>
         </Alert>
       )}
 
       {/* Recent Sales */}
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" fontWeight={600} gutterBottom>
+      <Paper sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
+        <Typography variant="h6" fontWeight={600} gutterBottom sx={{ fontSize: { xs: '1rem', sm: '1.125rem', md: '1.25rem' } }}>
           Recent Sales
         </Typography>
-        <Divider sx={{ mb: 2 }} />
+        <Divider sx={{ mb: { xs: 1.5, sm: 2 } }} />
 
         {sales.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 6 }}>
+          <Box sx={{ textAlign: 'center', py: { xs: 3, sm: 4, md: 6 } }}>
             <ShoppingBag size={48} color="#6B7280" style={{ opacity: 0.5, marginBottom: 16 }} />
-            <Typography color="text.secondary">No sales yet</Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography color="text.secondary" sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>No sales yet</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
               Your sales will appear here once you start selling products.
             </Typography>
           </Box>
         ) : (
-          <TableContainer>
-            <Table>
+          <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: { xs: 500, sm: 650 } }} size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Product</TableCell>
-                  <TableCell>Buyer</TableCell>
-                  <TableCell align="right">Amount</TableCell>
-                  <TableCell align="right">Commission</TableCell>
-                  <TableCell>Status</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>Date</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' } }}>Product</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' } }}>Buyer</TableCell>
+                  <TableCell align="right" sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' } }}>Amount</TableCell>
+                  <TableCell align="right" sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' } }}>Commission</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' } }}>Status</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {sales.map((sale) => (
                   <TableRow key={sale.id}>
-                    <TableCell>{formatDate(sale.created_at)}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>{formatDate(sale.created_at)}</TableCell>
                     <TableCell>
                       <Box>
-                        <Typography fontWeight={500}>{sale.product_name}</Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography fontWeight={500} sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' } }}>{sale.product_name}</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.6rem', sm: '0.7rem', md: '0.75rem' } }}>
                           {sale.product_type}
                         </Typography>
                       </Box>
                     </TableCell>
-                    <TableCell>{sale.buyer_name}</TableCell>
-                    <TableCell align="right">${sale.amount.toFixed(2)}</TableCell>
-                    <TableCell align="right" sx={{ color: 'success.main', fontWeight: 600 }}>
+                    <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' } }}>{sale.buyer_name}</TableCell>
+                    <TableCell align="right" sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' } }}>${sale.amount.toFixed(2)}</TableCell>
+                    <TableCell align="right" sx={{ color: 'success.main', fontWeight: 600, fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' } }}>
                       +${sale.commission.toFixed(2)}
                     </TableCell>
                     <TableCell>
@@ -265,6 +269,7 @@ export default function SellerEarningsPage() {
                         label={sale.status}
                         size="small"
                         color={sale.status === 'completed' ? 'success' : 'warning'}
+                        sx={{ fontSize: { xs: '0.6rem', sm: '0.7rem', md: '0.75rem' } }}
                       />
                     </TableCell>
                   </TableRow>

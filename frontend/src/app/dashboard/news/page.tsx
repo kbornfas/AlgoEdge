@@ -90,13 +90,13 @@ export default function NewsPage() {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1.5, sm: 2, md: 3 } }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 2, sm: 0 }, mb: { xs: 2, sm: 3, md: 4 } }}>
         <Box>
-          <Typography variant="h4" fontWeight={700} gutterBottom>
+          <Typography variant="h4" fontWeight={700} gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' } }}>
             Market News & Calendar
           </Typography>
-          <Typography color="text.secondary">
+          <Typography color="text.secondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' } }}>
             {today}
           </Typography>
         </Box>
@@ -105,6 +105,8 @@ export default function NewsPage() {
           startIcon={<RefreshCw size={18} />}
           onClick={fetchNews}
           disabled={loading}
+          size="small"
+          sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: { xs: 0.75, sm: 1 }, alignSelf: { xs: 'flex-end', sm: 'auto' } }}
         >
           Refresh
         </Button>
@@ -115,23 +117,23 @@ export default function NewsPage() {
           <CircularProgress />
         </Box>
       ) : (
-        <Grid container spacing={4}>
+        <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
           {/* Economic Calendar */}
           <Grid item xs={12} md={6}>
-            <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' } }}>
               <Calendar size={20} />
               Economic Calendar
             </Typography>
             {events.length === 0 ? (
-              <Card sx={{ p: 4, textAlign: 'center' }}>
+              <Card sx={{ p: { xs: 2, sm: 3, md: 4 }, textAlign: 'center' }}>
                 <Calendar size={48} color="#6B7280" style={{ opacity: 0.5, marginBottom: 16 }} />
-                <Typography color="text.secondary">No economic events scheduled for today</Typography>
+                <Typography color="text.secondary" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>No economic events scheduled for today</Typography>
               </Card>
             ) : (
               events.map((event) => (
-                <Card key={event.id} sx={{ mb: 2 }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Card key={event.id} sx={{ mb: { xs: 1.5, sm: 2 } }}>
+                  <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 1, sm: 0 }, mb: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Chip 
                           label={event.currency} 
@@ -148,26 +150,26 @@ export default function NewsPage() {
                           }}
                         />
                       </Box>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                         <Clock size={14} style={{ marginRight: 4, verticalAlign: 'middle' }} />
                         {event.time}
                       </Typography>
                     </Box>
-                    <Typography fontWeight={600}>{event.title}</Typography>
+                    <Typography fontWeight={600} sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>{event.title}</Typography>
                     {(event.forecast || event.previous) && (
-                      <Box sx={{ display: 'flex', gap: 3, mt: 1 }}>
+                      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 0.5, sm: 3 }, mt: 1 }}>
                         {event.actual && (
-                          <Typography variant="body2">
+                          <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                             <strong>Actual:</strong> {event.actual}
                           </Typography>
                         )}
                         {event.forecast && (
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                             <strong>Forecast:</strong> {event.forecast}
                           </Typography>
                         )}
                         {event.previous && (
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                             <strong>Previous:</strong> {event.previous}
                           </Typography>
                         )}
@@ -181,21 +183,21 @@ export default function NewsPage() {
 
           {/* Market News */}
           <Grid item xs={12} md={6}>
-            <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' } }}>
               <TrendingUp size={20} />
               Latest Market News
             </Typography>
             {news.length === 0 ? (
-              <Card sx={{ p: 4, textAlign: 'center' }}>
+              <Card sx={{ p: { xs: 2, sm: 3, md: 4 }, textAlign: 'center' }}>
                 <AlertTriangle size={48} color="#6B7280" style={{ opacity: 0.5, marginBottom: 16 }} />
-                <Typography color="text.secondary">No news available at the moment</Typography>
-                <Typography variant="body2" color="text.secondary">Check back later for updates</Typography>
+                <Typography color="text.secondary" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>No news available at the moment</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Check back later for updates</Typography>
               </Card>
             ) : (
               news.map((item) => (
-                <Card key={item.id} sx={{ mb: 2 }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Card key={item.id} sx={{ mb: { xs: 1.5, sm: 2 } }}>
+                  <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
                       <Chip 
                         label={item.currency} 
                         size="small" 
@@ -211,11 +213,11 @@ export default function NewsPage() {
                         }}
                       />
                     </Box>
-                    <Typography fontWeight={600} gutterBottom>{item.title}</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    <Typography fontWeight={600} gutterBottom sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>{item.title}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                       {item.summary}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                       {item.source} • {new Date(item.published_at).toLocaleString()}
                     </Typography>
                   </CardContent>

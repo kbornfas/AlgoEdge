@@ -437,8 +437,8 @@ export default function WalletPage() {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1.5, sm: 2, md: 3 } }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight={{ xs: '300px', md: '400px' }}>
           <CircularProgress />
         </Box>
       </Container>
@@ -446,14 +446,14 @@ export default function WalletPage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1.5, sm: 2, md: 3 } }}>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+      <Box display="flex" justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={{ xs: 2, sm: 3, md: 4 }} flexDirection={{ xs: 'column', sm: 'row' }} gap={{ xs: 1, sm: 0 }}>
         <Box>
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
+          <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' } }}>
             Wallet
           </Typography>
-          <Typography color="text.secondary">
+          <Typography color="text.secondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' } }}>
             Manage your balance, make deposits, and view transactions
           </Typography>
         </Box>
@@ -493,7 +493,7 @@ export default function WalletPage() {
       )}
 
       {/* Action Buttons */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1.5, sm: 2 }, mb: { xs: 2, sm: 3, md: 4 } }}>
         <Button
           variant="contained"
           color="success"
@@ -501,11 +501,14 @@ export default function WalletPage() {
           onClick={() => setDepositModalOpen(true)}
           disabled={wallet?.is_frozen}
           size="large"
+          fullWidth
           sx={{
-            py: 1.5,
-            px: 4,
+            py: { xs: 1.25, sm: 1.5 },
+            px: { xs: 2, sm: 4 },
             borderRadius: 2,
             fontWeight: 'bold',
+            fontSize: { xs: '0.875rem', sm: '1rem' },
+            width: { xs: '100%', sm: 'auto' },
             background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
             boxShadow: '0 4px 14px rgba(34, 197, 94, 0.3)',
             '&:hover': {
@@ -523,84 +526,90 @@ export default function WalletPage() {
           onClick={() => openActionDialog('withdraw')}
           disabled={wallet?.is_frozen || (wallet?.balance || 0) < 10}
           size="large"
+          sx={{
+            py: { xs: 1.25, sm: 1.5 },
+            px: { xs: 2, sm: 4 },
+            fontSize: { xs: '0.875rem', sm: '1rem' },
+            width: { xs: '100%', sm: 'auto' },
+          }}
         >
           Withdraw Funds
         </Button>
       </Box>
 
       {/* Balance Cards */}
-      <Grid container spacing={3} mb={4}>
-        <Grid item xs={12} md={3}>
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} mb={{ xs: 2, sm: 3, md: 4 }}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card 
             sx={{ 
               background: 'linear-gradient(135deg, #1D9BF0 0%, #0A8DDC 100%)',
               color: 'white',
             }}
           >
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <WalletIcon />
-                <Typography variant="subtitle2">Available Balance</Typography>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+              <Box display="flex" alignItems="center" gap={{ xs: 0.5, sm: 1 }} mb={{ xs: 1, sm: 2 }}>
+                <WalletIcon sx={{ fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' } }} />
+                <Typography variant="subtitle2" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' } }}>Available Balance</Typography>
               </Box>
-              <Typography variant="h3" fontWeight="bold">
+              <Typography variant="h3" fontWeight="bold" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2rem' } }}>
                 ${wallet?.balance.toFixed(2) || '0.00'}
               </Typography>
               {wallet && wallet.pending_deposits > 0 && (
-                <Typography variant="body2" sx={{ opacity: 0.8, mt: 1 }}>
-                  +${wallet.pending_deposits.toFixed(2)} pending deposit
+                <Typography variant="body2" sx={{ opacity: 0.8, mt: 1, fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' } }}>
+                  +${wallet.pending_deposits.toFixed(2)} pending
                 </Typography>
               )}
               {wallet && (wallet.pending_withdrawals || 0) > 0 && (
-                <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                  -${(wallet.pending_withdrawals || 0).toFixed(2)} pending withdrawal
+                <Typography variant="body2" sx={{ opacity: 0.8, fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' } }}>
+                  -${(wallet.pending_withdrawals || 0).toFixed(2)} pending
                 </Typography>
               )}
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <DepositIcon color="success" />
-                <Typography variant="subtitle2" color="text.secondary">
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+              <Box display="flex" alignItems="center" gap={{ xs: 0.5, sm: 1 }} mb={{ xs: 1, sm: 2 }}>
+                <DepositIcon color="success" sx={{ fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' } }} />
+                <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' } }}>
                   Total Deposited
                 </Typography>
               </Box>
-              <Typography variant="h4" fontWeight="bold" color="success.main">
+              <Typography variant="h4" fontWeight="bold" color="success.main" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}>
                 ${wallet?.total_deposited.toFixed(2) || '0.00'}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <ShoppingCartIcon color="primary" />
-                <Typography variant="subtitle2" color="text.secondary">
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+              <Box display="flex" alignItems="center" gap={{ xs: 0.5, sm: 1 }} mb={{ xs: 1, sm: 2 }}>
+                <ShoppingCartIcon color="primary" sx={{ fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' } }} />
+                <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' } }}>
                   Total Spent
                 </Typography>
               </Box>
-              <Typography variant="h4" fontWeight="bold">
+              <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}>
                 ${wallet?.total_spent.toFixed(2) || '0.00'}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <WithdrawIcon color="warning" />
-                <Typography variant="subtitle2" color="text.secondary">
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+              <Box display="flex" alignItems="center" gap={{ xs: 0.5, sm: 1 }} mb={{ xs: 1, sm: 2 }}>
+                <WithdrawIcon color="warning" sx={{ fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' } }} />
+                <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' } }}>
                   Total Withdrawn
                 </Typography>
               </Box>
-              <Typography variant="h4" fontWeight="bold" color="warning.main">
+              <Typography variant="h4" fontWeight="bold" color="warning.main" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}>
                 ${(wallet?.total_withdrawn || 0).toFixed(2)}
               </Typography>
             </CardContent>
@@ -609,17 +618,17 @@ export default function WalletPage() {
       </Grid>
 
       {/* Payment Methods Info */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <AddIcon /> Accepted Payment Methods
+      <Paper sx={{ p: { xs: 2, sm: 2.5, md: 3 }, mb: { xs: 2, sm: 3, md: 4 } }}>
+        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '1rem', sm: '1.15rem', md: '1.25rem' } }}>
+          <AddIcon sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }} /> Accepted Payment Methods
         </Typography>
-        <Typography color="text.secondary" sx={{ mb: 3 }}>
+        <Typography color="text.secondary" sx={{ mb: { xs: 2, sm: 2.5, md: 3 }, fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' } }}>
           We accept the following payment methods for deposits and withdrawals
         </Typography>
 
-        <Grid container spacing={2}>
+        <Grid container spacing={{ xs: 1, sm: 1.5, md: 2 }}>
           {PAYMENT_METHODS.map((method) => (
-            <Grid item xs={12} sm={4} key={method.id}>
+            <Grid item xs={6} sm={4} md={4} key={method.id}>
               <Card 
                 sx={{ 
                   border: '1px solid',
@@ -627,25 +636,26 @@ export default function WalletPage() {
                   borderLeft: `4px solid ${method.color}`,
                 }}
               >
-                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5, md: 2 }, p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
                   <Box sx={{ 
-                    width: 40, 
-                    height: 40, 
+                    width: { xs: 28, sm: 34, md: 40 }, 
+                    height: { xs: 28, sm: 34, md: 40 }, 
                     display: 'flex', 
                     alignItems: 'center', 
-                    justifyContent: 'center' 
+                    justifyContent: 'center',
+                    flexShrink: 0
                   }}>
                     <img 
                       src={method.icon} 
                       alt={method.label} 
-                      style={{ width: 36, height: 36, borderRadius: '50%' }} 
+                      style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'contain' }} 
                     />
                   </Box>
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight="medium">
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="subtitle1" fontWeight="medium" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' }, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {method.label}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.6rem', sm: '0.7rem', md: '0.75rem' }, display: { xs: 'none', sm: 'block' } }}>
                       {method.id === 'mpesa' || method.id === 'airtel_money' ? 'Mobile Money' : 'Cryptocurrency'}
                     </Typography>
                   </Box>
@@ -658,19 +668,19 @@ export default function WalletPage() {
 
       {/* Pending Deposits */}
       {depositHistory.filter(d => d.status === 'pending').length > 0 && (
-        <Paper sx={{ p: 3, mb: 4 }}>
-          <Typography variant="h6" gutterBottom color="warning.main">
+        <Paper sx={{ p: { xs: 1.5, sm: 2, md: 3 }, mb: { xs: 2, sm: 3, md: 4 } }}>
+          <Typography variant="h6" gutterBottom color="warning.main" sx={{ fontSize: { xs: '1rem', sm: '1.15rem', md: '1.25rem' } }}>
             Pending Deposits
           </Typography>
-          <TableContainer>
-            <Table size="small">
+          <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: { xs: 400, sm: 500, md: 'auto' } }}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Method</TableCell>
-                  <TableCell>Reference</TableCell>
-                  <TableCell>Status</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 1, sm: 2 } }}>Date</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 1, sm: 2 } }}>Amount</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 1, sm: 2 } }}>Method</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 1, sm: 2 }, display: { xs: 'none', sm: 'table-cell' } }}>Reference</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 1, sm: 2 } }}>Status</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -678,17 +688,18 @@ export default function WalletPage() {
                   .filter(d => d.status === 'pending')
                   .map((deposit) => (
                     <TableRow key={deposit.id}>
-                      <TableCell>
+                      <TableCell sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' }, py: { xs: 0.75, sm: 1 }, px: { xs: 1, sm: 2 }, whiteSpace: 'nowrap' }}>
                         {formatDate(deposit.created_at)}
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'medium' }}>${deposit.amount.toFixed(2)}</TableCell>
-                      <TableCell>{getPaymentMethodLabel(deposit.payment_method)}</TableCell>
-                      <TableCell>{deposit.payment_reference || '-'}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ fontWeight: 'medium', fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 0.75, sm: 1 }, px: { xs: 1, sm: 2 } }}>${deposit.amount.toFixed(2)}</TableCell>
+                      <TableCell sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' }, py: { xs: 0.75, sm: 1 }, px: { xs: 1, sm: 2 } }}>{getPaymentMethodLabel(deposit.payment_method)}</TableCell>
+                      <TableCell sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' }, py: { xs: 0.75, sm: 1 }, px: { xs: 1, sm: 2 }, display: { xs: 'none', sm: 'table-cell' } }}>{deposit.payment_reference || '-'}</TableCell>
+                      <TableCell sx={{ py: { xs: 0.75, sm: 1 }, px: { xs: 1, sm: 2 } }}>
                         <Chip 
                           label={deposit.status} 
                           size="small" 
                           color={getStatusColor(deposit.status) as any}
+                          sx={{ fontSize: { xs: '0.6rem', sm: '0.7rem', md: '0.75rem' }, height: { xs: 20, sm: 24 } }}
                         />
                       </TableCell>
                     </TableRow>
@@ -701,21 +712,21 @@ export default function WalletPage() {
 
       {/* Pending Withdrawals */}
       {withdrawalHistory.filter(w => w.status === 'pending' || w.status === 'processing').length > 0 && (
-        <Paper sx={{ p: 3, mb: 4 }}>
-          <Typography variant="h6" gutterBottom color="warning.main">
+        <Paper sx={{ p: { xs: 1.5, sm: 2, md: 3 }, mb: { xs: 2, sm: 3, md: 4 } }}>
+          <Typography variant="h6" gutterBottom color="warning.main" sx={{ fontSize: { xs: '1rem', sm: '1.15rem', md: '1.25rem' } }}>
             Pending Withdrawals
           </Typography>
-          <TableContainer>
-            <Table size="small">
+          <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: { xs: 450, sm: 600, md: 'auto' } }}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Fee</TableCell>
-                  <TableCell>Net</TableCell>
-                  <TableCell>Method</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 0.75, sm: 2 } }}>Date</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 0.75, sm: 2 } }}>Amount</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 0.75, sm: 2 }, display: { xs: 'none', sm: 'table-cell' } }}>Fee</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 0.75, sm: 2 } }}>Net</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 0.75, sm: 2 }, display: { xs: 'none', md: 'table-cell' } }}>Method</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 0.75, sm: 2 } }}>Status</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 0.75, sm: 2 } }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -723,31 +734,33 @@ export default function WalletPage() {
                   .filter(w => w.status === 'pending' || w.status === 'processing')
                   .map((withdrawal) => (
                     <TableRow key={withdrawal.id}>
-                      <TableCell>
+                      <TableCell sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' }, py: { xs: 0.75, sm: 1 }, px: { xs: 0.75, sm: 2 }, whiteSpace: 'nowrap' }}>
                         {formatDate(withdrawal.created_at)}
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'medium' }}>${parseFloat(String(withdrawal.amount)).toFixed(2)}</TableCell>
-                      <TableCell sx={{ color: 'text.secondary' }}>${parseFloat(String(withdrawal.withdrawal_fee)).toFixed(2)}</TableCell>
-                      <TableCell sx={{ fontWeight: 'medium', color: 'success.main' }}>
+                      <TableCell sx={{ fontWeight: 'medium', fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 0.75, sm: 1 }, px: { xs: 0.75, sm: 2 } }}>${parseFloat(String(withdrawal.amount)).toFixed(2)}</TableCell>
+                      <TableCell sx={{ color: 'text.secondary', fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' }, py: { xs: 0.75, sm: 1 }, px: { xs: 0.75, sm: 2 }, display: { xs: 'none', sm: 'table-cell' } }}>${parseFloat(String(withdrawal.withdrawal_fee)).toFixed(2)}</TableCell>
+                      <TableCell sx={{ fontWeight: 'medium', color: 'success.main', fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 0.75, sm: 1 }, px: { xs: 0.75, sm: 2 } }}>
                         ${parseFloat(String(withdrawal.net_amount)).toFixed(2)}
                       </TableCell>
-                      <TableCell>{getPaymentMethodLabel(withdrawal.payment_method)}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' }, py: { xs: 0.75, sm: 1 }, px: { xs: 0.75, sm: 2 }, display: { xs: 'none', md: 'table-cell' } }}>{getPaymentMethodLabel(withdrawal.payment_method)}</TableCell>
+                      <TableCell sx={{ py: { xs: 0.75, sm: 1 }, px: { xs: 0.75, sm: 2 } }}>
                         <Chip 
                           label={withdrawal.status} 
                           size="small" 
                           color={withdrawal.status === 'pending' ? 'warning' : 'info'}
+                          sx={{ fontSize: { xs: '0.6rem', sm: '0.7rem', md: '0.75rem' }, height: { xs: 20, sm: 24 } }}
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ py: { xs: 0.75, sm: 1 }, px: { xs: 0.75, sm: 2 } }}>
                         {withdrawal.status === 'pending' && (
                           <Tooltip title="Cancel Withdrawal">
                             <IconButton 
                               size="small" 
                               color="error"
                               onClick={() => handleCancelWithdrawal(withdrawal.id)}
+                              sx={{ p: { xs: 0.5, sm: 1 } }}
                             >
-                              <CancelIcon />
+                              <CancelIcon sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} />
                             </IconButton>
                           </Tooltip>
                         )}
@@ -761,51 +774,55 @@ export default function WalletPage() {
       )}
 
       {/* Recent Transactions */}
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <HistoryIcon /> Recent Transactions
+      <Paper sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
+        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '1rem', sm: '1.15rem', md: '1.25rem' } }}>
+          <HistoryIcon sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }} /> Recent Transactions
         </Typography>
 
         {transactions.length === 0 ? (
-          <Box textAlign="center" py={4}>
-            <Typography color="text.secondary">No transactions yet</Typography>
+          <Box textAlign="center" py={{ xs: 2, sm: 3, md: 4 }}>
+            <Typography color="text.secondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' } }}>No transactions yet</Typography>
           </Box>
         ) : (
-          <TableContainer>
-            <Table>
+          <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: { xs: 400, sm: 500, md: 'auto' } }}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Description</TableCell>
-                  <TableCell align="right">Amount</TableCell>
-                  <TableCell align="right">Balance</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 1, sm: 2 } }}>Date</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 1, sm: 2 } }}>Type</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 1, sm: 2 }, display: { xs: 'none', sm: 'table-cell' } }}>Description</TableCell>
+                  <TableCell align="right" sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 1, sm: 2 } }}>Amount</TableCell>
+                  <TableCell align="right" sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 1, sm: 2 } }}>Balance</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {transactions.map((tx) => (
                   <TableRow key={tx.id}>
-                    <TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' }, py: { xs: 0.75, sm: 1 }, px: { xs: 1, sm: 2 }, whiteSpace: 'nowrap' }}>
                       {formatDate(tx.created_at)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ py: { xs: 0.75, sm: 1 }, px: { xs: 1, sm: 2 } }}>
                       <Chip 
                         label={tx.type} 
                         size="small"
                         color={tx.type === 'deposit' ? 'success' : tx.type === 'purchase' ? 'primary' : 'default'}
+                        sx={{ fontSize: { xs: '0.6rem', sm: '0.7rem', md: '0.75rem' }, height: { xs: 20, sm: 24 } }}
                       />
                     </TableCell>
-                    <TableCell>{tx.description}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' }, py: { xs: 0.75, sm: 1 }, px: { xs: 1, sm: 2 }, display: { xs: 'none', sm: 'table-cell' } }}>{tx.description}</TableCell>
                     <TableCell 
                       align="right"
                       sx={{ 
                         fontWeight: 'medium',
                         color: tx.amount >= 0 ? 'success.main' : 'error.main',
+                        fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' },
+                        py: { xs: 0.75, sm: 1 },
+                        px: { xs: 1, sm: 2 }
                       }}
                     >
                       {tx.amount >= 0 ? '+' : ''}${Math.abs(tx.amount).toFixed(2)}
                     </TableCell>
-                    <TableCell align="right">${tx.balance_after.toFixed(2)}</TableCell>
+                    <TableCell align="right" sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }, py: { xs: 0.75, sm: 1 }, px: { xs: 1, sm: 2 } }}>${tx.balance_after.toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -820,27 +837,35 @@ export default function WalletPage() {
         onClose={() => setActionDialogOpen(false)}
         maxWidth="sm"
         fullWidth
+        fullScreen={false}
+        sx={{
+          '& .MuiDialog-paper': {
+            m: { xs: 1, sm: 2, md: 3 },
+            maxHeight: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 32px)', md: 'calc(100% - 64px)' },
+            width: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 32px)', md: '100%' },
+          }
+        }}
       >
-        <DialogTitle>
-          <Box display="flex" alignItems="center" gap={2}>
-            {actionType === 'deposit' ? <DepositIcon color="success" /> : <WithdrawIcon color="warning" />}
-            <Typography variant="h6">
+        <DialogTitle sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
+          <Box display="flex" alignItems="center" gap={{ xs: 1, sm: 2 }}>
+            {actionType === 'deposit' ? <DepositIcon color="success" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} /> : <WithdrawIcon color="warning" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />}
+            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.15rem', md: '1.25rem' } }}>
               {actionType === 'deposit' ? 'Deposit Funds' : 'Withdraw Funds'}
             </Typography>
           </Box>
         </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
+        <DialogContent sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
+          <Box sx={{ pt: { xs: 1, sm: 2 } }}>
             {/* Payment Method Selection */}
-            <Typography variant="subtitle2" gutterBottom fontWeight="bold">
+            <Typography variant="subtitle2" gutterBottom fontWeight="bold" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
               Select Payment Method
             </Typography>
-            <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid container spacing={{ xs: 1, sm: 1.5, md: 2 }} sx={{ mb: { xs: 2, sm: 3 } }}>
               {PAYMENT_METHODS.map((method) => (
-                <Grid item xs={4} key={method.id}>
+                <Grid item xs={4} sm={4} md={4} key={method.id}>
                   <Paper
                     sx={{
-                      p: 2,
+                      p: { xs: 1, sm: 1.5, md: 2 },
                       cursor: 'pointer',
                       border: selectedMethod === method.id ? '2px solid' : '1px solid',
                       borderColor: selectedMethod === method.id ? method.color : 'divider',
@@ -854,10 +879,10 @@ export default function WalletPage() {
                     }}
                   >
                     <Box textAlign="center">
-                      <Box sx={{ color: method.color, mb: 1 }}>
-                        {method.icon === 'phone' ? <PhoneIcon /> : <CryptoIcon />}
+                      <Box sx={{ color: method.color, mb: { xs: 0.5, sm: 1 } }}>
+                        {method.icon === 'phone' ? <PhoneIcon sx={{ fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' } }} /> : <CryptoIcon sx={{ fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' } }} />}
                       </Box>
-                      <Typography variant="body2" fontWeight={selectedMethod === method.id ? 'bold' : 'normal'}>
+                      <Typography variant="body2" fontWeight={selectedMethod === method.id ? 'bold' : 'normal'} sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem', md: '0.875rem' }, lineHeight: 1.2 }}>
                         {method.label}
                       </Typography>
                     </Box>
@@ -866,7 +891,7 @@ export default function WalletPage() {
               ))}
             </Grid>
 
-            <Divider sx={{ my: 2 }} />
+            <Divider sx={{ my: { xs: 1.5, sm: 2 } }} />
 
             {/* Amount Input */}
             <TextField
@@ -876,29 +901,31 @@ export default function WalletPage() {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               inputProps={{ min: actionType === 'deposit' ? 19 : 10, step: 1 }}
-              sx={{ mb: 3 }}
+              sx={{ mb: { xs: 2, sm: 3 } }}
+              size="medium"
               required
               helperText={
                 actionType === 'deposit'
                   ? 'Minimum deposit: $19'
                   : `Minimum: $10 | Available: $${wallet?.balance.toFixed(2) || '0.00'} | Fee: 3%`
               }
+              FormHelperTextProps={{ sx: { fontSize: { xs: '0.65rem', sm: '0.75rem' } } }}
             />
 
             {/* DEPOSIT: Show platform payment details */}
             {actionType === 'deposit' && (
               <>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  <Typography variant="body2" fontWeight="bold">
+                <Alert severity="info" sx={{ mb: { xs: 1.5, sm: 2 }, '& .MuiAlert-message': { fontSize: { xs: '0.75rem', sm: '0.875rem' } } }}>
+                  <Typography variant="body2" fontWeight="bold" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Step 1: Send money to the details below
                   </Typography>
-                  <Typography variant="body2">
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Step 2: Enter the transaction reference/confirmation code
                   </Typography>
                 </Alert>
 
-                <Paper sx={{ p: 2, mb: 3, bgcolor: 'rgba(0, 50, 50, 0.8)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
-                  <Typography variant="subtitle2" color="rgba(255,255,255,0.7)" gutterBottom>
+                <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: { xs: 2, sm: 3 }, bgcolor: 'rgba(0, 50, 50, 0.8)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+                  <Typography variant="subtitle2" color="rgba(255,255,255,0.7)" gutterBottom sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Send {getPaymentMethodLabel(selectedMethod)} to:
                   </Typography>
                   
@@ -906,16 +933,17 @@ export default function WalletPage() {
                     <>
                       <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
                         <Box>
-                          <Typography variant="body2" color="rgba(255,255,255,0.6)">Phone Number</Typography>
-                          <Typography variant="h6" fontWeight="bold" sx={{ color: '#fff' }}>
+                          <Typography variant="body2" color="rgba(255,255,255,0.6)" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>Phone Number</Typography>
+                          <Typography variant="h6" fontWeight="bold" sx={{ color: '#fff', fontSize: { xs: '1rem', sm: '1.15rem', md: '1.25rem' } }}>
                             {PLATFORM_PAYMENT_DETAILS[selectedMethod as 'mpesa' | 'airtel_money'].number}
                           </Typography>
                         </Box>
                         <IconButton 
                           onClick={() => handleCopy(PLATFORM_PAYMENT_DETAILS[selectedMethod as 'mpesa' | 'airtel_money'].number, 'phone')}
                           size="small"
+                          sx={{ p: { xs: 0.5, sm: 1 } }}
                         >
-                          {copiedField === 'phone' ? <CheckIcon color="success" /> : <CopyIcon />}
+                          {copiedField === 'phone' ? <CheckIcon color="success" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} /> : <CopyIcon sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} />}
                         </IconButton>
                       </Box>
                     </>
@@ -925,20 +953,21 @@ export default function WalletPage() {
                     <>
                       <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
                         <Box sx={{ maxWidth: '80%' }}>
-                          <Typography variant="body2" color="rgba(255,255,255,0.6)">USDT Address (TRC20)</Typography>
-                          <Typography variant="body1" fontWeight="bold" sx={{ wordBreak: 'break-all', color: '#fff' }}>
+                          <Typography variant="body2" color="rgba(255,255,255,0.6)" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>USDT Address (TRC20)</Typography>
+                          <Typography variant="body1" fontWeight="bold" sx={{ wordBreak: 'break-all', color: '#fff', fontSize: { xs: '0.7rem', sm: '0.85rem', md: '1rem' } }}>
                             {PLATFORM_PAYMENT_DETAILS.usdt.address}
                           </Typography>
                         </Box>
                         <IconButton 
                           onClick={() => handleCopy(PLATFORM_PAYMENT_DETAILS.usdt.address, 'address')}
                           size="small"
+                          sx={{ p: { xs: 0.5, sm: 1 }, flexShrink: 0 }}
                         >
-                          {copiedField === 'address' ? <CheckIcon color="success" /> : <CopyIcon />}
+                          {copiedField === 'address' ? <CheckIcon color="success" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} /> : <CopyIcon sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} />}
                         </IconButton>
                       </Box>
-                      <Alert severity="warning" sx={{ mt: 1 }}>
-                        <Typography variant="body2">
+                      <Alert severity="warning" sx={{ mt: 1, '& .MuiAlert-message': { fontSize: { xs: '0.7rem', sm: '0.875rem' } } }}>
+                        <Typography variant="body2" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
                           Only send USDT on TRC20 network. Sending other tokens or using wrong network will result in loss of funds.
                         </Typography>
                       </Alert>
@@ -949,20 +978,21 @@ export default function WalletPage() {
                     <>
                       <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
                         <Box sx={{ maxWidth: '80%' }}>
-                          <Typography variant="body2" color="rgba(255,255,255,0.6)">Bitcoin Address</Typography>
-                          <Typography variant="body1" fontWeight="bold" sx={{ wordBreak: 'break-all', color: '#fff' }}>
+                          <Typography variant="body2" color="rgba(255,255,255,0.6)" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>Bitcoin Address</Typography>
+                          <Typography variant="body1" fontWeight="bold" sx={{ wordBreak: 'break-all', color: '#fff', fontSize: { xs: '0.7rem', sm: '0.85rem', md: '1rem' } }}>
                             {PLATFORM_PAYMENT_DETAILS.btc.address}
                           </Typography>
                         </Box>
                         <IconButton 
                           onClick={() => handleCopy(PLATFORM_PAYMENT_DETAILS.btc.address, 'address')}
                           size="small"
+                          sx={{ p: { xs: 0.5, sm: 1 }, flexShrink: 0 }}
                         >
-                          {copiedField === 'address' ? <CheckIcon color="success" /> : <CopyIcon />}
+                          {copiedField === 'address' ? <CheckIcon color="success" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} /> : <CopyIcon sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} />}
                         </IconButton>
                       </Box>
-                      <Alert severity="warning" sx={{ mt: 1 }}>
-                        <Typography variant="body2">
+                      <Alert severity="warning" sx={{ mt: 1, '& .MuiAlert-message': { fontSize: { xs: '0.7rem', sm: '0.875rem' } } }}>
+                        <Typography variant="body2" sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
                           Only send Bitcoin (BTC). Sending other tokens will result in loss of funds.
                         </Typography>
                       </Alert>
@@ -989,8 +1019,8 @@ export default function WalletPage() {
             {/* WITHDRAW: Collect user's payment details */}
             {actionType === 'withdraw' && (
               <>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  <Typography variant="body2">
+                <Alert severity="info" sx={{ mb: { xs: 1.5, sm: 2 }, '& .MuiAlert-message': { fontSize: { xs: '0.75rem', sm: '0.875rem' } } }}>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     <strong>Withdrawal Fee:</strong> 3%<br />
                     <strong>Processing Time:</strong> 24-48 hours
                   </Typography>
@@ -1003,7 +1033,8 @@ export default function WalletPage() {
                     value={userPaymentDetails.phone_number || ''}
                     onChange={(e) => setUserPaymentDetails({ ...userPaymentDetails, phone_number: e.target.value })}
                     placeholder="+254..."
-                    sx={{ mb: 2 }}
+                    sx={{ mb: { xs: 1.5, sm: 2 } }}
+                    size="medium"
                     required
                   />
                 )}
@@ -1015,11 +1046,12 @@ export default function WalletPage() {
                       fullWidth
                       value={userPaymentDetails.wallet_address || ''}
                       onChange={(e) => setUserPaymentDetails({ ...userPaymentDetails, wallet_address: e.target.value })}
-                      sx={{ mb: 2 }}
+                      sx={{ mb: { xs: 1.5, sm: 2 } }}
+                      size="medium"
                       required
                     />
-                    <Alert severity="warning" sx={{ mb: 2 }}>
-                      <Typography variant="body2">
+                    <Alert severity="warning" sx={{ mb: { xs: 1.5, sm: 2 }, '& .MuiAlert-message': { fontSize: { xs: '0.75rem', sm: '0.875rem' } } }}>
+                      <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                         Make sure your wallet supports USDT on TRC20 network.
                       </Typography>
                     </Alert>
@@ -1033,11 +1065,12 @@ export default function WalletPage() {
                       fullWidth
                       value={userPaymentDetails.wallet_address || ''}
                       onChange={(e) => setUserPaymentDetails({ ...userPaymentDetails, wallet_address: e.target.value })}
-                      sx={{ mb: 2 }}
+                      sx={{ mb: { xs: 1.5, sm: 2 } }}
+                      size="medium"
                       required
                     />
-                    <Alert severity="warning" sx={{ mb: 2 }}>
-                      <Typography variant="body2">
+                    <Alert severity="warning" sx={{ mb: { xs: 1.5, sm: 2 }, '& .MuiAlert-message': { fontSize: { xs: '0.75rem', sm: '0.875rem' } } }}>
+                      <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                         Make sure you provide a valid Bitcoin address.
                       </Typography>
                     </Alert>
@@ -1045,12 +1078,12 @@ export default function WalletPage() {
                 )}
 
                 {amount && parseFloat(amount) >= 10 && (
-                  <Paper sx={{ p: 2, bgcolor: 'success.50', border: '1px solid', borderColor: 'success.main' }}>
-                    <Typography variant="body2" color="text.secondary">You will receive:</Typography>
-                    <Typography variant="h5" fontWeight="bold" color="success.main">
+                  <Paper sx={{ p: { xs: 1.5, sm: 2 }, bgcolor: 'success.50', border: '1px solid', borderColor: 'success.main' }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>You will receive:</Typography>
+                    <Typography variant="h5" fontWeight="bold" color="success.main" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                       ${Math.max(parseFloat(amount) - (parseFloat(amount) * 0.02 + 1), 0).toFixed(2)}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                       After 3% withdrawal fee
                     </Typography>
                   </Paper>
@@ -1059,8 +1092,12 @@ export default function WalletPage() {
             )}
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setActionDialogOpen(false)} disabled={submitting}>
+        <DialogActions sx={{ p: { xs: 1.5, sm: 2, md: 3 }, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1, sm: 0 } }}>
+          <Button 
+            onClick={() => setActionDialogOpen(false)} 
+            disabled={submitting}
+            sx={{ width: { xs: '100%', sm: 'auto' }, order: { xs: 2, sm: 1 } }}
+          >
             Cancel
           </Button>
           <Button 
@@ -1068,7 +1105,8 @@ export default function WalletPage() {
             color={actionType === 'deposit' ? 'success' : 'warning'}
             onClick={actionType === 'deposit' ? handleSubmitDeposit : handleSubmitWithdraw}
             disabled={submitting}
-            startIcon={submitting ? <CircularProgress size={20} /> : (actionType === 'deposit' ? <DepositIcon /> : <WithdrawIcon />)}
+            startIcon={submitting ? <CircularProgress size={18} /> : (actionType === 'deposit' ? <DepositIcon /> : <WithdrawIcon />)}
+            sx={{ width: { xs: '100%', sm: 'auto' }, order: { xs: 1, sm: 2 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
           >
             {submitting ? 'Processing...' : (actionType === 'deposit' ? 'Submit Deposit Request' : 'Submit Withdrawal Request')}
           </Button>

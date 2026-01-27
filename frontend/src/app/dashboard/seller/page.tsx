@@ -396,22 +396,30 @@ export default function SellerDashboardPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: 4 }}>
-      <Container maxWidth="lg">
+    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 } }}>
+      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 } }}>
         {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between', 
+          alignItems: { xs: 'flex-start', sm: 'center' }, 
+          gap: 2,
+          mb: { xs: 2, md: 4 } 
+        }}>
           <Box>
-            <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, mb: 1 }}>
+            <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, mb: 1, fontSize: { xs: '1.5rem', md: '2rem' } }}>
               Seller Dashboard
             </Typography>
-            <Typography sx={{ color: 'rgba(255,255,255,0.6)' }}>
+            <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.875rem', md: '1rem' } }}>
               Manage your listings and track your earnings
             </Typography>
           </Box>
-          <Stack direction="row" spacing={2}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
             <Button
               startIcon={<Plus size={18} />}
               variant="outlined"
+              fullWidth
               sx={{ borderColor: '#8B5CF6', color: '#8B5CF6' }}
               component={Link}
               href="/dashboard/seller/create"
@@ -421,6 +429,7 @@ export default function SellerDashboardPage() {
             <Button
               startIcon={<Wallet size={18} />}
               variant="contained"
+              fullWidth
               onClick={() => setPayoutDialogOpen(true)}
               disabled={!stats?.wallet?.available_balance || stats.wallet.available_balance < 50}
               sx={{ bgcolor: '#8B5CF6', '&:hover': { bgcolor: '#7C3AED' } }}
@@ -441,13 +450,13 @@ export default function SellerDashboardPage() {
         {!stats?.is_verified && (
         <Card
           sx={{
-            mb: 4,
+            mb: { xs: 2, md: 4 },
             background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.05) 100%)',
             border: '1px solid rgba(139, 92, 246, 0.3)',
           }}
         >
-          <CardContent>
-            <Grid container spacing={3} alignItems="center">
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Grid container spacing={{ xs: 2, md: 3 }} alignItems="center">
               <Grid item xs={12} md={8}>
                 <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
                   <Box
@@ -458,35 +467,36 @@ export default function SellerDashboardPage() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      flexShrink: 0,
                     }}
                   >
-                    <ShieldCheck size={32} color="#8B5CF6" />
+                    <ShieldCheck size={28} color="#8B5CF6" />
                   </Box>
                   <Box>
-                    <Typography variant="h5" sx={{ color: 'white', fontWeight: 800 }}>
+                    <Typography variant="h5" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1.1rem', md: '1.5rem' } }}>
                       Get Verified
                     </Typography>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.8rem', md: '1rem' } }}>
                       Boost your credibility with a verified seller badge
                     </Typography>
                   </Box>
                 </Stack>
-                <Stack direction="row" spacing={3} sx={{ mt: 2 }}>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 1, md: 3 }} sx={{ mt: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CheckCircle size={16} color="#22C55E" />
-                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
+                    <CheckCircle size={14} color="#22C55E" />
+                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                       Verified badge on all listings
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CheckCircle size={16} color="#22C55E" />
-                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
+                    <CheckCircle size={14} color="#22C55E" />
+                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                       Higher visibility in search
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CheckCircle size={16} color="#22C55E" />
-                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
+                    <CheckCircle size={14} color="#22C55E" />
+                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                       Increased buyer confidence
                     </Typography>
                   </Box>
@@ -538,73 +548,85 @@ export default function SellerDashboardPage() {
         )}
 
         {/* Quick Actions */}
-        <Grid container spacing={2} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
+        <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mb: { xs: 2, md: 4 } }}>
+          <Grid item xs={6} sm={6} md={3}>
             <Button
               fullWidth
               variant="outlined"
-              startIcon={<Package size={20} />}
+              startIcon={<Package size={18} />}
               component={Link}
               href="/dashboard/seller/listings"
               sx={{
-                py: 2,
+                py: { xs: 1.5, md: 2 },
                 borderColor: 'rgba(34, 197, 94, 0.5)',
                 color: '#22C55E',
+                fontSize: { xs: '0.7rem', sm: '0.875rem' },
                 '&:hover': { borderColor: '#22C55E', bgcolor: 'rgba(34, 197, 94, 0.1)' },
+                '& .MuiButton-startIcon': { mr: { xs: 0.5, sm: 1 } },
               }}
             >
-              Manage Listings & Prices
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Manage Listings & Prices</Box>
+              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Listings</Box>
             </Button>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <Button
               fullWidth
               variant="outlined"
-              startIcon={<Download size={20} />}
+              startIcon={<Download size={18} />}
               component={Link}
               href="/dashboard/seller/deliverables"
               sx={{
-                py: 2,
+                py: { xs: 1.5, md: 2 },
                 borderColor: 'rgba(245, 158, 11, 0.5)',
                 color: '#F59E0B',
+                fontSize: { xs: '0.7rem', sm: '0.875rem' },
                 '&:hover': { borderColor: '#F59E0B', bgcolor: 'rgba(245, 158, 11, 0.1)' },
+                '& .MuiButton-startIcon': { mr: { xs: 0.5, sm: 1 } },
               }}
             >
-              Manage Deliverables
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Manage Deliverables</Box>
+              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Deliverables</Box>
             </Button>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <Button
               fullWidth
               variant="outlined"
-              startIcon={<Users size={20} />}
+              startIcon={<Users size={18} />}
               component={Link}
               href="/dashboard/seller/customers"
               sx={{
-                py: 2,
+                py: { xs: 1.5, md: 2 },
                 borderColor: 'rgba(59, 130, 246, 0.5)',
                 color: '#3B82F6',
+                fontSize: { xs: '0.7rem', sm: '0.875rem' },
                 '&:hover': { borderColor: '#3B82F6', bgcolor: 'rgba(59, 130, 246, 0.1)' },
+                '& .MuiButton-startIcon': { mr: { xs: 0.5, sm: 1 } },
               }}
             >
-              View Customers
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>View Customers</Box>
+              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Customers</Box>
             </Button>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <Button
               fullWidth
               variant="outlined"
-              startIcon={<Star size={20} />}
+              startIcon={<Star size={18} />}
               component={Link}
               href="/dashboard/seller/reviews"
               sx={{
-                py: 2,
+                py: { xs: 1.5, md: 2 },
                 borderColor: 'rgba(139, 92, 246, 0.5)',
                 color: '#8B5CF6',
+                fontSize: { xs: '0.7rem', sm: '0.875rem' },
                 '&:hover': { borderColor: '#8B5CF6', bgcolor: 'rgba(139, 92, 246, 0.1)' },
+                '& .MuiButton-startIcon': { mr: { xs: 0.5, sm: 1 } },
               }}
             >
-              Reviews & Ratings
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Reviews & Ratings</Box>
+              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Reviews</Box>
             </Button>
           </Grid>
         </Grid>
@@ -743,83 +765,80 @@ export default function SellerDashboardPage() {
         </Card>
 
         {/* Wallet Stats */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
+        <Grid container spacing={{ xs: 1.5, md: 3 }} sx={{ mb: { xs: 2, md: 4 } }}>
+          <Grid item xs={6} sm={6} md={3}>
             <Card sx={{ bgcolor: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                  <Box sx={{ p: 1, bgcolor: 'rgba(139, 92, 246, 0.2)', borderRadius: 1 }}>
-                    <Wallet size={20} color="#8B5CF6" />
+              <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Box sx={{ p: 0.75, bgcolor: 'rgba(139, 92, 246, 0.2)', borderRadius: 1 }}>
+                    <Wallet size={18} color="#8B5CF6" />
                   </Box>
                   <Chip
                     label="Available"
                     size="small"
-                    sx={{ bgcolor: 'rgba(34, 197, 94, 0.2)', color: '#22C55E' }}
+                    sx={{ bgcolor: 'rgba(34, 197, 94, 0.2)', color: '#22C55E', height: 20, fontSize: '0.65rem' }}
                   />
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>
-                  Available Balance
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.7rem', md: '0.875rem' } }}>
+                  Available
                 </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800 }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1.2rem', md: '1.75rem' } }}>
                   ${Number(stats?.wallet?.available_balance || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <Card sx={{ bgcolor: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                  <Box sx={{ p: 1, bgcolor: 'rgba(245, 158, 11, 0.2)', borderRadius: 1 }}>
-                    <Clock size={20} color="#F59E0B" />
+              <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Box sx={{ p: 0.75, bgcolor: 'rgba(245, 158, 11, 0.2)', borderRadius: 1 }}>
+                    <Clock size={18} color="#F59E0B" />
                   </Box>
                   <Chip
                     label="Pending"
                     size="small"
-                    sx={{ bgcolor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B' }}
+                    sx={{ bgcolor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', height: 20, fontSize: '0.65rem' }}
                   />
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>
-                  Pending Earnings
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.7rem', md: '0.875rem' } }}>
+                  Pending
                 </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800 }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1.2rem', md: '1.75rem' } }}>
                   ${Number(stats?.wallet?.pending_earnings || 0).toFixed(2)}
-                </Typography>
-                <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>
-                  Clears after 14 days
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <Card sx={{ bgcolor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                  <Box sx={{ p: 1, bgcolor: 'rgba(34, 197, 94, 0.2)', borderRadius: 1 }}>
-                    <TrendingUp size={20} color="#22C55E" />
+              <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Box sx={{ p: 0.75, bgcolor: 'rgba(34, 197, 94, 0.2)', borderRadius: 1 }}>
+                    <TrendingUp size={18} color="#22C55E" />
                   </Box>
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>
-                  Total Earnings
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.7rem', md: '0.875rem' } }}>
+                  Total Earned
                 </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800 }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1.2rem', md: '1.75rem' } }}>
                   ${Number(stats?.wallet?.total_earnings || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <Card sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                  <Box sx={{ p: 1, bgcolor: 'rgba(59, 130, 246, 0.2)', borderRadius: 1 }}>
-                    <DollarSign size={20} color="#3B82F6" />
+              <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Box sx={{ p: 0.75, bgcolor: 'rgba(59, 130, 246, 0.2)', borderRadius: 1 }}>
+                    <DollarSign size={18} color="#3B82F6" />
                   </Box>
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>
-                  Total Paid Out
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.7rem', md: '0.875rem' } }}>
+                  Paid Out
                 </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800 }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1.2rem', md: '1.75rem' } }}>
                   ${Number(stats?.wallet?.total_payouts || 0).toFixed(2)}
                 </Typography>
               </CardContent>
@@ -828,16 +847,16 @@ export default function SellerDashboardPage() {
         </Grid>
 
         {/* Quick Stats */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid container spacing={{ xs: 1, md: 3 }} sx={{ mb: { xs: 2, md: 4 } }}>
           <Grid item xs={6} sm={3}>
-            <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Bot size={24} color="#8B5CF6" />
+            <Paper sx={{ p: { xs: 1.5, md: 2 }, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Bot size={20} color="#8B5CF6" />
                 <Box>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
-                    Bots Listed
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
+                    Bots
                   </Typography>
-                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1.25rem' }}>
+                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '1rem', md: '1.25rem' } }}>
                     {stats?.totals?.bots || 0}
                   </Typography>
                 </Box>
@@ -845,14 +864,14 @@ export default function SellerDashboardPage() {
             </Paper>
           </Grid>
           <Grid item xs={6} sm={3}>
-            <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Package size={24} color="#3B82F6" />
+            <Paper sx={{ p: { xs: 1.5, md: 2 }, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Package size={20} color="#3B82F6" />
                 <Box>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
-                    Products Listed
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
+                    Products
                   </Typography>
-                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1.25rem' }}>
+                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '1rem', md: '1.25rem' } }}>
                     {stats?.totals?.products || 0}
                   </Typography>
                 </Box>
@@ -860,14 +879,14 @@ export default function SellerDashboardPage() {
             </Paper>
           </Grid>
           <Grid item xs={6} sm={3}>
-            <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Users size={24} color="#22C55E" />
+            <Paper sx={{ p: { xs: 1.5, md: 2 }, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Users size={20} color="#22C55E" />
                 <Box>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
-                    Total Sales
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
+                    Sales
                   </Typography>
-                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1.25rem' }}>
+                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '1rem', md: '1.25rem' } }}>
                     {stats?.totals?.total_sales || 0}
                   </Typography>
                 </Box>
@@ -875,14 +894,14 @@ export default function SellerDashboardPage() {
             </Paper>
           </Grid>
           <Grid item xs={6} sm={3}>
-            <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Star size={24} color="#F59E0B" />
+            <Paper sx={{ p: { xs: 1.5, md: 2 }, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Star size={20} color="#F59E0B" />
                 <Box>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
-                    Avg Rating
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
+                    Rating
                   </Typography>
-                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1.25rem' }}>
+                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '1rem', md: '1.25rem' } }}>
                     {Number(stats?.totals?.avg_rating || 0).toFixed(1)} ★
                   </Typography>
                 </Box>
@@ -895,30 +914,38 @@ export default function SellerDashboardPage() {
         <Tabs
           value={activeTab}
           onChange={(_, v) => setActiveTab(v)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           sx={{
-            mb: 3,
-            '& .MuiTab-root': { color: 'rgba(255,255,255,0.5)' },
+            mb: { xs: 2, md: 3 },
+            '& .MuiTab-root': { 
+              color: 'rgba(255,255,255,0.5)',
+              minWidth: { xs: 'auto', sm: 'unset' },
+              px: { xs: 1.5, sm: 2 },
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            },
             '& .Mui-selected': { color: '#8B5CF6' },
             '& .MuiTabs-indicator': { bgcolor: '#8B5CF6' },
           }}
         >
-          <Tab label="Bots" icon={<Bot size={18} />} iconPosition="start" />
-          <Tab label="Products" icon={<Package size={18} />} iconPosition="start" />
-          <Tab label="Transactions" icon={<FileText size={18} />} iconPosition="start" />
+          <Tab label="Bots" icon={<Bot size={16} />} iconPosition="start" />
+          <Tab label="Products" icon={<Package size={16} />} iconPosition="start" />
+          <Tab label="Transactions" icon={<FileText size={16} />} iconPosition="start" />
         </Tabs>
 
         {/* Bots Tab */}
         {activeTab === 0 && (
-          <TableContainer component={Paper} sx={{ bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <Table>
+          <TableContainer component={Paper} sx={{ bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: { xs: 500, md: 'auto' } }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Bot</TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Price</TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Status</TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Sales</TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Rating</TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)' }}>Actions</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>Bot</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>Price</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>Status</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>Sales</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>Rating</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -926,20 +953,17 @@ export default function SellerDashboardPage() {
                   stats.listings.bots.map((bot) => (
                     <TableRow key={bot.id}>
                       <TableCell>
-                        <Stack direction="row" spacing={2} alignItems="center">
-                          <Avatar sx={{ bgcolor: 'rgba(139, 92, 246, 0.2)' }}>
-                            <Bot size={20} color="#8B5CF6" />
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Avatar sx={{ bgcolor: 'rgba(139, 92, 246, 0.2)', width: 32, height: 32 }}>
+                            <Bot size={16} color="#8B5CF6" />
                           </Avatar>
-                          <Box>
-                            <Typography sx={{ color: 'white', fontWeight: 600 }}>{bot.name}</Typography>
-                            <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
-                              {bot.slug}
-                            </Typography>
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography sx={{ color: 'white', fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.875rem' }, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: { xs: 100, md: 200 } }}>{bot.name}</Typography>
                           </Box>
                         </Stack>
                       </TableCell>
                       <TableCell>
-                        <Typography sx={{ color: 'white' }}>
+                        <Typography sx={{ color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           {bot.is_free ? 'Free' : `$${bot.price}`}
                         </Typography>
                       </TableCell>
@@ -948,6 +972,8 @@ export default function SellerDashboardPage() {
                           label={bot.status}
                           size="small"
                           sx={{
+                            height: 22,
+                            fontSize: '0.65rem',
                             bgcolor: bot.status === 'approved' ? 'rgba(34, 197, 94, 0.2)' : 
                                      bot.status === 'pending' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
                             color: bot.status === 'approved' ? '#22C55E' : 
@@ -956,17 +982,17 @@ export default function SellerDashboardPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        <Typography sx={{ color: 'white' }}>{bot.total_purchases}</Typography>
+                        <Typography sx={{ color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>{bot.total_purchases}</Typography>
                       </TableCell>
                       <TableCell>
                         <Stack direction="row" alignItems="center" spacing={0.5}>
-                          <Star size={14} fill="#F59E0B" color="#F59E0B" />
-                          <Typography sx={{ color: 'white' }}>{Number(bot.avg_rating || 0).toFixed(1)}</Typography>
+                          <Star size={12} fill="#F59E0B" color="#F59E0B" />
+                          <Typography sx={{ color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>{Number(bot.avg_rating || 0).toFixed(1)}</Typography>
                         </Stack>
                       </TableCell>
                       <TableCell>
                         <IconButton size="small" onClick={(e) => handleMenuClick(e, bot)}>
-                          <MoreVertical size={18} color="white" />
+                          <MoreVertical size={16} color="white" />
                         </IconButton>
                       </TableCell>
                     </TableRow>
