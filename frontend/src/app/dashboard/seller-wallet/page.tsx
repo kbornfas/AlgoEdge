@@ -97,6 +97,8 @@ const getPaymentMethodLabel = (method: string) => {
     case 'airtel_money': return 'Airtel Money';
     case 'usdt': return 'USDT (TRC20)';
     case 'btc': return 'Bitcoin (BTC)';
+    case 'eth': return 'Ethereum (ETH)';
+    case 'ltc': return 'Litecoin (LTC)';
     default: return method;
   }
 };
@@ -107,6 +109,8 @@ const PAYMENT_METHODS = [
   { id: 'airtel_money', label: 'Airtel Money', color: '#FF0000' },
   { id: 'usdt', label: 'USDT (TRC20)', color: '#26A17B' },
   { id: 'btc', label: 'Bitcoin (BTC)', color: '#F7931A' },
+  { id: 'eth', label: 'Ethereum (ETH)', color: '#627EEA' },
+  { id: 'ltc', label: 'Litecoin (LTC)', color: '#BFBBBB' },
 ];
 
 export default function SellerWalletPage() {

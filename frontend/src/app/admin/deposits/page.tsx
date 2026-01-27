@@ -88,12 +88,20 @@ const getPaymentMethodLabel = (method: string) => {
   switch (method) {
     case 'mpesa':
       return 'M-Pesa';
+    case 'airtel_money':
+      return 'Airtel Money';
     case 'paypal':
       return 'PayPal';
+    case 'usdt':
     case 'crypto_usdt':
-      return 'USDT';
+      return 'USDT (TRC20)';
+    case 'btc':
     case 'crypto_btc':
-      return 'Bitcoin';
+      return 'Bitcoin (BTC)';
+    case 'eth':
+      return 'Ethereum (ETH)';
+    case 'ltc':
+      return 'Litecoin (LTC)';
     case 'bank_transfer':
       return 'Bank';
     default:

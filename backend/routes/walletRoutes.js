@@ -191,6 +191,34 @@ const getPaymentAccounts = () => {
     });
   }
   
+  // Ethereum
+  if (process.env.ETH_ADDRESS) {
+    accounts.push({
+      id: 5,
+      payment_method: 'eth',
+      account_name: 'AlgoEdge ETH',
+      crypto_address: process.env.ETH_ADDRESS,
+      crypto_network: 'ERC20',
+      instructions: 'Send Ethereum to this address. Make sure to use the ERC20 network!',
+      min_amount: MIN_DEPOSIT,
+      max_amount: MAX_DEPOSIT,
+    });
+  }
+  
+  // Litecoin
+  if (process.env.LTC_ADDRESS) {
+    accounts.push({
+      id: 6,
+      payment_method: 'ltc',
+      account_name: 'AlgoEdge LTC',
+      crypto_address: process.env.LTC_ADDRESS,
+      crypto_network: 'Litecoin',
+      instructions: 'Send Litecoin to this address. Confirm the address before sending.',
+      min_amount: MIN_DEPOSIT,
+      max_amount: MAX_DEPOSIT,
+    });
+  }
+  
   return accounts;
 };
 
@@ -234,10 +262,10 @@ router.post('/deposit/request', authenticate, async (req, res) => {
       });
     }
 
-    // Validate payment method - M-Pesa, Airtel Money, USDT, and BTC allowed
-    const validMethods = ['mpesa', 'airtel_money', 'usdt', 'btc'];
+    // Validate payment method - M-Pesa, Airtel Money, USDT, BTC, ETH, and LTC allowed
+    const validMethods = ['mpesa', 'airtel_money', 'usdt', 'btc', 'eth', 'ltc'];
     if (!validMethods.includes(payment_method)) {
-      return res.status(400).json({ error: 'Invalid payment method. Only M-Pesa, Airtel Money, USDT, and BTC are accepted.' });
+      return res.status(400).json({ error: 'Invalid payment method. Only M-Pesa, Airtel Money, USDT, BTC, ETH, and LTC are accepted.' });
     }
 
     // Check for pending deposits (limit to prevent spam)

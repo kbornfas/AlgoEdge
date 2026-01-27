@@ -40,6 +40,8 @@ const getPaymentMethodIcon = (method: string) => {
       return <PhoneIcon />;
     case 'usdt':
     case 'btc':
+    case 'eth':
+    case 'ltc':
       return <CryptoIcon />;
     default:
       return <PhoneIcon />;
@@ -55,7 +57,11 @@ const getPaymentMethodLabel = (method: string) => {
     case 'usdt':
       return 'USDT (TRC20)';
     case 'btc':
-      return 'Bitcoin';
+      return 'Bitcoin (BTC)';
+    case 'eth':
+      return 'Ethereum (ETH)';
+    case 'ltc':
+      return 'Litecoin (LTC)';
     default:
       return method;
   }
@@ -133,8 +139,8 @@ export default function AdminPaymentAccountsPage() {
             </Typography>
           </Box>
           <Typography variant="body2">
-            Payment accounts are configured via environment variables on Railway. 
-            To update payment details, modify the following variables in your Railway dashboard:
+            Payment accounts are configured via environment variables on your hosting platform (Vercel/Railway). 
+            To update payment details, modify the following variables in your dashboard:
           </Typography>
           <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.85rem' }}>
             <Typography component="div" sx={{ fontFamily: 'inherit' }}>MPESA_NUMBER, MPESA_NAME</Typography>
@@ -148,7 +154,7 @@ export default function AdminPaymentAccountsPage() {
       {/* No accounts warning */}
       {accounts.length === 0 && !loading && (
         <Alert severity="warning" sx={{ mb: 3 }}>
-          No payment accounts configured. Please add the required environment variables on Railway.
+          No payment accounts configured. Please add the required environment variables on your hosting platform.
         </Alert>
       )}
 

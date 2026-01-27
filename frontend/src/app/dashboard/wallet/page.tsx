@@ -53,6 +53,7 @@ import {
   Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { useAuth } from '@/context/AuthContext';
+import DepositModal from '@/components/wallet/DepositModal';
 
 // Helper function to format dates
 const formatDate = (dateString: string) => {
@@ -134,6 +135,10 @@ const getPaymentMethodIcon = (method: string) => {
       return <CryptoIcon sx={{ color: '#26A17B' }} />;
     case 'btc':
       return <CryptoIcon sx={{ color: '#F7931A' }} />;
+    case 'eth':
+      return <CryptoIcon sx={{ color: '#627EEA' }} />;
+    case 'ltc':
+      return <CryptoIcon sx={{ color: '#BFBBBB' }} />;
     default:
       return <PaymentsIcon />;
   }
@@ -149,6 +154,10 @@ const getPaymentMethodLabel = (method: string) => {
       return 'USDT (TRC20)';
     case 'btc':
       return 'Bitcoin (BTC)';
+    case 'eth':
+      return 'Ethereum (ETH)';
+    case 'ltc':
+      return 'Litecoin (LTC)';
     case 'crypto':
       return 'Crypto';
     default:
@@ -162,6 +171,8 @@ const PAYMENT_METHODS = [
   { id: 'airtel_money', label: 'Airtel Money', icon: 'phone', color: '#FF0000' },
   { id: 'usdt', label: 'USDT (TRC20)', icon: 'crypto', color: '#26A17B' },
   { id: 'btc', label: 'Bitcoin (BTC)', icon: 'crypto', color: '#F7931A' },
+  { id: 'eth', label: 'Ethereum (ETH)', icon: 'crypto', color: '#627EEA' },
+  { id: 'ltc', label: 'Litecoin (LTC)', icon: 'crypto', color: '#BFBBBB' },
 ];
 
 // Platform payment details (configured via environment variables)
@@ -221,7 +232,10 @@ export default function WalletPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Action dialog state (shared for deposit/withdraw)
+  // New Deposit Modal state
+  const [depositModalOpen, setDepositModalOpen] = useState(false);
+
+  // Action dialog state (for withdraw only now)
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [actionType, setActionType] = useState<'deposit' | 'withdraw'>('deposit');
   const [selectedMethod, setSelectedMethod] = useState('mpesa');
@@ -483,9 +497,21 @@ export default function WalletPage() {
           variant="contained"
           color="success"
           startIcon={<DepositIcon />}
-          onClick={() => openActionDialog('deposit')}
+          onClick={() => setDepositModalOpen(true)}
           disabled={wallet?.is_frozen}
           size="large"
+          sx={{
+            py: 1.5,
+            px: 4,
+            borderRadius: 2,
+            fontWeight: 'bold',
+            background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+            boxShadow: '0 4px 14px rgba(34, 197, 94, 0.3)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+              boxShadow: '0 6px 20px rgba(34, 197, 94, 0.4)',
+            },
+          }}
         >
           Deposit Funds
         </Button>
@@ -1037,6 +1063,18 @@ export default function WalletPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* New Deposit Modal */}
+      <DepositModal
+        open={depositModalOpen}
+        onClose={() => setDepositModalOpen(false)}
+        onSuccess={() => {
+          setSuccess('Deposit request submitted! Admin will verify and approve your payment within 24 hours.');
+          fetchWalletData();
+        }}
+        token={token}
+        apiUrl={API_URL}
+      />
     </Container>
   );
 }
