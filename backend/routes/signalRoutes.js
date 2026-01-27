@@ -18,6 +18,7 @@ import {
   getSignalStats,
   getSubscriberStats
 } from '../services/signalService.js';
+import { getMarketIndicators } from '../services/marketIndicators.js';
 
 const router = express.Router();
 
@@ -147,6 +148,57 @@ router.post('/cancel', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Error cancelling subscription:', error);
     res.status(500).json({ error: 'Failed to cancel subscription' });
+  }
+});
+
+/**
+ * GET /api/signals/active
+ * Get currently active trading signals
+ */
+router.get('/active', optionalAuth, async (req, res) => {
+  try {
+    // Get active signals from the last 24 hours
+    const result = await pool.query(`
+      SELECT 
+        id,
+        symbol,
+        signal_type,
+        entry_price,
+        stop_loss,
+        take_profit_1,
+        take_profit_2,
+        take_profit_3,
+        confidence,
+        timeframe,
+        analysis,
+        status,
+        created_at
+      FROM trading_signals
+      WHERE status IN ('active', 'pending')
+        AND created_at > NOW() - INTERVAL '24 hours'
+      ORDER BY created_at DESC
+      LIMIT 20
+    `);
+
+    // Hide sensitive details for non-authenticated users
+    const signals = result.rows.map(signal => {
+      if (!req.user) {
+        return {
+          ...signal,
+          stop_loss: null,
+          take_profit_1: null,
+          take_profit_2: null,
+          take_profit_3: null,
+          analysis: null,
+        };
+      }
+      return signal;
+    });
+
+    res.json({ signals });
+  } catch (error) {
+    console.error('Error fetching active signals:', error);
+    res.status(500).json({ error: 'Failed to fetch active signals' });
   }
 });
 
@@ -299,6 +351,55 @@ router.post('/admin/quick-signal', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Error creating quick signal:', error);
     res.status(500).json({ error: 'Failed to create signal' });
+  }
+});
+
+/**
+ * GET /api/signals/indicators/:symbol
+ * Get real-time market indicators for a symbol
+ */
+router.get('/indicators/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    
+    if (!symbol) {
+      return res.status(400).json({ error: 'Symbol is required' });
+    }
+
+    const indicators = await getMarketIndicators(symbol);
+    
+    res.json({ 
+      success: true, 
+      indicators,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching market indicators:', error);
+    res.status(500).json({ error: 'Failed to fetch market indicators' });
+  }
+});
+
+/**
+ * GET /api/signals/indicators
+ * Get market indicators for multiple symbols
+ */
+router.get('/indicators', async (req, res) => {
+  try {
+    const symbols = req.query.symbols?.split(',') || ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDJPY'];
+    
+    const results = {};
+    for (const symbol of symbols) {
+      results[symbol] = await getMarketIndicators(symbol.trim());
+    }
+    
+    res.json({ 
+      success: true, 
+      indicators: results,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching market indicators:', error);
+    res.status(500).json({ error: 'Failed to fetch market indicators' });
   }
 });
 

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!-- M-Pesa Logo - Green theme -->
+  <circle cx="24" cy="24" r="22" fill="#4CAF50"/>
+  <text x="24" y="20" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold">M-PESA</text>
+  <path d="M16 26 L24 34 L32 26" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="24" y1="22" x2="24" y2="32" stroke="white" stroke-width="3" stroke-linecap="round"/>
+</svg>

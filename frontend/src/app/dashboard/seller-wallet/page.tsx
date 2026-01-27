@@ -105,12 +105,12 @@ const getPaymentMethodLabel = (method: string) => {
 
 // Payment methods configuration
 const PAYMENT_METHODS = [
-  { id: 'mpesa', label: 'M-Pesa', color: '#4CAF50' },
-  { id: 'airtel_money', label: 'Airtel Money', color: '#FF0000' },
-  { id: 'usdt', label: 'USDT (TRC20)', color: '#26A17B' },
-  { id: 'btc', label: 'Bitcoin (BTC)', color: '#F7931A' },
-  { id: 'eth', label: 'Ethereum (ETH)', color: '#627EEA' },
-  { id: 'ltc', label: 'Litecoin (LTC)', color: '#BFBBBB' },
+  { id: 'mpesa', label: 'M-Pesa', icon: '/icons/mpesa.svg', color: '#4CAF50' },
+  { id: 'airtel_money', label: 'Airtel Money', icon: '/icons/airtel.svg', color: '#FF0000' },
+  { id: 'usdt', label: 'USDT (TRC20)', icon: '/icons/usdt.svg', color: '#26A17B' },
+  { id: 'btc', label: 'Bitcoin (BTC)', icon: '/icons/btc.svg', color: '#F7931A' },
+  { id: 'eth', label: 'Ethereum (ETH)', icon: '/icons/eth.svg', color: '#627EEA' },
+  { id: 'ltc', label: 'Litecoin (LTC)', icon: '/icons/ltc.svg', color: '#BFBBBB' },
 ];
 
 export default function SellerWalletPage() {

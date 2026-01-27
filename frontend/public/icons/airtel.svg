@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!-- Airtel Money Logo - Red theme -->
+  <circle cx="24" cy="24" r="22" fill="#ED1C24"/>
+  <path d="M24 10 C16 10 12 18 12 24 C12 32 18 38 24 38 C30 38 36 32 36 24 C36 18 32 10 24 10 M24 14 C28 14 32 19 32 24 C32 30 28 34 24 34 C20 34 16 30 16 24 C16 19 20 14 24 14" fill="white"/>
+  <circle cx="24" cy="24" r="6" fill="white"/>
+</svg>

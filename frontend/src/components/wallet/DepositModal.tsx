@@ -47,7 +47,7 @@ const MOBILE_MONEY_METHODS: BasePaymentMethod[] = [
   { 
     id: 'mpesa', 
     name: 'M-Pesa', 
-    icon: '/icons/mpesa.png',
+    icon: '/icons/mpesa.svg',
     color: '#4CAF50',
     minAmount: 5,
     maxAmount: 2000,
@@ -55,7 +55,7 @@ const MOBILE_MONEY_METHODS: BasePaymentMethod[] = [
   { 
     id: 'airtel_money', 
     name: 'Airtel Money', 
-    icon: '/icons/airtel.png',
+    icon: '/icons/airtel.svg',
     color: '#FF0000',
     minAmount: 5,
     maxAmount: 2000,

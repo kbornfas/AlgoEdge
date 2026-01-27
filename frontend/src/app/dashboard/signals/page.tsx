@@ -78,55 +78,49 @@ interface MarketIndicator {
   color: string;
 }
 
-// Function to calculate indicators based on price data
-function calculateIndicators(symbol: string): MarketIndicator[] {
-  // These would ideally come from a real API, but we'll simulate realistic values
-  // that update based on time to show market is "live"
-  const now = new Date();
-  const seed = now.getHours() * 60 + now.getMinutes();
-  
-  // RSI calculation simulation (14 period)
-  const baseRsi = 50 + Math.sin(seed * 0.1) * 20;
-  const rsi = Math.round(baseRsi + (Math.random() * 10 - 5));
-  const rsiSignal = rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral';
-  const rsiColor = rsi > 70 ? '#FF5252' : rsi < 30 ? '#00C853' : '#FFA500';
-  
-  // MACD simulation
-  const macdValue = Math.sin(seed * 0.05) > 0;
-  const macdSignal = macdValue ? 'Buy' : 'Sell';
-  const macdColor = macdValue ? '#00C853' : '#FF5252';
-  
-  // Moving Average simulation
-  const maValue = Math.sin(seed * 0.03) > -0.2;
-  const maText = maValue ? 'Above 200 SMA' : 'Below 200 SMA';
-  const maSignal = maValue ? 'Bullish' : 'Bearish';
-  const maColor = maValue ? '#00C853' : '#FF5252';
-  
-  // Bollinger Bands simulation
-  const bbPosition = Math.sin(seed * 0.07);
-  const bbText = bbPosition > 0.3 ? 'Upper Band' : bbPosition < -0.3 ? 'Lower Band' : 'Middle Band';
-  const bbSignal = bbPosition > 0.3 ? 'Overbought' : bbPosition < -0.3 ? 'Oversold' : 'Neutral';
-  const bbColor = bbPosition > 0.3 ? '#FF5252' : bbPosition < -0.3 ? '#00C853' : '#FFA500';
-  
-  // Stochastic simulation
-  const stochBase = 50 + Math.sin(seed * 0.08) * 30;
-  const stoch = Math.round(stochBase + (Math.random() * 10 - 5));
-  const stochSignal = stoch > 80 ? 'Overbought' : stoch < 20 ? 'Oversold' : 'Neutral';
-  const stochColor = stoch > 80 ? '#FF5252' : stoch < 20 ? '#00C853' : '#FFA500';
-  
-  // ADX simulation (trend strength)
-  const adxBase = 25 + Math.abs(Math.sin(seed * 0.04)) * 20;
-  const adx = Math.round(adxBase + (Math.random() * 5 - 2.5));
-  const adxSignal = adx > 25 ? 'Trending' : 'Ranging';
-  const adxColor = adx > 25 ? '#00C853' : '#FFA500';
-  
+// API response indicator format
+interface APIIndicator {
+  value: string | number;
+  signal: string;
+  color: string;
+}
+
+interface APIIndicatorsResponse {
+  rsi: APIIndicator;
+  macd: APIIndicator;
+  movingAverage: APIIndicator;
+  bollingerBands: APIIndicator;
+  stochastic: APIIndicator;
+  adx: APIIndicator;
+  source?: string;
+  lastSignal?: {
+    type: string;
+    confidence: number;
+    time: string;
+  } | null;
+}
+
+// Transform API response to display format
+function transformIndicators(apiIndicators: APIIndicatorsResponse): MarketIndicator[] {
   return [
-    { name: 'RSI (14)', value: rsi, signal: rsiSignal, color: rsiColor },
-    { name: 'MACD', value: macdValue ? 'Bullish' : 'Bearish', signal: macdSignal, color: macdColor },
-    { name: 'Moving Average', value: maText, signal: maSignal, color: maColor },
-    { name: 'Bollinger Bands', value: bbText, signal: bbSignal, color: bbColor },
-    { name: 'Stochastic', value: stoch, signal: stochSignal, color: stochColor },
-    { name: 'ADX', value: adx, signal: adxSignal, color: adxColor },
+    { name: 'RSI (14)', value: apiIndicators.rsi.value, signal: apiIndicators.rsi.signal, color: apiIndicators.rsi.color },
+    { name: 'MACD', value: apiIndicators.macd.value, signal: apiIndicators.macd.signal, color: apiIndicators.macd.color },
+    { name: 'Moving Average', value: apiIndicators.movingAverage.value, signal: apiIndicators.movingAverage.signal, color: apiIndicators.movingAverage.color },
+    { name: 'Bollinger Bands', value: apiIndicators.bollingerBands.value, signal: apiIndicators.bollingerBands.signal, color: apiIndicators.bollingerBands.color },
+    { name: 'Stochastic', value: apiIndicators.stochastic.value, signal: apiIndicators.stochastic.signal, color: apiIndicators.stochastic.color },
+    { name: 'ADX', value: apiIndicators.adx.value, signal: apiIndicators.adx.signal, color: apiIndicators.adx.color },
+  ];
+}
+
+// Fallback function for when API is unavailable
+function getDefaultIndicators(): MarketIndicator[] {
+  return [
+    { name: 'RSI (14)', value: 50, signal: 'Neutral', color: '#FFA500' },
+    { name: 'MACD', value: 'Neutral', signal: 'Hold', color: '#FFA500' },
+    { name: 'Moving Average', value: 'Neutral', signal: 'Hold', color: '#FFA500' },
+    { name: 'Bollinger Bands', value: 'Middle Band', signal: 'Neutral', color: '#FFA500' },
+    { name: 'Stochastic', value: 50, signal: 'Neutral', color: '#FFA500' },
+    { name: 'ADX', value: 25, signal: 'Moderate', color: '#FFA500' },
   ];
 }
 
@@ -139,7 +133,8 @@ export default function SignalsPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [indicators, setIndicators] = useState<MarketIndicator[]>(calculateIndicators('EURUSD'));
+  const [indicators, setIndicators] = useState<MarketIndicator[]>(getDefaultIndicators());
+  const [indicatorsLoading, setIndicatorsLoading] = useState(false);
   const [selectedPair, setSelectedPair] = useState('EURUSD');
 
   const [alertSettings, setAlertSettings] = useState<AlertSetting[]>([
@@ -149,6 +144,30 @@ export default function SignalsPage() {
     { type: 'High Confidence', enabled: true, conditions: ['Above 85%'] },
     { type: 'News Events', enabled: false, conditions: ['Major Only'] },
   ]);
+
+  // Fetch market indicators from API
+  const fetchIndicators = useCallback(async (symbol: string) => {
+    setIndicatorsLoading(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/signals/indicators/${symbol}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.indicators) {
+          setIndicators(transformIndicators(data.indicators));
+        } else {
+          setIndicators(getDefaultIndicators());
+        }
+      } else {
+        setIndicators(getDefaultIndicators());
+      }
+    } catch (error) {
+      console.error('Error fetching indicators:', error);
+      setIndicators(getDefaultIndicators());
+    } finally {
+      setIndicatorsLoading(false);
+    }
+  }, []);
 
   const fetchSignals = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
@@ -204,15 +223,15 @@ export default function SignalsPage() {
     return () => clearInterval(interval);
   }, [fetchSignals]);
 
-  // Update market indicators every 60 seconds to simulate live data
+  // Fetch market indicators when pair changes or every 60 seconds
   useEffect(() => {
-    const updateIndicators = () => {
-      setIndicators(calculateIndicators(selectedPair));
-    };
+    // Initial fetch
+    fetchIndicators(selectedPair);
     
-    const interval = setInterval(updateIndicators, 60000);
+    // Auto-refresh indicators every 60 seconds
+    const interval = setInterval(() => fetchIndicators(selectedPair), 60000);
     return () => clearInterval(interval);
-  }, [selectedPair]);
+  }, [selectedPair, fetchIndicators]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -362,6 +381,7 @@ export default function SignalsPage() {
             <Typography variant="h6" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Activity size={20} />
               Market Indicators ({selectedPair})
+              {indicatorsLoading && <RefreshCw size={16} className="animate-spin" style={{ marginLeft: 8 }} />}
             </Typography>
             <TextField
               select
@@ -369,14 +389,34 @@ export default function SignalsPage() {
               value={selectedPair}
               onChange={(e) => {
                 setSelectedPair(e.target.value);
-                setIndicators(calculateIndicators(e.target.value));
               }}
-              sx={{ minWidth: 120 }}
+              sx={{ minWidth: 140 }}
+              disabled={indicatorsLoading}
             >
+              {/* Metals */}
+              <MenuItem value="XAUUSD">XAU/USD (Gold)</MenuItem>
+              <MenuItem value="XAGUSD">XAG/USD (Silver)</MenuItem>
+              {/* Major Forex Pairs */}
               <MenuItem value="EURUSD">EUR/USD</MenuItem>
               <MenuItem value="GBPUSD">GBP/USD</MenuItem>
-              <MenuItem value="XAUUSD">XAU/USD</MenuItem>
               <MenuItem value="USDJPY">USD/JPY</MenuItem>
+              <MenuItem value="USDCHF">USD/CHF</MenuItem>
+              <MenuItem value="AUDUSD">AUD/USD</MenuItem>
+              <MenuItem value="USDCAD">USD/CAD</MenuItem>
+              <MenuItem value="NZDUSD">NZD/USD</MenuItem>
+              {/* Cross Pairs */}
+              <MenuItem value="EURJPY">EUR/JPY</MenuItem>
+              <MenuItem value="GBPJPY">GBP/JPY</MenuItem>
+              <MenuItem value="EURGBP">EUR/GBP</MenuItem>
+              <MenuItem value="EURAUD">EUR/AUD</MenuItem>
+              <MenuItem value="AUDJPY">AUD/JPY</MenuItem>
+              {/* Crypto */}
+              <MenuItem value="BTCUSD">BTC/USD</MenuItem>
+              <MenuItem value="ETHUSD">ETH/USD</MenuItem>
+              {/* Indices */}
+              <MenuItem value="US30">US30 (Dow)</MenuItem>
+              <MenuItem value="US500">US500 (S&P)</MenuItem>
+              <MenuItem value="NAS100">NAS100</MenuItem>
             </TextField>
           </Box>
           <Divider sx={{ my: 2 }} />
@@ -389,6 +429,8 @@ export default function SignalsPage() {
                   bgcolor: alpha(indicator.color, 0.1),
                   border: `1px solid ${alpha(indicator.color, 0.3)}`,
                   textAlign: 'center',
+                  opacity: indicatorsLoading ? 0.7 : 1,
+                  transition: 'opacity 0.2s',
                 }}>
                   <Typography variant="caption" color="text.secondary" display="block">
                     {indicator.name}

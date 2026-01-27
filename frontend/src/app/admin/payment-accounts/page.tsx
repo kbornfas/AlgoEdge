@@ -34,15 +34,20 @@ interface PaymentAccount {
 }
 
 const getPaymentMethodIcon = (method: string) => {
+  const iconStyle = { width: 28, height: 28, borderRadius: '50%' };
   switch (method) {
     case 'mpesa':
+      return <img src="/icons/mpesa.svg" alt="M-Pesa" style={iconStyle} />;
     case 'airtel_money':
-      return <PhoneIcon />;
+      return <img src="/icons/airtel.svg" alt="Airtel Money" style={iconStyle} />;
     case 'usdt':
+      return <img src="/icons/usdt.svg" alt="USDT" style={iconStyle} />;
     case 'btc':
+      return <img src="/icons/btc.svg" alt="Bitcoin" style={iconStyle} />;
     case 'eth':
+      return <img src="/icons/eth.svg" alt="Ethereum" style={iconStyle} />;
     case 'ltc':
-      return <CryptoIcon />;
+      return <img src="/icons/ltc.svg" alt="Litecoin" style={iconStyle} />;
     default:
       return <PhoneIcon />;
   }

@@ -126,19 +126,20 @@ interface WithdrawalRequest {
 }
 
 const getPaymentMethodIcon = (method: string) => {
+  const iconStyle = { width: 24, height: 24, borderRadius: '50%' };
   switch (method) {
     case 'mpesa':
-      return <PhoneIcon sx={{ color: '#4CAF50' }} />;
+      return <img src="/icons/mpesa.svg" alt="M-Pesa" style={iconStyle} />;
     case 'airtel_money':
-      return <PhoneIcon sx={{ color: '#FF0000' }} />;
+      return <img src="/icons/airtel.svg" alt="Airtel Money" style={iconStyle} />;
     case 'usdt':
-      return <CryptoIcon sx={{ color: '#26A17B' }} />;
+      return <img src="/icons/usdt.svg" alt="USDT" style={iconStyle} />;
     case 'btc':
-      return <CryptoIcon sx={{ color: '#F7931A' }} />;
+      return <img src="/icons/btc.svg" alt="Bitcoin" style={iconStyle} />;
     case 'eth':
-      return <CryptoIcon sx={{ color: '#627EEA' }} />;
+      return <img src="/icons/eth.svg" alt="Ethereum" style={iconStyle} />;
     case 'ltc':
-      return <CryptoIcon sx={{ color: '#BFBBBB' }} />;
+      return <img src="/icons/ltc.svg" alt="Litecoin" style={iconStyle} />;
     default:
       return <PaymentsIcon />;
   }
@@ -167,12 +168,12 @@ const getPaymentMethodLabel = (method: string) => {
 
 // Payment methods configuration
 const PAYMENT_METHODS = [
-  { id: 'mpesa', label: 'M-Pesa', icon: 'phone', color: '#4CAF50' },
-  { id: 'airtel_money', label: 'Airtel Money', icon: 'phone', color: '#FF0000' },
-  { id: 'usdt', label: 'USDT (TRC20)', icon: 'crypto', color: '#26A17B' },
-  { id: 'btc', label: 'Bitcoin (BTC)', icon: 'crypto', color: '#F7931A' },
-  { id: 'eth', label: 'Ethereum (ETH)', icon: 'crypto', color: '#627EEA' },
-  { id: 'ltc', label: 'Litecoin (LTC)', icon: 'crypto', color: '#BFBBBB' },
+  { id: 'mpesa', label: 'M-Pesa', icon: '/icons/mpesa.svg', color: '#4CAF50' },
+  { id: 'airtel_money', label: 'Airtel Money', icon: '/icons/airtel.svg', color: '#FF0000' },
+  { id: 'usdt', label: 'USDT (TRC20)', icon: '/icons/usdt.svg', color: '#26A17B' },
+  { id: 'btc', label: 'Bitcoin (BTC)', icon: '/icons/btc.svg', color: '#F7931A' },
+  { id: 'eth', label: 'Ethereum (ETH)', icon: '/icons/eth.svg', color: '#627EEA' },
+  { id: 'ltc', label: 'Litecoin (LTC)', icon: '/icons/ltc.svg', color: '#BFBBBB' },
 ];
 
 // Platform payment details (configured via environment variables)
@@ -627,15 +628,25 @@ export default function WalletPage() {
                 }}
               >
                 <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box sx={{ color: method.color }}>
-                    {method.icon === 'phone' ? <PhoneIcon fontSize="large" /> : <CryptoIcon fontSize="large" />}
+                  <Box sx={{ 
+                    width: 40, 
+                    height: 40, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center' 
+                  }}>
+                    <img 
+                      src={method.icon} 
+                      alt={method.label} 
+                      style={{ width: 36, height: 36, borderRadius: '50%' }} 
+                    />
                   </Box>
                   <Box>
                     <Typography variant="subtitle1" fontWeight="medium">
                       {method.label}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {method.id === 'crypto' ? 'USDT on TRC20 Network' : 'Mobile Money'}
+                      {method.id === 'mpesa' || method.id === 'airtel_money' ? 'Mobile Money' : 'Cryptocurrency'}
                     </Typography>
                   </Box>
                 </CardContent>

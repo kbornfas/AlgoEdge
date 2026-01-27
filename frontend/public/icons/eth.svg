@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!-- Ethereum Logo -->
+  <circle cx="24" cy="24" r="22" fill="#627EEA"/>
+  <g fill="white">
+    <polygon points="24,8 24,20 32,24" opacity="0.6"/>
+    <polygon points="24,8 16,24 24,20"/>
+    <polygon points="24,32 24,40 32,26" opacity="0.6"/>
+    <polygon points="24,32 16,26 24,40"/>
+    <polygon points="24,20 32,24 24,30" opacity="0.6"/>
+    <polygon points="24,20 24,30 16,24"/>
+  </g>
+</svg>

@@ -89,6 +89,9 @@ export async function completeTelegramConnection(token, chatId, telegramUsername
   try {
     await client.query('BEGIN');
 
+    console.log(`📱 Attempting Telegram connection with token: ${token.substring(0, 8)}...`);
+    console.log(`📱 Chat ID: ${chatId}, Username: ${telegramUsername}`);
+
     // Find pending connection
     const result = await client.query(
       `SELECT user_id FROM telegram_pending_connections 
@@ -97,19 +100,24 @@ export async function completeTelegramConnection(token, chatId, telegramUsername
     );
 
     if (result.rows.length === 0) {
+      console.log('❌ No pending connection found for token');
       await client.query('ROLLBACK');
       return { success: false, error: 'Invalid or expired token' };
     }
 
     const userId = result.rows[0].user_id;
+    console.log(`📱 Found pending connection for user ID: ${userId}`);
 
-    // Update user settings with Telegram chat ID
-    await client.query(
-      `UPDATE user_settings 
-       SET telegram_chat_id = $1, telegram_alerts = true, telegram_username = $2
-       WHERE user_id = $3`,
-      [chatId.toString(), telegramUsername, userId]
+    // Update user settings with Telegram chat ID (using UPSERT to handle missing rows)
+    const upsertResult = await client.query(
+      `INSERT INTO user_settings (user_id, telegram_chat_id, telegram_alerts, telegram_username)
+       VALUES ($1, $2, true, $3)
+       ON CONFLICT (user_id) DO UPDATE 
+       SET telegram_chat_id = $2, telegram_alerts = true, telegram_username = $3
+       RETURNING *`,
+      [userId, chatId.toString(), telegramUsername]
     );
+    console.log(`📱 Upsert result:`, upsertResult.rows[0]);
 
     // Delete pending connection
     await client.query(
@@ -118,6 +126,7 @@ export async function completeTelegramConnection(token, chatId, telegramUsername
     );
 
     await client.query('COMMIT');
+    console.log(`✅ Telegram connection completed for user ${userId}`);
 
     // Get user info for welcome message
     const userResult = await pool.query(
@@ -381,14 +390,21 @@ export async function handleTelegramWebhook(update) {
 
     // Handle /status command
     if (text === '/status') {
+      console.log(`📱 Status check for chat ID: ${chatId} (type: ${typeof chatId})`);
+      
       // Check if this chat is connected to any user
       const result = await pool.query(
-        `SELECT u.username, us.telegram_alerts 
+        `SELECT u.username, us.telegram_alerts, us.telegram_chat_id 
          FROM user_settings us 
          JOIN users u ON u.id = us.user_id 
          WHERE us.telegram_chat_id = $1`,
         [chatId.toString()]
       );
+
+      console.log(`📱 Status query result: ${result.rows.length} rows found`);
+      if (result.rows.length > 0) {
+        console.log(`📱 Found connection:`, result.rows[0]);
+      }
 
       if (result.rows.length > 0) {
         const user = result.rows[0];
@@ -398,6 +414,12 @@ export async function handleTelegramWebhook(update) {
           `Alerts: ${user.telegram_alerts ? '🔔 Enabled' : '🔕 Disabled'}`
         );
       } else {
+        // Debug: Check what's in user_settings for telegram
+        const debugResult = await pool.query(
+          `SELECT user_id, telegram_chat_id, telegram_username FROM user_settings WHERE telegram_chat_id IS NOT NULL LIMIT 5`
+        );
+        console.log(`📱 Debug - All telegram connections:`, debugResult.rows);
+        
         await sendTelegramMessage(chatId,
           '❌ <b>Not Connected</b>\n\n' +
           'This Telegram is not linked to any AlgoEdge account.\n' +

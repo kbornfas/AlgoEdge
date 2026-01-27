@@ -1306,9 +1306,10 @@ router.get('/seller/dashboard', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Get user verification status
+    // Get user verification status and seller_slug
     const userInfo = await pool.query(`
-      SELECT is_verified, verification_pending, profile_image FROM users WHERE id = $1
+      SELECT is_verified, verification_pending, profile_image, seller_slug, has_blue_badge 
+      FROM users WHERE id = $1
     `, [userId]);
 
     // Get or create wallet
@@ -1361,9 +1362,10 @@ router.get('/seller/dashboard', authenticate, async (req, res) => {
       },
       transactions: transactions.rows,
       verification: {
-        is_verified: userInfo.rows[0]?.is_verified || false,
+        is_verified: userInfo.rows[0]?.is_verified || userInfo.rows[0]?.has_blue_badge || false,
         verification_pending: userInfo.rows[0]?.verification_pending || false,
-        profile_image: userInfo.rows[0]?.profile_image || null
+        profile_image: userInfo.rows[0]?.profile_image || null,
+        seller_slug: userInfo.rows[0]?.seller_slug || null
       }
     });
   } catch (error) {
@@ -1431,7 +1433,7 @@ router.post('/seller/request-verification', authenticate, async (req, res) => {
 
     // Check if user is already verified
     const userCheck = await pool.query(
-      'SELECT is_verified, verification_pending FROM users WHERE id = $1',
+      'SELECT is_verified, verification_pending, has_blue_badge FROM users WHERE id = $1',
       [userId]
     );
 
@@ -1441,7 +1443,7 @@ router.post('/seller/request-verification', authenticate, async (req, res) => {
 
     const user = userCheck.rows[0];
 
-    if (user.is_verified) {
+    if (user.is_verified || user.has_blue_badge) {
       return res.status(400).json({ error: 'You are already verified' });
     }
 
@@ -1449,42 +1451,44 @@ router.post('/seller/request-verification', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Verification request already pending' });
     }
 
-    // Check if user has a seller wallet with sufficient balance
+    // Check user's main wallet balance (not seller wallet)
     const walletCheck = await pool.query(
-      'SELECT balance FROM seller_wallets WHERE user_id = $1',
+      'SELECT balance FROM user_wallets WHERE user_id = $1',
       [userId]
     );
 
     if (walletCheck.rows.length === 0) {
       return res.status(400).json({ 
-        error: 'No seller wallet found. Start selling to earn balance for verification.',
+        error: `Insufficient balance. You need $${VERIFICATION_FEE} for verification. Please deposit funds to your wallet first.`,
         requiresPayment: true,
+        currentBalance: 0,
         fee: VERIFICATION_FEE
       });
     }
 
     const wallet = walletCheck.rows[0];
+    const currentBalance = parseFloat(wallet.balance) || 0;
 
-    if (parseFloat(wallet.balance) < VERIFICATION_FEE) {
+    if (currentBalance < VERIFICATION_FEE) {
       return res.status(400).json({ 
-        error: `Insufficient balance. You need $${VERIFICATION_FEE} for verification. Current balance: $${wallet.balance}`,
+        error: `Insufficient balance. You need $${VERIFICATION_FEE} for verification. Current balance: $${currentBalance.toFixed(2)}`,
         requiresPayment: true,
-        currentBalance: wallet.balance,
+        currentBalance: currentBalance,
         fee: VERIFICATION_FEE
       });
     }
 
-    // Deduct verification fee from wallet
+    // Deduct verification fee from user's main wallet
     await pool.query(
-      'UPDATE seller_wallets SET balance = balance - $1 WHERE user_id = $2',
+      'UPDATE user_wallets SET balance = balance - $1, total_spent = total_spent + $1 WHERE user_id = $2',
       [VERIFICATION_FEE, userId]
     );
 
-    // Record the transaction
+    // Record the transaction in wallet transactions
     await pool.query(
-      `INSERT INTO seller_transactions (user_id, type, amount, description, status)
-       VALUES ($1, 'verification_fee', $2, 'Seller Verification Badge Fee', 'completed')`,
-      [userId, -VERIFICATION_FEE]
+      `INSERT INTO wallet_transactions (user_id, type, amount, balance_before, balance_after, description)
+       VALUES ($1, 'purchase', $2, $3, $4, 'Seller Verification Badge')`,
+      [userId, -VERIFICATION_FEE, currentBalance, currentBalance - VERIFICATION_FEE]
     );
 
     // Credit admin wallet with verification fee

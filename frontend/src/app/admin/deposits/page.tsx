@@ -71,14 +71,22 @@ interface EarningSummary {
 }
 
 const getPaymentMethodIcon = (method: string) => {
+  const iconStyle = { width: 20, height: 20, borderRadius: '50%' };
   switch (method) {
     case 'mpesa':
-      return <PhoneIcon fontSize="small" />;
-    case 'paypal':
-      return <PaymentsIcon fontSize="small" />;
+      return <img src="/icons/mpesa.svg" alt="M-Pesa" style={iconStyle} />;
+    case 'airtel_money':
+      return <img src="/icons/airtel.svg" alt="Airtel Money" style={iconStyle} />;
+    case 'usdt':
     case 'crypto_usdt':
+      return <img src="/icons/usdt.svg" alt="USDT" style={iconStyle} />;
+    case 'btc':
     case 'crypto_btc':
-      return <CryptoIcon fontSize="small" />;
+      return <img src="/icons/btc.svg" alt="Bitcoin" style={iconStyle} />;
+    case 'eth':
+      return <img src="/icons/eth.svg" alt="Ethereum" style={iconStyle} />;
+    case 'ltc':
+      return <img src="/icons/ltc.svg" alt="Litecoin" style={iconStyle} />;
     default:
       return <PaymentsIcon fontSize="small" />;
   }
