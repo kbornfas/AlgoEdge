@@ -321,9 +321,33 @@ export default function SignalProviderPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
+    // Check if user is logged in by verifying token
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setIsLoggedIn(false);
+        return;
+      }
+      
+      try {
+        // Verify token is valid by making a quick API call
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          setIsLoggedIn(true);
+        } else {
+          // Token is invalid, clear it
+          localStorage.removeItem('token');
+          setIsLoggedIn(false);
+        }
+      } catch {
+        // Network error, assume not logged in
+        setIsLoggedIn(false);
+      }
+    };
+    
+    checkAuth();
   }, []);
 
   useEffect(() => {
@@ -421,14 +445,15 @@ export default function SignalProviderPage() {
         body: JSON.stringify({ plan_type: selectedPlan }),
       });
       
-      const data = await res.json();
-      
       // Handle authentication errors - redirect to login
-      if (res.status === 401) {
+      if (res.status === 401 || res.status === 403) {
         localStorage.removeItem('token');
+        setIsLoggedIn(false);
         router.push('/auth/login?redirect=/marketplace/signals/' + providerId);
         return;
       }
+      
+      const data = await res.json();
       
       if (res.ok) {
         // Subscription successful - redirect to purchases page
@@ -438,11 +463,14 @@ export default function SignalProviderPage() {
         if (data.error === 'Insufficient balance') {
           setSubscribeError(`Insufficient balance. You need $${data.required?.toFixed(2)} but only have $${data.current?.toFixed(2)}. Please deposit $${data.shortfall?.toFixed(2)} more.`);
         } else {
-          setSubscribeError(data.error || 'Failed to subscribe');
+          setSubscribeError(data.error || 'Failed to subscribe. Please try again.');
         }
       }
     } catch (error) {
-      setSubscribeError('Network error. Please try again.');
+      // Network error - could be auth issue or server error
+      localStorage.removeItem('token');
+      setIsLoggedIn(false);
+      setSubscribeError('Please login to subscribe to signals.');
     } finally {
       setSubscribing(false);
     }
