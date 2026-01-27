@@ -42,7 +42,7 @@ const botImages: Record<string, string> = {
   // Actual database bots
   'gold-scalper-pro': 'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=400&h=250&fit=crop', // Gold bars
   'silver-trend-rider': 'https://images.unsplash.com/photo-1589656966895-2f33e7653819?w=400&h=250&fit=crop', // Silver coins
-  'multi-metal-portfolio': 'https://images.unsplash.com/photo-1624365168968-f283d506c6b6?w=400&h=250&fit=crop', // Multiple precious metals
+  'multi-metal-portfolio': 'https://images.unsplash.com/photo-1618761714954-0b8cd0026356?w=400&h=250&fit=crop', // Gold and silver coins stack
   'news-trading-sniper': 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&h=250&fit=crop', // News/newspaper
   'risk-manager-pro': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=250&fit=crop', // Dashboard analytics
   // Fallback demo bots
