@@ -71,7 +71,7 @@ const demoBots: TradingBot[] = [
     name: 'Multi-Metal Portfolio EA',
     slug: 'multi-metal-portfolio',
     short_description: 'Diversified precious metals trading strategy for Gold, Silver and Platinum with correlation filter and risk diversification.',
-    thumbnail_url: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=400&h=225&fit=crop',
+    thumbnail_url: 'https://images.pexels.com/photos/730547/pexels-photo-730547.jpeg?auto=compress&cs=tinysrgb&w=400',
     price: 199,
     price_type: 'one_time',
     win_rate: 78.90,
