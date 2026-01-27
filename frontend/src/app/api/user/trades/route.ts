@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
         orderBy: { openTime: 'desc' },
         take: 50,
         include: {
-          robot: {
+          trading_robots: {
             select: {
               id: true,
               name: true,
@@ -180,8 +180,8 @@ export async function GET(req: NextRequest) {
         openTime: trade.openTime,
         closeTime: trade.closeTime,
         status: trade.status?.toUpperCase() || 'OPEN',
-        robotId: trade.robotId,
-        robotName: trade.robot?.name || null,
+        robotId: trade.robot_id,
+        robotName: trade.trading_robots?.name || null,
       })),
       totalCount,
       totalProfit: Number(profitResult._sum.profit) || 0,

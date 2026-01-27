@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
         },
       },
       include: {
-        robot: {
+        trading_robots: {
           select: {
             id: true,
             name: true,
@@ -122,8 +122,8 @@ export async function GET(req: NextRequest) {
         currentPrice: null, // Not available without live connection
         profit: trade.profit ? Number(trade.profit) : 0,
         openTime: trade.openTime,
-        robotId: trade.robotId,
-        robotName: trade.robot?.name || null,
+        robotId: trade.robot_id,
+        robotName: trade.trading_robots?.name || null,
       })),
       source: 'database',
     });

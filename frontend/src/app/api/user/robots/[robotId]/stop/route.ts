@@ -38,7 +38,7 @@ export async function POST(
         },
       },
       include: {
-        robot: true,
+        trading_robots: true,
       },
     });
 
@@ -110,7 +110,7 @@ export async function POST(
     // Also mark trades as closed in database
     await prisma.trade.updateMany({
       where: {
-        robotId: robotId,
+        robot_id: robotId,
         userId: decoded.userId,
         status: 'open',
       },
@@ -127,7 +127,7 @@ export async function POST(
         action: 'ROBOT_STOPPED',
         details: {
           robotId,
-          robotName: userRobotConfig.robot.name,
+          robotName: userRobotConfig.trading_robots.name,
           tradesClosed,
           closeErrors,
         },
@@ -138,8 +138,8 @@ export async function POST(
     return NextResponse.json({
       message: `Robot stopped successfully. ${tradesClosed} trade(s) closed.`,
       robot: {
-        id: userRobotConfig.robot.id,
-        name: userRobotConfig.robot.name,
+        id: userRobotConfig.trading_robots.id,
+        name: userRobotConfig.trading_robots.name,
         status: 'stopped',
       },
       tradesClosed,

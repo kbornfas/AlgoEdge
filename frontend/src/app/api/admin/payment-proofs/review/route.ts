@@ -32,9 +32,9 @@ export async function POST(req: NextRequest) {
     const { proofId, status, notes } = reviewSchema.parse(body);
 
     // Get the payment proof
-    const proof = await prisma.paymentProof.findUnique({
+    const proof = await prisma.payment_proofs.findUnique({
       where: { id: proofId },
-      include: { user: true },
+      include: { users: true },
     });
 
     if (!proof) {
@@ -42,12 +42,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Update payment proof
-    const updatedProof = await prisma.paymentProof.update({
+    const updatedProof = await prisma.payment_proofs.update({
       where: { id: proofId },
       data: {
         status,
-        reviewedBy: decoded.userId,
-        reviewedAt: new Date(),
+        reviewed_by: decoded.userId,
+        reviewed_at: new Date(),
         notes: notes || proof.notes,
       },
     });
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     // If approved, activate the user
     if (status === 'approved') {
       await prisma.user.update({
-        where: { id: proof.userId },
+        where: { id: proof.user_id },
         data: {
           isActivated: true,
           activatedAt: new Date(),
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     } else {
       // If rejected, update payment status
       await prisma.user.update({
-        where: { id: proof.userId },
+        where: { id: proof.user_id },
         data: {
           paymentStatus: 'rejected',
         },
@@ -80,8 +80,8 @@ export async function POST(req: NextRequest) {
         action: status === 'approved' ? 'PAYMENT_APPROVED' : 'PAYMENT_REJECTED',
         details: {
           proofId,
-          targetUserId: proof.userId,
-          targetEmail: proof.user.email,
+          targetUserId: proof.user_id,
+          targetEmail: proof.users.email,
         },
         ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '',
       },
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
       paymentProof: {
         id: updatedProof.id,
         status: updatedProof.status,
-        reviewedAt: updatedProof.reviewedAt,
+        reviewedAt: updatedProof.reviewed_at,
       },
       userActivated: status === 'approved',
     });

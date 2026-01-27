@@ -805,7 +805,7 @@ export async function runRobotTrading(
           await prisma.trade.create({
             data: {
               userId,
-              robotId,
+              robot_id: robotId,
               mt5AccountId: mt5AccountDbId,
               pair: signal.symbol,
               type: signal.type,
@@ -914,7 +914,7 @@ export async function runRobotTrading(
             await prisma.trade.create({
               data: {
                 userId,
-                robotId,
+                robot_id: robotId,
                 mt5AccountId: mt5AccountDbId,
                 pair: 'XAUUSD',
                 type: guaranteedSignal.type,

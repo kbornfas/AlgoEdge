@@ -32,10 +32,10 @@ export async function POST(req: NextRequest) {
     const { proofUrl, amount, notes } = submitProofSchema.parse(body);
 
     // Create payment proof record
-    const paymentProof = await prisma.paymentProof.create({
+    const paymentProof = await prisma.payment_proofs.create({
       data: {
-        userId: decoded.userId,
-        proofUrl,
+        user_id: decoded.userId,
+        proof_url: proofUrl,
         amount,
         notes,
         status: 'pending',
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       paymentProof: {
         id: paymentProof.id,
         status: paymentProof.status,
-        submittedAt: paymentProof.submittedAt,
+        submittedAt: paymentProof.submitted_at,
       },
     });
   } catch (error) {

@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const dbUser = await prisma.user.findUnique({
       where: { id: user.userId },
       include: {
-        settings: true,
+        user_settings: true,
       },
     });
 
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
       twoFaEnabled: dbUser.twoFaEnabled,
       lastLogin: dbUser.lastLogin,
       createdAt: dbUser.createdAt,
-      settings: dbUser.settings,
+      settings: dbUser.user_settings,
     });
   } catch (error) {
     console.error('Get profile error:', error);

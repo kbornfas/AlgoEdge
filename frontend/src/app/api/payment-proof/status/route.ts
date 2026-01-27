@@ -41,18 +41,18 @@ export async function GET(req: NextRequest) {
     }
 
     // Get payment proofs
-    const paymentProofs = await prisma.paymentProof.findMany({
-      where: { userId: decoded.userId },
-      orderBy: { submittedAt: 'desc' },
+    const paymentProofs = await prisma.payment_proofs.findMany({
+      where: { user_id: decoded.userId },
+      orderBy: { submitted_at: 'desc' },
       take: 5,
       select: {
         id: true,
-        proofUrl: true,
+        proof_url: true,
         amount: true,
         status: true,
         notes: true,
-        submittedAt: true,
-        reviewedAt: true,
+        submitted_at: true,
+        reviewed_at: true,
       },
     });
 
@@ -61,7 +61,15 @@ export async function GET(req: NextRequest) {
       isActivated: user.isActivated,
       activatedAt: user.activatedAt,
       paymentSubmittedAt: user.paymentSubmittedAt,
-      paymentProofs,
+      paymentProofs: paymentProofs.map(p => ({
+        id: p.id,
+        proofUrl: p.proof_url,
+        amount: p.amount,
+        status: p.status,
+        notes: p.notes,
+        submittedAt: p.submitted_at,
+        reviewedAt: p.reviewed_at,
+      })),
     });
   } catch (error) {
     console.error('Get payment status error:', error);
