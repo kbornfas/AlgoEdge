@@ -566,6 +566,338 @@ const emailTemplates = {
       </html>
     `,
   }),
+
+  // Deposit Approved Email
+  depositApproved: (username, amount, paymentMethod, newBalance) => ({
+    subject: '✅ Deposit Approved - AlgoEdge',
+    html: `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Deposit Approved</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6;">
+          <tr>
+            <td style="padding: 40px 20px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden;">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 50px 30px; text-align: center;">
+                    <div style="font-size: 64px; margin-bottom: 15px;">💰</div>
+                    <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 800;">Deposit Approved!</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 40px 30px;">
+                    <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px;">Hi ${username},</h2>
+                    <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
+                      Great news! Your deposit has been approved and credited to your wallet.
+                    </p>
+                    
+                    <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-radius: 12px; padding: 25px; margin: 25px 0;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                        <tr>
+                          <td style="padding: 8px 0; color: #065f46; font-size: 14px;">Amount Deposited:</td>
+                          <td style="padding: 8px 0; color: #065f46; font-size: 20px; font-weight: 700; text-align: right;">$${parseFloat(amount).toFixed(2)}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #065f46; font-size: 14px;">Payment Method:</td>
+                          <td style="padding: 8px 0; color: #065f46; font-size: 14px; font-weight: 500; text-align: right;">${paymentMethod}</td>
+                        </tr>
+                        <tr>
+                          <td colspan="2" style="padding-top: 15px; border-top: 1px solid #6ee7b7;"></td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #065f46; font-size: 14px;">New Balance:</td>
+                          <td style="padding: 8px 0; color: #065f46; font-size: 24px; font-weight: 900; text-align: right;">$${parseFloat(newBalance).toFixed(2)}</td>
+                        </tr>
+                      </table>
+                    </div>
+
+                    <div style="text-align: center; margin: 35px 0;">
+                      <a href="${process.env.FRONTEND_URL || 'https://algoedgehub.com'}/dashboard/wallet" 
+                         style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px;">
+                        View Your Wallet
+                      </a>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0;">
+                      You can now use your balance to purchase products, subscribe to signals, or access premium features.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #667eea; font-size: 18px; font-weight: 700; margin: 0 0 5px 0;">AlgoEdge</p>
+                    <p style="color: #6b7280; font-size: 13px; margin: 0 0 15px 0;">Your Automated Trading Platform</p>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} AlgoEdge. All rights reserved.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `,
+  }),
+
+  // Withdrawal Completed Email
+  withdrawalCompleted: (username, amount, netAmount, fee, paymentMethod, transactionRef) => ({
+    subject: '✅ Withdrawal Completed - AlgoEdge',
+    html: `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Withdrawal Completed</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6;">
+          <tr>
+            <td style="padding: 40px 20px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden;">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 50px 30px; text-align: center;">
+                    <div style="font-size: 64px; margin-bottom: 15px;">💸</div>
+                    <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 800;">Withdrawal Completed!</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 40px 30px;">
+                    <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px;">Hi ${username},</h2>
+                    <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
+                      Your withdrawal has been processed and sent to your ${paymentMethod} account.
+                    </p>
+                    
+                    <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 12px; padding: 25px; margin: 25px 0;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                        <tr>
+                          <td style="padding: 8px 0; color: #1e40af; font-size: 14px;">Withdrawal Amount:</td>
+                          <td style="padding: 8px 0; color: #1e40af; font-size: 16px; font-weight: 600; text-align: right;">$${parseFloat(amount).toFixed(2)}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #1e40af; font-size: 14px;">Processing Fee:</td>
+                          <td style="padding: 8px 0; color: #1e40af; font-size: 16px; font-weight: 500; text-align: right;">-$${parseFloat(fee).toFixed(2)}</td>
+                        </tr>
+                        <tr>
+                          <td colspan="2" style="padding-top: 15px; border-top: 1px solid #93c5fd;"></td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #1e40af; font-size: 14px;">Amount Received:</td>
+                          <td style="padding: 8px 0; color: #1e40af; font-size: 24px; font-weight: 900; text-align: right;">$${parseFloat(netAmount).toFixed(2)}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #1e40af; font-size: 14px;">Payment Method:</td>
+                          <td style="padding: 8px 0; color: #1e40af; font-size: 14px; font-weight: 500; text-align: right;">${paymentMethod}</td>
+                        </tr>
+                        ${transactionRef ? `
+                        <tr>
+                          <td style="padding: 8px 0; color: #1e40af; font-size: 14px;">Transaction Ref:</td>
+                          <td style="padding: 8px 0; color: #1e40af; font-size: 14px; font-weight: 500; text-align: right;">${transactionRef}</td>
+                        </tr>
+                        ` : ''}
+                      </table>
+                    </div>
+
+                    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                      <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.5;">
+                        <strong>Note:</strong> Depending on your payment method, it may take 1-3 business days for the funds to appear in your account.
+                      </p>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0;">
+                      Questions? Contact us at <a href="mailto:support@algoedgehub.com" style="color: #3b82f6; text-decoration: none;">support@algoedgehub.com</a>
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #667eea; font-size: 18px; font-weight: 700; margin: 0 0 5px 0;">AlgoEdge</p>
+                    <p style="color: #6b7280; font-size: 13px; margin: 0 0 15px 0;">Your Automated Trading Platform</p>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} AlgoEdge. All rights reserved.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `,
+  }),
+
+  // Purchase Confirmation Email (Buyer)
+  purchaseConfirmation: (username, productName, productType, price, sellerName) => ({
+    subject: `🎉 Purchase Confirmed - ${productName}`,
+    html: `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Purchase Confirmed</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6;">
+          <tr>
+            <td style="padding: 40px 20px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden;">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 50px 30px; text-align: center;">
+                    <div style="font-size: 64px; margin-bottom: 15px;">🎉</div>
+                    <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 800;">Purchase Confirmed!</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 40px 30px;">
+                    <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px;">Hi ${username},</h2>
+                    <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
+                      Thank you for your purchase! Your ${productType === 'signal' ? 'signal subscription' : 'product'} is now ready.
+                    </p>
+                    
+                    <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); border-radius: 12px; padding: 25px; margin: 25px 0;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                        <tr>
+                          <td style="padding: 8px 0; color: #5b21b6; font-size: 14px;">${productType === 'signal' ? 'Signal Provider' : 'Product'}:</td>
+                          <td style="padding: 8px 0; color: #5b21b6; font-size: 16px; font-weight: 700; text-align: right;">${productName}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #5b21b6; font-size: 14px;">Seller:</td>
+                          <td style="padding: 8px 0; color: #5b21b6; font-size: 14px; font-weight: 500; text-align: right;">${sellerName}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #5b21b6; font-size: 14px;">Amount Paid:</td>
+                          <td style="padding: 8px 0; color: #5b21b6; font-size: 20px; font-weight: 900; text-align: right;">$${parseFloat(price).toFixed(2)}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #5b21b6; font-size: 14px;">Date:</td>
+                          <td style="padding: 8px 0; color: #5b21b6; font-size: 14px; font-weight: 500; text-align: right;">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</td>
+                        </tr>
+                      </table>
+                    </div>
+
+                    <div style="text-align: center; margin: 35px 0;">
+                      <a href="${process.env.FRONTEND_URL || 'https://algoedgehub.com'}/dashboard/purchases" 
+                         style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px;">
+                        View Your Purchases
+                      </a>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0;">
+                      Need help? Contact us at <a href="mailto:support@algoedgehub.com" style="color: #8b5cf6; text-decoration: none;">support@algoedgehub.com</a>
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #667eea; font-size: 18px; font-weight: 700; margin: 0 0 5px 0;">AlgoEdge</p>
+                    <p style="color: #6b7280; font-size: 13px; margin: 0 0 15px 0;">Your Automated Trading Platform</p>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} AlgoEdge. All rights reserved.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `,
+  }),
+
+  // Sale Notification Email (Seller)
+  saleNotification: (sellerName, productName, productType, price, earnings, buyerName) => ({
+    subject: `💵 New Sale - ${productName}`,
+    html: `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Sale</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6;">
+          <tr>
+            <td style="padding: 40px 20px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden;">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 50px 30px; text-align: center;">
+                    <div style="font-size: 64px; margin-bottom: 15px;">💵</div>
+                    <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 800;">You Made a Sale!</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 40px 30px;">
+                    <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px;">Congratulations ${sellerName}!</h2>
+                    <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
+                      Great news! Someone just purchased your ${productType === 'signal' ? 'signal subscription' : 'product'}.
+                    </p>
+                    
+                    <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-radius: 12px; padding: 25px; margin: 25px 0;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                        <tr>
+                          <td style="padding: 8px 0; color: #065f46; font-size: 14px;">${productType === 'signal' ? 'Signal Provider' : 'Product'}:</td>
+                          <td style="padding: 8px 0; color: #065f46; font-size: 16px; font-weight: 700; text-align: right;">${productName}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #065f46; font-size: 14px;">Buyer:</td>
+                          <td style="padding: 8px 0; color: #065f46; font-size: 14px; font-weight: 500; text-align: right;">${buyerName}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #065f46; font-size: 14px;">Sale Price:</td>
+                          <td style="padding: 8px 0; color: #065f46; font-size: 16px; font-weight: 600; text-align: right;">$${parseFloat(price).toFixed(2)}</td>
+                        </tr>
+                        <tr>
+                          <td colspan="2" style="padding-top: 15px; border-top: 1px solid #6ee7b7;"></td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #065f46; font-size: 14px;">Your Earnings (80%):</td>
+                          <td style="padding: 8px 0; color: #065f46; font-size: 24px; font-weight: 900; text-align: right;">$${parseFloat(earnings).toFixed(2)}</td>
+                        </tr>
+                      </table>
+                    </div>
+
+                    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                      <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.5;">
+                        <strong>Note:</strong> Your earnings will be available for withdrawal after a 7-day holding period.
+                      </p>
+                    </div>
+
+                    <div style="text-align: center; margin: 35px 0;">
+                      <a href="${process.env.FRONTEND_URL || 'https://algoedgehub.com'}/dashboard/seller" 
+                         style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px;">
+                        View Seller Dashboard
+                      </a>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0;">
+                      Keep up the great work! 🚀
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #667eea; font-size: 18px; font-weight: 700; margin: 0 0 5px 0;">AlgoEdge</p>
+                    <p style="color: #6b7280; font-size: 13px; margin: 0 0 15px 0;">Your Automated Trading Platform</p>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} AlgoEdge. All rights reserved.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `,
+  }),
 };
 
 // Send email function - uses Resend (HTTP) with SMTP fallback
@@ -932,6 +1264,54 @@ export const sendDailyReportsToAllUsers = async (pool, batchSize = 5, batchDelay
   }
 };
 
+// Send deposit approved email
+export const sendDepositApprovedEmail = async (email, username, amount, paymentMethod, newBalance) => {
+  try {
+    await sendEmail(email, 'depositApproved', [username, amount, paymentMethod, newBalance]);
+    console.log(`✅ Deposit approved email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Failed to send deposit approved email:`, error);
+    return false;
+  }
+};
+
+// Send withdrawal completed email
+export const sendWithdrawalCompletedEmail = async (email, username, amount, netAmount, fee, paymentMethod, transactionRef) => {
+  try {
+    await sendEmail(email, 'withdrawalCompleted', [username, amount, netAmount, fee, paymentMethod, transactionRef]);
+    console.log(`✅ Withdrawal completed email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Failed to send withdrawal completed email:`, error);
+    return false;
+  }
+};
+
+// Send purchase confirmation email to buyer
+export const sendPurchaseConfirmationEmail = async (email, username, productName, productType, price, sellerName) => {
+  try {
+    await sendEmail(email, 'purchaseConfirmation', [username, productName, productType, price, sellerName]);
+    console.log(`✅ Purchase confirmation email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Failed to send purchase confirmation email:`, error);
+    return false;
+  }
+};
+
+// Send sale notification email to seller
+export const sendSaleNotificationEmail = async (email, sellerName, productName, productType, price, earnings, buyerName) => {
+  try {
+    await sendEmail(email, 'saleNotification', [sellerName, productName, productType, price, earnings, buyerName]);
+    console.log(`✅ Sale notification email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Failed to send sale notification email:`, error);
+    return false;
+  }
+};
+
 export default { 
   sendEmail, 
   emailTemplates, 
@@ -943,5 +1323,9 @@ export default {
   calculateDailyStats,
   getTodaysTrades,
   sendDailyTradeReport,
-  sendDailyReportsToAllUsers
+  sendDailyReportsToAllUsers,
+  sendDepositApprovedEmail,
+  sendWithdrawalCompletedEmail,
+  sendPurchaseConfirmationEmail,
+  sendSaleNotificationEmail
 };

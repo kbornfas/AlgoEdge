@@ -2,6 +2,12 @@ import express from 'express';
 import pool from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { addAdminWalletTransaction } from '../services/adminWalletService.js';
+import { 
+  sendDepositApprovedEmail, 
+  sendWithdrawalCompletedEmail, 
+  sendPurchaseConfirmationEmail, 
+  sendSaleNotificationEmail 
+} from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -302,9 +308,17 @@ router.post('/purchase/bot/:botId', authenticate, async (req, res) => {
     const userId = req.user.id;
     const { botId } = req.params;
 
-    // Get bot details
+    // Get buyer info
+    const buyerInfo = await pool.query(
+      'SELECT email, username, full_name FROM users WHERE id = $1',
+      [userId]
+    );
+    const buyerEmail = buyerInfo.rows[0]?.email;
+    const buyerName = buyerInfo.rows[0]?.full_name || buyerInfo.rows[0]?.username;
+
+    // Get bot details with seller info
     const bot = await pool.query(
-      `SELECT b.*, u.id as seller_id, u.email as seller_email
+      `SELECT b.*, u.id as seller_id, u.email as seller_email, u.username as seller_username, u.full_name as seller_full_name
        FROM marketplace_bots b
        JOIN users u ON b.seller_id = u.id
        WHERE b.id = $1 AND b.status = 'approved'`,
@@ -317,6 +331,8 @@ router.post('/purchase/bot/:botId', authenticate, async (req, res) => {
 
     const item = bot.rows[0];
     const price = parseFloat(item.price);
+    const sellerEmail = item.seller_email;
+    const sellerName = item.seller_full_name || item.seller_username;
 
     // Check if user is the seller
     if (item.seller_id === userId) {
@@ -456,6 +472,35 @@ router.post('/purchase/bot/:botId', authenticate, async (req, res) => {
 
       await client.query('COMMIT');
 
+      // Send purchase confirmation email to buyer
+      try {
+        await sendPurchaseConfirmationEmail(
+          buyerEmail,
+          buyerName,
+          item.name,
+          'bot',
+          price,
+          sellerName
+        );
+      } catch (emailErr) {
+        console.error('Failed to send buyer email:', emailErr);
+      }
+
+      // Send sale notification email to seller
+      try {
+        await sendSaleNotificationEmail(
+          sellerEmail,
+          sellerName,
+          item.name,
+          'bot',
+          price,
+          sellerEarnings,
+          buyerName
+        );
+      } catch (emailErr) {
+        console.error('Failed to send seller email:', emailErr);
+      }
+
       res.json({
         success: true,
         message: 'Purchase successful!',
@@ -480,9 +525,17 @@ router.post('/purchase/product/:productId', authenticate, async (req, res) => {
     const userId = req.user.id;
     const { productId } = req.params;
 
-    // Get product details
+    // Get buyer info
+    const buyerInfo = await pool.query(
+      'SELECT email, username, full_name FROM users WHERE id = $1',
+      [userId]
+    );
+    const buyerEmail = buyerInfo.rows[0]?.email;
+    const buyerName = buyerInfo.rows[0]?.full_name || buyerInfo.rows[0]?.username;
+
+    // Get product details with seller info
     const product = await pool.query(
-      `SELECT p.*, u.id as seller_id, u.email as seller_email
+      `SELECT p.*, u.id as seller_id, u.email as seller_email, u.username as seller_username, u.full_name as seller_full_name
        FROM marketplace_products p
        JOIN users u ON p.seller_id = u.id
        WHERE p.id = $1 AND p.status = 'approved'`,
@@ -495,6 +548,8 @@ router.post('/purchase/product/:productId', authenticate, async (req, res) => {
 
     const item = product.rows[0];
     const price = parseFloat(item.price);
+    const sellerEmail = item.seller_email;
+    const sellerName = item.seller_full_name || item.seller_username;
 
     // Check if user is the seller
     if (item.seller_id === userId) {
@@ -630,6 +685,35 @@ router.post('/purchase/product/:productId', authenticate, async (req, res) => {
 
       await client.query('COMMIT');
 
+      // Send purchase confirmation email to buyer
+      try {
+        await sendPurchaseConfirmationEmail(
+          buyerEmail,
+          buyerName,
+          item.name,
+          'product',
+          price,
+          sellerName
+        );
+      } catch (emailErr) {
+        console.error('Failed to send buyer email:', emailErr);
+      }
+
+      // Send sale notification email to seller
+      try {
+        await sendSaleNotificationEmail(
+          sellerEmail,
+          sellerName,
+          item.name,
+          'product',
+          price,
+          sellerEarnings,
+          buyerName
+        );
+      } catch (emailErr) {
+        console.error('Failed to send seller email:', emailErr);
+      }
+
       res.json({
         success: true,
         message: 'Purchase successful!',
@@ -659,9 +743,17 @@ router.post('/purchase/signal/:providerId', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Invalid plan type. Must be monthly, quarterly, or yearly.' });
     }
 
-    // Get provider details
+    // Get buyer info
+    const buyerInfo = await pool.query(
+      'SELECT email, username, full_name FROM users WHERE id = $1',
+      [userId]
+    );
+    const buyerEmail = buyerInfo.rows[0]?.email;
+    const buyerName = buyerInfo.rows[0]?.full_name || buyerInfo.rows[0]?.username;
+
+    // Get provider details with seller info
     const provider = await pool.query(
-      `SELECT sp.*, u.id as seller_id, u.email as seller_email
+      `SELECT sp.*, u.id as seller_id, u.email as seller_email, u.username as seller_username, u.full_name as seller_full_name
        FROM signal_providers sp
        JOIN users u ON sp.user_id = u.id
        WHERE sp.id = $1 AND sp.status = 'approved'`,
@@ -673,6 +765,8 @@ router.post('/purchase/signal/:providerId', authenticate, async (req, res) => {
     }
 
     const item = provider.rows[0];
+    const sellerEmail = item.seller_email;
+    const sellerName = item.seller_full_name || item.seller_username;
 
     // Check if user is the provider
     if (item.user_id === userId) {
@@ -837,6 +931,35 @@ router.post('/purchase/signal/:providerId', authenticate, async (req, res) => {
 
       await client.query('COMMIT');
 
+      // Send purchase confirmation email to buyer
+      try {
+        await sendPurchaseConfirmationEmail(
+          buyerEmail,
+          buyerName,
+          item.display_name,
+          'signal',
+          price,
+          sellerName
+        );
+      } catch (emailErr) {
+        console.error('Failed to send buyer email:', emailErr);
+      }
+
+      // Send sale notification email to seller
+      try {
+        await sendSaleNotificationEmail(
+          sellerEmail,
+          sellerName,
+          item.display_name,
+          'signal',
+          price,
+          providerEarnings,
+          buyerName
+        );
+      } catch (emailErr) {
+        console.error('Failed to send seller email:', emailErr);
+      }
+
       res.json({
         success: true,
         message: 'Subscription successful!',
@@ -953,9 +1076,12 @@ router.post('/admin/deposits/:id/approve', authenticate, async (req, res) => {
     const { id } = req.params;
     const { admin_notes } = req.body;
 
-    // Get deposit request
+    // Get deposit request with user info
     const deposit = await pool.query(
-      'SELECT * FROM wallet_deposit_requests WHERE id = $1 AND status = $2',
+      `SELECT d.*, u.email, u.username, u.full_name
+       FROM wallet_deposit_requests d
+       JOIN users u ON d.user_id = u.id
+       WHERE d.id = $1 AND d.status = $2`,
       [id, 'pending']
     );
 
@@ -966,6 +1092,8 @@ router.post('/admin/deposits/:id/approve', authenticate, async (req, res) => {
     const depositData = deposit.rows[0];
     const userId = depositData.user_id;
     const amount = parseFloat(depositData.amount);
+    const userEmail = depositData.email;
+    const userName = depositData.full_name || depositData.username;
 
     const client = await pool.connect();
     try {
@@ -1015,6 +1143,20 @@ router.post('/admin/deposits/:id/approve', authenticate, async (req, res) => {
       );
 
       await client.query('COMMIT');
+
+      // Send deposit approved email
+      try {
+        await sendDepositApprovedEmail(
+          userEmail,
+          userName,
+          amount,
+          depositData.payment_method,
+          newBalance
+        );
+      } catch (emailErr) {
+        console.error('Failed to send deposit email:', emailErr);
+        // Don't fail the request if email fails
+      }
 
       res.json({
         success: true,
@@ -1133,6 +1275,30 @@ router.get('/seller/balance', authenticate, async (req, res) => {
     const client = await pool.connect();
 
     try {
+      // First, check if user is actually a seller
+      const userCheck = await client.query(
+        'SELECT is_seller FROM users WHERE id = $1',
+        [userId]
+      );
+
+      if (!userCheck.rows[0]?.is_seller) {
+        // Return empty wallet for non-sellers (don't create one)
+        return res.json({
+          success: true,
+          wallet: {
+            balance: 0,
+            pending_balance: 0,
+            total_earned: 0,
+            total_withdrawn: 0,
+            is_frozen: false,
+            frozen_reason: null,
+            pending_withdrawals: 0,
+          },
+          recent_sales: [],
+          is_seller: false,
+        });
+      }
+
       let wallet = await client.query(
         'SELECT * FROM seller_wallets WHERE user_id = $1',
         [userId]
@@ -1140,7 +1306,7 @@ router.get('/seller/balance', authenticate, async (req, res) => {
 
       if (wallet.rows.length === 0) {
         wallet = await client.query(
-          `INSERT INTO seller_wallets (user_id, balance, pending_balance, total_earned, total_withdrawn)
+          `INSERT INTO seller_wallets (user_id, available_balance, pending_balance, total_earned, total_withdrawn)
            VALUES ($1, 0, 0, 0, 0) RETURNING *`,
           [userId]
         );
@@ -1160,15 +1326,16 @@ router.get('/seller/balance', authenticate, async (req, res) => {
       res.json({
         success: true,
         wallet: {
-          balance: parseFloat(wallet.rows[0].balance),
+          balance: parseFloat(wallet.rows[0].available_balance || 0),
           pending_balance: parseFloat(wallet.rows[0].pending_balance || 0),
-          total_earned: parseFloat(wallet.rows[0].total_earned),
-          total_withdrawn: parseFloat(wallet.rows[0].total_withdrawn || 0),
+          total_earned: parseFloat(wallet.rows[0].total_earned || 0),
+          total_withdrawn: parseFloat(wallet.rows[0].total_withdrawn || wallet.rows[0].withdrawn_balance || 0),
           is_frozen: wallet.rows[0].is_frozen,
           frozen_reason: wallet.rows[0].frozen_reason,
           pending_withdrawals: parseFloat(pendingWithdrawals.rows[0].total),
         },
         recent_sales: recentSales.rows,
+        is_seller: true,
       });
     } finally {
       client.release();
@@ -1736,8 +1903,12 @@ router.post('/admin/withdrawals/:id/complete', authenticate, async (req, res) =>
 
     await client.query('BEGIN');
 
+    // Get withdrawal with user info
     const withdrawal = await client.query(
-      `SELECT * FROM wallet_withdrawal_requests WHERE id = $1 AND status IN ('pending', 'processing') FOR UPDATE`,
+      `SELECT w.*, u.email, u.username, u.full_name
+       FROM wallet_withdrawal_requests w
+       JOIN users u ON w.user_id = u.id
+       WHERE w.id = $1 AND w.status IN ('pending', 'processing') FOR UPDATE`,
       [id]
     );
 
@@ -1748,6 +1919,8 @@ router.post('/admin/withdrawals/:id/complete', authenticate, async (req, res) =>
 
     const w = withdrawal.rows[0];
     const walletTable = w.wallet_type === 'seller' ? 'seller_wallets' : 'user_wallets';
+    const userEmail = w.email;
+    const userName = w.full_name || w.username;
 
     // Update total_withdrawn
     await client.query(
@@ -1769,6 +1942,22 @@ router.post('/admin/withdrawals/:id/complete', authenticate, async (req, res) =>
     );
 
     await client.query('COMMIT');
+
+    // Send withdrawal completed email
+    try {
+      await sendWithdrawalCompletedEmail(
+        userEmail,
+        userName,
+        w.amount,
+        w.net_amount,
+        w.fee || 0,
+        w.payment_method,
+        transaction_reference
+      );
+    } catch (emailErr) {
+      console.error('Failed to send withdrawal email:', emailErr);
+      // Don't fail the request if email fails
+    }
 
     res.json({ success: true, message: 'Withdrawal completed successfully' });
   } catch (error) {

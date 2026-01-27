@@ -1263,7 +1263,7 @@ export default function ProductDetailPage() {
                   </Typography>
                   <Stack direction="row" spacing={2} alignItems="center">
                     <Box sx={{ position: 'relative' }}>
-                      <Avatar sx={{ bgcolor: 'rgba(59, 130, 246, 0.2)' }}>
+                      <Avatar sx={{ bgcolor: 'rgba(59, 130, 246, 0.2)', width: 48, height: 48 }}>
                         {product.seller_name?.charAt(0)}
                       </Avatar>
                       {product.seller_verified && (
@@ -1272,10 +1272,10 @@ export default function ProductDetailPage() {
                             position: 'absolute',
                             bottom: -2,
                             right: -2,
-                            width: 18,
-                            height: 18,
+                            width: 20,
+                            height: 20,
                             borderRadius: '50%',
-                            bgcolor: 'rgba(255,255,255,0.03)',
+                            bgcolor: '#0a0f1a',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',

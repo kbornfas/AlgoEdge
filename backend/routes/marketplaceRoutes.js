@@ -198,7 +198,7 @@ router.get('/bots', async (req, res) => {
       SELECT b.*, 
              u.username as seller_name,
              u.profile_picture as seller_avatar,
-             u.is_verified_seller as seller_verified,
+             u.has_blue_badge as seller_verified,
              COALESCE(u.seller_rating_average, 0) as seller_rating,
              COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM marketplace_bots b
@@ -289,7 +289,7 @@ router.get('/bots/:slug', optionalAuthenticate, async (req, res) => {
              u.username as seller_name, 
              u.created_at as seller_since,
              u.profile_picture as seller_avatar,
-             u.is_verified_seller as seller_verified,
+             u.has_blue_badge as seller_verified,
              COALESCE(u.seller_rating_average, 0) as seller_rating,
              COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM marketplace_bots b
@@ -550,7 +550,7 @@ router.get('/signals/providers', async (req, res) => {
       SELECT sp.*, 
              u.username,
              u.profile_picture as seller_avatar,
-             u.is_verified_seller as seller_verified,
+             u.has_blue_badge as seller_verified,
              COALESCE(u.seller_rating_average, 0) as seller_rating,
              COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM signal_providers sp
@@ -611,7 +611,7 @@ router.get('/signals/providers/:idOrSlug', optionalAuthenticate, async (req, res
              u.username, 
              u.created_at as member_since,
              u.profile_picture as seller_avatar,
-             u.is_verified_seller as seller_verified,
+             u.has_blue_badge as seller_verified,
              COALESCE(u.seller_rating_average, 0) as seller_rating,
              COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM signal_providers sp
@@ -956,7 +956,7 @@ router.get('/products', async (req, res) => {
       SELECT p.*, 
              u.username as seller_name,
              u.profile_picture as seller_avatar,
-             u.is_verified_seller as seller_verified,
+             u.has_blue_badge as seller_verified,
              COALESCE(u.seller_rating_average, 0) as seller_rating,
              COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM marketplace_products p
@@ -1022,7 +1022,7 @@ router.get('/products/:slug', optionalAuthenticate, async (req, res) => {
       SELECT p.*, 
              u.username as seller_name,
              u.profile_picture as seller_avatar,
-             u.is_verified_seller as seller_verified,
+             u.has_blue_badge as seller_verified,
              COALESCE(u.seller_rating_average, 0) as seller_rating,
              COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM marketplace_products p

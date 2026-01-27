@@ -456,8 +456,8 @@ export default function DashboardAffiliatePage() {
           {/* Stats Grid - 2x2 on mobile */}
           <Grid container spacing={1}>
             {[
-              { label: 'Balance', value: `$${(stats?.availableBalance || 0).toFixed(2)}`, color: '#22C55E' },
-              { label: 'Total Earned', value: `$${(stats?.totalEarnings || 0).toFixed(2)}`, color: '#0066FF' },
+              { label: 'Balance', value: `$${Number(stats?.availableBalance || 0).toFixed(2)}`, color: '#22C55E' },
+              { label: 'Total Earned', value: `$${Number(stats?.totalEarnings || 0).toFixed(2)}`, color: '#0066FF' },
               { label: 'Referrals', value: stats?.totalReferrals || 0, color: '#FFD700' },
               { label: 'Active', value: stats?.activeReferrals || 0, color: '#A000FF' },
             ].map((stat, i) => (
@@ -493,7 +493,7 @@ export default function DashboardAffiliatePage() {
               '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
             }}
           >
-            {stats && stats.availableBalance >= 50 ? 'Request Payout' : `$${(50 - (stats?.availableBalance || 0)).toFixed(2)} more to withdraw`}
+            {stats && Number(stats.availableBalance) >= 50 ? 'Request Payout' : `$${(50 - Number(stats?.availableBalance || 0)).toFixed(2)} more to withdraw`}
           </Button>
         </GlassCard>
 
@@ -699,7 +699,7 @@ export default function DashboardAffiliatePage() {
                       />
                     </TableCell>
                     <TableCell sx={{ color: '#22C55E', fontWeight: 700, borderColor: 'rgba(255,255,255,0.1)', py: 1, px: 1, fontSize: '0.75rem' }} align="right">
-                      ${(referral.commission || 0).toFixed(2)}
+                      ${Number(referral.commission || 0).toFixed(2)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -736,7 +736,7 @@ export default function DashboardAffiliatePage() {
           {payoutError && <Alert severity="error" sx={{ mb: 1.5, py: 0.5 }}>{payoutError}</Alert>}
           
           <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 2, fontSize: '0.85rem' }}>
-            Available: <strong style={{ color: '#22C55E' }}>${(stats?.availableBalance || 0).toFixed(2)}</strong>
+            Available: <strong style={{ color: '#22C55E' }}>${Number(stats?.availableBalance || 0).toFixed(2)}</strong>
           </Typography>
 
           <TextField

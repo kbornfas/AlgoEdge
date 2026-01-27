@@ -513,52 +513,6 @@ export default function DashboardPage() {
 
   return (
     <Box>
-      {/* Upgrade Banner for Unsubscribed Users */}
-      {!isSubscribed && (
-        <Alert
-          severity="info"
-          sx={{
-            mb: 3,
-            borderRadius: 3,
-            background: 'linear-gradient(135deg, rgba(0, 102, 255, 0.1) 0%, rgba(0, 212, 255, 0.05) 100%)',
-            border: '1px solid rgba(0, 102, 255, 0.3)',
-            '& .MuiAlert-icon': {
-              color: '#0066FF',
-            },
-          }}
-          icon={<Crown size={24} />}
-          action={
-            <Button
-              component={Link}
-              href="/auth/pricing"
-              variant="contained"
-              size="small"
-              endIcon={<ChevronRight size={16} />}
-              sx={{
-                borderRadius: 2,
-                background: 'linear-gradient(135deg, #0066FF 0%, #00D4FF 100%)',
-                boxShadow: '0 4px 14px rgba(0, 102, 255, 0.4)',
-                fontWeight: 600,
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #0052CC 0%, #00B8D9 100%)',
-                },
-              }}
-            >
-              Upgrade Now
-            </Button>
-          }
-        >
-          <Box>
-            <Typography sx={{ fontWeight: 700, color: '#0066FF' }}>
-              Unlock Premium Features
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Get access to trading signals, robots, analytics, and more. Upgrade to start automated trading.
-            </Typography>
-          </Box>
-        </Alert>
-      )}
-
       {/* Header Section */}
       <Box sx={{ mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
