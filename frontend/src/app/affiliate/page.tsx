@@ -474,6 +474,7 @@ export default function AffiliatePage() {
                 name="James K."
                 role="Finance Blogger"
                 earnings="$4,230/mo"
+                avatar="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face"
                 text="Best affiliate program I've joined. The recurring commissions are a game changer - I'm earning from referrals I made 6 months ago!"
               />
             </Grid>
@@ -482,6 +483,7 @@ export default function AffiliatePage() {
                 name="Sarah M."
                 role="YouTube Creator"
                 earnings="$2,890/mo"
+                avatar="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face"
                 text="Super easy to promote since the product actually works. My audience loves it and my commissions keep growing every month."
               />
             </Grid>
@@ -490,7 +492,35 @@ export default function AffiliatePage() {
                 name="David O."
                 role="Telegram Admin"
                 earnings="$1,650/mo"
+                avatar="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face"
                 text="Started sharing in my trading group 3 months ago. Already at Silver tier with 12% commission. Payouts are always on time!"
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TestimonialCard
+                name="Michelle T."
+                role="Trading Educator"
+                earnings="$3,450/mo"
+                avatar="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&h=150&fit=crop&crop=face"
+                text="My students needed a reliable trading platform. AlgoEdge delivers results, so promoting it feels natural. The 15% Gold tier commission is amazing!"
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TestimonialCard
+                name="Marcus W."
+                role="Forex Signal Provider"
+                earnings="$5,120/mo"
+                avatar="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"
+                text="Hit Diamond tier in just 4 months. The real-time dashboard makes tracking easy and the support team is incredibly responsive. Top-notch program!"
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TestimonialCard
+                name="Aisha N."
+                role="Instagram Influencer"
+                earnings="$2,340/mo"
+                avatar="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&h=150&fit=crop&crop=face"
+                text="Love how the marketing materials are ready to use. Started posting about AlgoEdge and commissions started flowing within the first week!"
               />
             </Grid>
           </Grid>
