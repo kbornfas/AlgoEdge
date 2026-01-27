@@ -318,6 +318,13 @@ export default function SignalProviderPage() {
   const [subscribing, setSubscribing] = useState(false);
   const [subscribeError, setSubscribeError] = useState('');
   const [loadError, setLoadError] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
+  }, []);
 
   useEffect(() => {
     if (providerId) {
@@ -415,6 +422,14 @@ export default function SignalProviderPage() {
       });
       
       const data = await res.json();
+      
+      // Handle authentication errors - redirect to login
+      if (res.status === 401) {
+        localStorage.removeItem('token');
+        router.push('/auth/login?redirect=/marketplace/signals/' + providerId);
+        return;
+      }
+      
       if (res.ok) {
         // Subscription successful - redirect to purchases page
         router.push('/dashboard/purchases?type=signal&success=true');
@@ -914,25 +929,46 @@ export default function SignalProviderPage() {
                   </Alert>
                 )}
 
-                {/* Subscribe Button */}
-                <Button
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  onClick={handleSubscribe}
-                  disabled={subscribing || !getSelectedPrice()}
-                  startIcon={subscribing ? <CircularProgress size={20} /> : <Signal size={20} />}
-                  sx={{
-                    bgcolor: '#22C55E',
-                    py: 1.5,
-                    fontSize: '1.1rem',
-                    fontWeight: 700,
-                    '&:hover': { bgcolor: '#16A34A' },
-                    mb: 2,
-                  }}
-                >
-                  {subscribing ? 'Processing...' : 'Subscribe Now'}
-                </Button>
+                {/* Subscribe Button or Login Button */}
+                {isLoggedIn ? (
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    onClick={handleSubscribe}
+                    disabled={subscribing || !getSelectedPrice()}
+                    startIcon={subscribing ? <CircularProgress size={20} /> : <Signal size={20} />}
+                    sx={{
+                      bgcolor: '#22C55E',
+                      py: 1.5,
+                      fontSize: '1.1rem',
+                      fontWeight: 700,
+                      '&:hover': { bgcolor: '#16A34A' },
+                      mb: 2,
+                    }}
+                  >
+                    {subscribing ? 'Processing...' : 'Subscribe Now'}
+                  </Button>
+                ) : (
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    component={Link}
+                    href={`/auth/login?redirect=/marketplace/signals/${providerId}`}
+                    startIcon={<Signal size={20} />}
+                    sx={{
+                      bgcolor: '#22C55E',
+                      py: 1.5,
+                      fontSize: '1.1rem',
+                      fontWeight: 700,
+                      '&:hover': { bgcolor: '#16A34A' },
+                      mb: 2,
+                    }}
+                  >
+                    Login to Subscribe
+                  </Button>
+                )}
 
                 {/* Features */}
                 <Stack spacing={1.5}>
