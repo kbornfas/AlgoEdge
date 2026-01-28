@@ -8,11 +8,20 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function check() {
   try {
+    // Check constraints on user_settings
+    const constraints = await pool.query(`
+      SELECT conname, pg_get_constraintdef(oid) as definition
+      FROM pg_constraint 
+      WHERE conrelid = 'user_settings'::regclass
+    `);
+    console.log('Constraints on user_settings:');
+    constraints.rows.forEach(c => console.log(`  - ${c.conname}: ${c.definition}`));
+    
     // Check user_settings columns
     const schema = await pool.query(
       "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'user_settings'"
     );
-    console.log('user_settings columns:');
+    console.log('\nuser_settings columns:');
     schema.rows.forEach(r => console.log(`  - ${r.column_name}: ${r.data_type}`));
     
     // Check all telegram connections
