@@ -602,10 +602,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 1,
-                  px: 2,
-                  py: 1,
-                  mr: 2,
+                  gap: 0.5,
+                  px: { xs: 1, sm: 2 },
+                  py: 0.75,
+                  mr: 0.5,
                   borderRadius: 2,
                   bgcolor: alpha(theme.palette.success.main, 0.1),
                   border: '1px solid',
@@ -730,10 +730,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           sx={{
             flexGrow: 1,
             width: { lg: `calc(100% - ${drawerWidth}px)` },
+            maxWidth: '100vw',
             minHeight: '100vh',
             pt: { xs: 8, sm: 9 },
             pb: 4,
-            px: { xs: 2, sm: 3, lg: 4 },
+            px: { xs: 1, sm: 2, lg: 3 },
+            overflow: 'hidden',
+            boxSizing: 'border-box',
           }}
         >
           {/* Unlock Features Banner for Free Users */}

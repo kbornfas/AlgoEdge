@@ -62,6 +62,7 @@ import {
   Upload,
 } from 'lucide-react';
 import Link from 'next/link';
+import VerificationModal from '@/components/VerificationModal';
 
 interface SellerStats {
   wallet: {
@@ -128,8 +129,7 @@ export default function SellerDashboardPage() {
   const [stats, setStats] = useState<SellerStats | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   const [payoutDialogOpen, setPayoutDialogOpen] = useState(false);
-  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
-  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState('');
   const [payoutMethod, setPayoutMethod] = useState('bank_transfer');
   const [payoutDetails, setPayoutDetails] = useState('');
@@ -140,6 +140,7 @@ export default function SellerDashboardPage() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isSeller, setIsSeller] = useState<boolean | null>(null);
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
+  const [userWalletBalance, setUserWalletBalance] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -148,7 +149,25 @@ export default function SellerDashboardPage() {
       setUser(JSON.parse(userData));
     }
     checkSellerStatus();
+    fetchUserWalletBalance();
   }, []);
+
+  const fetchUserWalletBalance = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/wallet/balance`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUserWalletBalance(parseFloat(data.balance) || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching wallet balance:', error);
+    }
+  };
 
   const checkSellerStatus = async () => {
     try {
@@ -277,35 +296,16 @@ export default function SellerDashboardPage() {
     }
   };
 
-  const handleRequestVerification = async () => {
-    setVerifyLoading(true);
-    setError('');
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/seller/request-verification`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        if (data.payment_url) {
-          window.location.href = data.payment_url;
-        } else {
-          setSuccess('Verification request submitted! You will be notified once approved.');
-          setVerifyDialogOpen(false);
-          fetchSellerStats();
-        }
-      } else {
-        setError(data.error || 'Failed to request verification');
-      }
-    } catch (error) {
-      setError('Network error. Please try again.');
-    } finally {
-      setVerifyLoading(false);
-    }
+  const handleOpenVerificationModal = () => {
+    // Refresh wallet balance before opening modal
+    fetchUserWalletBalance();
+    setVerifyModalOpen(true);
+  };
+
+  const handleVerificationSuccess = () => {
+    setSuccess('Verification request submitted! Your documents will be reviewed within 24-48 hours.');
+    fetchSellerStats();
+    fetchUserWalletBalance();
   };
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, item: any) => {
@@ -416,22 +416,19 @@ export default function SellerDashboardPage() {
 
   return (
     <Box sx={{ 
-      minHeight: '100vh', 
-      bgcolor: '#0a0f1a', 
-      py: { xs: 1, md: 4 }, 
-      overflow: 'hidden', 
-      maxWidth: '100vw', 
-      boxSizing: 'border-box',
       width: '100%',
-      '& *': { boxSizing: 'border-box' },
+      maxWidth: '100%',
+      overflowX: 'hidden',
+      bgcolor: '#0a0f1a', 
+      minHeight: '100vh',
+      py: { xs: 2, md: 4 },
     }}>
       <Box 
         sx={{ 
-          px: { xs: 1, sm: 2, md: 3 }, 
-          overflow: 'hidden', 
-          maxWidth: '100%',
           width: '100%',
+          maxWidth: '1200px',
           mx: 'auto',
+          px: { xs: 2, sm: 3, md: 4 },
         }}
       >
         {/* Header */}
@@ -439,9 +436,9 @@ export default function SellerDashboardPage() {
           display: 'flex', 
           flexDirection: { xs: 'column', sm: 'row' },
           justifyContent: 'space-between', 
-          alignItems: { xs: 'flex-start', sm: 'center' }, 
+          alignItems: { xs: 'stretch', sm: 'center' }, 
           gap: 2,
-          mb: { xs: 2, md: 4 } 
+          mb: { xs: 3, md: 4 } 
         }}>
           <Box>
             <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, mb: 1, fontSize: { xs: '1.5rem', md: '2rem' } }}>
@@ -594,8 +591,7 @@ export default function SellerDashboardPage() {
                           <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="white"/>
                         </svg>
                       }
-                      onClick={handleRequestVerification}
-                      disabled={verifyLoading}
+                      onClick={handleOpenVerificationModal}
                       sx={{
                         bgcolor: '#1D9BF0',
                         '&:hover': { bgcolor: '#1A8CD8' },
@@ -603,7 +599,7 @@ export default function SellerDashboardPage() {
                         px: 3,
                       }}
                     >
-                      {verifyLoading ? <CircularProgress size={20} color="inherit" /> : 'Get Verified Now'}
+                      Get Verified Now
                     </Button>
                   </Box>
                 )}
@@ -614,90 +610,86 @@ export default function SellerDashboardPage() {
         )}
 
         {/* Quick Actions */}
-        <Box sx={{ overflow: 'hidden', mx: { xs: -0.5, sm: -1 } }}>
-        <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mb: { xs: 2, md: 4 } }}>
-          <Grid item xs={6} sm={6} md={3}>
+        <Grid container spacing={1} sx={{ mb: 3 }}>
+          <Grid item xs={6} md={3}>
             <Button
               fullWidth
               variant="outlined"
-              startIcon={<Package size={18} />}
+              startIcon={<Package size={16} />}
               component={Link}
               href="/dashboard/seller/listings"
               sx={{
-                py: { xs: 1.5, md: 2 },
+                py: 1.5,
                 borderColor: 'rgba(34, 197, 94, 0.5)',
                 color: '#22C55E',
-                fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                fontSize: { xs: '0.65rem', sm: '0.8rem' },
                 '&:hover': { borderColor: '#22C55E', bgcolor: 'rgba(34, 197, 94, 0.1)' },
-                '& .MuiButton-startIcon': { mr: { xs: 0.5, sm: 1 } },
+                '& .MuiButton-startIcon': { mr: 0.5 },
               }}
             >
-              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Manage Listings & Prices</Box>
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Listings</Box>
               <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Listings</Box>
             </Button>
           </Grid>
-          <Grid item xs={6} sm={6} md={3}>
+          <Grid item xs={6} md={3}>
             <Button
               fullWidth
               variant="outlined"
-              startIcon={<Download size={18} />}
+              startIcon={<Download size={16} />}
               component={Link}
               href="/dashboard/seller/deliverables"
               sx={{
-                py: { xs: 1.5, md: 2 },
+                py: 1.5,
                 borderColor: 'rgba(245, 158, 11, 0.5)',
                 color: '#F59E0B',
-                fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                fontSize: { xs: '0.65rem', sm: '0.8rem' },
                 '&:hover': { borderColor: '#F59E0B', bgcolor: 'rgba(245, 158, 11, 0.1)' },
-                '& .MuiButton-startIcon': { mr: { xs: 0.5, sm: 1 } },
+                '& .MuiButton-startIcon': { mr: 0.5 },
               }}
             >
-              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Manage Deliverables</Box>
-              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Deliverables</Box>
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Deliverables</Box>
+              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Files</Box>
             </Button>
           </Grid>
-          <Grid item xs={6} sm={6} md={3}>
+          <Grid item xs={6} md={3}>
             <Button
               fullWidth
               variant="outlined"
-              startIcon={<Users size={18} />}
+              startIcon={<Users size={16} />}
               component={Link}
               href="/dashboard/seller/customers"
               sx={{
-                py: { xs: 1.5, md: 2 },
+                py: 1.5,
                 borderColor: 'rgba(59, 130, 246, 0.5)',
                 color: '#3B82F6',
-                fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                fontSize: { xs: '0.65rem', sm: '0.8rem' },
                 '&:hover': { borderColor: '#3B82F6', bgcolor: 'rgba(59, 130, 246, 0.1)' },
-                '& .MuiButton-startIcon': { mr: { xs: 0.5, sm: 1 } },
+                '& .MuiButton-startIcon': { mr: 0.5 },
               }}
             >
-              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>View Customers</Box>
-              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Customers</Box>
+              Customers
             </Button>
           </Grid>
-          <Grid item xs={6} sm={6} md={3}>
+          <Grid item xs={6} md={3}>
             <Button
               fullWidth
               variant="outlined"
-              startIcon={<Star size={18} />}
+              startIcon={<Star size={16} />}
               component={Link}
               href="/dashboard/seller/reviews"
               sx={{
-                py: { xs: 1.5, md: 2 },
+                py: 1.5,
                 borderColor: 'rgba(139, 92, 246, 0.5)',
                 color: '#8B5CF6',
-                fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                fontSize: { xs: '0.65rem', sm: '0.8rem' },
                 '&:hover': { borderColor: '#8B5CF6', bgcolor: 'rgba(139, 92, 246, 0.1)' },
-                '& .MuiButton-startIcon': { mr: { xs: 0.5, sm: 1 } },
+                '& .MuiButton-startIcon': { mr: 0.5 },
               }}
             >
-              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Reviews & Ratings</Box>
-              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Reviews</Box>
+              Reviews
             </Button>
           </Grid>
         </Grid>
-        </Box>
 
         {success && (
           <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>
@@ -749,14 +741,14 @@ export default function SellerDashboardPage() {
                   </Typography>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Box sx={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
-                      <Typography sx={{ color: '#22C55E', fontFamily: 'monospace', fontSize: { xs: '0.7rem', md: '0.85rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {process.env.NEXT_PUBLIC_APP_URL || 'https://algoedgehub.com'}/sellers/{stats?.seller_slug || 'your-username'}
+                      <Typography sx={{ color: '#22C55E', fontFamily: 'monospace', fontSize: { xs: '0.65rem', md: '0.85rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        algoedgehub.com/sellers/{stats?.seller_slug || user?.username || 'username'}
                       </Typography>
                     </Box>
                     <IconButton
                       size="small"
                       onClick={() => {
-                        navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_APP_URL || 'https://algoedgehub.com'}/sellers/${stats?.seller_slug || 'your-username'}`);
+                        navigator.clipboard.writeText(`https://algoedgehub.com/sellers/${stats?.seller_slug || user?.username || 'username'}`);
                         setSuccess('Profile link copied!');
                       }}
                       sx={{ color: '#22C55E' }}
@@ -836,101 +828,88 @@ export default function SellerDashboardPage() {
         </Card>
 
         {/* Wallet Stats */}
-        <Box sx={{ overflow: 'hidden', mx: { xs: -0.5, md: -1.5 } }}>
-        <Grid container spacing={{ xs: 1, md: 3 }} sx={{ mb: { xs: 2, md: 4 } }}>
-          <Grid item xs={6} sm={6} md={3}>
-            <Card sx={{ bgcolor: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)', minWidth: 0, overflow: 'hidden' }}>
-              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } }, overflow: 'hidden' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5, flexWrap: 'nowrap' }}>
-                  <Box sx={{ p: 0.5, bgcolor: 'rgba(139, 92, 246, 0.2)', borderRadius: 1, flexShrink: 0 }}>
+        <Grid container spacing={1} sx={{ mb: 3 }}>
+          <Grid item xs={6} md={3}>
+            <Card sx={{ bgcolor: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+              <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Box sx={{ p: 0.5, bgcolor: 'rgba(139, 92, 246, 0.2)', borderRadius: 1 }}>
                     <Wallet size={14} color="#8B5CF6" />
                   </Box>
-                  <Chip
-                    label="Available"
-                    size="small"
-                    sx={{ bgcolor: 'rgba(34, 197, 94, 0.2)', color: '#22C55E', height: 18, fontSize: '0.55rem', display: { xs: 'none', sm: 'flex' } }}
-                  />
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>
+                    Available
+                  </Typography>
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>
-                  Available
-                </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' }, whiteSpace: 'nowrap' }}>
+                <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '1.1rem' }}>
                   ${Number(stats?.wallet?.available_balance || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={6} sm={6} md={3}>
-            <Card sx={{ bgcolor: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', minWidth: 0, overflow: 'hidden' }}>
-              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } }, overflow: 'hidden' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5, flexWrap: 'nowrap' }}>
-                  <Box sx={{ p: 0.5, bgcolor: 'rgba(245, 158, 11, 0.2)', borderRadius: 1, flexShrink: 0 }}>
+            <Card sx={{ bgcolor: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+              <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Box sx={{ p: 0.5, bgcolor: 'rgba(245, 158, 11, 0.2)', borderRadius: 1 }}>
                     <Clock size={14} color="#F59E0B" />
                   </Box>
-                  <Chip
-                    label="Pending"
-                    size="small"
-                    sx={{ bgcolor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', height: 18, fontSize: '0.55rem', display: { xs: 'none', sm: 'flex' } }}
-                  />
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>
+                    Pending
+                  </Typography>
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>
-                  Pending
-                </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' }, whiteSpace: 'nowrap' }}>
+                <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '1.1rem' }}>
                   ${Number(stats?.wallet?.pending_earnings || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={6} sm={6} md={3}>
-            <Card sx={{ bgcolor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', minWidth: 0, overflow: 'hidden' }}>
-              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } }, overflow: 'hidden' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5, flexWrap: 'nowrap' }}>
-                  <Box sx={{ p: 0.5, bgcolor: 'rgba(34, 197, 94, 0.2)', borderRadius: 1, flexShrink: 0 }}>
+          <Grid item xs={6} md={3}>
+            <Card sx={{ bgcolor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+              <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Box sx={{ p: 0.5, bgcolor: 'rgba(34, 197, 94, 0.2)', borderRadius: 1 }}>
                     <TrendingUp size={14} color="#22C55E" />
                   </Box>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>
+                    Total Earned
+                  </Typography>
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>
-                  Total Earned
-                </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' }, whiteSpace: 'nowrap' }}>
+                <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '1.1rem' }}>
                   ${Number(stats?.wallet?.total_earnings || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={6} sm={6} md={3}>
-            <Card sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', minWidth: 0, overflow: 'hidden' }}>
-              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } }, overflow: 'hidden' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5, flexWrap: 'nowrap' }}>
-                  <Box sx={{ p: 0.5, bgcolor: 'rgba(59, 130, 246, 0.2)', borderRadius: 1, flexShrink: 0 }}>
+          <Grid item xs={6} md={3}>
+            <Card sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+              <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Box sx={{ p: 0.5, bgcolor: 'rgba(59, 130, 246, 0.2)', borderRadius: 1 }}>
                     <DollarSign size={14} color="#3B82F6" />
                   </Box>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>
+                    Paid Out
+                  </Typography>
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>
-                  Paid Out
-                </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' }, whiteSpace: 'nowrap' }}>
+                <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '1.1rem' }}>
                   ${Number(stats?.wallet?.total_payouts || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
         </Grid>
-        </Box>
 
         {/* Quick Stats */}
-        <Box sx={{ overflow: 'hidden', mx: { xs: -0.5, md: -1.5 } }}>
-        <Grid container spacing={{ xs: 1, md: 3 }} sx={{ mb: { xs: 2, md: 4 } }}>
+        <Grid container spacing={1} sx={{ mb: 3 }}>
           <Grid item xs={6} sm={3}>
-            <Paper sx={{ p: { xs: 1.5, md: 2 }, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Paper sx={{ p: 1.5, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
               <Stack direction="row" spacing={1} alignItems="center">
-                <Bot size={20} color="#8B5CF6" />
+                <Bot size={18} color="#8B5CF6" />
                 <Box>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem' }}>
                     Bots
                   </Typography>
-                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '1rem', md: '1.25rem' } }}>
+                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1rem' }}>
                     {stats?.totals?.bots || 0}
                   </Typography>
                 </Box>
@@ -938,14 +917,14 @@ export default function SellerDashboardPage() {
             </Paper>
           </Grid>
           <Grid item xs={6} sm={3}>
-            <Paper sx={{ p: { xs: 1.5, md: 2 }, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Paper sx={{ p: 1.5, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
               <Stack direction="row" spacing={1} alignItems="center">
-                <Package size={20} color="#3B82F6" />
+                <Package size={18} color="#3B82F6" />
                 <Box>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem' }}>
                     Products
                   </Typography>
-                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '1rem', md: '1.25rem' } }}>
+                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1rem' }}>
                     {stats?.totals?.products || 0}
                   </Typography>
                 </Box>
@@ -953,14 +932,14 @@ export default function SellerDashboardPage() {
             </Paper>
           </Grid>
           <Grid item xs={6} sm={3}>
-            <Paper sx={{ p: { xs: 1.5, md: 2 }, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Paper sx={{ p: 1.5, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
               <Stack direction="row" spacing={1} alignItems="center">
-                <Users size={20} color="#22C55E" />
+                <Users size={18} color="#22C55E" />
                 <Box>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem' }}>
                     Sales
                   </Typography>
-                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '1rem', md: '1.25rem' } }}>
+                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1rem' }}>
                     {stats?.totals?.total_sales || 0}
                   </Typography>
                 </Box>
@@ -968,14 +947,14 @@ export default function SellerDashboardPage() {
             </Paper>
           </Grid>
           <Grid item xs={6} sm={3}>
-            <Paper sx={{ p: { xs: 1.5, md: 2 }, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Paper sx={{ p: 1.5, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
               <Stack direction="row" spacing={1} alignItems="center">
-                <Star size={20} color="#F59E0B" />
+                <Star size={18} color="#F59E0B" />
                 <Box>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem' }}>
                     Rating
                   </Typography>
-                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '1rem', md: '1.25rem' } }}>
+                  <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1rem' }}>
                     {Number(stats?.totals?.avg_rating || 0).toFixed(1)} ★
                   </Typography>
                 </Box>
@@ -983,7 +962,6 @@ export default function SellerDashboardPage() {
             </Paper>
           </Grid>
         </Grid>
-        </Box>
 
         {/* Tabs */}
         <Tabs
@@ -993,12 +971,12 @@ export default function SellerDashboardPage() {
           scrollButtons="auto"
           allowScrollButtonsMobile
           sx={{
-            mb: { xs: 2, md: 3 },
+            mb: 3,
             '& .MuiTab-root': { 
               color: 'rgba(255,255,255,0.5)',
-              minWidth: { xs: 'auto', sm: 'unset' },
-              px: { xs: 1.5, sm: 2 },
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              minWidth: 'auto',
+              px: 1.5,
+              fontSize: '0.75rem',
             },
             '& .Mui-selected': { color: '#8B5CF6' },
             '& .MuiTabs-indicator': { bgcolor: '#8B5CF6' },
@@ -1371,104 +1349,13 @@ export default function SellerDashboardPage() {
           </DialogActions>
         </Dialog>
 
-        {/* Verification Dialog */}
-        <Dialog
-          open={verifyDialogOpen}
-          onClose={() => setVerifyDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-          PaperProps={{
-            sx: { bgcolor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' },
-          }}
-        >
-          <DialogTitle sx={{ color: 'white', display: 'flex', alignItems: 'center', gap: 1 }}>
-            <svg width="24" height="24" viewBox="0 0 22 22" fill="none">
-              <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1D9BF0"/>
-            </svg>
-            Get Verified Seller Badge
-          </DialogTitle>
-          <DialogContent>
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
-            <Box sx={{ textAlign: 'center', py: 3 }}>
-              <Box
-                sx={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: '50%',
-                  bgcolor: 'rgba(29, 155, 240, 0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  mx: 'auto',
-                  mb: 3,
-                }}
-              >
-                <svg width="40" height="40" viewBox="0 0 22 22" fill="none">
-                  <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1D9BF0"/>
-                </svg>
-              </Box>
-              <Typography variant="h5" sx={{ color: 'white', fontWeight: 800, mb: 1 }}>
-                Become a Verified Seller
-              </Typography>
-              <Typography sx={{ color: 'rgba(255,255,255,0.6)', mb: 3 }}>
-                Stand out from the competition with a verified badge
-              </Typography>
-              
-              <Stack spacing={2} sx={{ textAlign: 'left', mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2 }}>
-                  <CheckCircle size={20} color="#22C55E" />
-                  <Typography sx={{ color: 'white' }}>Verified badge displayed on all your listings</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2 }}>
-                  <CheckCircle size={20} color="#22C55E" />
-                  <Typography sx={{ color: 'white' }}>Priority placement in marketplace search results</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2 }}>
-                  <CheckCircle size={20} color="#22C55E" />
-                  <Typography sx={{ color: 'white' }}>Increased buyer trust and higher conversion rates</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2 }}>
-                  <CheckCircle size={20} color="#22C55E" />
-                  <Typography sx={{ color: 'white' }}>Access to premium seller analytics</Typography>
-                </Box>
-              </Stack>
-              
-              <Box sx={{ p: 3, bgcolor: 'rgba(29, 155, 240, 0.1)', borderRadius: 2, border: '1px solid rgba(29, 155, 240, 0.3)' }}>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>
-                  One-time verification fee
-                </Typography>
-                <Typography variant="h3" sx={{ color: 'white', fontWeight: 800, my: 1 }}>
-                  $50
-                </Typography>
-                <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
-                  Lifetime badge • No recurring fees
-                </Typography>
-              </Box>
-            </Box>
-          </DialogContent>
-          <DialogActions sx={{ p: 2, justifyContent: 'center' }}>
-            <Button onClick={() => setVerifyDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.5)' }}>
-              Maybe Later
-            </Button>
-            <Button
-              onClick={handleRequestVerification}
-              variant="contained"
-              disabled={verifyLoading}
-              startIcon={verifyLoading ? <CircularProgress size={16} /> : (
-                <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
-                  <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="white"/>
-                </svg>
-              )}
-              sx={{ bgcolor: '#1D9BF0', '&:hover': { bgcolor: '#1A8CD8' }, px: 4 }}
-            >
-              {verifyLoading ? 'Processing...' : 'Pay $50 & Get Verified'}
-            </Button>
-          </DialogActions>
-        </Dialog>
+        {/* ID Verification Modal */}
+        <VerificationModal
+          open={verifyModalOpen}
+          onClose={() => setVerifyModalOpen(false)}
+          onSuccess={handleVerificationSuccess}
+          walletBalance={userWalletBalance}
+        />
       </Box>
     </Box>
   );

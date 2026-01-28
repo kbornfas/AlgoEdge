@@ -86,7 +86,33 @@ router.get('/status', authenticateToken, async (req, res) => {
   }
 });
 
-// Submit verification request (with documents)
+// Check wallet balance before verification
+router.get('/check-balance', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Check user's wallet balance
+    const walletResult = await pool.query(
+      `SELECT balance FROM user_wallets WHERE user_id = $1`,
+      [userId]
+    );
+
+    const balance = parseFloat(walletResult.rows[0]?.balance) || 0;
+    const canAfford = balance >= VERIFICATION_FEE;
+
+    res.json({
+      balance,
+      verification_fee: VERIFICATION_FEE,
+      can_afford: canAfford,
+      shortfall: canAfford ? 0 : VERIFICATION_FEE - balance
+    });
+  } catch (error) {
+    console.error('Error checking balance:', error);
+    res.status(500).json({ error: 'Failed to check balance' });
+  }
+});
+
+// Submit verification request (with documents and wallet payment)
 router.post('/submit', 
   authenticateToken, 
   upload.fields([
@@ -99,7 +125,7 @@ router.post('/submit',
     
     try {
       const userId = req.user.id;
-      const { id_type, payment_method, payment_reference } = req.body;
+      const { id_type } = req.body;
       const files = req.files;
 
       // Validate inputs
@@ -111,27 +137,19 @@ router.post('/submit',
         return res.status(400).json({ error: 'Please upload all required documents: ID front, ID back, and selfie' });
       }
 
-      if (!payment_method || !['mpesa', 'airtel_money', 'crypto'].includes(payment_method)) {
-        return res.status(400).json({ error: 'Invalid payment method. Must be mpesa, airtel_money, or crypto' });
-      }
-
-      if (!payment_reference) {
-        return res.status(400).json({ error: 'Please provide payment reference/transaction ID' });
-      }
-
-      // Check if user already has blue badge
+      // Check if user already has blue badge or is_verified
       const userCheck = await client.query(
-        `SELECT has_blue_badge FROM users WHERE id = $1`,
+        `SELECT has_blue_badge, is_verified FROM users WHERE id = $1`,
         [userId]
       );
 
-      if (userCheck.rows[0]?.has_blue_badge) {
-        return res.status(400).json({ error: 'You already have a verified badge' });
+      if (userCheck.rows[0]?.has_blue_badge || userCheck.rows[0]?.is_verified) {
+        return res.status(400).json({ error: 'You are already verified' });
       }
 
       // Check for existing pending request
       const existingRequest = await client.query(
-        `SELECT id, status FROM seller_verification_requests WHERE user_id = $1 AND status IN ('pending', 'documents_submitted', 'fee_pending')`,
+        `SELECT id, status FROM seller_verification_requests WHERE user_id = $1 AND status IN ('pending', 'documents_submitted')`,
         [userId]
       );
 
@@ -139,10 +157,49 @@ router.post('/submit',
         return res.status(400).json({ error: 'You already have a pending verification request' });
       }
 
+      // Check wallet balance FIRST before any uploads are processed
+      const walletCheck = await client.query(
+        `SELECT balance FROM user_wallets WHERE user_id = $1`,
+        [userId]
+      );
+
+      const currentBalance = parseFloat(walletCheck.rows[0]?.balance) || 0;
+
+      if (currentBalance < VERIFICATION_FEE) {
+        return res.status(400).json({ 
+          error: `Insufficient balance. You need $${VERIFICATION_FEE} for verification. Current balance: $${currentBalance.toFixed(2)}. Please deposit funds first.`,
+          balance: currentBalance,
+          required: VERIFICATION_FEE
+        });
+      }
+
       await client.query('BEGIN');
 
+      // Deduct verification fee from user's wallet
+      await client.query(
+        `UPDATE user_wallets SET balance = balance - $1, total_spent = total_spent + $1 WHERE user_id = $2`,
+        [VERIFICATION_FEE, userId]
+      );
+
+      // Record the wallet transaction
+      await client.query(
+        `INSERT INTO wallet_transactions (user_id, type, amount, balance_before, balance_after, description)
+         VALUES ($1, 'purchase', $2, $3, $4, 'Seller ID Verification Fee')`,
+        [userId, -VERIFICATION_FEE, currentBalance, currentBalance - VERIFICATION_FEE]
+      );
+
+      // Credit admin wallet
+      await addAdminWalletTransaction(
+        'verification_fee',
+        VERIFICATION_FEE,
+        'Seller ID verification fee',
+        'verification',
+        null,
+        userId
+      );
+
       // Build file URLs
-      const baseUrl = process.env.API_URL || 'http://localhost:3000';
+      const baseUrl = process.env.API_URL || process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'http://localhost:3000';
       const idFrontUrl = `${baseUrl}/uploads/verification/${files.id_front[0].filename}`;
       const idBackUrl = `${baseUrl}/uploads/verification/${files.id_back[0].filename}`;
       const selfieUrl = `${baseUrl}/uploads/verification/${files.selfie[0].filename}`;
@@ -151,17 +208,25 @@ router.post('/submit',
       const result = await client.query(
         `INSERT INTO seller_verification_requests 
          (user_id, id_type, id_front_url, id_back_url, selfie_url, 
-          fee_payment_method, fee_payment_reference, fee_paid, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, 'pending')
+          fee_paid, fee_paid_at, status)
+         VALUES ($1, $2, $3, $4, $5, TRUE, NOW(), 'pending')
          RETURNING *`,
-        [userId, id_type, idFrontUrl, idBackUrl, selfieUrl, payment_method, payment_reference]
+        [userId, id_type, idFrontUrl, idBackUrl, selfieUrl]
+      );
+
+      // Update user's verification_pending status
+      await client.query(
+        `UPDATE users SET verification_pending = TRUE, verification_request_id = $1 WHERE id = $2`,
+        [result.rows[0].id, userId]
       );
 
       await client.query('COMMIT');
 
       res.json({
-        message: 'Verification request submitted successfully. Admin will review your documents and payment.',
-        verification_fee: VERIFICATION_FEE,
+        success: true,
+        message: 'Verification request submitted! $50 has been deducted from your wallet. Admin will review your documents within 24-48 hours.',
+        balance_deducted: VERIFICATION_FEE,
+        new_balance: currentBalance - VERIFICATION_FEE,
         request: {
           id: result.rows[0].id,
           status: result.rows[0].status,
@@ -361,7 +426,7 @@ router.post('/admin/requests/:id/approve', authenticateToken, requireAdmin, asyn
   }
 });
 
-// Reject verification request
+// Reject verification request (with refund)
 router.post('/admin/requests/:id/reject', authenticateToken, requireAdmin, async (req, res) => {
   const client = await pool.connect();
   
@@ -394,6 +459,11 @@ router.post('/admin/requests/:id/reject', authenticateToken, requireAdmin, async
       return res.status(400).json({ error: 'Cannot reject an already approved request' });
     }
 
+    if (request.status === 'rejected') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'This request has already been rejected' });
+    }
+
     // Update verification request
     await client.query(
       `UPDATE seller_verification_requests 
@@ -407,11 +477,41 @@ router.post('/admin/requests/:id/reject', authenticateToken, requireAdmin, async
       [rejection_reason, adminId, admin_notes, id]
     );
 
+    // Clear user's verification_pending status
+    await client.query(
+      `UPDATE users SET verification_pending = FALSE WHERE id = $1`,
+      [request.user_id]
+    );
+
+    // Refund the verification fee to user's wallet
+    if (request.fee_paid) {
+      // Get current wallet balance
+      const walletResult = await client.query(
+        `SELECT balance FROM user_wallets WHERE user_id = $1`,
+        [request.user_id]
+      );
+      const currentBalance = parseFloat(walletResult.rows[0]?.balance) || 0;
+
+      // Refund to user wallet
+      await client.query(
+        `UPDATE user_wallets SET balance = balance + $1 WHERE user_id = $2`,
+        [VERIFICATION_FEE, request.user_id]
+      );
+
+      // Record refund transaction
+      await client.query(
+        `INSERT INTO wallet_transactions (user_id, type, amount, balance_before, balance_after, description)
+         VALUES ($1, 'refund', $2, $3, $4, $5)`,
+        [request.user_id, VERIFICATION_FEE, currentBalance, currentBalance + VERIFICATION_FEE, `Verification rejected: ${rejection_reason}`]
+      );
+    }
+
     await client.query('COMMIT');
 
     res.json({ 
-      message: 'Verification request rejected.',
+      message: `Verification request rejected. ${request.fee_paid ? '$50 has been refunded to the user\'s wallet.' : ''}`,
       user_id: request.user_id,
+      refunded: request.fee_paid,
     });
   } catch (error) {
     await client.query('ROLLBACK');
