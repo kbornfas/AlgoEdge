@@ -1352,6 +1352,23 @@ router.get('/seller/dashboard', authenticate, async (req, res) => {
       ORDER BY created_at DESC LIMIT 20
     `, [userId]);
 
+    // Log the raw user info for debugging
+    console.log('Raw userInfo:', userInfo.rows[0]);
+    
+    // Handle PostgreSQL boolean values which might come as strings 't'/'f' or actual booleans
+    const isVerified = userInfo.rows[0]?.is_verified === true || 
+                       userInfo.rows[0]?.is_verified === 't' ||
+                       userInfo.rows[0]?.is_verified === 1 ||
+                       userInfo.rows[0]?.has_blue_badge === true || 
+                       userInfo.rows[0]?.has_blue_badge === 't' ||
+                       userInfo.rows[0]?.has_blue_badge === 1;
+    
+    const verificationPending = userInfo.rows[0]?.verification_pending === true || 
+                                userInfo.rows[0]?.verification_pending === 't' ||
+                                userInfo.rows[0]?.verification_pending === 1;
+    
+    console.log('Computed is_verified:', isVerified); // Debug log
+
     res.json({
       success: true,
       wallet: walletData,
@@ -1362,13 +1379,14 @@ router.get('/seller/dashboard', authenticate, async (req, res) => {
       },
       transactions: transactions.rows,
       verification: {
-        is_verified: userInfo.rows[0]?.is_verified === true || userInfo.rows[0]?.has_blue_badge === true,
-        verification_pending: userInfo.rows[0]?.verification_pending === true,
+        is_verified: isVerified,
+        verification_pending: verificationPending,
         profile_image: userInfo.rows[0]?.profile_image || null,
         seller_slug: userInfo.rows[0]?.seller_slug || null
       },
       // Also include at top level for easier access
-      is_verified: userInfo.rows[0]?.is_verified === true || userInfo.rows[0]?.has_blue_badge === true
+      is_verified: isVerified,
+      has_blue_badge: isVerified // Alias for frontend compatibility
     });
   } catch (error) {
     console.error('Get seller dashboard error:', error);
