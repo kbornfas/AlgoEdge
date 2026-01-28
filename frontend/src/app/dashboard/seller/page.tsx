@@ -614,6 +614,7 @@ export default function SellerDashboardPage() {
         )}
 
         {/* Quick Actions */}
+        <Box sx={{ overflow: 'hidden', mx: { xs: -0.5, sm: -1 } }}>
         <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mb: { xs: 2, md: 4 } }}>
           <Grid item xs={6} sm={6} md={3}>
             <Button
@@ -696,6 +697,7 @@ export default function SellerDashboardPage() {
             </Button>
           </Grid>
         </Grid>
+        </Box>
 
         {success && (
           <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>
@@ -834,7 +836,8 @@ export default function SellerDashboardPage() {
         </Card>
 
         {/* Wallet Stats */}
-        <Grid container spacing={{ xs: 1, md: 3 }} sx={{ mb: { xs: 2, md: 4 }, overflow: 'hidden' }}>
+        <Box sx={{ overflow: 'hidden', mx: { xs: -0.5, md: -1.5 } }}>
+        <Grid container spacing={{ xs: 1, md: 3 }} sx={{ mb: { xs: 2, md: 4 } }}>
           <Grid item xs={6} sm={6} md={3}>
             <Card sx={{ bgcolor: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)', minWidth: 0, overflow: 'hidden' }}>
               <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } }, overflow: 'hidden' }}>
@@ -914,8 +917,10 @@ export default function SellerDashboardPage() {
             </Card>
           </Grid>
         </Grid>
+        </Box>
 
         {/* Quick Stats */}
+        <Box sx={{ overflow: 'hidden', mx: { xs: -0.5, md: -1.5 } }}>
         <Grid container spacing={{ xs: 1, md: 3 }} sx={{ mb: { xs: 2, md: 4 } }}>
           <Grid item xs={6} sm={3}>
             <Paper sx={{ p: { xs: 1.5, md: 2 }, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -978,6 +983,7 @@ export default function SellerDashboardPage() {
             </Paper>
           </Grid>
         </Grid>
+        </Box>
 
         {/* Tabs */}
         <Tabs
