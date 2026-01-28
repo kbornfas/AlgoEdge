@@ -259,7 +259,7 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, overflow: 'hidden', maxWidth: '100vw' }}>
+    <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, overflow: 'hidden', maxWidth: '100vw', boxSizing: 'border-box', width: '100%' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: { xs: 2, sm: 3 }, gap: { xs: 1, sm: 0 } }}>
         <Box>
@@ -363,12 +363,12 @@ export default function AnalyticsPage() {
         </Grid>
 
         <Grid item xs={6} sm={6} md={3}>
-          <Card sx={{ height: '100%', minWidth: 0 }}>
+          <Card sx={{ height: '100%', minWidth: 0, overflow: 'hidden' }}>
             <CardContent sx={{ p: { xs: 1, sm: 2 }, '&:last-child': { pb: { xs: 1, sm: 2 } } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 }, flexWrap: 'wrap' }}>
                 {getKillSwitchIcon()}
-                <Typography variant="body2" sx={{ ml: 0.5, fontSize: { xs: '0.55rem', sm: '0.875rem' } }} color="text.secondary">
-                  Protection Status
+                <Typography variant="body2" sx={{ ml: 0.5, fontSize: { xs: '0.5rem', sm: '0.875rem' } }} color="text.secondary">
+                  Protection
                 </Typography>
               </Box>
               <Chip
@@ -397,7 +397,7 @@ export default function AnalyticsPage() {
                 📈 Strategy Performance
               </Typography>
               <TableContainer sx={{ maxWidth: '100%', overflowX: 'auto' }}>
-                <Table size="small" sx={{ minWidth: { xs: 400, sm: 'auto' } }}>
+                <Table size="small" sx={{ minWidth: { xs: 300, sm: 'auto' } }}>
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' }, p: { xs: 1, sm: 2 } }}>Strategy</TableCell>
@@ -704,7 +704,7 @@ export default function AnalyticsPage() {
               </Typography>
               
               <TableContainer component={Paper} variant="outlined" sx={{ maxWidth: '100%', overflowX: 'auto' }}>
-                <Table size="small" sx={{ minWidth: { xs: 550, sm: 650, md: 'auto' } }}>
+                <Table size="small" sx={{ minWidth: { xs: 380, sm: 500, md: 'auto' } }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: 'action.hover' }}>
                       <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' }, p: { xs: 0.75, sm: 1, md: 2 } }}><strong>Strategy</strong></TableCell>

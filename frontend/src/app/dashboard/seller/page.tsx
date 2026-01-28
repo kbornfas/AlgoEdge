@@ -312,32 +312,34 @@ export default function SellerDashboardPage() {
   // Show "Become a Seller" screen if user is not a seller
   if (isSeller === false) {
     return (
-      <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: 4 }}>
-        <Container maxWidth="md">
+      <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, overflow: 'hidden', maxWidth: '100vw', boxSizing: 'border-box' }}>
+        <Container maxWidth="md" sx={{ px: { xs: 1.5, sm: 2 }, overflow: 'hidden' }}>
           <Card sx={{ 
             bgcolor: 'rgba(139, 92, 246, 0.1)', 
             border: '1px solid rgba(139, 92, 246, 0.3)',
-            borderRadius: 4,
+            borderRadius: { xs: 2, md: 4 },
             textAlign: 'center',
-            py: 8,
-            px: 4
+            py: { xs: 4, md: 8 },
+            px: { xs: 1.5, sm: 2, md: 4 },
+            overflow: 'hidden',
           }}>
-            <CardContent>
+            <CardContent sx={{ px: { xs: 0.5, sm: 2 } }}>
               <Box sx={{ 
-                width: 100, height: 100, 
+                width: { xs: 70, md: 100 }, 
+                height: { xs: 70, md: 100 }, 
                 borderRadius: '50%', 
                 bgcolor: 'rgba(139, 92, 246, 0.2)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                mx: 'auto', mb: 3
+                mx: 'auto', mb: { xs: 2, md: 3 }
               }}>
                 <Package size={48} color="#8B5CF6" />
               </Box>
               
-              <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, mb: 2 }}>
+              <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, mb: 2, fontSize: { xs: '1.5rem', md: '2.125rem' } }}>
                 Become a Seller
               </Typography>
               
-              <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 4, maxWidth: 500, mx: 'auto' }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: { xs: 2, md: 4 }, maxWidth: 500, mx: 'auto', fontSize: { xs: '0.85rem', md: '1rem' }, px: { xs: 1, sm: 0 } }}>
                 {applicationStatus === 'pending' 
                   ? "Your seller application is being reviewed. You'll be notified once it's approved."
                   : applicationStatus === 'rejected'
@@ -345,18 +347,18 @@ export default function SellerDashboardPage() {
                   : "Join our marketplace and start selling your trading bots, educational content, signals, and more to thousands of traders worldwide."}
               </Typography>
 
-              <Stack direction="row" spacing={2} justifyContent="center" sx={{ mb: 4 }}>
-                <Box sx={{ textAlign: 'center', p: 2 }}>
-                  <Typography variant="h5" sx={{ color: '#22C55E', fontWeight: 800 }}>80%</Typography>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Revenue Share</Typography>
+              <Stack direction="row" spacing={{ xs: 1, sm: 2 }} justifyContent="center" flexWrap="wrap" sx={{ mb: { xs: 2, md: 4 } }}>
+                <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 2 } }}>
+                  <Typography variant="h5" sx={{ color: '#22C55E', fontWeight: 800, fontSize: { xs: '1.25rem', md: '1.5rem' } }}>80%</Typography>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: 12, md: 14 } }}>Revenue Share</Typography>
                 </Box>
-                <Box sx={{ textAlign: 'center', p: 2 }}>
-                  <Typography variant="h5" sx={{ color: '#00D4FF', fontWeight: 800 }}>0</Typography>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Listing Fee</Typography>
+                <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 2 } }}>
+                  <Typography variant="h5" sx={{ color: '#00D4FF', fontWeight: 800, fontSize: { xs: '1.25rem', md: '1.5rem' } }}>0</Typography>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: 12, md: 14 } }}>Listing Fee</Typography>
                 </Box>
-                <Box sx={{ textAlign: 'center', p: 2 }}>
-                  <Typography variant="h5" sx={{ color: '#FF6B6B', fontWeight: 800 }}>24/7</Typography>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Support</Typography>
+                <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 2 } }}>
+                  <Typography variant="h5" sx={{ color: '#FF6B6B', fontWeight: 800, fontSize: { xs: '1.25rem', md: '1.5rem' } }}>24/7</Typography>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: 12, md: 14 } }}>Support</Typography>
                 </Box>
               </Stack>
 
@@ -364,7 +366,7 @@ export default function SellerDashboardPage() {
                 <Chip 
                   label="Application Under Review" 
                   color="warning" 
-                  sx={{ fontSize: 16, py: 2, px: 3 }}
+                  sx={{ fontSize: { xs: 12, md: 16 }, py: { xs: 1.5, md: 2 }, px: { xs: 2, md: 3 } }}
                 />
               ) : (
                 <Button
@@ -376,9 +378,9 @@ export default function SellerDashboardPage() {
                     background: 'linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%)',
                     color: 'white',
                     fontWeight: 700,
-                    px: 6,
-                    py: 1.5,
-                    fontSize: 16,
+                    px: { xs: 3, md: 6 },
+                    py: { xs: 1, md: 1.5 },
+                    fontSize: { xs: 14, md: 16 },
                     borderRadius: 2,
                     '&:hover': {
                       background: 'linear-gradient(135deg, #7C3AED 0%, #0891B2 100%)',
@@ -396,8 +398,8 @@ export default function SellerDashboardPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, overflow: 'hidden', maxWidth: '100vw' }}>
-      <Container maxWidth="lg" sx={{ px: { xs: 1.5, sm: 3 } }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, overflow: 'hidden', maxWidth: '100vw', boxSizing: 'border-box' }}>
+      <Container maxWidth="lg" sx={{ px: { xs: 1, sm: 2, md: 3 }, overflow: 'hidden', maxWidth: '100%' }}>
         {/* Header */}
         <Box sx={{ 
           display: 'flex', 
