@@ -200,8 +200,8 @@ export default function SellerDashboardPage() {
             total_earnings: parseFloat(data.wallet?.total_earnings) || 0,
             total_payouts: parseFloat(data.wallet?.total_payouts) || 0,
           },
-          is_verified: data.verification?.is_verified || false,
-          verification_pending: data.verification?.verification_pending || false,
+          is_verified: data.verification?.is_verified === true || data.is_verified === true,
+          verification_pending: data.verification?.verification_pending === true || data.verification_pending === true,
           profile_image: data.verification?.profile_image || undefined,
           seller_slug: data.verification?.seller_slug || undefined,
           totals: {
@@ -398,8 +398,25 @@ export default function SellerDashboardPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, overflow: 'hidden', maxWidth: '100vw', boxSizing: 'border-box' }}>
-      <Container maxWidth="lg" sx={{ px: { xs: 1, sm: 2, md: 3 }, overflow: 'hidden', maxWidth: '100%' }}>
+    <Box sx={{ 
+      minHeight: '100vh', 
+      bgcolor: '#0a0f1a', 
+      py: { xs: 1, md: 4 }, 
+      overflow: 'hidden', 
+      maxWidth: '100vw', 
+      boxSizing: 'border-box',
+      width: '100%',
+    }}>
+      <Container 
+        maxWidth="lg" 
+        disableGutters 
+        sx={{ 
+          px: { xs: 1, sm: 2, md: 3 }, 
+          overflow: 'hidden', 
+          maxWidth: '100%',
+          width: '100%',
+        }}
+      >
         {/* Header */}
         <Box sx={{ 
           display: 'flex', 

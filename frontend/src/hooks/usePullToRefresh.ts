@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 
 interface UsePullToRefreshOptions {
   onRefresh: () => Promise<void>;
@@ -15,6 +15,8 @@ export function usePullToRefresh({
 }: UsePullToRefreshOptions) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullProgress, setPullProgress] = useState(0);
+  const startYRef = useRef(0);
+  const isPullingRef = useRef(false);
 
   const handleRefresh = useCallback(async () => {
     if (isRefreshing || disabled) return;
@@ -31,52 +33,60 @@ export function usePullToRefresh({
   useEffect(() => {
     if (disabled) return;
 
-    let startY = 0;
-    let currentY = 0;
-    let isPulling = false;
+    const isAtTop = () => {
+      // Check both window scroll and any scrollable parent
+      const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+      return scrollY <= 5; // Allow small tolerance
+    };
 
     const handleTouchStart = (e: TouchEvent) => {
-      // Only trigger if at top of page
-      if (window.scrollY === 0) {
-        startY = e.touches[0].clientY;
-        isPulling = true;
+      if (isAtTop() && !isRefreshing) {
+        startYRef.current = e.touches[0].clientY;
+        isPullingRef.current = true;
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!isPulling || isRefreshing) return;
+      if (!isPullingRef.current || isRefreshing) return;
       
-      currentY = e.touches[0].clientY;
-      const diff = currentY - startY;
+      const currentY = e.touches[0].clientY;
+      const diff = currentY - startYRef.current;
       
-      if (diff > 0 && window.scrollY === 0) {
+      if (diff > 0 && isAtTop()) {
         const progress = Math.min(diff / threshold, 1);
         setPullProgress(progress);
         
-        // Prevent default scroll when pulling
+        // Prevent default scroll when pulling down
         if (diff > 10) {
           e.preventDefault();
         }
+      } else if (diff < 0) {
+        // User is scrolling up, cancel pull
+        isPullingRef.current = false;
+        setPullProgress(0);
       }
     };
 
     const handleTouchEnd = () => {
-      if (isPulling && pullProgress >= 1 && !isRefreshing) {
-        handleRefresh();
-      } else {
-        setPullProgress(0);
+      if (isPullingRef.current) {
+        if (pullProgress >= 1 && !isRefreshing) {
+          handleRefresh();
+        } else {
+          setPullProgress(0);
+        }
       }
-      isPulling = false;
+      isPullingRef.current = false;
     };
 
-    document.addEventListener('touchstart', handleTouchStart, { passive: true });
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    // Use window level listeners for better mobile support
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
     };
   }, [threshold, isRefreshing, pullProgress, handleRefresh, disabled]);
 
