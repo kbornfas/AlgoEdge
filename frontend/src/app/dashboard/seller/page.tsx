@@ -192,6 +192,19 @@ export default function SellerDashboardPage() {
       });
       if (res.ok) {
         const data = await res.json();
+        console.log('Seller dashboard data:', data); // Debug log
+        console.log('Verification data:', data.verification); // Debug log
+        
+        // Check verification from multiple possible sources
+        const isVerified = Boolean(
+          data.verification?.is_verified ||
+          data.verification?.has_blue_badge ||
+          data.is_verified ||
+          data.has_blue_badge
+        );
+        
+        console.log('Is verified:', isVerified); // Debug log
+        
         // Map API response to SellerStats interface
         const mappedStats: SellerStats = {
           wallet: {
@@ -200,8 +213,8 @@ export default function SellerDashboardPage() {
             total_earnings: parseFloat(data.wallet?.total_earnings) || 0,
             total_payouts: parseFloat(data.wallet?.total_payouts) || 0,
           },
-          is_verified: data.verification?.is_verified === true || data.is_verified === true,
-          verification_pending: data.verification?.verification_pending === true || data.verification_pending === true,
+          is_verified: isVerified,
+          verification_pending: Boolean(data.verification?.verification_pending || data.verification_pending),
           profile_image: data.verification?.profile_image || undefined,
           seller_slug: data.verification?.seller_slug || undefined,
           totals: {
@@ -220,6 +233,7 @@ export default function SellerDashboardPage() {
           },
         };
         setStats(mappedStats);
+        console.log('Mapped stats:', mappedStats); // Debug log
       }
     } catch (error) {
       console.error('Error fetching seller stats:', error);
@@ -406,15 +420,15 @@ export default function SellerDashboardPage() {
       maxWidth: '100vw', 
       boxSizing: 'border-box',
       width: '100%',
+      '& *': { boxSizing: 'border-box' },
     }}>
-      <Container 
-        maxWidth="lg" 
-        disableGutters 
+      <Box 
         sx={{ 
           px: { xs: 1, sm: 2, md: 3 }, 
           overflow: 'hidden', 
           maxWidth: '100%',
           width: '100%',
+          mx: 'auto',
         }}
       >
         {/* Header */}
@@ -487,21 +501,23 @@ export default function SellerDashboardPage() {
         )}
 
         {/* Verification Badge Card - Only show for non-verified sellers */}
-        {!stats?.is_verified && (
+        {!stats?.is_verified && !stats?.verification_pending && (
         <Card
           sx={{
             mb: { xs: 2, md: 4 },
             background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.05) 100%)',
             border: '1px solid rgba(139, 92, 246, 0.3)',
+            overflow: 'hidden',
+            minWidth: 0,
           }}
         >
-          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Grid container spacing={{ xs: 2, md: 3 }} alignItems="center">
+          <CardContent sx={{ p: { xs: 1.5, md: 3 } }}>
+            <Grid container spacing={{ xs: 1.5, md: 3 }} alignItems="center">
               <Grid item xs={12} md={8}>
-                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
                   <Box
                     sx={{
-                      p: 1.5,
+                      p: 1,
                       bgcolor: 'rgba(139, 92, 246, 0.2)',
                       borderRadius: 2,
                       display: 'flex',
@@ -510,27 +526,27 @@ export default function SellerDashboardPage() {
                       flexShrink: 0,
                     }}
                   >
-                    <ShieldCheck size={28} color="#8B5CF6" />
+                    <ShieldCheck size={24} color="#8B5CF6" />
                   </Box>
-                  <Box>
-                    <Typography variant="h5" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1.1rem', md: '1.5rem' } }}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="h5" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.5rem' } }}>
                       Get Verified
                     </Typography>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.8rem', md: '1rem' } }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.75rem', md: '1rem' } }}>
                       Boost your credibility with a verified seller badge
                     </Typography>
                   </Box>
                 </Stack>
-                <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 1, md: 3 }} sx={{ mt: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CheckCircle size={14} color="#22C55E" />
-                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 0.5, md: 3 }} sx={{ mt: 1.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <CheckCircle size={12} color="#22C55E" />
+                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.7rem', md: '0.875rem' } }}>
                       Verified badge on all listings
                     </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CheckCircle size={14} color="#22C55E" />
-                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <CheckCircle size={12} color="#22C55E" />
+                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.7rem', md: '0.875rem' } }}>
                       Higher visibility in search
                     </Typography>
                   </Box>
@@ -1435,7 +1451,7 @@ export default function SellerDashboardPage() {
             </Button>
           </DialogActions>
         </Dialog>
-      </Container>
+      </Box>
     </Box>
   );
 }

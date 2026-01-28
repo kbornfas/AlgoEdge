@@ -1362,11 +1362,13 @@ router.get('/seller/dashboard', authenticate, async (req, res) => {
       },
       transactions: transactions.rows,
       verification: {
-        is_verified: userInfo.rows[0]?.is_verified || userInfo.rows[0]?.has_blue_badge || false,
-        verification_pending: userInfo.rows[0]?.verification_pending || false,
+        is_verified: userInfo.rows[0]?.is_verified === true || userInfo.rows[0]?.has_blue_badge === true,
+        verification_pending: userInfo.rows[0]?.verification_pending === true,
         profile_image: userInfo.rows[0]?.profile_image || null,
         seller_slug: userInfo.rows[0]?.seller_slug || null
-      }
+      },
+      // Also include at top level for easier access
+      is_verified: userInfo.rows[0]?.is_verified === true || userInfo.rows[0]?.has_blue_badge === true
     });
   } catch (error) {
     console.error('Get seller dashboard error:', error);
