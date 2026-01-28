@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import PullToRefresh from '@/components/PullToRefresh';
 import {
   Box,
   Drawer,
@@ -427,7 +428,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           bgcolor: '#0a0f1a',
         }}
       >
-        {children}
+        <PullToRefresh onRefresh={async () => { window.location.reload(); }}>
+          {children}
+        </PullToRefresh>
       </Box>
     </Box>
   );

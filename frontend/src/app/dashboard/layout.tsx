@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Drawer,
@@ -29,6 +29,7 @@ import {
   Chip,
   Stack,
 } from '@mui/material';
+import PullToRefresh from '@/components/PullToRefresh';
 import {
   Menu as MenuIcon,
   LayoutDashboard,
@@ -803,7 +804,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Box>
             </Box>
           )}
-          {children}
+          <PullToRefresh onRefresh={async () => { window.location.reload(); }}>
+            {children}
+          </PullToRefresh>
         </Box>
 
         {/* Subscription Required Modal */}

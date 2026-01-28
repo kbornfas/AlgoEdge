@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import PullToRefresh from '@/components/PullToRefresh';
 import {
   Box,
   Grid,
@@ -260,7 +259,6 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <PullToRefresh onRefresh={() => fetchAnalytics(true)}>
     <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, overflow: 'hidden', maxWidth: '100vw' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: { xs: 2, sm: 3 }, gap: { xs: 1, sm: 0 } }}>
@@ -803,6 +801,5 @@ export default function AnalyticsPage() {
         </Typography>
       </Box>
     </Box>
-    </PullToRefresh>
   );
 }
