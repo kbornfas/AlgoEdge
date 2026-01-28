@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 interface PushNotificationState {
   isSupported: boolean;
@@ -76,6 +77,11 @@ export function usePushNotifications() {
     setError(null);
 
     try {
+      // Check if VAPID key is configured
+      if (!VAPID_PUBLIC_KEY) {
+        throw new Error('Push notifications not configured');
+      }
+
       // Request notification permission
       const permission = await Notification.requestPermission();
       
@@ -94,7 +100,7 @@ export function usePushNotifications() {
 
       // Send subscription to backend
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/notifications/subscribe', {
+      const response = await fetch(`${API_URL}/api/notifications/subscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +112,8 @@ export function usePushNotifications() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save subscription on server');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to save subscription on server');
       }
 
       setState(prev => ({
@@ -140,7 +147,7 @@ export function usePushNotifications() {
 
         // Notify backend
         const token = localStorage.getItem('token');
-        await fetch('/api/notifications/unsubscribe', {
+        await fetch(`${API_URL}/api/notifications/unsubscribe`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

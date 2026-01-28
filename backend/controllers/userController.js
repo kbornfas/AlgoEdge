@@ -133,7 +133,7 @@ export const getProfile = async (req, res) => {
 
     const result = await pool.query(
       `SELECT u.id, u.username, u.email, u.full_name, u.phone, u.country, u.timezone,
-              u.is_verified, u.two_fa_enabled, u.created_at, u.bio, u.date_of_birth,
+              u.is_verified, u.has_blue_badge, u.two_fa_enabled, u.created_at, u.bio, u.date_of_birth,
               u.profile_picture as avatar_url,
               s.plan, s.status as subscription_status, s.current_period_end
        FROM users u
@@ -146,7 +146,11 @@ export const getProfile = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ user: result.rows[0] });
+    // Combine is_verified and has_blue_badge
+    const user = result.rows[0];
+    user.is_verified = user.is_verified === true || user.has_blue_badge === true;
+
+    res.json({ user });
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ error: 'Failed to get profile' });
