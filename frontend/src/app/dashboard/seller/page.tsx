@@ -188,7 +188,10 @@ export default function SellerDashboardPage() {
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/seller/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Cache-Control': 'no-cache',
+        },
       });
       if (res.ok) {
         const data = await res.json();
@@ -203,7 +206,7 @@ export default function SellerDashboardPage() {
           data.has_blue_badge
         );
         
-        console.log('Is verified:', isVerified); // Debug log
+        console.log('Is verified (computed):', isVerified); // Debug log
         
         // Map API response to SellerStats interface
         const mappedStats: SellerStats = {
@@ -500,8 +503,15 @@ export default function SellerDashboardPage() {
           </Alert>
         )}
 
+        {/* DEBUG: Show verification status */}
+        {process.env.NODE_ENV === 'development' && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            DEBUG: is_verified={String(stats?.is_verified)}, verification_pending={String(stats?.verification_pending)}
+          </Alert>
+        )}
+
         {/* Verification Badge Card - Only show for non-verified sellers */}
-        {!stats?.is_verified && !stats?.verification_pending && (
+        {stats && !stats.is_verified && !stats.verification_pending && (
         <Card
           sx={{
             mb: { xs: 2, md: 4 },
