@@ -392,13 +392,14 @@ export async function handleTelegramWebhook(update) {
     if (text === '/status') {
       console.log(`📱 Status check for chat ID: ${chatId} (type: ${typeof chatId})`);
       
-      // Check if this chat is connected to any user
+      // Check if this chat is connected to any user - try both string and number formats
+      const chatIdStr = chatId.toString();
       const result = await pool.query(
         `SELECT u.username, us.telegram_alerts, us.telegram_chat_id 
          FROM user_settings us 
          JOIN users u ON u.id = us.user_id 
-         WHERE us.telegram_chat_id = $1`,
-        [chatId.toString()]
+         WHERE us.telegram_chat_id = $1 OR us.telegram_chat_id = $2`,
+        [chatIdStr, chatId]
       );
 
       console.log(`📱 Status query result: ${result.rows.length} rows found`);
@@ -419,6 +420,7 @@ export async function handleTelegramWebhook(update) {
           `SELECT user_id, telegram_chat_id, telegram_username FROM user_settings WHERE telegram_chat_id IS NOT NULL LIMIT 5`
         );
         console.log(`📱 Debug - All telegram connections:`, debugResult.rows);
+        console.log(`📱 Looking for chat ID: ${chatIdStr}`);
         
         await sendTelegramMessage(chatId,
           '❌ <b>Not Connected</b>\n\n' +

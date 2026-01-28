@@ -446,12 +446,14 @@ export default function SettingsPage() {
 
   // Sessions
   const [sessions, setSessions] = useState<Array<{
-    id: number;
+    id: string | number;
     device: string;
     browser: string;
+    os?: string;
     location: string;
     ip: string;
     lastActive: string;
+    loggedInAt?: string;
     current: boolean;
   }>>([]);
 
@@ -620,17 +622,44 @@ export default function SettingsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        if (data.sessions) {
-          setSessions(data.sessions);
+        if (data.sessions && Array.isArray(data.sessions)) {
+          // Map the response to match expected format
+          const formattedSessions = data.sessions.map((s: any) => ({
+            id: s.id,
+            device: s.device || 'Unknown Device',
+            browser: s.browser || 'Unknown Browser',
+            os: s.os || '',
+            location: s.location || 'Unknown Location',
+            ip: s.ip || 'Unknown',
+            lastActive: s.current ? 'Active now' : formatLastActive(s.lastActive || s.loggedInAt),
+            current: s.current || false,
+          }));
+          setSessions(formattedSessions);
         }
       }
     } catch (err) {
-      // Use mock data if API not available
+      console.error('Failed to fetch sessions:', err);
+      // Use fallback data if API not available
       setSessions([
-        { id: 1, device: 'Windows PC', browser: 'Chrome 120', location: 'New York, USA', ip: '192.168.1.xxx', lastActive: 'Active now', current: true },
-        { id: 2, device: 'iPhone 15', browser: 'Safari Mobile', location: 'London, UK', ip: '10.0.0.xxx', lastActive: '2 hours ago', current: false },
+        { id: 'current', device: 'Current Device', browser: 'Current Browser', location: 'Current Location', ip: 'Your IP', lastActive: 'Active now', current: true },
       ]);
     }
+  };
+  
+  // Helper to format last active time
+  const formatLastActive = (timestamp: string) => {
+    if (!timestamp) return 'Unknown';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    return `${diffDays} days ago`;
   };
 
   const handleUpdateProfile = async () => {
@@ -978,7 +1007,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleLogoutSession = async (sessionId: number) => {
+  const handleLogoutSession = async (sessionId: string | number) => {
     setSessions(sessions.filter(s => s.id !== sessionId));
     setSuccess('Session logged out');
   };
