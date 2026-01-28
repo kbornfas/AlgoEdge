@@ -215,11 +215,11 @@ export default function AnalyticsPage() {
   if (loading) {
     return (
       <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
-        <Skeleton variant="rectangular" height={{ xs: 120, sm: 160, md: 200 }} sx={{ mb: 2, borderRadius: 2 }} />
+        <Skeleton variant="rectangular" sx={{ mb: 2, borderRadius: 2, height: { xs: 120, sm: 160, md: 200 } }} />
         <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }}>
           {[1, 2, 3, 4].map((i) => (
             <Grid item xs={6} sm={6} md={3} key={i}>
-              <Skeleton variant="rectangular" height={{ xs: 100, sm: 110, md: 120 }} sx={{ borderRadius: 2 }} />
+              <Skeleton variant="rectangular" sx={{ borderRadius: 2, height: { xs: 100, sm: 110, md: 120 } }} />
             </Grid>
           ))}
         </Grid>
@@ -259,7 +259,7 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
+    <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, overflow: 'hidden', maxWidth: '100vw' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: { xs: 2, sm: 3 }, gap: { xs: 1, sm: 0 } }}>
         <Box>
@@ -300,20 +300,20 @@ export default function AnalyticsPage() {
       )}
 
       {/* Today's Stats */}
-      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: { xs: 2, sm: 3 } }}>
+      <Grid container spacing={{ xs: 1, sm: 2, md: 3 }} sx={{ mb: { xs: 2, sm: 3 } }}>
         <Grid item xs={6} sm={6} md={3}>
-          <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+          <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', minWidth: 0 }}>
+            <CardContent sx={{ p: { xs: 1, sm: 2 }, '&:last-child': { pb: { xs: 1, sm: 2 } } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 } }}>
-                <Zap size={16} color="white" />
-                <Typography variant="body2" sx={{ ml: 1, color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
+                <Zap size={14} color="white" />
+                <Typography variant="body2" sx={{ ml: 0.5, color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.6rem', sm: '0.875rem' }, whiteSpace: 'nowrap' }}>
                   Signals Today
                 </Typography>
               </Box>
-              <Typography variant="h3" fontWeight="bold" color="white" sx={{ fontSize: { xs: '1.75rem', sm: '2rem', md: '3rem' } }}>
+              <Typography variant="h3" fontWeight="bold" color="white" sx={{ fontSize: { xs: '1.5rem', sm: '2rem', md: '3rem' } }}>
                 {analytics?.today.signals || 0}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.55rem', sm: '0.75rem' } }}>
                 Total: {analytics?.totalSignals || 0}
               </Typography>
             </CardContent>
@@ -321,18 +321,18 @@ export default function AnalyticsPage() {
         </Grid>
 
         <Grid item xs={6} sm={6} md={3}>
-          <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' }}>
-            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+          <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', minWidth: 0 }}>
+            <CardContent sx={{ p: { xs: 1, sm: 2 }, '&:last-child': { pb: { xs: 1, sm: 2 } } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 } }}>
-                <Target size={16} color="white" />
-                <Typography variant="body2" sx={{ ml: 1, color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
+                <Target size={14} color="white" />
+                <Typography variant="body2" sx={{ ml: 0.5, color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.6rem', sm: '0.875rem' }, whiteSpace: 'nowrap' }}>
                   Trades Today
                 </Typography>
               </Box>
-              <Typography variant="h3" fontWeight="bold" color="white" sx={{ fontSize: { xs: '1.75rem', sm: '2rem', md: '3rem' } }}>
+              <Typography variant="h3" fontWeight="bold" color="white" sx={{ fontSize: { xs: '1.5rem', sm: '2rem', md: '3rem' } }}>
                 {analytics?.today.trades || 0}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.55rem', sm: '0.75rem' } }}>
                 Win Rate: {analytics?.today.winRate || 'N/A'}
               </Typography>
             </CardContent>
@@ -342,20 +342,20 @@ export default function AnalyticsPage() {
         <Grid item xs={6} sm={6} md={3}>
           <Card sx={{ height: '100%', background: parseFloat(analytics?.today.profit || '0') >= 0 
             ? 'linear-gradient(135deg, #00b09b 0%, #96c93d 100%)'
-            : 'linear-gradient(135deg, #eb3349 0%, #f45c43 100%)' 
+            : 'linear-gradient(135deg, #eb3349 0%, #f45c43 100%)', minWidth: 0
           }}>
-            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+            <CardContent sx={{ p: { xs: 1, sm: 2 }, '&:last-child': { pb: { xs: 1, sm: 2 } } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 } }}>
                 {parseFloat(analytics?.today.profit || '0') >= 0 ? (
-                  <TrendingUp size={16} color="white" />
+                  <TrendingUp size={14} color="white" />
                 ) : (
-                  <TrendingDown size={16} color="white" />
+                  <TrendingDown size={14} color="white" />
                 )}
-                <Typography variant="body2" sx={{ ml: 1, color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
+                <Typography variant="body2" sx={{ ml: 0.5, color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.6rem', sm: '0.875rem' }, whiteSpace: 'nowrap' }}>
                   Today's P&L
                 </Typography>
               </Box>
-              <Typography variant="h3" fontWeight="bold" color="white" sx={{ fontSize: { xs: '1.75rem', sm: '2rem', md: '3rem' } }}>
+              <Typography variant="h3" fontWeight="bold" color="white" sx={{ fontSize: { xs: '1.5rem', sm: '2rem', md: '3rem' } }}>
                 ${analytics?.today.profit || '0.00'}
               </Typography>
             </CardContent>
@@ -363,11 +363,11 @@ export default function AnalyticsPage() {
         </Grid>
 
         <Grid item xs={6} sm={6} md={3}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 } }}>
+          <Card sx={{ height: '100%', minWidth: 0 }}>
+            <CardContent sx={{ p: { xs: 1, sm: 2 }, '&:last-child': { pb: { xs: 1, sm: 2 } } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 }, flexWrap: 'wrap' }}>
                 {getKillSwitchIcon()}
-                <Typography variant="body2" sx={{ ml: 1, fontSize: { xs: '0.7rem', sm: '0.875rem' } }} color="text.secondary">
+                <Typography variant="body2" sx={{ ml: 0.5, fontSize: { xs: '0.55rem', sm: '0.875rem' } }} color="text.secondary">
                   Protection Status
                 </Typography>
               </Box>
@@ -376,10 +376,10 @@ export default function AnalyticsPage() {
                   ? `${analytics.protectionStatus.killSwitch.level?.toUpperCase()} ACTIVE`
                   : 'NORMAL'}
                 color={getKillSwitchColor()}
-                sx={{ fontWeight: 'bold', mt: { xs: 0.5, sm: 1 }, fontSize: { xs: '0.65rem', sm: '0.8125rem' } }}
+                sx={{ fontWeight: 'bold', mt: { xs: 0.5, sm: 1 }, fontSize: { xs: '0.55rem', sm: '0.8125rem' } }}
                 size="small"
               />
-              <Typography variant="caption" display="block" sx={{ mt: { xs: 0.5, sm: 1 }, fontSize: { xs: '0.65rem', sm: '0.75rem' } }} color="text.secondary">
+              <Typography variant="caption" display="block" sx={{ mt: { xs: 0.5, sm: 1 }, fontSize: { xs: '0.5rem', sm: '0.75rem' } }} color="text.secondary">
                 Losses: {analytics?.protectionStatus.equity.consecutiveLosses || 0} consecutive
               </Typography>
             </CardContent>

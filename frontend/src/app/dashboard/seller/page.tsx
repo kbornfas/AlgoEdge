@@ -396,8 +396,8 @@ export default function SellerDashboardPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 } }}>
-      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 } }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, overflow: 'hidden', maxWidth: '100vw' }}>
+      <Container maxWidth="lg" sx={{ px: { xs: 1.5, sm: 3 } }}>
         {/* Header */}
         <Box sx={{ 
           display: 'flex', 
@@ -443,6 +443,27 @@ export default function SellerDashboardPage() {
         {error && (
           <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
             {error}
+          </Alert>
+        )}
+
+        {/* Verified Status Alert - Show for verified sellers */}
+        {stats?.is_verified && (
+          <Alert 
+            severity="success" 
+            sx={{ 
+              mb: { xs: 2, md: 3 }, 
+              bgcolor: 'rgba(34, 197, 94, 0.1)', 
+              border: '1px solid rgba(34, 197, 94, 0.3)',
+              '& .MuiAlert-icon': { color: '#22C55E' },
+              '& .MuiAlert-message': { color: 'white' }
+            }}
+            icon={
+              <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
+                <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#22C55E"/>
+              </svg>
+            }
+          >
+            You are a verified seller! Your verified badge is displayed on all your listings.
           </Alert>
         )}
 
@@ -640,45 +661,46 @@ export default function SellerDashboardPage() {
         {/* Share Your Links Card */}
         <Card
           sx={{
-            mb: 4,
+            mb: { xs: 2, md: 4 },
             background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%)',
             border: '1px solid rgba(34, 197, 94, 0.25)',
           }}
         >
-          <CardContent>
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+          <CardContent sx={{ p: { xs: 1.5, md: 3 } }}>
+            <Stack direction="row" spacing={{ xs: 1.5, md: 2 }} alignItems="center" sx={{ mb: { xs: 2, md: 3 } }}>
               <Box
                 sx={{
-                  p: 1.5,
+                  p: { xs: 1, md: 1.5 },
                   bgcolor: 'rgba(34, 197, 94, 0.2)',
                   borderRadius: 2,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  flexShrink: 0,
                 }}
               >
-                <ArrowUpRight size={28} color="#22C55E" />
+                <ArrowUpRight size={24} color="#22C55E" />
               </Box>
-              <Box>
-                <Typography variant="h5" sx={{ color: 'white', fontWeight: 800 }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="h5" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.5rem' } }}>
                   Share Your Links
                 </Typography>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.75rem', md: '1rem' } }}>
                   Promote your profile and products on social media
                 </Typography>
               </Box>
             </Stack>
 
-            <Grid container spacing={2}>
+            <Grid container spacing={{ xs: 1.5, md: 2 }}>
               {/* Seller Profile Link */}
               <Grid item xs={12}>
-                <Paper sx={{ p: 2, bgcolor: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <Paper sx={{ p: { xs: 1.5, md: 2 }, bgcolor: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}>
                   <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', mb: 1 }}>
                     Your Seller Profile
                   </Typography>
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Box sx={{ flex: 1, overflow: 'hidden' }}>
-                      <Typography sx={{ color: '#22C55E', fontFamily: 'monospace', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <Box sx={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
+                      <Typography sx={{ color: '#22C55E', fontFamily: 'monospace', fontSize: { xs: '0.7rem', md: '0.85rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {process.env.NEXT_PUBLIC_APP_URL || 'https://algoedgehub.com'}/sellers/{stats?.seller_slug || 'your-username'}
                       </Typography>
                     </Box>
@@ -765,80 +787,80 @@ export default function SellerDashboardPage() {
         </Card>
 
         {/* Wallet Stats */}
-        <Grid container spacing={{ xs: 1.5, md: 3 }} sx={{ mb: { xs: 2, md: 4 } }}>
+        <Grid container spacing={{ xs: 1, md: 3 }} sx={{ mb: { xs: 2, md: 4 } }}>
           <Grid item xs={6} sm={6} md={3}>
-            <Card sx={{ bgcolor: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
-              <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{ p: 0.75, bgcolor: 'rgba(139, 92, 246, 0.2)', borderRadius: 1 }}>
-                    <Wallet size={18} color="#8B5CF6" />
+            <Card sx={{ bgcolor: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)', minWidth: 0 }}>
+              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+                  <Box sx={{ p: 0.5, bgcolor: 'rgba(139, 92, 246, 0.2)', borderRadius: 1, flexShrink: 0 }}>
+                    <Wallet size={14} color="#8B5CF6" />
                   </Box>
                   <Chip
                     label="Available"
                     size="small"
-                    sx={{ bgcolor: 'rgba(34, 197, 94, 0.2)', color: '#22C55E', height: 20, fontSize: '0.65rem' }}
+                    sx={{ bgcolor: 'rgba(34, 197, 94, 0.2)', color: '#22C55E', height: 18, fontSize: '0.55rem', display: { xs: 'none', sm: 'flex' } }}
                   />
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.7rem', md: '0.875rem' } }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' } }}>
                   Available
                 </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1.2rem', md: '1.75rem' } }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' } }}>
                   ${Number(stats?.wallet?.available_balance || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={6} sm={6} md={3}>
-            <Card sx={{ bgcolor: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-              <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{ p: 0.75, bgcolor: 'rgba(245, 158, 11, 0.2)', borderRadius: 1 }}>
-                    <Clock size={18} color="#F59E0B" />
+            <Card sx={{ bgcolor: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', minWidth: 0 }}>
+              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+                  <Box sx={{ p: 0.5, bgcolor: 'rgba(245, 158, 11, 0.2)', borderRadius: 1, flexShrink: 0 }}>
+                    <Clock size={14} color="#F59E0B" />
                   </Box>
                   <Chip
                     label="Pending"
                     size="small"
-                    sx={{ bgcolor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', height: 20, fontSize: '0.65rem' }}
+                    sx={{ bgcolor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', height: 18, fontSize: '0.55rem', display: { xs: 'none', sm: 'flex' } }}
                   />
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.7rem', md: '0.875rem' } }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' } }}>
                   Pending
                 </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1.2rem', md: '1.75rem' } }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' } }}>
                   ${Number(stats?.wallet?.pending_earnings || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={6} sm={6} md={3}>
-            <Card sx={{ bgcolor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
-              <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{ p: 0.75, bgcolor: 'rgba(34, 197, 94, 0.2)', borderRadius: 1 }}>
-                    <TrendingUp size={18} color="#22C55E" />
+            <Card sx={{ bgcolor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', minWidth: 0 }}>
+              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+                  <Box sx={{ p: 0.5, bgcolor: 'rgba(34, 197, 94, 0.2)', borderRadius: 1, flexShrink: 0 }}>
+                    <TrendingUp size={14} color="#22C55E" />
                   </Box>
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.7rem', md: '0.875rem' } }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' } }}>
                   Total Earned
                 </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1.2rem', md: '1.75rem' } }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' } }}>
                   ${Number(stats?.wallet?.total_earnings || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={6} sm={6} md={3}>
-            <Card sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-              <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{ p: 0.75, bgcolor: 'rgba(59, 130, 246, 0.2)', borderRadius: 1 }}>
-                    <DollarSign size={18} color="#3B82F6" />
+            <Card sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', minWidth: 0 }}>
+              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+                  <Box sx={{ p: 0.5, bgcolor: 'rgba(59, 130, 246, 0.2)', borderRadius: 1, flexShrink: 0 }}>
+                    <DollarSign size={14} color="#3B82F6" />
                   </Box>
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.7rem', md: '0.875rem' } }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' } }}>
                   Paid Out
                 </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1.2rem', md: '1.75rem' } }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' } }}>
                   ${Number(stats?.wallet?.total_payouts || 0).toFixed(2)}
                 </Typography>
               </CardContent>
