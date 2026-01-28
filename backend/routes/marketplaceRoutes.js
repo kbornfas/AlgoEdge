@@ -137,29 +137,37 @@ router.get('/landing', async (req, res) => {
   try {
     const [bots, providers, products] = await Promise.all([
       pool.query(`
-        SELECT id, name, slug, short_description as description, thumbnail_url, price, price_type,
-               win_rate, monthly_return, rating_average, rating_count as total_reviews, total_sales, category
-        FROM marketplace_bots
-        WHERE status = 'approved'
-        ORDER BY is_featured DESC, total_sales DESC, rating_average DESC
-        LIMIT 3
+        SELECT b.id, b.name, b.slug, b.short_description as description, b.thumbnail_url, b.price, b.price_type,
+               b.win_rate, b.monthly_return, b.rating_average, b.rating_count as total_reviews, b.total_sales, b.category,
+               b.is_featured,
+               u.full_name as seller_name, u.profile_image as seller_avatar, u.has_blue_badge as seller_verified
+        FROM marketplace_bots b
+        JOIN users u ON b.seller_id = u.id
+        WHERE b.status = 'approved'
+        ORDER BY b.is_featured DESC, b.total_sales DESC, b.rating_average DESC
+        LIMIT 6
       `),
       pool.query(`
         SELECT sp.id, sp.display_name as name, sp.slug, sp.avatar_url, sp.monthly_price,
                sp.win_rate, sp.total_pips, sp.subscriber_count, sp.rating_average,
-               sp.trading_style, sp.risk_level, sp.bio as description
+               sp.trading_style, sp.risk_level, sp.bio as description, sp.is_featured,
+               u.full_name as provider_name, u.profile_image as provider_avatar, u.has_blue_badge as provider_verified
         FROM signal_providers sp
+        JOIN users u ON sp.user_id = u.id
         WHERE sp.status = 'approved'
         ORDER BY sp.is_featured DESC, sp.subscriber_count DESC, sp.rating_average DESC
-        LIMIT 2
+        LIMIT 4
       `),
       pool.query(`
-        SELECT id, name, slug, short_description as description, thumbnail_url, price,
-               product_type as type, rating_average, rating_count as total_reviews, total_sales
-        FROM marketplace_products
-        WHERE status = 'approved'
-        ORDER BY is_featured DESC, total_sales DESC, rating_average DESC
-        LIMIT 3
+        SELECT p.id, p.name, p.slug, p.short_description as description, p.thumbnail_url, p.price,
+               p.product_type as type, p.rating_average, p.rating_count as total_reviews, p.total_sales,
+               p.is_featured,
+               u.full_name as seller_name, u.profile_image as seller_avatar, u.has_blue_badge as seller_verified
+        FROM marketplace_products p
+        JOIN users u ON p.seller_id = u.id
+        WHERE p.status = 'approved'
+        ORDER BY p.is_featured DESC, p.total_sales DESC, p.rating_average DESC
+        LIMIT 6
       `)
     ]);
 

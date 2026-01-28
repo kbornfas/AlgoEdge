@@ -228,7 +228,7 @@ export default function AdminVerificationsPage() {
     <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: 4 }}>
       <Container maxWidth="xl">
         {/* Header */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4, pl: { xs: 6, md: 0 } }}>
           <Box>
             <Stack direction="row" alignItems="center" spacing={1.5}>
               <VerifiedBadgeSVG size={32} />

@@ -277,7 +277,7 @@ export default function AdminDepositsPage() {
   return (
     <Box>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4} sx={{ pl: { xs: 6, md: 0 } }}>
         <Box>
           <Typography variant="h4" fontWeight="bold" gutterBottom>
             Wallet Management

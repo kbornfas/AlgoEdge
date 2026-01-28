@@ -316,7 +316,7 @@ export default function AdminAffiliatePage() {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar position="static">
-        <Toolbar>
+        <Toolbar sx={{ pl: { xs: 7, md: 2 } }}>
           <Shield size={32} style={{ marginRight: 16 }} />
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             AlgoEdge Admin - Affiliate Management

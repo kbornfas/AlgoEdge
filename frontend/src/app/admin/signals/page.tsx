@@ -221,7 +221,7 @@ export default function AdminSignalsPage() {
   return (
     <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
       <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, pl: { xs: 6, md: 0 } }}>
           <Box>
             <Typography variant="h4" fontWeight={700}>
               Signal Management

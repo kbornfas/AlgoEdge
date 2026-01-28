@@ -245,7 +245,7 @@ export default function AdminWalletsPage() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, pl: { xs: 6, md: 0 } }}>
         <Typography variant="h4">Wallet Management</Typography>
         <Button startIcon={<RefreshIcon />} onClick={fetchWallets}>Refresh</Button>
       </Box>

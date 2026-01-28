@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ProductShowcase from '@/components/landing/ProductShowcase';
+import FeaturedSellers from '@/components/landing/FeaturedSellers';
 
 /**
  * Trading Background Component
@@ -1591,6 +1592,11 @@ export default function Home() {
             PRODUCT SHOWCASE - Premium Trading Products
         ═══════════════════════════════════════════════════════════════════════ */}
         <ProductShowcase />
+
+        {/* ═══════════════════════════════════════════════════════════════════════
+            FEATURED SELLERS - Top Marketplace Sellers
+        ═══════════════════════════════════════════════════════════════════════ */}
+        <FeaturedSellers />
 
         {/* ═══════════════════════════════════════════════════════════════════════
             TESTIMONIALS - Social Proof Section

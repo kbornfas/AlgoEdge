@@ -33,11 +33,57 @@ router.get('/stats', async (req, res) => {
     );
     stats.pending_signals = parseInt(pendingSignals.rows[0].count);
 
-    // Total sellers
+    // Total sellers (count users who are sellers)
     const totalSellers = await pool.query(
-      'SELECT COUNT(DISTINCT user_id) FROM seller_wallets'
+      "SELECT COUNT(*) FROM users WHERE is_seller = TRUE"
     );
     stats.total_sellers = parseInt(totalSellers.rows[0].count);
+
+    // Pending seller applications
+    const pendingSellerApps = await pool.query(
+      "SELECT COUNT(*) FROM seller_applications WHERE status = 'pending'"
+    );
+    stats.pending_seller_applications = parseInt(pendingSellerApps.rows[0].count);
+
+    // Total users count
+    const totalUsers = await pool.query("SELECT COUNT(*) FROM users");
+    stats.total_users = parseInt(totalUsers.rows[0].count);
+
+    // Total admins count
+    const totalAdmins = await pool.query("SELECT COUNT(*) FROM users WHERE is_admin = TRUE");
+    stats.total_admins = parseInt(totalAdmins.rows[0].count);
+
+    // Active users (not blocked)
+    const activeUsers = await pool.query("SELECT COUNT(*) FROM users WHERE is_blocked = FALSE OR is_blocked IS NULL");
+    stats.active_users = parseInt(activeUsers.rows[0].count);
+
+    // Verified users count (with blue badge)
+    const verifiedUsers = await pool.query("SELECT COUNT(*) FROM users WHERE has_blue_badge = TRUE");
+    stats.verified_users = parseInt(verifiedUsers.rows[0].count);
+
+    // New users today
+    const newUsersToday = await pool.query(
+      "SELECT COUNT(*) FROM users WHERE DATE(created_at) = CURRENT_DATE"
+    );
+    stats.new_users_today = parseInt(newUsersToday.rows[0].count);
+
+    // Total approved bots
+    const totalBots = await pool.query(
+      "SELECT COUNT(*) FROM marketplace_bots WHERE status = 'approved'"
+    );
+    stats.total_bots = parseInt(totalBots.rows[0].count);
+
+    // Total approved products
+    const totalProducts = await pool.query(
+      "SELECT COUNT(*) FROM marketplace_products WHERE status = 'approved'"
+    );
+    stats.total_products = parseInt(totalProducts.rows[0].count);
+
+    // Total active signal providers
+    const totalSignalProviders = await pool.query(
+      "SELECT COUNT(*) FROM signal_providers WHERE status = 'approved'"
+    );
+    stats.total_signal_providers = parseInt(totalSignalProviders.rows[0].count);
 
     // Today's sales
     const today = new Date().toISOString().split('T')[0];

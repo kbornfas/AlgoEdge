@@ -58,6 +58,7 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
+  Star,
 } from 'lucide-react';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 
@@ -68,6 +69,9 @@ interface User {
   full_name?: string;
   is_admin: boolean;
   is_verified: boolean;
+  is_seller?: boolean;
+  seller_featured?: boolean;
+  has_blue_badge?: boolean;
   verification_pending: boolean;
   is_blocked: boolean;
   subscription_status?: string;
@@ -90,7 +94,7 @@ export default function AdminUsersPage() {
   const [rowsPerPage] = useState(15);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
-  const [actionType, setActionType] = useState<'block' | 'verify' | 'admin' | 'delete'>('block');
+  const [actionType, setActionType] = useState<'block' | 'verify' | 'admin' | 'delete' | 'feature'>('block');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -194,6 +198,11 @@ export default function AdminUsersPage() {
           method = 'PATCH';
           body = { is_admin: !selectedUser.is_admin };
           break;
+        case 'feature':
+          endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${selectedUser.id}/feature`;
+          method = 'PATCH';
+          body = { featured: !selectedUser.seller_featured };
+          break;
         case 'delete':
           endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${selectedUser.id}`;
           method = 'DELETE';
@@ -215,6 +224,7 @@ export default function AdminUsersPage() {
           message: `User ${actionType === 'block' ? (selectedUser.is_blocked ? 'unblocked' : 'blocked') : 
                           actionType === 'verify' ? 'verified' : 
                           actionType === 'admin' ? (selectedUser.is_admin ? 'removed from admin' : 'made admin') : 
+                          actionType === 'feature' ? (selectedUser.seller_featured ? 'removed from featured' : 'added to featured sellers') :
                           'deleted'} successfully` 
         });
         fetchUsers();
@@ -231,7 +241,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  const openActionDialog = (user: User, action: 'block' | 'verify' | 'admin' | 'delete') => {
+  const openActionDialog = (user: User, action: 'block' | 'verify' | 'admin' | 'delete' | 'feature') => {
     setSelectedUser(user);
     setActionType(action);
     setActionDialogOpen(true);
@@ -260,7 +270,7 @@ export default function AdminUsersPage() {
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 4, pl: { xs: 6, md: 0 } }}>
         <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, mb: 0.5 }}>
           User Management
         </Typography>
@@ -529,6 +539,12 @@ export default function AdminUsersPage() {
           <Shield size={16} style={{ marginRight: 8 }} />
           {selectedUser?.is_admin ? 'Remove Admin' : 'Make Admin'}
         </MenuItem>
+        {selectedUser?.is_seller && (
+          <MenuItem onClick={() => openActionDialog(selectedUser!, 'feature')} sx={{ color: '#8B5CF6', '&:hover': { bgcolor: 'rgba(139, 92, 246, 0.1)' } }}>
+            <Star size={16} style={{ marginRight: 8 }} />
+            {selectedUser?.seller_featured ? 'Remove from Featured' : 'Feature on Landing Page'}
+          </MenuItem>
+        )}
         <MenuItem onClick={() => openActionDialog(selectedUser!, 'delete')} sx={{ color: '#EF4444', '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.1)' } }}>
           <Trash2 size={16} style={{ marginRight: 8 }} />
           Delete User
@@ -545,6 +561,7 @@ export default function AdminUsersPage() {
           {actionType === 'block' ? (selectedUser?.is_blocked ? 'Unblock User' : 'Block User') :
            actionType === 'verify' ? 'Verify User' :
            actionType === 'admin' ? (selectedUser?.is_admin ? 'Remove Admin' : 'Make Admin') :
+           actionType === 'feature' ? (selectedUser?.seller_featured ? 'Remove from Featured' : 'Feature Seller') :
            'Delete User'}
         </DialogTitle>
         <DialogContent>
@@ -556,6 +573,9 @@ export default function AdminUsersPage() {
             {actionType === 'admin' && (selectedUser?.is_admin
               ? `Remove admin privileges from ${selectedUser?.email}?`
               : `Grant admin privileges to ${selectedUser?.email}? They will have full platform access.`)}
+            {actionType === 'feature' && (selectedUser?.seller_featured
+              ? `Remove ${selectedUser?.email} from featured sellers on the landing page?`
+              : `Feature ${selectedUser?.email} as a seller on the landing page? They will appear in the Featured Sellers section.`)}
             {actionType === 'delete' && `Permanently delete ${selectedUser?.email}? This action cannot be undone.`}
           </Typography>
         </DialogContent>

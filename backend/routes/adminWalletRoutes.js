@@ -123,6 +123,382 @@ router.post('/wallet/adjustment', async (req, res) => {
 });
 
 // ============================================================================
+// ADMIN USER MANAGEMENT ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/admin/users
+ * Get all users for admin dashboard
+ */
+router.get('/users', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, username, email, full_name, phone, country, timezone, 
+        is_verified, two_fa_enabled, created_at, is_blocked,
+        subscription_status, subscription_plan, subscription_expires_at,
+        is_admin, is_seller, has_blue_badge, profile_image
+      FROM users
+      ORDER BY created_at DESC
+    `);
+    res.json({ success: true, users: result.rows });
+  } catch (error) {
+    console.error('List all users error:', error);
+    res.status(500).json({ error: 'Failed to list users' });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:userId/block
+ * Block or unblock a user
+ */
+router.patch('/users/:userId/block', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { block } = req.body;
+    const result = await pool.query(
+      `UPDATE users SET is_blocked = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 
+       RETURNING id, username, email, is_blocked`,
+      [!!block, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ success: true, user: result.rows[0] });
+  } catch (error) {
+    console.error('Set user blocked error:', error);
+    res.status(500).json({ error: 'Failed to update user status' });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:userId/admin
+ * Toggle admin status
+ */
+router.patch('/users/:userId/admin', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { is_admin } = req.body;
+    const result = await pool.query(
+      `UPDATE users SET is_admin = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 
+       RETURNING id, username, email, is_admin`,
+      [!!is_admin, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ success: true, user: result.rows[0] });
+  } catch (error) {
+    console.error('Toggle admin error:', error);
+    res.status(500).json({ error: 'Failed to update admin status' });
+  }
+});
+
+/**
+ * DELETE /api/admin/users/:userId
+ * Delete a user
+ */
+router.delete('/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const adminId = req.user.id;
+    
+    // Prevent self-deletion
+    if (parseInt(userId) === adminId) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+    
+    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id, email', [userId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ success: true, message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+/**
+ * GET /api/admin/featured
+ * Get all featurable items (bots, signals, products) with current featured status
+ */
+router.get('/featured', async (req, res) => {
+  try {
+    const [bots, signals, products, sellers] = await Promise.all([
+      pool.query(`
+        SELECT b.id, b.name, b.slug, b.thumbnail_url, b.is_featured, b.status, b.total_sales,
+               u.id as seller_id, u.username as seller_username, u.full_name as seller_name, 
+               u.has_blue_badge as seller_verified
+        FROM marketplace_bots b
+        JOIN users u ON b.seller_id = u.id
+        WHERE b.status = 'approved'
+        ORDER BY b.is_featured DESC, b.total_sales DESC
+      `),
+      pool.query(`
+        SELECT sp.id, sp.display_name as name, sp.slug, sp.avatar_url, sp.is_featured, sp.status, sp.subscriber_count,
+               u.id as provider_id, u.username as provider_username, u.full_name as provider_name,
+               u.has_blue_badge as provider_verified
+        FROM signal_providers sp
+        JOIN users u ON sp.user_id = u.id
+        WHERE sp.status = 'approved'
+        ORDER BY sp.is_featured DESC, sp.subscriber_count DESC
+      `),
+      pool.query(`
+        SELECT p.id, p.name, p.slug, p.thumbnail_url, p.is_featured, p.status, p.total_sales,
+               u.id as seller_id, u.username as seller_username, u.full_name as seller_name,
+               u.has_blue_badge as seller_verified
+        FROM marketplace_products p
+        JOIN users u ON p.seller_id = u.id
+        WHERE p.status = 'approved'
+        ORDER BY p.is_featured DESC, p.total_sales DESC
+      `),
+      pool.query(`
+        SELECT u.id, u.username, u.full_name, u.profile_image, u.seller_featured, u.has_blue_badge,
+               (SELECT COUNT(*) FROM marketplace_bots WHERE seller_id = u.id AND status = 'approved') as bots_count,
+               (SELECT COUNT(*) FROM marketplace_products WHERE seller_id = u.id AND status = 'approved') as products_count,
+               (SELECT COUNT(*) FROM signal_providers WHERE user_id = u.id AND status = 'approved') as signals_count
+        FROM users u
+        WHERE u.is_seller = true
+        ORDER BY u.seller_featured DESC, u.created_at DESC
+      `)
+    ]);
+
+    res.json({
+      success: true,
+      bots: bots.rows,
+      signals: signals.rows,
+      products: products.rows,
+      sellers: sellers.rows
+    });
+  } catch (error) {
+    console.error('Get featured items error:', error);
+    res.status(500).json({ error: 'Failed to get featured items' });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:userId/feature
+ * Toggle featured status for a seller (shows on landing page)
+ * Requires seller to be verified AND have at least 1 listing
+ */
+router.patch('/users/:userId/feature', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { featured } = req.body;
+    
+    // Check if user is a seller with verification status
+    const userCheck = await pool.query(`
+      SELECT u.is_seller, u.has_blue_badge,
+             (SELECT COUNT(*) FROM marketplace_bots WHERE seller_id = u.id AND status = 'approved') as bots_count,
+             (SELECT COUNT(*) FROM marketplace_products WHERE seller_id = u.id AND status = 'approved') as products_count,
+             (SELECT COUNT(*) FROM signal_providers WHERE user_id = u.id AND status = 'approved') as signals_count
+      FROM users u WHERE u.id = $1
+    `, [userId]);
+    
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const user = userCheck.rows[0];
+    if (!user.is_seller) {
+      return res.status(400).json({ error: 'User is not a seller' });
+    }
+    
+    // Only enforce verification and listing requirements when featuring (not when unfeaturing)
+    if (featured) {
+      if (!user.has_blue_badge) {
+        return res.status(400).json({ 
+          error: 'Seller must be verified (have blue badge) to be featured',
+          requires_verification: true
+        });
+      }
+      
+      const totalListings = parseInt(user.bots_count) + parseInt(user.products_count) + parseInt(user.signals_count);
+      if (totalListings < 1) {
+        return res.status(400).json({ 
+          error: 'Seller must have at least 1 approved listing (bot, product, or signal) to be featured',
+          requires_listings: true
+        });
+      }
+    }
+    
+    const result = await pool.query(
+      `UPDATE users SET seller_featured = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 
+       RETURNING id, username, email, full_name, seller_featured`,
+      [!!featured, userId]
+    );
+    res.json({ 
+      success: true, 
+      user: result.rows[0],
+      message: featured ? 'Seller is now featured on landing page' : 'Seller removed from featured list'
+    });
+  } catch (error) {
+    console.error('Toggle featured error:', error);
+    res.status(500).json({ error: 'Failed to update featured status' });
+  }
+});
+
+/**
+ * PATCH /api/admin/bots/:botId/feature
+ * Toggle featured status for a bot (shows on landing page)
+ * Requires bot seller to be verified
+ */
+router.patch('/bots/:botId/feature', async (req, res) => {
+  try {
+    const { botId } = req.params;
+    const { featured } = req.body;
+    
+    // Check if bot exists and get seller verification status
+    const botCheck = await pool.query(`
+      SELECT b.id, b.name, b.status, u.has_blue_badge as seller_verified
+      FROM marketplace_bots b
+      JOIN users u ON b.seller_id = u.id
+      WHERE b.id = $1
+    `, [botId]);
+    
+    if (botCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Bot not found' });
+    }
+    
+    const bot = botCheck.rows[0];
+    
+    // Only check requirements when featuring
+    if (featured) {
+      if (bot.status !== 'approved') {
+        return res.status(400).json({ error: 'Bot must be approved before being featured' });
+      }
+      if (!bot.seller_verified) {
+        return res.status(400).json({ 
+          error: 'Bot seller must be verified (have blue badge) before the bot can be featured',
+          requires_seller_verification: true
+        });
+      }
+    }
+    
+    const result = await pool.query(
+      `UPDATE marketplace_bots SET is_featured = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 
+       RETURNING id, name, slug, is_featured`,
+      [!!featured, botId]
+    );
+    res.json({ 
+      success: true, 
+      bot: result.rows[0],
+      message: featured ? 'Bot is now featured on landing page' : 'Bot removed from featured list'
+    });
+  } catch (error) {
+    console.error('Toggle bot featured error:', error);
+    res.status(500).json({ error: 'Failed to update bot featured status' });
+  }
+});
+
+/**
+ * PATCH /api/admin/signals/:signalId/feature
+ * Toggle featured status for a signal provider (shows on landing page)
+ * Requires signal provider to be verified
+ */
+router.patch('/signals/:signalId/feature', async (req, res) => {
+  try {
+    const { signalId } = req.params;
+    const { featured } = req.body;
+    
+    // Check if signal exists and get provider verification status
+    const signalCheck = await pool.query(`
+      SELECT sp.id, sp.display_name, sp.status, u.has_blue_badge as provider_verified
+      FROM signal_providers sp
+      JOIN users u ON sp.user_id = u.id
+      WHERE sp.id = $1
+    `, [signalId]);
+    
+    if (signalCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Signal provider not found' });
+    }
+    
+    const signal = signalCheck.rows[0];
+    
+    // Only check requirements when featuring
+    if (featured) {
+      if (signal.status !== 'approved') {
+        return res.status(400).json({ error: 'Signal provider must be approved before being featured' });
+      }
+      if (!signal.provider_verified) {
+        return res.status(400).json({ 
+          error: 'Signal provider must be verified (have blue badge) before they can be featured',
+          requires_provider_verification: true
+        });
+      }
+    }
+    
+    const result = await pool.query(
+      `UPDATE signal_providers SET is_featured = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 
+       RETURNING id, display_name, slug, is_featured`,
+      [!!featured, signalId]
+    );
+    res.json({ 
+      success: true, 
+      signal: result.rows[0],
+      message: featured ? 'Signal provider is now featured on landing page' : 'Signal provider removed from featured list'
+    });
+  } catch (error) {
+    console.error('Toggle signal featured error:', error);
+    res.status(500).json({ error: 'Failed to update signal featured status' });
+  }
+});
+
+/**
+ * PATCH /api/admin/products/:productId/feature
+ * Toggle featured status for a product (shows on landing page)
+ * Requires product seller to be verified
+ */
+router.patch('/products/:productId/feature', async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { featured } = req.body;
+    
+    // Check if product exists and get seller verification status
+    const productCheck = await pool.query(`
+      SELECT p.id, p.name, p.status, u.has_blue_badge as seller_verified
+      FROM marketplace_products p
+      JOIN users u ON p.seller_id = u.id
+      WHERE p.id = $1
+    `, [productId]);
+    
+    if (productCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    const product = productCheck.rows[0];
+    
+    // Only check requirements when featuring
+    if (featured) {
+      if (product.status !== 'approved') {
+        return res.status(400).json({ error: 'Product must be approved before being featured' });
+      }
+      if (!product.seller_verified) {
+        return res.status(400).json({ 
+          error: 'Product seller must be verified (have blue badge) before the product can be featured',
+          requires_seller_verification: true
+        });
+      }
+    }
+    
+    const result = await pool.query(
+      `UPDATE marketplace_products SET is_featured = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 
+       RETURNING id, name, slug, is_featured`,
+      [!!featured, productId]
+    );
+    res.json({ 
+      success: true, 
+      product: result.rows[0],
+      message: featured ? 'Product is now featured on landing page' : 'Product removed from featured list'
+    });
+  } catch (error) {
+    console.error('Toggle product featured error:', error);
+    res.status(500).json({ error: 'Failed to update product featured status' });
+  }
+});
+
+// ============================================================================
 // ALL USER BALANCES ENDPOINTS
 // ============================================================================
 

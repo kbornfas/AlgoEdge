@@ -59,6 +59,7 @@ import {
   CheckCircle,
   XCircle,
   ShieldCheck,
+  Store,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -92,10 +93,32 @@ interface MarketplaceStats {
   pending_products: number;
   pending_signals: number;
   pending_verifications: number;
+  pending_seller_applications: number;
   total_sellers: number;
   total_sales_today: number;
   revenue_today: number;
   commission_today: number;
+}
+
+interface SellerApplication {
+  id: number;
+  user_id: number;
+  user_email: string;
+  username: string;
+  profile_image: string;
+  full_name: string;
+  bio: string;
+  tagline: string;
+  experience_years: number;
+  trading_style: string;
+  specialties: string[];
+  phone: string;
+  country: string;
+  website: string;
+  telegram: string;
+  twitter: string;
+  created_at: string;
+  status: string;
 }
 
 export default function AdminMarketplacePage() {
@@ -119,6 +142,10 @@ export default function AdminMarketplacePage() {
   const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
   const [selectedVerification, setSelectedVerification] = useState<PendingVerification | null>(null);
   const [verificationRejectionReason, setVerificationRejectionReason] = useState('');
+  const [sellerApplications, setSellerApplications] = useState<SellerApplication[]>([]);
+  const [selectedApplication, setSelectedApplication] = useState<SellerApplication | null>(null);
+  const [applicationDialogOpen, setApplicationDialogOpen] = useState(false);
+  const [applicationRejectionReason, setApplicationRejectionReason] = useState('');
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -152,6 +179,15 @@ export default function AdminMarketplacePage() {
       if (verificationsRes.ok) {
         const verificationsData = await verificationsRes.json();
         setPendingVerifications(verificationsData.pendingVerifications || []);
+      }
+
+      // Fetch pending seller applications
+      const applicationsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile/admin/seller-applications`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (applicationsRes.ok) {
+        const applicationsData = await applicationsRes.json();
+        setSellerApplications(applicationsData.applications || []);
       }
 
       // Fetch pending items based on tab
@@ -313,6 +349,62 @@ export default function AdminMarketplacePage() {
     }
   };
 
+  // Seller Application handlers
+  const handleApproveSellerApplication = async (application: SellerApplication) => {
+    setActionLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile/admin/seller-applications/${application.id}/approve`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (res.ok) {
+        setAlert({ type: 'success', message: `${application.full_name} is now a verified seller!` });
+        setSellerApplications(sellerApplications.filter((a) => a.id !== application.id));
+        setApplicationDialogOpen(false);
+        setSelectedApplication(null);
+      } else {
+        const data = await res.json();
+        setAlert({ type: 'error', message: data.error || 'Failed to approve seller application' });
+      }
+    } catch (error) {
+      setAlert({ type: 'error', message: 'Network error' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectSellerApplication = async (application: SellerApplication) => {
+    setActionLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile/admin/seller-applications/${application.id}/reject`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason: applicationRejectionReason || 'Application does not meet requirements' }),
+      });
+      
+      if (res.ok) {
+        setAlert({ type: 'success', message: `Seller application rejected for ${application.full_name}` });
+        setSellerApplications(sellerApplications.filter((a) => a.id !== application.id));
+        setApplicationDialogOpen(false);
+        setSelectedApplication(null);
+        setApplicationRejectionReason('');
+      } else {
+        const data = await res.json();
+        setAlert({ type: 'error', message: data.error || 'Failed to reject seller application' });
+      }
+    } catch (error) {
+      setAlert({ type: 'error', message: 'Network error' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const filteredItems = pendingItems.filter(
     (item) =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -332,7 +424,7 @@ export default function AdminMarketplacePage() {
     <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: 4 }}>
       <Container maxWidth="xl">
         {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, pl: { xs: 6, md: 0 } }}>
           <Box>
             <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, mb: 1 }}>
               Marketplace Management
@@ -521,6 +613,119 @@ export default function AdminMarketplacePage() {
                             onClick={() => {
                               setSelectedVerification(verification);
                               setVerificationDialogOpen(true);
+                            }}
+                            sx={{ borderColor: '#EF4444', color: '#EF4444' }}
+                          >
+                            Reject
+                          </Button>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Pending Seller Applications Section */}
+        {sellerApplications.length > 0 && (
+          <Card sx={{ mb: 4, bgcolor: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+            <CardContent>
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+                <Store size={28} color="#8B5CF6" />
+                <Typography variant="h6" sx={{ color: 'white', fontWeight: 700 }}>
+                  Pending Seller Applications
+                </Typography>
+                <Chip
+                  label={sellerApplications.length}
+                  size="small"
+                  sx={{ bgcolor: '#8B5CF6', color: 'white', fontWeight: 700 }}
+                />
+              </Stack>
+              
+              <Grid container spacing={2}>
+                {sellerApplications.map((application) => (
+                  <Grid item xs={12} md={6} lg={4} key={application.id}>
+                    <Card sx={{ bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <CardContent>
+                        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                          <Avatar 
+                            src={application.profile_image} 
+                            sx={{ bgcolor: '#8B5CF6', width: 48, height: 48 }}
+                          >
+                            {application.full_name?.charAt(0) || 'U'}
+                          </Avatar>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography sx={{ color: 'white', fontWeight: 700 }}>
+                              {application.full_name}
+                            </Typography>
+                            <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>
+                              {application.user_email}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                        
+                        {application.tagline && (
+                          <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem', mb: 2, fontStyle: 'italic' }}>
+                            "{application.tagline}"
+                          </Typography>
+                        )}
+                        
+                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
+                          {application.trading_style && (
+                            <Chip
+                              label={application.trading_style}
+                              size="small"
+                              sx={{ bgcolor: 'rgba(139, 92, 246, 0.2)', color: '#A78BFA', fontSize: '0.75rem' }}
+                            />
+                          )}
+                          {application.experience_years && (
+                            <Chip
+                              label={`${application.experience_years} yrs exp`}
+                              size="small"
+                              sx={{ bgcolor: 'rgba(34, 197, 94, 0.2)', color: '#86EFAC', fontSize: '0.75rem' }}
+                            />
+                          )}
+                          {application.country && (
+                            <Chip
+                              label={application.country}
+                              size="small"
+                              sx={{ bgcolor: 'rgba(59, 130, 246, 0.2)', color: '#93C5FD', fontSize: '0.75rem' }}
+                            />
+                          )}
+                        </Stack>
+                        
+                        {application.bio && (
+                          <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', mb: 2, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {application.bio}
+                          </Typography>
+                        )}
+                        
+                        <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', mb: 2 }}>
+                          Applied: {new Date(application.created_at).toLocaleDateString()}
+                        </Typography>
+                        
+                        <Stack direction="row" spacing={1}>
+                          <Button
+                            fullWidth
+                            variant="contained"
+                            size="small"
+                            startIcon={<CheckCircle size={16} />}
+                            onClick={() => handleApproveSellerApplication(application)}
+                            disabled={actionLoading}
+                            sx={{ bgcolor: '#22C55E', '&:hover': { bgcolor: '#16A34A' } }}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            fullWidth
+                            variant="outlined"
+                            size="small"
+                            startIcon={<XCircle size={16} />}
+                            onClick={() => {
+                              setSelectedApplication(application);
+                              setApplicationDialogOpen(true);
                             }}
                             sx={{ borderColor: '#EF4444', color: '#EF4444' }}
                           >
@@ -985,6 +1190,90 @@ export default function AdminMarketplacePage() {
               startIcon={actionLoading ? <CircularProgress size={18} /> : <XCircle size={18} />}
             >
               Reject & Refund
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Seller Application Rejection Dialog */}
+        <Dialog
+          open={applicationDialogOpen}
+          onClose={() => {
+            setApplicationDialogOpen(false);
+            setSelectedApplication(null);
+            setApplicationRejectionReason('');
+          }}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: { bgcolor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' },
+          }}
+        >
+          <DialogTitle sx={{ color: 'white', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <XCircle size={24} color="#EF4444" />
+            Reject Seller Application
+          </DialogTitle>
+          <DialogContent>
+            {selectedApplication && (
+              <Box>
+                <Box sx={{ mb: 3, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2 }}>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar 
+                      src={selectedApplication.profile_image}
+                      sx={{ bgcolor: '#8B5CF6', width: 48, height: 48 }}
+                    >
+                      {selectedApplication.full_name?.charAt(0) || 'U'}
+                    </Avatar>
+                    <Box>
+                      <Typography sx={{ color: 'white', fontWeight: 700 }}>
+                        {selectedApplication.full_name}
+                      </Typography>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                        {selectedApplication.user_email}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+                
+                <Typography sx={{ color: 'white', fontWeight: 600, mb: 1 }}>
+                  Rejection Reason
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  value={applicationRejectionReason}
+                  onChange={(e) => setApplicationRejectionReason(e.target.value)}
+                  placeholder="Explain why this seller application is being rejected..."
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      color: 'white',
+                      bgcolor: 'rgba(255,255,255,0.03)',
+                      '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                    },
+                  }}
+                />
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button
+              onClick={() => {
+                setApplicationDialogOpen(false);
+                setSelectedApplication(null);
+                setApplicationRejectionReason('');
+              }}
+              sx={{ color: 'rgba(255,255,255,0.5)' }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => selectedApplication && handleRejectSellerApplication(selectedApplication)}
+              disabled={actionLoading}
+              variant="contained"
+              color="error"
+              startIcon={actionLoading ? <CircularProgress size={18} /> : <XCircle size={18} />}
+            >
+              Reject Application
             </Button>
           </DialogActions>
         </Dialog>

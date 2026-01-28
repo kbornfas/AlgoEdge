@@ -182,7 +182,14 @@ export default function AdminDashboard() {
         const statsData = await statsRes.json();
         dashboardStats = {
           ...dashboardStats,
-          pendingApprovals: (statsData.pending_bots || 0) + (statsData.pending_products || 0) + (statsData.pending_signals || 0),
+          // Use stats from backend directly
+          totalUsers: statsData.total_users || 0,
+          activeUsers: statsData.active_users || 0,
+          newUsersToday: statsData.new_users_today || 0,
+          totalBots: statsData.total_bots || 0,
+          totalProducts: statsData.total_products || 0,
+          totalSignalProviders: statsData.total_signal_providers || 0,
+          pendingApprovals: (statsData.pending_bots || 0) + (statsData.pending_products || 0) + (statsData.pending_signals || 0) + (statsData.pending_seller_applications || 0),
           totalOrders: statsData.total_sales_today || 0,
           revenueToday: statsData.revenue_today || 0,
         };
@@ -191,28 +198,36 @@ export default function AdminDashboard() {
       if (usersRes?.ok) {
         const usersData = await usersRes.json();
         const users = usersData.users || [];
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
         
-        dashboardStats.totalUsers = users.length;
-        dashboardStats.activeUsers = users.filter((u: any) => !u.is_blocked).length;
-        dashboardStats.newUsersToday = users.filter((u: any) => new Date(u.created_at) >= today).length;
+        // Only update if stats endpoint didn't provide these
+        if (dashboardStats.totalUsers === 0) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          dashboardStats.totalUsers = users.length;
+          dashboardStats.activeUsers = users.filter((u: any) => !u.is_blocked).length;
+          dashboardStats.newUsersToday = users.filter((u: any) => new Date(u.created_at) >= today).length;
+        }
         dashboardStats.activeSubscribers = users.filter((u: any) => u.subscription_status === 'active').length;
 
-        // Get top sellers (mock data for now, would come from backend)
-        const sellers = users.slice(0, 5).map((u: any, index: number) => ({
+        // Get top sellers from actual seller data
+        const sellerUsers = users.filter((u: any) => u.is_seller);
+        const sellers = sellerUsers.slice(0, 5).map((u: any) => ({
           id: u.id,
           name: u.full_name || u.username || 'Unknown',
           email: u.email,
-          is_verified: index < 2, // First 2 are verified for demo
-          total_sales: Math.floor(Math.random() * 100) + 10,
-          total_revenue: Math.floor(Math.random() * 5000) + 500,
-          products_count: Math.floor(Math.random() * 10) + 1,
+          avatar: u.profile_image,
+          is_verified: u.has_blue_badge || false,
+          total_sales: 0, // Would need a separate query for actual sales
+          total_revenue: 0,
+          products_count: 0,
         }));
         setTopSellers(sellers);
 
-        // Recent activity from users
-        const activity: RecentActivity[] = users.slice(0, 8).map((u: any) => ({
+        // Recent activity from users (sorted by created_at desc)
+        const sortedUsers = [...users].sort((a: any, b: any) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        const activity: RecentActivity[] = sortedUsers.slice(0, 8).map((u: any) => ({
           id: u.id,
           type: 'user_signup' as const,
           title: 'New User Signup',
@@ -354,7 +369,7 @@ export default function AdminDashboard() {
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 4, pl: { xs: 6, md: 0 } }}>
         <Typography
           variant="h4"
           sx={{

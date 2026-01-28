@@ -149,14 +149,21 @@ router.get('/sellers', async (req, res) => {
         u.seller_total_sales, u.seller_rating_average, u.seller_rating_count,
         u.seller_featured, u.country,
         (SELECT COUNT(*) FROM marketplace_bots WHERE seller_id = u.id AND status = 'approved') as bots_count,
-        (SELECT COUNT(*) FROM marketplace_products WHERE seller_id = u.id AND status = 'approved') as products_count
+        (SELECT COUNT(*) FROM marketplace_products WHERE seller_id = u.id AND status = 'approved') as products_count,
+        (SELECT COUNT(*) FROM signal_providers WHERE user_id = u.id AND status = 'approved') as signals_count
       FROM users u
       WHERE u.is_seller = TRUE
     `;
     const params = [];
 
     if (featured === 'true') {
-      query += ` AND u.seller_featured = TRUE`;
+      // Featured sellers must be verified AND have at least 1 listing
+      query += ` AND u.seller_featured = TRUE AND u.has_blue_badge = TRUE`;
+      query += ` AND (
+        (SELECT COUNT(*) FROM marketplace_bots WHERE seller_id = u.id AND status = 'approved') > 0 OR
+        (SELECT COUNT(*) FROM marketplace_products WHERE seller_id = u.id AND status = 'approved') > 0 OR
+        (SELECT COUNT(*) FROM signal_providers WHERE user_id = u.id AND status = 'approved') > 0
+      )`;
     }
 
     if (search) {

@@ -41,6 +41,7 @@ import {
   FileText,
   AlertTriangle,
   Menu,
+  Star,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -142,6 +143,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Dashboard', icon: <LayoutDashboard size={22} />, href: '/admin/dashboard' },
     { label: 'Users', icon: <Users size={22} />, href: '/admin/users', badge: 0 },
     { label: 'Marketplace', icon: <Store size={22} />, href: '/admin/marketplace', badge: notifications },
+    { label: 'Featured Content', icon: <Star size={22} />, href: '/admin/featured' },
     { label: 'Finance', icon: <TrendingUp size={22} />, href: '/admin/finance' },
     { label: 'Wallets', icon: <Wallet size={22} />, href: '/admin/wallets' },
     { label: 'Withdrawals', icon: <CreditCard size={22} />, href: '/admin/withdrawals' },

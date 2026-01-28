@@ -341,30 +341,34 @@ export default function ProductShowcase() {
                       />
                       {/* Badges */}
                       <Stack direction="row" spacing={1} sx={{ position: 'absolute', top: 12, left: 12 }}>
-                        <Chip
-                          icon={<Crown size={12} />}
-                          label="Official"
-                          size="small"
-                          sx={{ 
-                            bgcolor: 'rgba(234, 179, 8, 0.9)', 
-                            color: '#000', 
-                            fontWeight: 700,
-                            fontSize: '0.7rem',
-                            height: 24,
-                          }}
-                        />
-                        <Chip
-                          icon={<Shield size={12} />}
-                          label="Verified"
-                          size="small"
-                          sx={{ 
-                            bgcolor: 'rgba(34, 197, 94, 0.9)', 
-                            color: '#000', 
-                            fontWeight: 700,
-                            fontSize: '0.7rem',
-                            height: 24,
-                          }}
-                        />
+                        {bot.is_featured && (
+                          <Chip
+                            icon={<Crown size={12} />}
+                            label="Featured"
+                            size="small"
+                            sx={{ 
+                              bgcolor: 'rgba(234, 179, 8, 0.9)', 
+                              color: '#000', 
+                              fontWeight: 700,
+                              fontSize: '0.7rem',
+                              height: 24,
+                            }}
+                          />
+                        )}
+                        {bot.seller_verified && (
+                          <Chip
+                            icon={<Shield size={12} />}
+                            label="Verified Seller"
+                            size="small"
+                            sx={{ 
+                              bgcolor: 'rgba(34, 197, 94, 0.9)', 
+                              color: '#000', 
+                              fontWeight: 700,
+                              fontSize: '0.7rem',
+                              height: 24,
+                            }}
+                          />
+                        )}
                       </Stack>
                       {/* Category badge */}
                       {bot.category && (
@@ -512,6 +516,7 @@ export default function ProductShowcase() {
                     <Stack direction="row" alignItems="flex-start" justifyContent="space-between" sx={{ mb: 3 }}>
                       <Stack direction="row" alignItems="center" spacing={2}>
                         <Avatar
+                          src={signal.avatar_url || signal.provider_avatar}
                           sx={{
                             width: 64,
                             height: 64,
@@ -523,24 +528,42 @@ export default function ProductShowcase() {
                             fontSize: '1.2rem',
                           }}
                         >
-                          {signal.avatar || signal.display_name?.substring(0, 2) || signal.name?.substring(0, 2)}
+                          {signal.display_name?.substring(0, 2) || signal.name?.substring(0, 2)}
                         </Avatar>
                         <Box>
-                          <Typography variant="h6" sx={{ color: '#FFFFFF', fontWeight: 700 }}>
-                            {signal.display_name || signal.name}
-                          </Typography>
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <Typography variant="h6" sx={{ color: '#FFFFFF', fontWeight: 700 }}>
+                              {signal.display_name || signal.name}
+                            </Typography>
+                            {signal.provider_verified && (
+                              <Box 
+                                component="img" 
+                                src="/verified-badge.svg" 
+                                alt="Verified"
+                                sx={{ width: 18, height: 18 }}
+                              />
+                            )}
+                          </Stack>
                           <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                            {signal.is_featured && (
+                              <Chip
+                                icon={<Crown size={12} />}
+                                label="Featured"
+                                size="small"
+                                sx={{ bgcolor: 'rgba(234, 179, 8, 0.2)', color: '#EAB308', fontSize: '0.65rem', height: 22 }}
+                              />
+                            )}
                             <Chip
-                              icon={<Crown size={12} />}
-                              label="Official"
+                              label={signal.risk_level || 'Medium'}
                               size="small"
-                              sx={{ bgcolor: 'rgba(234, 179, 8, 0.2)', color: '#EAB308', fontSize: '0.65rem', height: 22 }}
-                            />
-                            <Chip
-                              icon={<Shield size={12} />}
-                              label="Verified"
-                              size="small"
-                              sx={{ bgcolor: 'rgba(34, 197, 94, 0.2)', color: '#22C55E', fontSize: '0.65rem', height: 22 }}
+                              sx={{ 
+                                bgcolor: signal.risk_level === 'Low' ? 'rgba(34, 197, 94, 0.2)' : 
+                                         signal.risk_level === 'High' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)', 
+                                color: signal.risk_level === 'Low' ? '#22C55E' : 
+                                       signal.risk_level === 'High' ? '#EF4444' : '#EAB308', 
+                                fontSize: '0.65rem', 
+                                height: 22 
+                              }}
                             />
                           </Stack>
                         </Box>
@@ -691,18 +714,34 @@ export default function ProductShowcase() {
                             fontSize: '0.7rem',
                           }}
                         />
-                        <Chip
-                          icon={<Shield size={10} />}
-                          label="Verified"
-                          size="small"
-                          sx={{ 
-                            bgcolor: 'rgba(34, 197, 94, 0.9)', 
-                            color: '#000', 
-                            fontWeight: 700,
-                            fontSize: '0.65rem',
-                            height: 22,
-                          }}
-                        />
+                        {product.is_featured && (
+                          <Chip
+                            icon={<Crown size={10} />}
+                            label="Featured"
+                            size="small"
+                            sx={{ 
+                              bgcolor: 'rgba(234, 179, 8, 0.9)', 
+                              color: '#000', 
+                              fontWeight: 700,
+                              fontSize: '0.65rem',
+                              height: 22,
+                            }}
+                          />
+                        )}
+                        {product.seller_verified && (
+                          <Chip
+                            icon={<Shield size={10} />}
+                            label="Verified"
+                            size="small"
+                            sx={{ 
+                              bgcolor: 'rgba(34, 197, 94, 0.9)', 
+                              color: '#000', 
+                              fontWeight: 700,
+                              fontSize: '0.65rem',
+                              height: 22,
+                            }}
+                          />
+                        )}
                       </Stack>
                     </Box>
 
