@@ -699,9 +699,11 @@ export default function SellerDashboardPage() {
             mb: { xs: 2, md: 4 },
             background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%)',
             border: '1px solid rgba(34, 197, 94, 0.25)',
+            minWidth: 0,
+            overflow: 'hidden',
           }}
         >
-          <CardContent sx={{ p: { xs: 1.5, md: 3 } }}>
+          <CardContent sx={{ p: { xs: 1.5, md: 3 }, overflow: 'hidden' }}>
             <Stack direction="row" spacing={{ xs: 1.5, md: 2 }} alignItems="center" sx={{ mb: { xs: 2, md: 3 } }}>
               <Box
                 sx={{
@@ -822,11 +824,11 @@ export default function SellerDashboardPage() {
         </Card>
 
         {/* Wallet Stats */}
-        <Grid container spacing={{ xs: 1, md: 3 }} sx={{ mb: { xs: 2, md: 4 } }}>
+        <Grid container spacing={{ xs: 1, md: 3 }} sx={{ mb: { xs: 2, md: 4 }, overflow: 'hidden' }}>
           <Grid item xs={6} sm={6} md={3}>
-            <Card sx={{ bgcolor: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)', minWidth: 0 }}>
-              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+            <Card sx={{ bgcolor: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)', minWidth: 0, overflow: 'hidden' }}>
+              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } }, overflow: 'hidden' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5, flexWrap: 'nowrap' }}>
                   <Box sx={{ p: 0.5, bgcolor: 'rgba(139, 92, 246, 0.2)', borderRadius: 1, flexShrink: 0 }}>
                     <Wallet size={14} color="#8B5CF6" />
                   </Box>
@@ -836,19 +838,19 @@ export default function SellerDashboardPage() {
                     sx={{ bgcolor: 'rgba(34, 197, 94, 0.2)', color: '#22C55E', height: 18, fontSize: '0.55rem', display: { xs: 'none', sm: 'flex' } }}
                   />
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' } }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>
                   Available
                 </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' } }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' }, whiteSpace: 'nowrap' }}>
                   ${Number(stats?.wallet?.available_balance || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={6} sm={6} md={3}>
-            <Card sx={{ bgcolor: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', minWidth: 0 }}>
-              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+            <Card sx={{ bgcolor: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', minWidth: 0, overflow: 'hidden' }}>
+              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } }, overflow: 'hidden' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5, flexWrap: 'nowrap' }}>
                   <Box sx={{ p: 0.5, bgcolor: 'rgba(245, 158, 11, 0.2)', borderRadius: 1, flexShrink: 0 }}>
                     <Clock size={14} color="#F59E0B" />
                   </Box>
@@ -858,44 +860,44 @@ export default function SellerDashboardPage() {
                     sx={{ bgcolor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', height: 18, fontSize: '0.55rem', display: { xs: 'none', sm: 'flex' } }}
                   />
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' } }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>
                   Pending
                 </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' } }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' }, whiteSpace: 'nowrap' }}>
                   ${Number(stats?.wallet?.pending_earnings || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={6} sm={6} md={3}>
-            <Card sx={{ bgcolor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', minWidth: 0 }}>
-              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+            <Card sx={{ bgcolor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', minWidth: 0, overflow: 'hidden' }}>
+              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } }, overflow: 'hidden' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5, flexWrap: 'nowrap' }}>
                   <Box sx={{ p: 0.5, bgcolor: 'rgba(34, 197, 94, 0.2)', borderRadius: 1, flexShrink: 0 }}>
                     <TrendingUp size={14} color="#22C55E" />
                   </Box>
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' } }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>
                   Total Earned
                 </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' } }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' }, whiteSpace: 'nowrap' }}>
                   ${Number(stats?.wallet?.total_earnings || 0).toFixed(2)}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={6} sm={6} md={3}>
-            <Card sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', minWidth: 0 }}>
-              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+            <Card sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', minWidth: 0, overflow: 'hidden' }}>
+              <CardContent sx={{ p: { xs: 1, md: 2 }, '&:last-child': { pb: { xs: 1, md: 2 } }, overflow: 'hidden' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5, flexWrap: 'nowrap' }}>
                   <Box sx={{ p: 0.5, bgcolor: 'rgba(59, 130, 246, 0.2)', borderRadius: 1, flexShrink: 0 }}>
                     <DollarSign size={14} color="#3B82F6" />
                   </Box>
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' } }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.6rem', md: '0.875rem' }, whiteSpace: 'nowrap' }}>
                   Paid Out
                 </Typography>
-                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' } }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, fontSize: { xs: '1rem', md: '1.75rem' }, whiteSpace: 'nowrap' }}>
                   ${Number(stats?.wallet?.total_payouts || 0).toFixed(2)}
                 </Typography>
               </CardContent>
