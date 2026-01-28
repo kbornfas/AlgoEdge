@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import PullToRefresh from '@/components/PullToRefresh';
 import {
   Box,
   Container,
@@ -396,6 +397,7 @@ export default function SellerDashboardPage() {
   }
 
   return (
+    <PullToRefresh onRefresh={async () => { await fetchSellerStats(); }}>
     <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, overflow: 'hidden', maxWidth: '100vw' }}>
       <Container maxWidth="lg" sx={{ px: { xs: 1.5, sm: 3 } }}>
         {/* Header */}
@@ -1418,5 +1420,6 @@ export default function SellerDashboardPage() {
         </Dialog>
       </Container>
     </Box>
+    </PullToRefresh>
   );
 }
