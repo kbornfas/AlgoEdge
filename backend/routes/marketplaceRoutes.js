@@ -143,8 +143,8 @@ router.get('/landing', async (req, res) => {
                u.full_name as seller_name, u.profile_image as seller_avatar, u.has_blue_badge as seller_verified
         FROM marketplace_bots b
         JOIN users u ON b.seller_id = u.id
-        WHERE b.status = 'approved'
-        ORDER BY b.is_featured DESC, b.total_sales DESC, b.rating_average DESC
+        WHERE b.status = 'approved' AND b.is_featured = true
+        ORDER BY b.total_sales DESC, b.rating_average DESC
         LIMIT 6
       `),
       pool.query(`
@@ -154,9 +154,9 @@ router.get('/landing', async (req, res) => {
                u.full_name as provider_name, u.profile_image as provider_avatar, u.has_blue_badge as provider_verified
         FROM signal_providers sp
         JOIN users u ON sp.user_id = u.id
-        WHERE sp.status = 'approved'
-        ORDER BY sp.is_featured DESC, sp.subscriber_count DESC, sp.rating_average DESC
-        LIMIT 4
+        WHERE sp.status = 'approved' AND sp.is_featured = true
+        ORDER BY sp.subscriber_count DESC, sp.rating_average DESC
+        LIMIT 6
       `),
       pool.query(`
         SELECT p.id, p.name, p.slug, p.short_description as description, p.thumbnail_url, p.price,
@@ -165,8 +165,8 @@ router.get('/landing', async (req, res) => {
                u.full_name as seller_name, u.profile_image as seller_avatar, u.has_blue_badge as seller_verified
         FROM marketplace_products p
         JOIN users u ON p.seller_id = u.id
-        WHERE p.status = 'approved'
-        ORDER BY p.is_featured DESC, p.total_sales DESC, p.rating_average DESC
+        WHERE p.status = 'approved' AND p.is_featured = true
+        ORDER BY p.total_sales DESC, p.rating_average DESC
         LIMIT 6
       `)
     ]);
