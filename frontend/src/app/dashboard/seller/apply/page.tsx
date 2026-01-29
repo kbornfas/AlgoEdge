@@ -21,6 +21,8 @@ import {
   CircularProgress,
   Stack,
   Divider,
+  Avatar,
+  IconButton,
 } from '@mui/material';
 import {
   Package,
@@ -34,6 +36,8 @@ import {
   Youtube,
   ArrowLeft,
   CheckCircle,
+  Camera,
+  AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -68,6 +72,8 @@ export default function BecomeSellerPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   
   const [formData, setFormData] = useState({
     full_name: '',
@@ -105,9 +111,88 @@ export default function BecomeSellerPage() {
     }));
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be less than 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    setError('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('profile_image', file);
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile/image`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.profile_image) {
+        setProfileImage(data.profile_image);
+      } else {
+        setError(data.error || 'Failed to upload image');
+      }
+    } catch (err) {
+      setError('Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Fetch existing profile image on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (data.profile_image) {
+          setProfileImage(data.profile_image);
+        }
+        if (data.full_name) {
+          setFormData(prev => ({ ...prev, full_name: data.full_name || '' }));
+        }
+        if (data.phone) {
+          setFormData(prev => ({ ...prev, phone: data.phone || '' }));
+        }
+        if (data.country) {
+          setFormData(prev => ({ ...prev, country: data.country || '' }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch profile');
+      }
+    };
+    fetchProfile();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validate profile picture
+    if (!profileImage) {
+      setError('Please upload a profile picture to continue');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -220,6 +305,63 @@ export default function BecomeSellerPage() {
                   Personal Information
                 </Typography>
               </Stack>
+
+              {/* Profile Picture Upload */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
+                <Box sx={{ position: 'relative', mb: 2 }}>
+                  <Avatar
+                    src={profileImage || undefined}
+                    sx={{
+                      width: 120,
+                      height: 120,
+                      bgcolor: '#8B5CF6',
+                      fontSize: '3rem',
+                      border: profileImage ? '3px solid #22C55E' : '3px dashed rgba(255,255,255,0.3)',
+                    }}
+                  >
+                    {!profileImage && <Camera size={40} />}
+                  </Avatar>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    style={{ display: 'none' }}
+                    id="profile-image-upload"
+                    disabled={uploadingImage}
+                  />
+                  <label htmlFor="profile-image-upload">
+                    <IconButton
+                      component="span"
+                      disabled={uploadingImage}
+                      sx={{
+                        position: 'absolute',
+                        bottom: 0,
+                        right: 0,
+                        bgcolor: '#8B5CF6',
+                        color: 'white',
+                        '&:hover': { bgcolor: '#7C3AED' },
+                        border: '2px solid #0a0f1a',
+                      }}
+                    >
+                      {uploadingImage ? <CircularProgress size={20} color="inherit" /> : <Camera size={20} />}
+                    </IconButton>
+                  </label>
+                </Box>
+                <Typography sx={{ color: 'white', fontWeight: 600, mb: 0.5 }}>
+                  Profile Picture *
+                </Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', textAlign: 'center' }}>
+                  {profileImage ? (
+                    <Box component="span" sx={{ color: '#22C55E', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <CheckCircle size={16} /> Photo uploaded
+                    </Box>
+                  ) : (
+                    <Box component="span" sx={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <AlertCircle size={16} /> Required - Click to upload
+                    </Box>
+                  )}
+                </Typography>
+              </Box>
 
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>

@@ -53,8 +53,8 @@ router.get('/stats', async (req, res) => {
     const totalAdmins = await pool.query("SELECT COUNT(*) FROM users WHERE is_admin = TRUE");
     stats.total_admins = parseInt(totalAdmins.rows[0].count);
 
-    // Active users (not blocked)
-    const activeUsers = await pool.query("SELECT COUNT(*) FROM users WHERE is_blocked = FALSE OR is_blocked IS NULL");
+    // Active users (all users who are verified or have logged in)
+    const activeUsers = await pool.query("SELECT COUNT(*) FROM users WHERE is_verified = TRUE OR last_login IS NOT NULL");
     stats.active_users = parseInt(activeUsers.rows[0].count);
 
     // Verified users count (with blue badge)

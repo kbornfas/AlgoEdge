@@ -131,6 +131,9 @@ const setupRoutes = (app) => {
 
   // Serve product files statically (files are protected by download route auth)
   app.use('/products', express.static(path.join(__dirname, 'products')));
+  
+  // Serve uploaded files (profile images, etc.)
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);

@@ -7,6 +7,7 @@ import pool from '../config/database.js';
 import { sendEmail, generateVerificationCode, sendVerificationCodeEmail, sendVerificationCodeSMS } from '../services/emailService.js';
 import { auditLog } from '../middleware/audit.js';
 import { sendNewReferralTelegram } from '../services/telegramService.js';
+import { createSession } from '../services/sessionService.js';
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -286,6 +287,9 @@ export const login = async (req, res) => {
 
     // Generate token
     const token = generateToken(user.id);
+
+    // Create session for tracking across devices
+    await createSession(user.id, req, token);
 
     // Audit log
     auditLog(user.id, 'USER_LOGIN', { username }, req);

@@ -425,7 +425,7 @@ router.post('/purchase/bot/:botId', authenticate, async (req, res) => {
         [userId, -price, currentBalance, newBalance, `Purchased bot: ${item.name}`, botId]
       );
 
-      // Get or create seller wallet
+      // Get or create seller wallet (for stats tracking)
       let sellerWallet = await client.query(
         'SELECT * FROM seller_wallets WHERE user_id = $1',
         [item.seller_id]
@@ -433,27 +433,59 @@ router.post('/purchase/bot/:botId', authenticate, async (req, res) => {
 
       if (sellerWallet.rows.length === 0) {
         await client.query(
-          `INSERT INTO seller_wallets (user_id, balance, pending_balance, total_earned)
+          `INSERT INTO seller_wallets (user_id, available_balance, pending_balance, total_earned)
            VALUES ($1, 0, 0, 0)`,
-          [item.seller_id]
-        );
-        sellerWallet = await client.query(
-          'SELECT * FROM seller_wallets WHERE user_id = $1',
           [item.seller_id]
         );
       }
 
-      // Credit seller pending balance (7-day hold)
+      // Update seller wallet stats (for display purposes only)
       await client.query(
         `UPDATE seller_wallets 
-         SET pending_balance = pending_balance + $1, 
-             total_earned = total_earned + $1,
+         SET total_earned = total_earned + $1,
+             total_sales = COALESCE(total_sales, 0) + 1,
              updated_at = NOW()
          WHERE user_id = $2`,
         [sellerEarnings, item.seller_id]
       );
 
-      // Record seller transaction
+      // Get or create seller's main wallet
+      let sellerMainWallet = await client.query(
+        'SELECT balance FROM user_wallets WHERE user_id = $1',
+        [item.seller_id]
+      );
+
+      if (sellerMainWallet.rows.length === 0) {
+        await client.query(
+          `INSERT INTO user_wallets (user_id, balance, total_deposited, total_spent)
+           VALUES ($1, 0, 0, 0)`,
+          [item.seller_id]
+        );
+        sellerMainWallet = { rows: [{ balance: 0 }] };
+      }
+
+      const sellerCurrentBalance = parseFloat(sellerMainWallet.rows[0].balance) || 0;
+
+      // Credit seller's main wallet
+      await client.query(
+        `UPDATE user_wallets 
+         SET balance = balance + $1, 
+             total_deposited = total_deposited + $1,
+             updated_at = NOW()
+         WHERE user_id = $2`,
+        [sellerEarnings, item.seller_id]
+      );
+
+      // Record seller transaction in main wallet transactions
+      await client.query(
+        `INSERT INTO wallet_transactions 
+         (user_id, type, amount, balance_before, balance_after, description, reference_type, reference_id)
+         VALUES ($1, 'sale_earning', $2, $3, $4, $5, 'bot_sale', $6)`,
+        [item.seller_id, sellerEarnings, sellerCurrentBalance, sellerCurrentBalance + sellerEarnings, 
+         `Sale: ${item.name} (Commission: $${platformCommission.toFixed(2)})`, botId]
+      );
+
+      // Also record in seller_transactions for seller dashboard stats
       await client.query(
         `INSERT INTO seller_transactions 
          (user_id, type, amount, description, status)
@@ -642,7 +674,7 @@ router.post('/purchase/product/:productId', authenticate, async (req, res) => {
         [userId, -price, currentBalance, newBalance, `Purchased product: ${item.name}`, productId]
       );
 
-      // Get or create seller wallet
+      // Get or create seller wallet (for stats tracking)
       let sellerWallet = await pool.query(
         'SELECT * FROM seller_wallets WHERE user_id = $1',
         [item.seller_id]
@@ -650,23 +682,59 @@ router.post('/purchase/product/:productId', authenticate, async (req, res) => {
 
       if (sellerWallet.rows.length === 0) {
         await client.query(
-          `INSERT INTO seller_wallets (user_id, balance, pending_balance, total_earned)
+          `INSERT INTO seller_wallets (user_id, available_balance, pending_balance, total_earned)
            VALUES ($1, 0, 0, 0)`,
           [item.seller_id]
         );
       }
 
-      // Credit seller pending balance
+      // Update seller wallet stats (for display purposes only)
       await client.query(
         `UPDATE seller_wallets 
-         SET pending_balance = pending_balance + $1, 
-             total_earned = total_earned + $1,
+         SET total_earned = total_earned + $1,
+             total_sales = COALESCE(total_sales, 0) + 1,
              updated_at = NOW()
          WHERE user_id = $2`,
         [sellerEarnings, item.seller_id]
       );
 
-      // Record seller transaction
+      // Get or create seller's main wallet
+      let sellerMainWallet = await client.query(
+        'SELECT balance FROM user_wallets WHERE user_id = $1',
+        [item.seller_id]
+      );
+
+      if (sellerMainWallet.rows.length === 0) {
+        await client.query(
+          `INSERT INTO user_wallets (user_id, balance, total_deposited, total_spent)
+           VALUES ($1, 0, 0, 0)`,
+          [item.seller_id]
+        );
+        sellerMainWallet = { rows: [{ balance: 0 }] };
+      }
+
+      const sellerCurrentBalance = parseFloat(sellerMainWallet.rows[0].balance) || 0;
+
+      // Credit seller's main wallet
+      await client.query(
+        `UPDATE user_wallets 
+         SET balance = balance + $1, 
+             total_deposited = total_deposited + $1,
+             updated_at = NOW()
+         WHERE user_id = $2`,
+        [sellerEarnings, item.seller_id]
+      );
+
+      // Record seller transaction in main wallet transactions
+      await client.query(
+        `INSERT INTO wallet_transactions 
+         (user_id, type, amount, balance_before, balance_after, description, reference_type, reference_id)
+         VALUES ($1, 'sale_earning', $2, $3, $4, $5, 'product_sale', $6)`,
+        [item.seller_id, sellerEarnings, sellerCurrentBalance, sellerCurrentBalance + sellerEarnings, 
+         `Sale: ${item.name} (Commission: $${platformCommission.toFixed(2)})`, productId]
+      );
+
+      // Also record in seller_transactions for seller dashboard stats
       await client.query(
         `INSERT INTO seller_transactions 
          (user_id, type, amount, description, status)
@@ -882,7 +950,7 @@ router.post('/purchase/signal/:providerId', authenticate, async (req, res) => {
         [userId, -price, currentBalance, newBalance, `Signal subscription: ${item.display_name} (${plan_type})`, providerId]
       );
 
-      // Get or create seller wallet
+      // Get or create seller wallet (for stats tracking)
       let sellerWallet = await client.query(
         'SELECT * FROM seller_wallets WHERE user_id = $1',
         [item.user_id]
@@ -890,23 +958,59 @@ router.post('/purchase/signal/:providerId', authenticate, async (req, res) => {
 
       if (sellerWallet.rows.length === 0) {
         await client.query(
-          `INSERT INTO seller_wallets (user_id, balance, pending_balance, total_earned)
+          `INSERT INTO seller_wallets (user_id, available_balance, pending_balance, total_earned)
            VALUES ($1, 0, 0, 0)`,
           [item.user_id]
         );
       }
 
-      // Credit seller pending balance (7-day hold)
+      // Update seller wallet stats (for display purposes only)
       await client.query(
         `UPDATE seller_wallets 
-         SET pending_balance = pending_balance + $1, 
-             total_earned = total_earned + $1,
+         SET total_earned = total_earned + $1,
+             total_sales = COALESCE(total_sales, 0) + 1,
              updated_at = NOW()
          WHERE user_id = $2`,
         [providerEarnings, item.user_id]
       );
 
-      // Record seller transaction
+      // Get or create seller's main wallet
+      let sellerMainWallet = await client.query(
+        'SELECT balance FROM user_wallets WHERE user_id = $1',
+        [item.user_id]
+      );
+
+      if (sellerMainWallet.rows.length === 0) {
+        await client.query(
+          `INSERT INTO user_wallets (user_id, balance, total_deposited, total_spent)
+           VALUES ($1, 0, 0, 0)`,
+          [item.user_id]
+        );
+        sellerMainWallet = { rows: [{ balance: 0 }] };
+      }
+
+      const sellerCurrentBalance = parseFloat(sellerMainWallet.rows[0].balance) || 0;
+
+      // Credit seller's main wallet
+      await client.query(
+        `UPDATE user_wallets 
+         SET balance = balance + $1, 
+             total_deposited = total_deposited + $1,
+             updated_at = NOW()
+         WHERE user_id = $2`,
+        [providerEarnings, item.user_id]
+      );
+
+      // Record seller transaction in main wallet transactions
+      await client.query(
+        `INSERT INTO wallet_transactions 
+         (user_id, type, amount, balance_before, balance_after, description, reference_type, reference_id)
+         VALUES ($1, 'sale_earning', $2, $3, $4, $5, 'signal_subscription', $6)`,
+        [item.user_id, providerEarnings, sellerCurrentBalance, sellerCurrentBalance + providerEarnings, 
+         `Signal subscription: ${item.display_name} (${plan_type}) - Commission: $${platformCommission.toFixed(2)}`, providerId]
+      );
+
+      // Also record in seller_transactions for seller dashboard stats
       await client.query(
         `INSERT INTO seller_transactions 
          (user_id, type, amount, description, status)

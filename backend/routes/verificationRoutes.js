@@ -91,7 +91,7 @@ router.get('/check-balance', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Check user's wallet balance
+    // Check user's main wallet balance
     const walletResult = await pool.query(
       `SELECT balance FROM user_wallets WHERE user_id = $1`,
       [userId]
@@ -157,17 +157,25 @@ router.post('/submit',
         return res.status(400).json({ error: 'You already have a pending verification request' });
       }
 
-      // Check wallet balance FIRST before any uploads are processed
+      // Check user wallet balance FIRST before any uploads are processed
       const walletCheck = await client.query(
         `SELECT balance FROM user_wallets WHERE user_id = $1`,
         [userId]
       );
 
+      if (walletCheck.rows.length === 0) {
+        return res.status(400).json({ 
+          error: `No wallet found. Please ensure you have a wallet with at least $${VERIFICATION_FEE} for verification.`,
+          balance: 0,
+          required: VERIFICATION_FEE
+        });
+      }
+
       const currentBalance = parseFloat(walletCheck.rows[0]?.balance) || 0;
 
       if (currentBalance < VERIFICATION_FEE) {
         return res.status(400).json({ 
-          error: `Insufficient balance. You need $${VERIFICATION_FEE} for verification. Current balance: $${currentBalance.toFixed(2)}. Please deposit funds first.`,
+          error: `Insufficient wallet balance. You need $${VERIFICATION_FEE} for verification. Current balance: $${currentBalance.toFixed(2)}. Please deposit funds first.`,
           balance: currentBalance,
           required: VERIFICATION_FEE
         });
@@ -175,16 +183,16 @@ router.post('/submit',
 
       await client.query('BEGIN');
 
-      // Deduct verification fee from user's wallet
+      // Deduct verification fee from user's main wallet
       await client.query(
-        `UPDATE user_wallets SET balance = balance - $1, total_spent = total_spent + $1 WHERE user_id = $2`,
+        `UPDATE user_wallets SET balance = balance - $1 WHERE user_id = $2`,
         [VERIFICATION_FEE, userId]
       );
 
       // Record the wallet transaction
       await client.query(
         `INSERT INTO wallet_transactions (user_id, type, amount, balance_before, balance_after, description)
-         VALUES ($1, 'purchase', $2, $3, $4, 'Seller ID Verification Fee')`,
+         VALUES ($1, 'verification_fee', $2, $3, $4, 'Seller ID Verification Fee')`,
         [userId, -VERIFICATION_FEE, currentBalance, currentBalance - VERIFICATION_FEE]
       );
 

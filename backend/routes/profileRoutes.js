@@ -277,9 +277,14 @@ router.post('/become-seller', authenticate, async (req, res) => {
     } = req.body;
 
     // Check if already a seller
-    const existing = await pool.query('SELECT is_seller FROM users WHERE id = $1', [userId]);
+    const existing = await pool.query('SELECT is_seller, profile_image FROM users WHERE id = $1', [userId]);
     if (existing.rows[0]?.is_seller) {
       return res.status(400).json({ error: 'You are already a seller' });
+    }
+
+    // Check if user has a profile picture
+    if (!existing.rows[0]?.profile_image) {
+      return res.status(400).json({ error: 'Please upload a profile picture before applying to become a seller' });
     }
 
     // Check for pending application
@@ -428,7 +433,10 @@ const isAdmin = (req) => {
 // Get pending seller applications
 router.get('/admin/seller-applications', authenticate, async (req, res) => {
   try {
+    console.log('Seller applications request - User:', req.user?.id, 'isAdmin:', req.user?.isAdmin, 'is_admin:', req.user?.is_admin, 'role:', req.user?.role);
+    
     if (!isAdmin(req)) {
+      console.log('Admin check failed for user:', req.user?.id);
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -439,6 +447,8 @@ router.get('/admin/seller-applications', authenticate, async (req, res) => {
       WHERE sa.status = 'pending'
       ORDER BY sa.created_at ASC
     `);
+    
+    console.log('Seller applications found:', applications.rows.length);
 
     res.json({ success: true, applications: applications.rows });
   } catch (error) {
@@ -503,7 +513,7 @@ router.post('/admin/seller-applications/:id/approve', authenticate, async (req, 
 
     // Create seller wallet if doesn't exist
     await pool.query(`
-      INSERT INTO seller_wallets (user_id, balance, pending_balance, total_earned)
+      INSERT INTO seller_wallets (user_id, available_balance, pending_balance, total_earned)
       VALUES ($1, 0, 0, 0)
       ON CONFLICT (user_id) DO NOTHING
     `, [application.user_id]);

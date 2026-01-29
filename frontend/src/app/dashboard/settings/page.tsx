@@ -626,12 +626,12 @@ export default function SettingsPage() {
           // Map the response to match expected format
           const formattedSessions = data.sessions.map((s: any) => ({
             id: s.id,
-            device: s.device || 'Unknown Device',
+            device: s.deviceName || s.device || s.deviceType || 'Unknown Device',
             browser: s.browser || 'Unknown Browser',
             os: s.os || '',
             location: s.location || 'Unknown Location',
             ip: s.ip || 'Unknown',
-            lastActive: s.current ? 'Active now' : formatLastActive(s.lastActive || s.loggedInAt),
+            lastActive: s.current ? 'Active now' : formatLastActive(s.lastActive || s.createdAt || s.loggedInAt),
             current: s.current || false,
           }));
           setSessions(formattedSessions);
@@ -1008,13 +1008,41 @@ export default function SettingsPage() {
   };
 
   const handleLogoutSession = async (sessionId: string | number) => {
-    setSessions(sessions.filter(s => s.id !== sessionId));
-    setSuccess('Session logged out');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/users/sessions/${sessionId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (response.ok) {
+        setSessions(sessions.filter(s => s.id !== sessionId));
+        setSuccess('Session logged out');
+      } else {
+        setError('Failed to logout session');
+      }
+    } catch (err) {
+      setError('Failed to logout session');
+    }
   };
 
   const handleLogoutAllSessions = async () => {
-    setSessions(sessions.filter(s => s.current));
-    setSuccess('All other sessions logged out');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/users/sessions/revoke-others`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (response.ok) {
+        setSessions(sessions.filter(s => s.current));
+        setSuccess('All other sessions logged out');
+      } else {
+        setError('Failed to logout other sessions');
+      }
+    } catch (err) {
+      setError('Failed to logout other sessions');
+    }
   };
 
   const handleExportData = async () => {
