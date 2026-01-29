@@ -1525,19 +1525,17 @@ router.get('/seller/dashboard', authenticate, async (req, res) => {
     // Log the raw user info for debugging
     console.log('Raw userInfo:', userInfo.rows[0]);
     
-    // Handle PostgreSQL boolean values which might come as strings 't'/'f' or actual booleans
-    const isVerified = userInfo.rows[0]?.is_verified === true || 
-                       userInfo.rows[0]?.is_verified === 't' ||
-                       userInfo.rows[0]?.is_verified === 1 ||
-                       userInfo.rows[0]?.has_blue_badge === true || 
-                       userInfo.rows[0]?.has_blue_badge === 't' ||
-                       userInfo.rows[0]?.has_blue_badge === 1;
+    // Seller verification is based on has_blue_badge ONLY (not email is_verified)
+    // has_blue_badge is granted by admin with $50 fee
+    const isSellerVerified = userInfo.rows[0]?.has_blue_badge === true || 
+                             userInfo.rows[0]?.has_blue_badge === 't' ||
+                             userInfo.rows[0]?.has_blue_badge === 1;
     
     const verificationPending = userInfo.rows[0]?.verification_pending === true || 
                                 userInfo.rows[0]?.verification_pending === 't' ||
                                 userInfo.rows[0]?.verification_pending === 1;
     
-    console.log('Computed is_verified:', isVerified); // Debug log
+    console.log('Computed is_seller_verified:', isSellerVerified); // Debug log
 
     res.json({
       success: true,
@@ -1549,14 +1547,15 @@ router.get('/seller/dashboard', authenticate, async (req, res) => {
       },
       transactions: transactions.rows,
       verification: {
-        is_verified: isVerified,
+        is_verified: isSellerVerified,
         verification_pending: verificationPending,
         profile_image: userInfo.rows[0]?.profile_image || null,
-        seller_slug: userInfo.rows[0]?.seller_slug || null
+        seller_slug: userInfo.rows[0]?.seller_slug || null,
+        has_blue_badge: isSellerVerified
       },
       // Also include at top level for easier access
-      is_verified: isVerified,
-      has_blue_badge: isVerified // Alias for frontend compatibility
+      is_verified: isSellerVerified,
+      has_blue_badge: isSellerVerified
     });
   } catch (error) {
     console.error('Get seller dashboard error:', error);
