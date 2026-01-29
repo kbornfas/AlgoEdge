@@ -172,10 +172,13 @@ const setupRoutes = (app) => {
   
   // Version endpoint for deployment verification
   app.get('/api/version', (req, res) => {
+    const jwtSecret = process.env.JWT_SECRET || '';
     res.json({ 
-      version: '2.0.1',
+      version: '2.0.2',
       deployed: new Date().toISOString(),
-      features: ['admin-users-endpoint', 'featured-content-endpoint']
+      features: ['admin-users-endpoint', 'featured-content-endpoint', 'jwt-debug'],
+      jwt_configured: !!jwtSecret,
+      jwt_secret_preview: jwtSecret ? jwtSecret.substring(0, 10) + '...' : 'NOT SET'
     });
   });
   
