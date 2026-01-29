@@ -141,7 +141,7 @@ export default function KnowledgeBasePage() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, px: { xs: 2, md: 4 } }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, px: { xs: 1.5, sm: 2, md: 4 }, overflowX: 'hidden', width: '100%', maxWidth: '100vw' }}>
       <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
         {/* Header */}
         <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
@@ -176,7 +176,12 @@ export default function KnowledgeBasePage() {
               <Button
                 variant="contained"
                 onClick={searchArticles}
-                sx={{ bgcolor: '#22C55E', minWidth: 100 }}
+                sx={{ 
+                  bgcolor: '#22C55E', 
+                  minWidth: { xs: 'auto', sm: 100 }, 
+                  py: { xs: 1.5, sm: 1 },
+                  width: { xs: '100%', sm: 'auto' }
+                }}
                 startIcon={<Search size={18} />}
               >
                 Search
@@ -185,9 +190,9 @@ export default function KnowledgeBasePage() {
           </CardContent>
         </Card>
 
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '300px 1fr' }, gap: 3 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '300px 1fr' }, gap: { xs: 2, md: 3 } }}>
           {/* Sidebar - Categories */}
-          <Box>
+          <Box sx={{ order: { xs: selectedArticle ? 2 : 1, md: 1 } }}>
             <Typography sx={{ color: 'white', fontWeight: 600, mb: 2, fontSize: '1.1rem' }}>
               Categories
             </Typography>
@@ -272,10 +277,10 @@ export default function KnowledgeBasePage() {
           </Box>
 
           {/* Main Content */}
-          <Box>
+          <Box sx={{ order: { xs: selectedArticle ? 1 : 2, md: 2 } }}>
             {selectedArticle ? (
               <Card sx={{ bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <CardContent sx={{ p: 4 }}>
+                <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
                   <Chip
                     label={selectedArticle.category_name}
                     size="small"

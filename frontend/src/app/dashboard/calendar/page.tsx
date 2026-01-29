@@ -91,27 +91,27 @@ export default function EconomicCalendarPage() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, px: { xs: 2, md: 4 } }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, px: { xs: 2, md: 4 }, overflowX: 'hidden', width: '100%', maxWidth: '100vw' }}>
       <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
         {/* Header */}
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3, flexWrap: 'wrap', gap: 2 }}>
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Box sx={{ p: 1.5, bgcolor: 'rgba(59, 130, 246, 0.2)', borderRadius: 2 }}>
-              <Calendar size={24} color="#3B82F6" />
+        <Stack spacing={{ xs: 2, md: 0 }} sx={{ mb: { xs: 2, md: 3 } }}>
+          <Stack direction="row" alignItems="center" spacing={{ xs: 1.5, md: 2 }}>
+            <Box sx={{ p: { xs: 1, md: 1.5 }, bgcolor: 'rgba(59, 130, 246, 0.2)', borderRadius: 2 }}>
+              <Calendar size={20} color="#3B82F6" />
             </Box>
             <Box>
-              <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
+              <Typography variant="h5" sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '1.25rem', md: '1.5rem' } }}>
                 Economic Calendar
               </Typography>
-              <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.8rem', md: '0.875rem' }, display: { xs: 'none', sm: 'block' } }}>
                 Major forex news events and their impact
               </Typography>
             </Box>
           </Stack>
 
           {/* Filters */}
-          <Stack direction="row" spacing={2}>
-            <FormControl sx={{ minWidth: 120 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1, md: 2 }} sx={{ width: { xs: '100%', md: 'auto' } }}>
+            <FormControl sx={{ minWidth: { xs: '100%', sm: 120 } }}>
               <InputLabel sx={{ color: 'rgba(255,255,255,0.5)' }}>Timeframe</InputLabel>
               <Select
                 value={timeframe}
@@ -127,7 +127,7 @@ export default function EconomicCalendarPage() {
               </Select>
             </FormControl>
 
-            <FormControl sx={{ minWidth: 120 }}>
+            <FormControl sx={{ minWidth: { xs: '100%', sm: 120 } }}>
               <InputLabel sx={{ color: 'rgba(255,255,255,0.5)' }}>Currency</InputLabel>
               <Select
                 value={currency}
@@ -147,7 +147,7 @@ export default function EconomicCalendarPage() {
               </Select>
             </FormControl>
 
-            <FormControl sx={{ minWidth: 120 }}>
+            <FormControl sx={{ minWidth: { xs: '100%', sm: 120 } }}>
               <InputLabel sx={{ color: 'rgba(255,255,255,0.5)' }}>Impact</InputLabel>
               <Select
                 value={impact}
@@ -178,10 +178,10 @@ export default function EconomicCalendarPage() {
                 borderColor: isToday(event.event_date) ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255,255,255,0.1)'
               }}
             >
-              <CardContent sx={{ py: 2 }}>
-                <Stack direction="row" spacing={2} alignItems="center">
+              <CardContent sx={{ py: { xs: 1.5, md: 2 } }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1.5, md: 2 }} alignItems={{ xs: 'flex-start', sm: 'center' }}>
                   {/* Time */}
-                  <Box sx={{ minWidth: 100 }}>
+                  <Box sx={{ minWidth: { xs: 'auto', sm: 100 } }}>
                     <Typography sx={{ color: '#3B82F6', fontWeight: 600, fontSize: '0.9rem' }}>
                       {formatDate(event.event_date)}
                     </Typography>
@@ -193,8 +193,8 @@ export default function EconomicCalendarPage() {
                   {/* Currency Flag */}
                   <Box
                     sx={{
-                      width: 40,
-                      height: 40,
+                      width: { xs: 32, md: 40 },
+                      height: { xs: 32, md: 40 },
                       bgcolor: 'rgba(255,255,255,0.1)',
                       borderRadius: 1,
                       display: 'flex',
@@ -202,7 +202,7 @@ export default function EconomicCalendarPage() {
                       justifyContent: 'center',
                       fontWeight: 700,
                       color: 'white',
-                      fontSize: '0.85rem',
+                      fontSize: { xs: '0.75rem', md: '0.85rem' },
                     }}
                   >
                     {event.currency}

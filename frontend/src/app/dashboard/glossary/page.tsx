@@ -100,7 +100,7 @@ export default function GlossaryPage() {
   );
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, px: { xs: 2, md: 4 } }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, px: { xs: 1.5, sm: 2, md: 4 }, overflowX: 'hidden', width: '100%', maxWidth: '100vw' }}>
       <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
         {/* Header */}
         <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
@@ -135,7 +135,12 @@ export default function GlossaryPage() {
               <Button
                 variant="contained"
                 onClick={handleSearch}
-                sx={{ bgcolor: '#8B5CF6', minWidth: 100 }}
+                sx={{ 
+                  bgcolor: '#8B5CF6', 
+                  minWidth: { xs: 'auto', sm: 100 }, 
+                  py: { xs: 1.5, sm: 1 },
+                  width: { xs: '100%', sm: 'auto' }
+                }}
                 startIcon={<Search size={18} />}
               >
                 Search

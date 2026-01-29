@@ -157,28 +157,40 @@ export default function SocialFeedPage() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, px: { xs: 2, md: 4 } }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, px: { xs: 1.5, sm: 2, md: 4 }, overflowX: 'hidden', width: '100%', maxWidth: '100vw' }}>
       <Box sx={{ maxWidth: 800, mx: 'auto' }}>
         {/* Header */}
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Box sx={{ p: 1.5, bgcolor: 'rgba(236, 72, 153, 0.2)', borderRadius: 2 }}>
-              <Users size={24} color="#EC4899" />
-            </Box>
-            <Box>
-              <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
-                Social Feed
-              </Typography>
-              <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>
-                Connect with traders worldwide
-              </Typography>
-            </Box>
-          </Stack>
+        <Stack spacing={{ xs: 2, md: 0 }} sx={{ mb: { xs: 2, md: 3 } }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Stack direction="row" alignItems="center" spacing={{ xs: 1.5, md: 2 }}>
+              <Box sx={{ p: { xs: 1, md: 1.5 }, bgcolor: 'rgba(236, 72, 153, 0.2)', borderRadius: 2 }}>
+                <Users size={20} color="#EC4899" />
+              </Box>
+              <Box>
+                <Typography variant="h5" sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '1.25rem', md: '1.5rem' } }}>
+                  Social Feed
+                </Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.8rem', md: '0.875rem' }, display: { xs: 'none', sm: 'block' } }}>
+                  Connect with traders worldwide
+                </Typography>
+              </Box>
+            </Stack>
 
+            <Button
+              variant="contained"
+              onClick={() => setCreateDialog(true)}
+              sx={{ bgcolor: '#EC4899', display: { xs: 'none', sm: 'flex' } }}
+              startIcon={<Send size={18} />}
+            >
+              Create Post
+            </Button>
+          </Stack>
+          
           <Button
             variant="contained"
+            fullWidth
             onClick={() => setCreateDialog(true)}
-            sx={{ bgcolor: '#EC4899' }}
+            sx={{ bgcolor: '#EC4899', display: { xs: 'flex', sm: 'none' }, py: 1.5 }}
             startIcon={<Send size={18} />}
           >
             Create Post
@@ -258,7 +270,7 @@ export default function SocialFeedPage() {
                 )}
 
                 {/* Post Actions */}
-                <Stack direction="row" spacing={2} alignItems="center">
+                <Stack direction="row" spacing={{ xs: 1.5, md: 2 }} alignItems="center">
                   <IconButton
                     onClick={() => toggleLike(post.id)}
                     sx={{

@@ -122,18 +122,18 @@ export default function CompetitionsPage() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, px: { xs: 2, md: 4 } }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, px: { xs: 1.5, sm: 2, md: 4 }, overflowX: 'hidden', width: '100%', maxWidth: '100vw' }}>
       <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
         {/* Header */}
-        <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
-          <Box sx={{ p: 1.5, bgcolor: 'rgba(245, 158, 11, 0.2)', borderRadius: 2 }}>
-            <Trophy size={24} color="#F59E0B" />
+        <Stack direction="row" alignItems="center" spacing={{ xs: 1.5, md: 2 }} sx={{ mb: { xs: 2, md: 3 } }}>
+          <Box sx={{ p: { xs: 1, md: 1.5 }, bgcolor: 'rgba(245, 158, 11, 0.2)', borderRadius: 2 }}>
+            <Trophy size={20} color="#F59E0B" />
           </Box>
           <Box>
-            <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
+            <Typography variant="h5" sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '1.25rem', md: '1.5rem' } }}>
               Trading Competitions
             </Typography>
-            <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>
+            <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.8rem', md: '0.875rem' }, display: { xs: 'none', sm: 'block' } }}>
               Compete with traders worldwide
             </Typography>
           </Box>
@@ -228,7 +228,7 @@ export default function CompetitionsPage() {
                   />
                 )}
 
-                <Stack direction="row" spacing={2}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1, md: 2 }}>
                   <Button
                     variant="outlined"
                     fullWidth
@@ -237,6 +237,7 @@ export default function CompetitionsPage() {
                       color: '#3B82F6',
                       borderColor: '#3B82F6',
                       '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.1)' },
+                      py: { xs: 1.5, sm: 1 },
                     }}
                   >
                     View Leaderboard
@@ -246,7 +247,7 @@ export default function CompetitionsPage() {
                       variant="contained"
                       fullWidth
                       onClick={() => joinCompetition(comp.id)}
-                      sx={{ bgcolor: '#F59E0B' }}
+                      sx={{ bgcolor: '#F59E0B', py: { xs: 1.5, sm: 1 } }}
                     >
                       Join Now
                     </Button>
@@ -287,8 +288,8 @@ export default function CompetitionsPage() {
                 </Typography>
               </Stack>
             </DialogTitle>
-            <DialogContent>
-              <Table>
+            <DialogContent sx={{ px: { xs: 1, sm: 3 }, overflowX: 'auto' }}>
+              <Table sx={{ minWidth: { xs: 500, sm: 'auto' } }}>
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>Rank</TableCell>

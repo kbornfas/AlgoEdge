@@ -114,18 +114,18 @@ export default function WishlistPage() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, px: { xs: 2, md: 4 } }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', py: { xs: 2, md: 4 }, px: { xs: 1.5, sm: 2, md: 4 }, overflowX: 'hidden', width: '100%', maxWidth: '100vw' }}>
       <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
         {/* Header */}
-        <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
-          <Box sx={{ p: 1.5, bgcolor: 'rgba(236, 72, 153, 0.2)', borderRadius: 2 }}>
-            <Heart size={24} color="#EC4899" />
+        <Stack direction="row" alignItems="center" spacing={{ xs: 1.5, md: 2 }} sx={{ mb: { xs: 2, md: 3 } }}>
+          <Box sx={{ p: { xs: 1, md: 1.5 }, bgcolor: 'rgba(236, 72, 153, 0.2)', borderRadius: 2 }}>
+            <Heart size={20} color="#EC4899" />
           </Box>
           <Box>
-            <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
+            <Typography variant="h5" sx={{ color: 'white', fontWeight: 700, fontSize: { xs: '1.25rem', md: '1.5rem' } }}>
               My Wishlist
             </Typography>
-            <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>
+            <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
               {items.length} {items.length === 1 ? 'item' : 'items'} saved
             </Typography>
           </Box>
@@ -183,17 +183,18 @@ export default function WishlistPage() {
                   />
                 )}
 
-                <Stack direction="row" spacing={1}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                   <Button
                     variant="outlined"
                     size="small"
                     startIcon={item.price_alert_active ? <BellOff size={16} /> : <Bell size={16} />}
                     onClick={() => openAlertDialog(item)}
+                    fullWidth
                     sx={{
                       color: '#F59E0B',
                       borderColor: '#F59E0B',
-                      fontSize: '0.75rem',
-                      flex: 1,
+                      fontSize: { xs: '0.8rem', md: '0.75rem' },
+                      py: { xs: 1, md: 0.5 },
                     }}
                   >
                     {item.price_alert_active ? 'Edit Alert' : 'Price Alert'}
@@ -203,10 +204,11 @@ export default function WishlistPage() {
                     size="small"
                     startIcon={<ShoppingCart size={16} />}
                     href={`/marketplace/${item.product_id}`}
+                    fullWidth
                     sx={{
                       bgcolor: '#3B82F6',
-                      fontSize: '0.75rem',
-                      flex: 1,
+                      fontSize: { xs: '0.8rem', md: '0.75rem' },
+                      py: { xs: 1, md: 0.5 },
                     }}
                   >
                     View
@@ -233,7 +235,13 @@ export default function WishlistPage() {
       </Box>
 
       {/* Price Alert Dialog */}
-      <Dialog open={alertDialog.open} onClose={() => setAlertDialog({ open: false, item: null })} PaperProps={{ sx: { bgcolor: '#1A1F2E', minWidth: 400 } }}>
+      <Dialog 
+        open={alertDialog.open} 
+        onClose={() => setAlertDialog({ open: false, item: null })} 
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{ sx: { bgcolor: '#1A1F2E', mx: { xs: 2, sm: 'auto' } } }}
+      >
         <DialogTitle sx={{ color: 'white' }}>Set Price Alert</DialogTitle>
         <DialogContent>
           <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 2, fontSize: '0.875rem' }}>
