@@ -48,6 +48,12 @@ import journalRoutes from './routes/journalRoutes.js';
 import leaderboardRoutes from './routes/leaderboardRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import wishlistRoutes from './routes/wishlistRoutes.js';
+import calendarRoutes from './routes/calendarRoutes.js';
+import glossaryRoutes from './routes/glossaryRoutes.js';
+import followRoutes from './routes/followRoutes.js';
+import socialRoutes from './routes/socialRoutes.js';
+import knowledgeBaseRoutes from './routes/knowledgeBaseRoutes.js';
 
 /* -------------------------------------------------------------------------- */
 /*                              ENV & CONSTANTS                               */
@@ -171,6 +177,12 @@ const setupRoutes = (app) => {
   app.use('/api/journal', journalRoutes);
   app.use('/api/leaderboard', leaderboardRoutes);
   app.use('/api/reviews', reviewRoutes);
+  app.use('/api/wishlist', wishlistRoutes);
+  app.use('/api/calendar', calendarRoutes);
+  app.use('/api/glossary', glossaryRoutes);
+  app.use('/api/follow', followRoutes);
+  app.use('/api/social', socialRoutes);
+  app.use('/api/knowledge-base', knowledgeBaseRoutes);
   console.log('✅ All routes registered');
 };
 
