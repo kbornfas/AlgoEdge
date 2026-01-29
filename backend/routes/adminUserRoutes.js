@@ -412,6 +412,7 @@ router.post('/bulk/email', async (req, res) => {
 /**
  * Get all users (root endpoint)
  * GET /api/admin/users
+ * Returns complete list of all platform users with their details
  */
 router.get('/', async (req, res) => {
   try {
