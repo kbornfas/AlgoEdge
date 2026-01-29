@@ -169,6 +169,16 @@ const setupRoutes = (app) => {
   app.use('/api/admin/wallet', adminWalletRoutes);
   app.use('/api/admin/users', adminUserRoutes);
   app.use('/api/admin', adminRoutes);
+  
+  // Version endpoint for deployment verification
+  app.get('/api/version', (req, res) => {
+    res.json({ 
+      version: '2.0.1',
+      deployed: new Date().toISOString(),
+      features: ['admin-users-endpoint', 'featured-content-endpoint']
+    });
+  });
+  
   app.use('/api/profile', profileRoutes);
   app.use('/api/export', exportRoutes);
   app.use('/api/alerts', alertRoutes);
