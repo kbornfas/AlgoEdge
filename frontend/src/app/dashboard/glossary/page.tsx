@@ -43,7 +43,7 @@ export default function GlossaryPage() {
       const params = new URLSearchParams();
       if (selectedCategory) params.append('category', selectedCategory);
       
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/glossary?${params}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/glossary?${params}`);
       if (res.ok) {
         const data = await res.json();
         setTerms(data.terms || []);
@@ -55,7 +55,7 @@ export default function GlossaryPage() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/glossary/meta/categories`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/glossary/meta/categories`);
       if (res.ok) {
         const data = await res.json();
         setCategories(data.categories || []);
@@ -72,7 +72,7 @@ export default function GlossaryPage() {
     }
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/glossary/search/full-text?query=${encodeURIComponent(searchQuery)}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/glossary/search/full-text?query=${encodeURIComponent(searchQuery)}`);
       if (res.ok) {
         const data = await res.json();
         setTerms(data.terms || []);
@@ -84,7 +84,7 @@ export default function GlossaryPage() {
 
   const openTerm = async (term: GlossaryTerm) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/glossary/${term.term}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/glossary/${term.term}`);
       if (res.ok) {
         const data = await res.json();
         setSelectedTerm(data.term);

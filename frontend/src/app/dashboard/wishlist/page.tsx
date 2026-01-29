@@ -47,7 +47,7 @@ export default function WishlistPage() {
   const fetchWishlist = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/wishlist`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/wishlist`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -62,7 +62,7 @@ export default function WishlistPage() {
   const removeItem = async (productId: number) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/wishlist/${productId}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/wishlist/${productId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -82,7 +82,7 @@ export default function WishlistPage() {
 
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/wishlist/price-alert`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/wishlist/price-alert`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -103,7 +103,7 @@ export default function WishlistPage() {
   const removePriceAlert = async (productId: number) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/wishlist/price-alert/${productId}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/wishlist/price-alert/${productId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

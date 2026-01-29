@@ -64,7 +64,7 @@ export default function SocialFeedPage() {
   const fetchFeed = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/social?filter=${feedFilter}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/social?filter=${feedFilter}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -79,7 +79,7 @@ export default function SocialFeedPage() {
   const createPost = async () => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/social`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/social`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -98,7 +98,7 @@ export default function SocialFeedPage() {
   const toggleLike = async (postId: number) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/social/${postId}/like`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/social/${postId}/like`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -111,7 +111,7 @@ export default function SocialFeedPage() {
   const openComments = async (postId: number) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/social/${postId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/social/${postId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -128,7 +128,7 @@ export default function SocialFeedPage() {
 
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/social/${commentsDialog.postId}/comment`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/social/${commentsDialog.postId}/comment`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

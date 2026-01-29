@@ -235,7 +235,6 @@ export default function SellerProfilePage() {
                     <Typography variant="h3" sx={{ color: 'white', fontWeight: 800 }}>
                       {seller.display_name || seller.username}
                     </Typography>
-                    {seller.has_blue_badge && <BlueBadge size={24} />}
                   </Stack>
                   {seller.seller_tagline && (
                     <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem', mb: 2 }}>

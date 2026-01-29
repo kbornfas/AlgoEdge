@@ -60,7 +60,7 @@ export default function KnowledgeBasePage() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/knowledge-base/categories`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/knowledge-base/categories`);
       if (res.ok) {
         const data = await res.json();
         setCategories(data.categories || []);
@@ -72,7 +72,7 @@ export default function KnowledgeBasePage() {
 
   const fetchArticlesByCategory = async (slug: string) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/knowledge-base/category/${slug}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/knowledge-base/category/${slug}`);
       if (res.ok) {
         const data = await res.json();
         setArticles(data.articles || []);
@@ -84,7 +84,7 @@ export default function KnowledgeBasePage() {
 
   const fetchFeaturedArticles = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/knowledge-base/featured`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/knowledge-base/featured`);
       if (res.ok) {
         const data = await res.json();
         setFeaturedArticles(data.articles || []);
@@ -98,7 +98,7 @@ export default function KnowledgeBasePage() {
     if (!searchQuery.trim()) return;
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/knowledge-base/search?query=${encodeURIComponent(searchQuery)}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/knowledge-base/search?query=${encodeURIComponent(searchQuery)}`);
       if (res.ok) {
         const data = await res.json();
         setArticles(data.articles || []);
@@ -111,7 +111,7 @@ export default function KnowledgeBasePage() {
 
   const openArticle = async (slug: string) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/knowledge-base/article/${slug}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/knowledge-base/article/${slug}`);
       if (res.ok) {
         const data = await res.json();
         setSelectedArticle(data.article);
@@ -124,7 +124,7 @@ export default function KnowledgeBasePage() {
   const voteHelpful = async (articleId: number, isHelpful: boolean) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/knowledge-base/article/${articleId}/helpful`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/knowledge-base/article/${articleId}/helpful`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

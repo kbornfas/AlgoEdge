@@ -60,7 +60,7 @@ export default function CompetitionsPage() {
   const fetchCompetitions = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/competitions`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/competitions`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -77,7 +77,7 @@ export default function CompetitionsPage() {
     // Fetch leaderboard
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/competitions/${comp.id}/leaderboard`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/competitions/${comp.id}/leaderboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -92,7 +92,7 @@ export default function CompetitionsPage() {
   const joinCompetition = async (compId: number) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/competitions/${compId}/join`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/competitions/${compId}/join`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });

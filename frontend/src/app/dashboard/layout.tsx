@@ -84,7 +84,6 @@ const menuCategories = [
       { text: 'Trade History', icon: History, href: '/dashboard/history', requiresSubscription: true },
       { text: 'Trading Journal', icon: BookOpen, href: '/dashboard/journal', requiresSubscription: false },
       { text: 'Signal Leaderboard', icon: TrendingUp, href: '/dashboard/leaderboard', requiresSubscription: false },
-      { text: 'Economic Calendar', icon: Calendar, href: '/dashboard/calendar', requiresSubscription: false },
       { text: 'MT5 Connection', icon: TrendingUp, href: '/dashboard/mt5', requiresSubscription: true },
     ],
   },

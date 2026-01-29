@@ -125,7 +125,7 @@ export default function AdminUsersPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -192,32 +192,32 @@ export default function AdminUsersPage() {
 
       switch (actionType) {
         case 'block':
-          endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${selectedUser.id}/block`;
+          endpoint = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/users/${selectedUser.id}/block`;
           method = 'PATCH';
           body = { block: !selectedUser.is_blocked };
           break;
         case 'verify':
-          endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${selectedUser.id}/badge`;
+          endpoint = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/users/${selectedUser.id}/badge`;
           method = 'PATCH';
           body = { has_blue_badge: !selectedUser.has_blue_badge };
           break;
         case 'seller':
-          endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${selectedUser.id}/seller`;
+          endpoint = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/users/${selectedUser.id}/seller`;
           method = 'PATCH';
           body = { is_seller: !selectedUser.is_seller };
           break;
         case 'admin':
-          endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${selectedUser.id}/admin`;
+          endpoint = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/users/${selectedUser.id}/admin`;
           method = 'PATCH';
           body = { is_admin: !selectedUser.is_admin };
           break;
         case 'feature':
-          endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${selectedUser.id}/feature`;
+          endpoint = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/users/${selectedUser.id}/feature`;
           method = 'PATCH';
           body = { featured: !selectedUser.seller_featured };
           break;
         case 'delete':
-          endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${selectedUser.id}`;
+          endpoint = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/users/${selectedUser.id}`;
           method = 'DELETE';
           break;
       }

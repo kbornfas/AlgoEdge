@@ -244,9 +244,21 @@ export default function AdminWalletsPage() {
   );
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, pl: { xs: 6, md: 0 } }}>
-        <Typography variant="h4">Wallet Management</Typography>
+    <Box sx={{ px: { xs: 2, sm: 3 }, py: 2, maxWidth: '100%', overflowX: 'hidden' }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 3 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', md: '2rem' } }}>Wallet Management</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Manage user deposits and view platform earnings</Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          startIcon={<RefreshIcon />}
+          onClick={fetchWallets}
+          disabled={loading}
+          sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
+        >
+          Refresh
+        </Button>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
@@ -347,17 +359,17 @@ export default function AdminWalletsPage() {
       </Card>
 
       {/* Wallets Table */}
-      <TableContainer component={Paper}>
-        <Table>
+      <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+        <Table sx={{ minWidth: { xs: '100%', md: 650 } }}>
           <TableHead>
             <TableRow>
-              <TableCell>User</TableCell>
-              <TableCell align="right">User Balance</TableCell>
-              <TableCell align="right">Seller Balance</TableCell>
-              <TableCell align="right">Total Deposited</TableCell>
-              <TableCell align="right">Total Spent</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="center">Actions</TableCell>
+              <TableCell sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>User</TableCell>
+              <TableCell align="right" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>User Balance</TableCell>
+              <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Seller Balance</TableCell>
+              <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Total Deposited</TableCell>
+              <TableCell align="right" sx={{ display: { xs: 'none', lg: 'table-cell' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Total Spent</TableCell>
+              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Status</TableCell>
+              <TableCell align="center" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -378,66 +390,68 @@ export default function AdminWalletsPage() {
                 <TableRow key={wallet.user_id}>
                   <TableCell>
                     <Box>
-                      <Typography variant="body2" fontWeight="bold">
+                      <Typography variant="body2" fontWeight="bold" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         {wallet.name || wallet.username || 'N/A'}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
                         {wallet.email}
                       </Typography>
                     </Box>
                   </TableCell>
                   <TableCell align="right">
-                    <Typography fontWeight="bold" color={wallet.is_frozen ? 'error' : 'inherit'}>
+                    <Typography fontWeight="bold" color={wallet.is_frozen ? 'error' : 'inherit'} sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                       {formatCurrency(parseFloat(String(wallet.balance)))}
                     </Typography>
                   </TableCell>
-                  <TableCell align="right">
-                    <Typography color={wallet.seller_frozen ? 'error' : 'inherit'}>
+                  <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                    <Typography color={wallet.seller_frozen ? 'error' : 'inherit'} sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                       {formatCurrency(parseFloat(String(wallet.seller_balance)))}
                     </Typography>
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                     {formatCurrency(parseFloat(String(wallet.total_deposited)))}
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell align="right" sx={{ display: { xs: 'none', lg: 'table-cell' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                     {formatCurrency(parseFloat(String(wallet.total_spent)))}
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                     {wallet.is_frozen && (
-                      <Chip label="User Frozen" color="error" size="small" sx={{ mr: 0.5 }} />
+                      <Chip label="User Frozen" color="error" size="small" sx={{ mr: 0.5, fontSize: { xs: '0.65rem', md: '0.75rem' } }} />
                     )}
                     {wallet.seller_frozen && (
-                      <Chip label="Seller Frozen" color="error" size="small" />
+                      <Chip label="Seller Frozen" color="error" size="small" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }} />
                     )}
                     {!wallet.is_frozen && !wallet.seller_frozen && (
-                      <Chip label="Active" color="success" size="small" />
+                      <Chip label="Active" color="success" size="small" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }} />
                     )}
                   </TableCell>
                   <TableCell align="center">
-                    <Tooltip title="View Details">
-                      <IconButton size="small" onClick={() => fetchWalletDetails(wallet.user_id)}>
-                        <ViewIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Credit User Wallet">
-                      <IconButton size="small" color="success" onClick={() => openActionDialog(wallet, 'credit', 'user')}>
-                        <AddIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Debit User Wallet">
-                      <IconButton size="small" color="error" onClick={() => openActionDialog(wallet, 'debit', 'user')}>
-                        <RemoveIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title={wallet.is_frozen ? 'Unfreeze User Wallet' : 'Freeze User Wallet'}>
-                      <IconButton
-                        size="small"
-                        color={wallet.is_frozen ? 'success' : 'warning'}
-                        onClick={() => openActionDialog(wallet, wallet.is_frozen ? 'unfreeze' : 'freeze', 'user')}
-                      >
-                        {wallet.is_frozen ? <UnfreezeIcon /> : <FreezeIcon />}
-                      </IconButton>
-                    </Tooltip>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 0.5 }}>
+                      <Tooltip title="View Details">
+                        <IconButton size="small" onClick={() => fetchWalletDetails(wallet.user_id)}>
+                          <ViewIcon sx={{ fontSize: { xs: 16, md: 20 } }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Credit User Wallet">
+                        <IconButton size="small" color="success" onClick={() => openActionDialog(wallet, 'credit', 'user')}>
+                          <AddIcon sx={{ fontSize: { xs: 16, md: 20 } }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Debit User Wallet">
+                        <IconButton size="small" color="error" onClick={() => openActionDialog(wallet, 'debit', 'user')}>
+                          <RemoveIcon sx={{ fontSize: { xs: 16, md: 20 } }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title={wallet.is_frozen ? 'Unfreeze User Wallet' : 'Freeze User Wallet'}>
+                        <IconButton
+                          size="small"
+                          color={wallet.is_frozen ? 'success' : 'warning'}
+                          onClick={() => openActionDialog(wallet, wallet.is_frozen ? 'unfreeze' : 'freeze', 'user')}
+                        >
+                          {wallet.is_frozen ? <UnfreezeIcon sx={{ fontSize: { xs: 16, md: 20 } }} /> : <FreezeIcon sx={{ fontSize: { xs: 16, md: 20 } }} />}
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))
