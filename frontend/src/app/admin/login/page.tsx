@@ -30,8 +30,11 @@ export default function AdminLogin() {
     setError('');
     setLoading(true);
 
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
     try {
-      const response = await fetch('/api/admin/login', {
+      // Use backend login API directly
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -43,9 +46,15 @@ export default function AdminLogin() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Store admin token
+      // Check if user is admin
+      if (!data.user?.is_admin) {
+        throw new Error('Admin access required');
+      }
+
+      // Store admin token (set both for compatibility)
       localStorage.setItem('adminToken', data.token);
-      localStorage.setItem('adminUser', JSON.stringify(data.admin));
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('adminUser', JSON.stringify(data.user));
 
       // Redirect to admin dashboard
       router.push('/admin/dashboard');
