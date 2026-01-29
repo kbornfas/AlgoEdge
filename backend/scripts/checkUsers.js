@@ -7,31 +7,17 @@ const pool = new pg.Pool({
 
 async function main() {
   try {
-    // Check table columns
-    const columns = await pool.query(`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'users' 
-      ORDER BY ordinal_position
-    `);
-    const colNames = columns.rows.map(c => c.column_name);
-    console.log('Column count:', colNames.length);
-    console.log('Has is_blocked:', colNames.includes('is_blocked'));
-    console.log('Has is_admin:', colNames.includes('is_admin'));
-    console.log('Has is_seller:', colNames.includes('is_seller'));
-    console.log('Has has_blue_badge:', colNames.includes('has_blue_badge'));
-    console.log('Has seller_featured:', colNames.includes('seller_featured'));
-    console.log('Has verification_pending:', colNames.includes('verification_pending'));
+    // Remove blue badges from all non-admin users
+    const result = await pool.query(
+      "UPDATE users SET has_blue_badge = false WHERE email != 'kbonface03@gmail.com'"
+    );
+    console.log('Removed blue badges from non-admin users:', result.rowCount);
     
-    // Try a simpler query first
-    const result = await pool.query(`
-      SELECT id, username, email, full_name, is_verified, is_admin, 
-             subscription_status, role, created_at
-      FROM users
-      ORDER BY created_at DESC
-    `);
-    console.log('Simple query succeeded! Users count:', result.rows.length);
-    console.log('Users:', result.rows);
+    // Also remove is_verified flag for signal providers not verified by admin
+    const signalResult = await pool.query(
+      "UPDATE signal_providers SET is_verified = false WHERE id > 0"
+    );
+    console.log('Reset signal provider verification:', signalResult.rowCount);
     
   } finally {
     await pool.end();

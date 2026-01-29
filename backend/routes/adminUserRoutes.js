@@ -701,13 +701,83 @@ router.patch('/:userId/block', async (req, res) => {
 /**
  * PATCH /api/admin/users/:userId/badge
  * Grant or revoke blue badge (verified status)
+ * When granting, $50 is deducted from user's wallet and credited to admin's wallet
  */
 router.patch('/:userId/badge', async (req, res) => {
+  const client = await pool.connect();
   try {
     const { userId } = req.params;
     const { has_blue_badge } = req.body;
+    const adminId = req.user.id;
+    const BADGE_FEE = 50.00;
     
-    const result = await pool.query(
+    await client.query('BEGIN');
+    
+    // If granting badge, check user has sufficient funds and process payment
+    if (has_blue_badge) {
+      // Get user's wallet
+      const userWalletResult = await client.query(
+        'SELECT id, balance FROM user_wallets WHERE user_id = $1',
+        [userId]
+      );
+      
+      if (userWalletResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'User does not have a wallet' });
+      }
+      
+      const userWallet = userWalletResult.rows[0];
+      
+      if (userWallet.balance < BADGE_FEE) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ 
+          error: `User has insufficient funds. Blue badge requires $${BADGE_FEE}. User balance: $${userWallet.balance.toFixed(2)}` 
+        });
+      }
+      
+      // Deduct from user's wallet
+      await client.query(
+        'UPDATE user_wallets SET balance = balance - $1, updated_at = NOW() WHERE user_id = $2',
+        [BADGE_FEE, userId]
+      );
+      
+      // Get or create admin's wallet
+      let adminWalletResult = await client.query(
+        'SELECT id FROM user_wallets WHERE user_id = $1',
+        [adminId]
+      );
+      
+      if (adminWalletResult.rows.length === 0) {
+        await client.query(
+          'INSERT INTO user_wallets (user_id, balance) VALUES ($1, 0)',
+          [adminId]
+        );
+      }
+      
+      // Credit admin's wallet
+      await client.query(
+        'UPDATE user_wallets SET balance = balance + $1, total_earned = total_earned + $1, updated_at = NOW() WHERE user_id = $2',
+        [BADGE_FEE, adminId]
+      );
+      
+      // Record transaction for user (debit)
+      await client.query(
+        `INSERT INTO wallet_transactions (wallet_id, type, amount, status, description, created_at)
+         VALUES ($1, 'badge_fee', $2, 'completed', 'Blue badge verification fee', NOW())`,
+        [userWallet.id, -BADGE_FEE]
+      );
+      
+      // Record transaction for admin (credit)
+      const adminWallet = await client.query('SELECT id FROM user_wallets WHERE user_id = $1', [adminId]);
+      await client.query(
+        `INSERT INTO wallet_transactions (wallet_id, type, amount, status, description, created_at)
+         VALUES ($1, 'badge_fee_received', $2, 'completed', 'Blue badge verification fee received', NOW())`,
+        [adminWallet.rows[0].id, BADGE_FEE]
+      );
+    }
+    
+    // Update user's badge status
+    const result = await client.query(
       `UPDATE users SET 
          has_blue_badge = $1, 
          blue_badge_granted_at = CASE WHEN $1 = TRUE THEN NOW() ELSE NULL END,
@@ -718,13 +788,23 @@ router.patch('/:userId/badge', async (req, res) => {
     );
     
     if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'User not found' });
     }
     
-    res.json({ success: true, user: result.rows[0] });
+    await client.query('COMMIT');
+    
+    res.json({ 
+      success: true, 
+      user: result.rows[0],
+      message: has_blue_badge ? `Blue badge granted. $${BADGE_FEE} charged to user.` : 'Blue badge revoked'
+    });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Toggle blue badge error:', error);
     res.status(500).json({ error: 'Failed to update verification status' });
+  } finally {
+    client.release();
   }
 });
 

@@ -531,18 +531,21 @@ export default function ProductShowcase() {
                           {signal.display_name?.substring(0, 2) || signal.name?.substring(0, 2)}
                         </Avatar>
                         <Box>
-                          <Stack direction="row" alignItems="center" spacing={1}>
-                            <Typography variant="h6" sx={{ color: '#FFFFFF', fontWeight: 700 }}>
+                          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flexWrap: 'nowrap' }}>
+                            <Typography variant="h6" sx={{ color: '#FFFFFF', fontWeight: 700, whiteSpace: 'nowrap' }}>
                               {signal.display_name || signal.name}
                             </Typography>
-                            {signal.provider_verified && (
+                            {(signal.provider_verified || signal.is_verified) && (
                               <Box 
                                 component="img" 
                                 src="/verified-badge.svg" 
                                 alt="Verified"
-                                sx={{ width: 18, height: 18 }}
+                                sx={{ width: 18, height: 18, flexShrink: 0, ml: 0.5 }}
                               />
                             )}
+                            <Typography sx={{ color: '#3B82F6', fontWeight: 700, fontSize: '1.1rem', ml: 1 }}>
+                              ${signal.monthly_price || signal.monthlyPrice}/mo
+                            </Typography>
                           </Stack>
                           <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
                             {signal.is_featured && (
@@ -554,13 +557,13 @@ export default function ProductShowcase() {
                               />
                             )}
                             <Chip
-                              label={signal.risk_level || 'Medium'}
+                              label={signal.risk_level || 'medium'}
                               size="small"
                               sx={{ 
-                                bgcolor: signal.risk_level === 'Low' ? 'rgba(34, 197, 94, 0.2)' : 
-                                         signal.risk_level === 'High' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)', 
-                                color: signal.risk_level === 'Low' ? '#22C55E' : 
-                                       signal.risk_level === 'High' ? '#EF4444' : '#EAB308', 
+                                bgcolor: signal.risk_level === 'low' ? 'rgba(34, 197, 94, 0.2)' : 
+                                         signal.risk_level === 'high' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)', 
+                                color: signal.risk_level === 'low' ? '#22C55E' : 
+                                       signal.risk_level === 'high' ? '#EF4444' : '#EAB308', 
                                 fontSize: '0.65rem', 
                                 height: 22 
                               }}
@@ -568,9 +571,6 @@ export default function ProductShowcase() {
                           </Stack>
                         </Box>
                       </Stack>
-                      <Typography sx={{ color: '#3B82F6', fontWeight: 700, fontSize: '1.3rem' }}>
-                        ${signal.monthly_price || signal.monthlyPrice}/mo
-                      </Typography>
                     </Stack>
 
                     <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', mb: 3 }}>
