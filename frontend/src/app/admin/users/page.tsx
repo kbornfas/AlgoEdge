@@ -493,7 +493,7 @@ export default function AdminUsersPage() {
                             <Typography sx={{ color: 'white', fontWeight: 600, fontSize: '0.9rem' }}>
                               {user.full_name || user.username || 'No name'}
                             </Typography>
-                            {user.is_verified && <VerifiedBadge size={14} />}
+                            {user.has_blue_badge && <VerifiedBadge size={14} />}
                             {user.is_admin && (
                               <Chip label="Admin" size="small" sx={{ ml: 0.5, height: 20, bgcolor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', fontSize: '0.65rem' }} />
                             )}

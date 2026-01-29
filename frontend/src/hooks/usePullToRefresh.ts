@@ -10,7 +10,7 @@ interface UsePullToRefreshOptions {
 
 export function usePullToRefresh({ 
   onRefresh, 
-  threshold = 80,
+  threshold = 150,
   disabled = false 
 }: UsePullToRefreshOptions) {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -36,7 +36,7 @@ export function usePullToRefresh({
     const isAtTop = () => {
       // Check both window scroll and any scrollable parent
       const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
-      return scrollY <= 5; // Allow small tolerance
+      return scrollY <= 2; // Stricter tolerance to prevent accidental triggers
     };
 
     const handleTouchStart = (e: TouchEvent) => {
