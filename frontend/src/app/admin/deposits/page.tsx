@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -134,6 +134,7 @@ export default function AdminDepositsPage() {
 
   // Copy state
   const [copied, setCopied] = useState(false);
+  const initialLoadRef = useRef(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -176,8 +177,11 @@ export default function AdminDepositsPage() {
   }, [token, API_URL]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!initialLoadRef.current && token) {
+      initialLoadRef.current = true;
+      fetchData();
+    }
+  }, [token, fetchData]);
 
   const handleOpenReview = (deposit: DepositRequest) => {
     setSelectedDeposit(deposit);
