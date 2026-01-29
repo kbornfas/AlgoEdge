@@ -60,60 +60,28 @@ interface Sale {
 }
 
 export default function SellerStatsPage() {
-  const { token, isLoading: authLoading } = useAuth();
+  const { token, user, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<SellerStats | null>(null);
   const [recentSales, setRecentSales] = useState<Sale[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [isSeller, setIsSeller] = useState<boolean | null>(null); // null = loading, false = not seller, true = seller
+  const [isSeller, setIsSeller] = useState<boolean | null>(null);
   const [sellerStatus, setSellerStatus] = useState<string>('');
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-  const checkSellerStatus = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!token) {
       setLoading(false);
       return;
     }
-    
-    try {
-      const response = await fetch(`${API_URL}/api/seller/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
-      if (!response.ok) {
-        setIsSeller(false);
-        setLoading(false);
-        return;
-      }
-      
-      const data = await response.json();
-      // Check if they are an approved seller
-      if (data.seller?.is_seller === true || data.seller?.status === 'approved') {
-        setIsSeller(true);
-        setSellerStatus('approved');
-      } else if (data.seller?.status === 'pending') {
-        setIsSeller(false);
-        setSellerStatus('pending');
-      } else {
-        setIsSeller(false);
-        setSellerStatus('not_applied');
-      }
-    } catch {
-      setIsSeller(false);
-      setSellerStatus('error');
-    }
-  }, [token, API_URL]);
-
-  const fetchData = useCallback(async () => {
-    if (!token) return;
 
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch seller wallet stats
-      const walletResponse = await fetch(`${API_URL}/api/wallet/seller`, {
+      // Fetch seller wallet stats - this endpoint tells us if user is a seller
+      const walletResponse = await fetch(`${API_URL}/api/wallet/seller/balance`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -123,22 +91,36 @@ export default function SellerStatsPage() {
         throw new Error(walletData.error || 'Failed to fetch seller stats');
       }
 
-      // Check if API says user is not a seller
-      if (walletData.is_seller === false) {
+      // Check if API says user is a seller
+      if (walletData.is_seller === true) {
+        setIsSeller(true);
+        setSellerStatus('approved');
+        setStats({
+          total_earned: walletData.wallet?.total_earned ?? 0,
+          total_sales: recentSales.length,
+        });
+        setRecentSales(walletData.recent_sales || []);
+      } else {
+        // Not a seller - check if they have a pending application
+        const profileRes = await fetch(`${API_URL}/api/seller/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          if (profileData.seller?.status === 'pending') {
+            setSellerStatus('pending');
+          } else {
+            setSellerStatus('not_applied');
+          }
+        }
         setIsSeller(false);
         setStats({ total_earned: 0, total_sales: 0 });
         setRecentSales([]);
-        return;
       }
-
-      // Extract stats from wallet data
-      setStats({
-        total_earned: walletData.wallet?.total_earned ?? 0,
-        total_sales: walletData.wallet?.total_sales ?? 0,
-      });
-      setRecentSales(walletData.recent_sales || []);
     } catch (err: any) {
       console.error('Error fetching seller stats:', err);
+      setIsSeller(false);
       setStats({ total_earned: 0, total_sales: 0 });
       setError(err.message || 'Failed to load seller stats. Please try again.');
     } finally {
@@ -147,18 +129,10 @@ export default function SellerStatsPage() {
   }, [token, API_URL]);
 
   useEffect(() => {
-    checkSellerStatus();
-  }, [checkSellerStatus]);
+    fetchData();
+  }, [fetchData]);
 
-  useEffect(() => {
-    if (isSeller === true) {
-      fetchData();
-    } else if (isSeller === false) {
-      setLoading(false);
-    }
-  }, [isSeller, fetchData]);
-
-  if (authLoading || isSeller === null) {
+  if (authLoading || loading) {
     return (
       <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1.5, sm: 2, md: 3 } }}>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight={{ xs: '250px', sm: '300px', md: '400px' }}>

@@ -8,6 +8,7 @@ import {
   sendPurchaseConfirmationEmail, 
   sendSaleNotificationEmail 
 } from '../services/emailService.js';
+import { getMarketplaceCommission, getMinimumWithdrawal, getMinimumDeposit } from '../services/settingsService.js';
 
 const router = express.Router();
 
@@ -19,8 +20,9 @@ const isAdmin = (req) => {
 // ============================================================================
 // COMMISSION CONFIGURATION
 // Platform receives 20%, Seller receives 80%
+// These defaults are now overridden by admin settings via settingsService
 // ============================================================================
-const COMMISSION_RATE = parseFloat(process.env.MARKETPLACE_COMMISSION_RATE) || 20; // 20% to platform
+const DEFAULT_COMMISSION_RATE = parseFloat(process.env.MARKETPLACE_COMMISSION_RATE) || 20; // 20% to platform
 const MIN_DEPOSIT = parseFloat(process.env.MIN_DEPOSIT_AMOUNT) || 19;
 const MAX_DEPOSIT = parseFloat(process.env.MAX_DEPOSIT_AMOUNT) || 10000;
 
@@ -401,7 +403,10 @@ router.post('/purchase/bot/:botId', authenticate, async (req, res) => {
     try {
       await client.query('BEGIN');
 
-      // Calculate commissions: 20% platform, 80% seller
+      // Get dynamic commission rate from admin settings
+      const COMMISSION_RATE = await getMarketplaceCommission();
+
+      // Calculate commissions based on admin settings
       const platformCommission = price * (COMMISSION_RATE / 100);
       const sellerEarnings = price - platformCommission;
 
@@ -650,7 +655,10 @@ router.post('/purchase/product/:productId', authenticate, async (req, res) => {
     try {
       await client.query('BEGIN');
 
-      // Calculate commissions: 20% platform, 80% seller
+      // Get dynamic commission rate from admin settings
+      const COMMISSION_RATE = await getMarketplaceCommission();
+
+      // Calculate commissions based on admin settings
       const platformCommission = price * (COMMISSION_RATE / 100);
       const sellerEarnings = price - platformCommission;
 
@@ -926,7 +934,10 @@ router.post('/purchase/signal/:providerId', authenticate, async (req, res) => {
     try {
       await client.query('BEGIN');
 
-      // Calculate commissions: 20% platform, 80% provider
+      // Get dynamic commission rate from admin settings
+      const COMMISSION_RATE = await getMarketplaceCommission();
+
+      // Calculate commissions based on admin settings
       const platformCommission = price * (COMMISSION_RATE / 100);
       const providerEarnings = price - platformCommission;
 

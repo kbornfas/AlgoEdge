@@ -448,15 +448,38 @@ const getSubscriptionStatus = async (req, res) => {
     // Either from subscription_status + subscription_plan fields OR from subscriptions table
     const hasPaidPlan = user.subscription_plan && user.subscription_plan !== 'free';
     const hasPaidSubscription = user.sub_plan && user.sub_plan !== 'free';
-    const isActive = (user.subscription_status === 'active' && hasPaidPlan && (!expiresAt || expiresAt > now)) || hasPaidSubscription;
+    
+    // Check if subscription has expired
+    const isExpired = expiresAt && expiresAt <= now;
+    
+    // Auto-expire subscription in database if it has expired
+    if (isExpired && user.subscription_status === 'active') {
+      console.log(`Auto-expiring subscription for user ${userId} - expired at ${expiresAt}`);
+      await pool.query(
+        `UPDATE users 
+         SET subscription_status = 'expired', updated_at = NOW()
+         WHERE id = $1`,
+        [userId]
+      );
+      // Also update subscriptions table if exists
+      await pool.query(
+        `UPDATE subscriptions 
+         SET status = 'expired', updated_at = NOW()
+         WHERE user_id = $1 AND status = 'active'`,
+        [userId]
+      );
+    }
+    
+    const isActive = !isExpired && ((user.subscription_status === 'active' && hasPaidPlan) || hasPaidSubscription);
 
-    console.log('Subscription check:', { userId, subscription_status: user.subscription_status, subscription_plan: user.subscription_plan, sub_plan: user.sub_plan, isActive });
+    console.log('Subscription check:', { userId, subscription_status: user.subscription_status, subscription_plan: user.subscription_plan, sub_plan: user.sub_plan, isExpired, isActive });
 
     res.json({
-      status: isActive ? 'active' : 'free',
+      status: isActive ? 'active' : (isExpired ? 'expired' : 'free'),
       plan: user.subscription_plan || user.sub_plan || 'free',
       expiresAt: user.subscription_expires_at,
       isActive,
+      isExpired: isExpired || false,
     });
   } catch (error) {
     console.error('Error getting subscription status:', error);

@@ -4,7 +4,7 @@
  */
 
 import express from 'express';
-import { authenticate, optionalAuth } from '../middleware/auth.js';
+import { authenticate, optionalAuth, requireSubscription } from '../middleware/auth.js';
 import pool from '../config/database.js';
 import {
   getSignalTiers,

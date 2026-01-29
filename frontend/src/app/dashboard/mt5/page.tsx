@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiFetch, isSubscriptionError } from '@/lib/api';
 import {
   Box,
   Typography,
@@ -72,7 +73,7 @@ export default function MT5ConnectionPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/user/mt5-account', {
+      const response = await apiFetch('/api/user/mt5-account', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -81,6 +82,8 @@ export default function MT5ConnectionPage() {
         setAccount(data.account);
       }
     } catch (err) {
+      // Subscription error redirects automatically
+      if (isSubscriptionError(err)) return;
       console.error('Failed to fetch MT5 account:', err);
     } finally {
       setLoading(false);
@@ -192,7 +195,7 @@ export default function MT5ConnectionPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/user/mt5-account/connect', {
+      const response = await apiFetch('/api/user/mt5-account/connect', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -212,6 +215,8 @@ export default function MT5ConnectionPage() {
         setError(data.error || 'Failed to connect MT5 account');
       }
     } catch (err) {
+      // Subscription error redirects automatically
+      if (isSubscriptionError(err)) return;
       setError('Failed to connect. Please try again.');
     } finally {
       setConnecting(false);

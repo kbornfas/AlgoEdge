@@ -10,7 +10,7 @@ import {
   getSignalAnalytics,
   resetKillSwitch,
 } from '../controllers/tradeController.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireSubscription } from '../middleware/auth.js';
 import { tradeLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
@@ -24,8 +24,8 @@ router.patch('/admin/:tradeId/approve', approveTransaction);
 // All trade routes require authentication
 router.use(authenticate);
 
-// Signal Analytics Dashboard (authenticated users)
-router.get('/analytics', tradeLimiter, getSignalAnalytics);
+// Signal Analytics Dashboard (requires subscription)
+router.get('/analytics', tradeLimiter, requireSubscription, getSignalAnalytics);
 
 // Admin: Reset Kill Switch
 router.post('/admin/kill-switch/reset', tradeLimiter, resetKillSwitch);

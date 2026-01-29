@@ -2,6 +2,7 @@ import express from 'express';
 import pool from '../config/database.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { getAdminWalletStats, getAdminWalletTransactions, addAdminWalletTransaction } from '../services/adminWalletService.js';
+import { clearSettingsCache } from '../services/settingsService.js';
 
 const router = express.Router();
 
@@ -134,12 +135,16 @@ router.get('/users', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
-        id, username, email, full_name, phone, country, timezone, 
-        is_verified, two_fa_enabled, created_at, is_blocked,
-        subscription_status, subscription_plan, subscription_expires_at,
-        is_admin, is_seller, has_blue_badge, profile_image
-      FROM users
-      ORDER BY created_at DESC
+        u.id, u.username, u.email, u.full_name, u.phone, u.country, u.timezone, 
+        u.is_verified, u.two_fa_enabled, u.created_at, u.is_blocked,
+        u.is_admin, u.is_seller, u.has_blue_badge, u.profile_image,
+        COALESCE(ws.status, 'none') as subscription_status,
+        ws.plan as subscription_plan,
+        ws.current_period_end as subscription_expires_at,
+        ws.membership_id as whop_membership_id
+      FROM users u
+      LEFT JOIN whop_subscriptions ws ON u.id = ws.user_id AND ws.status = 'active'
+      ORDER BY u.created_at DESC
     `);
     res.json({ success: true, users: result.rows });
   } catch (error) {
@@ -191,6 +196,71 @@ router.patch('/users/:userId/admin', async (req, res) => {
   } catch (error) {
     console.error('Toggle admin error:', error);
     res.status(500).json({ error: 'Failed to update admin status' });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:userId/seller
+ * Grant or revoke seller status
+ */
+router.patch('/users/:userId/seller', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { is_seller } = req.body;
+    
+    const result = await pool.query(
+      `UPDATE users SET is_seller = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 
+       RETURNING id, username, email, is_seller`,
+      [!!is_seller, userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // If granting seller status, create seller wallet if not exists
+    if (is_seller) {
+      await pool.query(`
+        INSERT INTO seller_wallets (user_id, balance, pending_balance, total_earnings)
+        VALUES ($1, 0, 0, 0)
+        ON CONFLICT (user_id) DO NOTHING
+      `, [userId]);
+    }
+    
+    res.json({ success: true, user: result.rows[0] });
+  } catch (error) {
+    console.error('Toggle seller status error:', error);
+    res.status(500).json({ error: 'Failed to update seller status' });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:userId/badge
+ * Grant or revoke blue badge (verified status)
+ */
+router.patch('/users/:userId/badge', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { has_blue_badge } = req.body;
+    
+    const result = await pool.query(
+      `UPDATE users SET 
+         has_blue_badge = $1, 
+         blue_badge_granted_at = CASE WHEN $1 = TRUE THEN NOW() ELSE NULL END,
+         updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $2 
+       RETURNING id, username, email, has_blue_badge`,
+      [!!has_blue_badge, userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ success: true, user: result.rows[0] });
+  } catch (error) {
+    console.error('Toggle blue badge error:', error);
+    res.status(500).json({ error: 'Failed to update verification status' });
   }
 });
 
@@ -990,6 +1060,9 @@ router.put('/settings', async (req, res) => {
         DO UPDATE SET value = $2, updated_at = NOW(), updated_by = $3
       `, [key, jsonValue, req.user.id]);
     }
+
+    // Clear settings cache so new values take effect immediately
+    clearSettingsCache();
 
     res.json({ success: true, message: 'Settings updated successfully' });
   } catch (error) {

@@ -59,6 +59,7 @@ import {
   XCircle,
   AlertTriangle,
   Star,
+  Store,
 } from 'lucide-react';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 
@@ -94,7 +95,7 @@ export default function AdminUsersPage() {
   const [rowsPerPage] = useState(15);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
-  const [actionType, setActionType] = useState<'block' | 'verify' | 'admin' | 'delete' | 'feature'>('block');
+  const [actionType, setActionType] = useState<'block' | 'verify' | 'admin' | 'delete' | 'feature' | 'seller'>('block');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -103,8 +104,9 @@ export default function AdminUsersPage() {
     total: users.length,
     active: users.filter(u => !u.is_blocked).length,
     blocked: users.filter(u => u.is_blocked).length,
-    verified: users.filter(u => u.is_verified).length,
+    verified: users.filter(u => u.has_blue_badge).length,
     admins: users.filter(u => u.is_admin).length,
+    sellers: users.filter(u => u.is_seller).length,
     subscribers: users.filter(u => u.subscription_status === 'active').length,
   };
 
@@ -154,6 +156,7 @@ export default function AdminUsersPage() {
       if (statusFilter === 'active') filtered = filtered.filter(u => !u.is_blocked);
       if (statusFilter === 'blocked') filtered = filtered.filter(u => u.is_blocked);
       if (statusFilter === 'admin') filtered = filtered.filter(u => u.is_admin);
+      if (statusFilter === 'seller') filtered = filtered.filter(u => u.is_seller);
     }
 
     // Subscription filter
@@ -163,11 +166,11 @@ export default function AdminUsersPage() {
       if (subscriptionFilter === 'none') filtered = filtered.filter(u => !u.subscription_status || u.subscription_status === 'none');
     }
 
-    // Verified filter
+    // Verified filter (Blue Badge)
     if (verifiedFilter !== 'all') {
-      if (verifiedFilter === 'verified') filtered = filtered.filter(u => u.is_verified);
+      if (verifiedFilter === 'verified') filtered = filtered.filter(u => u.has_blue_badge);
       if (verifiedFilter === 'pending') filtered = filtered.filter(u => u.verification_pending);
-      if (verifiedFilter === 'unverified') filtered = filtered.filter(u => !u.is_verified && !u.verification_pending);
+      if (verifiedFilter === 'unverified') filtered = filtered.filter(u => !u.has_blue_badge && !u.verification_pending);
     }
 
     setFilteredUsers(filtered);
@@ -191,7 +194,14 @@ export default function AdminUsersPage() {
           body = { block: !selectedUser.is_blocked };
           break;
         case 'verify':
-          endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/admin/approve-verification/${selectedUser.id}`;
+          endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${selectedUser.id}/badge`;
+          method = 'PATCH';
+          body = { has_blue_badge: !selectedUser.has_blue_badge };
+          break;
+        case 'seller':
+          endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${selectedUser.id}/seller`;
+          method = 'PATCH';
+          body = { is_seller: !selectedUser.is_seller };
           break;
         case 'admin':
           endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${selectedUser.id}/admin`;
@@ -222,7 +232,8 @@ export default function AdminUsersPage() {
         setAlert({ 
           type: 'success', 
           message: `User ${actionType === 'block' ? (selectedUser.is_blocked ? 'unblocked' : 'blocked') : 
-                          actionType === 'verify' ? 'verified' : 
+                          actionType === 'verify' ? (selectedUser.has_blue_badge ? 'blue badge removed' : 'granted blue badge') : 
+                          actionType === 'seller' ? (selectedUser.is_seller ? 'seller status revoked' : 'approved as seller') :
                           actionType === 'admin' ? (selectedUser.is_admin ? 'removed from admin' : 'made admin') : 
                           actionType === 'feature' ? (selectedUser.seller_featured ? 'removed from featured' : 'added to featured sellers') :
                           'deleted'} successfully` 
@@ -241,7 +252,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  const openActionDialog = (user: User, action: 'block' | 'verify' | 'admin' | 'delete' | 'feature') => {
+  const openActionDialog = (user: User, action: 'block' | 'verify' | 'admin' | 'delete' | 'feature' | 'seller') => {
     setSelectedUser(user);
     setActionType(action);
     setActionDialogOpen(true);
@@ -287,26 +298,29 @@ export default function AdminUsersPage() {
 
       {/* Stats */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
-        <Grid item xs={6} sm={4} md={2}>
+        <Grid item xs={6} sm={4} md>
           <StatCard icon={<Users size={20} color="#3B82F6" />} label="Total" value={stats.total} bgColor="rgba(59, 130, 246, 0.15)" />
         </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        <Grid item xs={6} sm={4} md>
           <StatCard icon={<UserCheck size={20} color="#22C55E" />} label="Active" value={stats.active} bgColor="rgba(34, 197, 94, 0.15)" />
         </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        <Grid item xs={6} sm={4} md>
           <StatCard icon={<Ban size={20} color="#EF4444" />} label="Blocked" value={stats.blocked} bgColor="rgba(239, 68, 68, 0.15)" />
         </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        <Grid item xs={6} sm={4} md>
           <StatCard icon={
             <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
               <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1D9BF0"/>
             </svg>
-          } label="Verified" value={stats.verified} bgColor="rgba(29, 155, 240, 0.15)" />
+          } label="Blue Badge" value={stats.verified} bgColor="rgba(29, 155, 240, 0.15)" />
         </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        <Grid item xs={6} sm={4} md>
+          <StatCard icon={<Store size={20} color="#10B981" />} label="Sellers" value={stats.sellers} bgColor="rgba(16, 185, 129, 0.15)" />
+        </Grid>
+        <Grid item xs={6} sm={4} md>
           <StatCard icon={<Crown size={20} color="#F59E0B" />} label="Admins" value={stats.admins} bgColor="rgba(245, 158, 11, 0.15)" />
         </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        <Grid item xs={6} sm={4} md>
           <StatCard icon={<CreditCard size={20} color="#8B5CF6" />} label="Subscribers" value={stats.subscribers} bgColor="rgba(139, 92, 246, 0.15)" />
         </Grid>
       </Grid>
@@ -350,6 +364,7 @@ export default function AdminUsersPage() {
                   <MenuItem value="active">Active</MenuItem>
                   <MenuItem value="blocked">Blocked</MenuItem>
                   <MenuItem value="admin">Admins</MenuItem>
+                  <MenuItem value="seller">Sellers</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -384,17 +399,6 @@ export default function AdminUsersPage() {
                   <MenuItem value="unverified">Unverified</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-            <Grid item xs={6} md={2}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<RefreshCcw size={16} />}
-                onClick={fetchUsers}
-                sx={{ borderColor: 'rgba(255,255,255,0.2)', color: 'white', height: 40 }}
-              >
-                Refresh
-              </Button>
             </Grid>
           </Grid>
         </CardContent>
@@ -453,11 +457,22 @@ export default function AdminUsersPage() {
                       </Stack>
                     </TableCell>
                     <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                      <Stack direction="row" spacing={1}>
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                         {user.is_blocked ? (
                           <Chip label="Blocked" size="small" sx={{ bgcolor: 'rgba(239, 68, 68, 0.2)', color: '#EF4444' }} />
                         ) : (
                           <Chip label="Active" size="small" sx={{ bgcolor: 'rgba(34, 197, 94, 0.2)', color: '#22C55E' }} />
+                        )}
+                        {user.is_seller && (
+                          <Chip label="Seller" size="small" sx={{ bgcolor: 'rgba(139, 92, 246, 0.2)', color: '#8B5CF6' }} />
+                        )}
+                        {user.has_blue_badge && (
+                          <Chip 
+                            icon={<VerifiedBadge size={12} />}
+                            label="Verified" 
+                            size="small" 
+                            sx={{ bgcolor: 'rgba(29, 155, 240, 0.2)', color: '#1D9BF0' }} 
+                          />
                         )}
                         {user.verification_pending && (
                           <Chip label="Pending Verify" size="small" sx={{ bgcolor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B' }} />
@@ -520,21 +535,28 @@ export default function AdminUsersPage() {
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
         PaperProps={{
-          sx: { bgcolor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', minWidth: 180 },
+          sx: { bgcolor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', minWidth: 200 },
         }}
       >
         <MenuItem onClick={() => openActionDialog(selectedUser!, 'block')} sx={{ color: 'white', '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}>
           {selectedUser?.is_blocked ? <UserCheck size={16} style={{ marginRight: 8 }} /> : <Ban size={16} style={{ marginRight: 8 }} />}
           {selectedUser?.is_blocked ? 'Unblock User' : 'Block User'}
         </MenuItem>
-        {!selectedUser?.is_verified && (
-          <MenuItem onClick={() => openActionDialog(selectedUser!, 'verify')} sx={{ color: '#1D9BF0', '&:hover': { bgcolor: 'rgba(29, 155, 240, 0.1)' } }}>
-            <svg width="16" height="16" viewBox="0 0 22 22" fill="none" style={{ marginRight: 8 }}>
-              <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1D9BF0"/>
-            </svg>
-            Verify User
-          </MenuItem>
-        )}
+        
+        {/* Blue Badge (Verification) */}
+        <MenuItem onClick={() => openActionDialog(selectedUser!, 'verify')} sx={{ color: '#1D9BF0', '&:hover': { bgcolor: 'rgba(29, 155, 240, 0.1)' } }}>
+          <svg width="16" height="16" viewBox="0 0 22 22" fill="none" style={{ marginRight: 8 }}>
+            <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1D9BF0"/>
+          </svg>
+          {selectedUser?.has_blue_badge ? 'Remove Blue Badge' : 'Grant Blue Badge'}
+        </MenuItem>
+        
+        {/* Seller Status */}
+        <MenuItem onClick={() => openActionDialog(selectedUser!, 'seller')} sx={{ color: '#10B981', '&:hover': { bgcolor: 'rgba(16, 185, 129, 0.1)' } }}>
+          <Store size={16} style={{ marginRight: 8 }} />
+          {selectedUser?.is_seller ? 'Revoke Seller Status' : 'Approve as Seller'}
+        </MenuItem>
+        
         <MenuItem onClick={() => openActionDialog(selectedUser!, 'admin')} sx={{ color: '#F59E0B', '&:hover': { bgcolor: 'rgba(245, 158, 11, 0.1)' } }}>
           <Shield size={16} style={{ marginRight: 8 }} />
           {selectedUser?.is_admin ? 'Remove Admin' : 'Make Admin'}
@@ -559,7 +581,8 @@ export default function AdminUsersPage() {
       >
         <DialogTitle sx={{ color: 'white' }}>
           {actionType === 'block' ? (selectedUser?.is_blocked ? 'Unblock User' : 'Block User') :
-           actionType === 'verify' ? 'Verify User' :
+           actionType === 'verify' ? (selectedUser?.has_blue_badge ? 'Remove Blue Badge' : 'Grant Blue Badge') :
+           actionType === 'seller' ? (selectedUser?.is_seller ? 'Revoke Seller Status' : 'Approve as Seller') :
            actionType === 'admin' ? (selectedUser?.is_admin ? 'Remove Admin' : 'Make Admin') :
            actionType === 'feature' ? (selectedUser?.seller_featured ? 'Remove from Featured' : 'Feature Seller') :
            'Delete User'}
@@ -569,7 +592,12 @@ export default function AdminUsersPage() {
             {actionType === 'block' && (selectedUser?.is_blocked 
               ? `Are you sure you want to unblock ${selectedUser?.email}?`
               : `Are you sure you want to block ${selectedUser?.email}? They won't be able to access the platform.`)}
-            {actionType === 'verify' && `Grant verified badge to ${selectedUser?.email}?`}
+            {actionType === 'verify' && (selectedUser?.has_blue_badge
+              ? `Remove the blue badge from ${selectedUser?.email}?`
+              : `Grant a blue verification badge to ${selectedUser?.email}? This indicates they are a verified seller.`)}
+            {actionType === 'seller' && (selectedUser?.is_seller
+              ? `Revoke seller privileges from ${selectedUser?.email}? They will no longer be able to list products.`
+              : `Approve ${selectedUser?.email} as a seller? They will be able to list products and bots on the marketplace.`)}
             {actionType === 'admin' && (selectedUser?.is_admin
               ? `Remove admin privileges from ${selectedUser?.email}?`
               : `Grant admin privileges to ${selectedUser?.email}? They will have full platform access.`)}

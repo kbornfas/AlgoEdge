@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireSubscription } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -46,8 +46,9 @@ router.get('/health', (req, res) => {
 /**
  * POST /api/mt5/provision
  * Backend provisioning of MetaAPI accounts using SDK
+ * Requires active subscription
  */
-router.post('/provision', authenticate, async (req, res) => {
+router.post('/provision', authenticate, requireSubscription, async (req, res) => {
   console.log('=== MT5 Provision Request ===');
   
   if (!api) {
@@ -229,8 +230,9 @@ router.post('/provision', authenticate, async (req, res) => {
 /**
  * GET /api/mt5/account-info/:accountId
  * Get account balance and equity from MetaAPI using SDK
+ * Requires active subscription
  */
-router.get('/account-info/:accountId', authenticate, async (req, res) => {
+router.get('/account-info/:accountId', authenticate, requireSubscription, async (req, res) => {
   if (!api) {
     await initMetaApi();
     if (!api) {
@@ -297,8 +299,9 @@ router.get('/account-info/:accountId', authenticate, async (req, res) => {
  * Get live open positions with current prices from MetaAPI
  * ALWAYS fetches fresh data from MetaAPI connection
  * @param accountId - Can be either MetaAPI account ID or database account ID
+ * Requires active subscription
  */
-router.get('/positions/:accountId', authenticate, async (req, res) => {
+router.get('/positions/:accountId', authenticate, requireSubscription, async (req, res) => {
   // Set no-cache headers
   res.set({
     'Cache-Control': 'no-cache, no-store, must-revalidate',

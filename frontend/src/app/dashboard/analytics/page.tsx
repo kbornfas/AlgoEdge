@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiFetch, isSubscriptionError } from '@/lib/api';
 import {
   Box,
   Grid,
@@ -167,7 +168,7 @@ export default function AnalyticsPage() {
     if (showRefresh) setRefreshing(true);
 
     try {
-      const response = await fetch(`${backendUrl}/api/trades/analytics`, {
+      const response = await apiFetch(`${backendUrl}/api/trades/analytics`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -180,6 +181,8 @@ export default function AnalyticsPage() {
       setStrategyPerformance(data.strategyPerformance);
       setError(null);
     } catch (err) {
+      // Subscription error redirects automatically, don't show error
+      if (isSubscriptionError(err)) return;
       setError(err instanceof Error ? err.message : 'Failed to load analytics');
     } finally {
       setLoading(false);

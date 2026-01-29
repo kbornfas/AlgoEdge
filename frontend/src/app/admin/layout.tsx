@@ -17,10 +17,9 @@ import {
   IconButton,
   Tooltip,
   Badge,
-  useMediaQuery,
-  useTheme,
   Collapse,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
   LayoutDashboard,
   Users,
@@ -70,19 +69,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [adminUser, setAdminUser] = useState<any>(null);
   const [notifications, setNotifications] = useState(0);
+  const [isClient, setIsClient] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Skip layout for login page
-  if (pathname === '/admin/login') {
-    return <>{children}</>;
-  }
+  // Handle client-side only rendering to prevent hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+    setIsMobile(window.innerWidth < theme.breakpoints.values.md);
+    
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < theme.breakpoints.values.md);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [theme.breakpoints.values.md]);
 
   useEffect(() => {
+    // Skip auth check for login page
+    if (pathname === '/admin/login') return;
+    if (!isClient) return;
+
     const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
     const userData = localStorage.getItem('adminUser') || localStorage.getItem('user');
     
@@ -114,7 +125,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     // Fetch notifications count
     fetchNotifications();
-  }, [pathname]);
+  }, [pathname, router, isClient]);
+
+  // Skip layout for login page
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
+
+  // Show loading state until client is ready to prevent hydration mismatch
+  if (!isClient) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#0a0f1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <Box
+            sx={{
+              width: 60,
+              height: 60,
+              borderRadius: 2,
+              background: 'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mx: 'auto',
+              mb: 2,
+            }}
+          >
+            <Shield size={32} color="white" />
+          </Box>
+          <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Loading admin panel...</Typography>
+        </Box>
+      </Box>
+    );
+  }
 
   const fetchNotifications = async () => {
     try {

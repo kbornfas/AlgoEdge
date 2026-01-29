@@ -6,11 +6,13 @@
 import express from 'express';
 import pool from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
+import { getMarketplaceCommission, getMinimumWithdrawal } from '../services/settingsService.js';
 
 const router = express.Router();
 
-// Commission rate: Platform receives 20%, Seller receives 80%
-const COMMISSION_RATE = parseFloat(process.env.MARKETPLACE_COMMISSION_RATE) || 20;
+// Default commission rate: Platform receives 20%, Seller receives 80%
+// These defaults are now overridden by admin settings via settingsService
+const DEFAULT_COMMISSION_RATE = parseFloat(process.env.MARKETPLACE_COMMISSION_RATE) || 20;
 const MINIMUM_PAYOUT = parseFloat(process.env.MINIMUM_PAYOUT) || 50;
 const COMMISSION_CLEARING_DAYS = parseInt(process.env.COMMISSION_CLEARING_DAYS) || 7;
 
@@ -223,6 +225,9 @@ router.get('/dashboard', authenticate, async (req, res) => {
       ORDER BY created_at DESC
     `, [sellerId]);
 
+    // Get dynamic commission rate from admin settings
+    const currentCommissionRate = await getMarketplaceCommission();
+
     res.json({
       wallet: {
         ...walletData,
@@ -234,7 +239,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
       stats: {
         ...listingsStats.rows[0],
         ...salesStats.rows[0],
-        commission_rate: COMMISSION_RATE
+        commission_rate: currentCommissionRate
       },
       transactions: recentTransactions.rows,
       listings: {

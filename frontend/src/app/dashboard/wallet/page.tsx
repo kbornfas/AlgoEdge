@@ -457,21 +457,6 @@ export default function WalletPage() {
             Manage your balance, make deposits, and view transactions
           </Typography>
         </Box>
-        <Tooltip title="Refresh balance">
-          <IconButton 
-            onClick={fetchWalletData} 
-            disabled={loading}
-            sx={{
-              animation: loading ? 'spin 1s linear infinite' : 'none',
-              '@keyframes spin': {
-                '0%': { transform: 'rotate(0deg)' },
-                '100%': { transform: 'rotate(360deg)' },
-              },
-            }}
-          >
-            <RefreshIcon />
-          </IconButton>
-        </Tooltip>
       </Box>
 
       {/* Alerts */}

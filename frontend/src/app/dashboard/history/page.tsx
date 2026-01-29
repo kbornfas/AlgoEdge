@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
+import { apiFetch, isSubscriptionError } from '@/lib/api';
 import {
   Box,
   Typography,
@@ -184,7 +185,7 @@ export default function TradesPage() {
   const fetchOpenPositions = useCallback(async () => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/user/positions?_t=${Date.now()}`, {
+      const response = await apiFetch(`${apiUrl}/api/user/positions?_t=${Date.now()}`, {
         headers: {
           ...getAuthHeaders(),
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -223,6 +224,8 @@ export default function TradesPage() {
         setLastUpdated(new Date());
       }
     } catch (err) {
+      // Subscription error redirects automatically
+      if (isSubscriptionError(err)) return;
       console.error('Failed to fetch positions:', err);
     }
   }, [getAuthHeaders]);
@@ -231,7 +234,7 @@ export default function TradesPage() {
   const fetchClosedTrades = useCallback(async () => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/user/trades?status=closed&_t=${Date.now()}`, {
+      const response = await apiFetch(`${apiUrl}/api/user/trades?status=closed&_t=${Date.now()}`, {
         headers: {
           ...getAuthHeaders(),
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -253,6 +256,8 @@ export default function TradesPage() {
         setClosedTrades(mappedTrades);
       }
     } catch (err) {
+      // Subscription error redirects automatically
+      if (isSubscriptionError(err)) return;
       console.error('Failed to fetch closed trades:', err);
     }
   }, [getAuthHeaders]);

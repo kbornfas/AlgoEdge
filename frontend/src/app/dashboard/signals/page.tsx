@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { apiFetch, isSubscriptionError } from '@/lib/api';
 import {
   Box,
   Grid,
@@ -178,7 +180,7 @@ export default function SignalsPage() {
       // First try to fetch live MT5 positions
       if (token) {
         try {
-          const mt5Response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/mt5/my-positions`, {
+          const mt5Response = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/mt5/my-positions`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           
@@ -208,6 +210,8 @@ export default function SignalsPage() {
             }
           }
         } catch (mt5Error) {
+          // Subscription error redirects automatically
+          if (isSubscriptionError(mt5Error)) return;
           console.log('MT5 positions not available, falling back to signals API');
         }
       }

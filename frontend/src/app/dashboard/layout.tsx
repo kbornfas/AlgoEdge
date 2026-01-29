@@ -93,7 +93,6 @@ const menuCategories = [
     items: [
       { text: 'Browse Products', icon: Store, href: '/marketplace', requiresSubscription: false },
       { text: 'Seller Dashboard', icon: BarChart3, href: '/dashboard/seller', requiresSubscription: false },
-      { text: 'Seller Earnings', icon: Wallet, href: '/dashboard/seller-wallet', requiresSubscription: false },
     ],
   },
   {
@@ -125,6 +124,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [user, setUser] = useState<any>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isExpired, setIsExpired] = useState(false);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
@@ -175,8 +176,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (response.ok) {
           const data = await response.json();
           setIsSubscribed(data.isActive || data.status === 'active');
+          setIsExpired(data.isExpired || data.status === 'expired');
+          setSubscriptionPlan(data.plan);
         } else {
           setIsSubscribed(false);
+          setIsExpired(false);
         }
       } catch (error) {
         console.error('Error checking subscription:', error);
@@ -739,8 +743,77 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             boxSizing: 'border-box',
           }}
         >
-          {/* Unlock Features Banner for Free Users */}
-          {!subscriptionLoading && !isSubscribed && (
+          {/* Subscription Expired Banner */}
+          {!subscriptionLoading && isExpired && (
+            <Box
+              component={Link}
+              href="/auth/pricing"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 2,
+                p: 2,
+                mb: 3,
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%)',
+                border: '2px solid rgba(239, 68, 68, 0.5)',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.2) 100%)',
+                  border: '2px solid rgba(239, 68, 68, 0.7)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 25px rgba(239, 68, 68, 0.2)',
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Lock size={20} color="white" />
+              </Box>
+              <Box sx={{ flexGrow: 1 }}>
+                <Typography variant="body1" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                  ⚠️ Your Subscription Has Expired
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Premium features are now locked. Renew to continue using Trading Signals, Robots, Analytics & more
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+                  color: 'white',
+                  fontWeight: 600,
+                  fontSize: '0.875rem',
+                  flexShrink: 0,
+                }}
+              >
+                <Crown size={16} />
+                Renew Now
+              </Box>
+            </Box>
+          )}
+          
+          {/* Unlock Features Banner for Free Users (who never subscribed) */}
+          {!subscriptionLoading && !isSubscribed && !isExpired && (
             <Box
               component={Link}
               href="/auth/pricing"

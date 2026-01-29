@@ -252,16 +252,6 @@ export default function AdminFinancePage() {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, pl: { xs: 6, md: 0 } }}>
         <Typography variant="h4">Financial Management</Typography>
-        <Button 
-          startIcon={<RefreshIcon />} 
-          onClick={() => {
-            if (tabValue === 0) fetchAdminWallet();
-            else if (tabValue === 1) fetchUserBalances();
-            else fetchTransactions();
-          }}
-        >
-          Refresh
-        </Button>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}

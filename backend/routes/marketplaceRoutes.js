@@ -5,11 +5,13 @@ import { apiLimiter } from '../middleware/rateLimiter.js';
 import { auditLog } from '../middleware/audit.js';
 import crypto from 'crypto';
 import { addAdminWalletTransaction } from '../services/adminWalletService.js';
+import { getMarketplaceCommission } from '../services/settingsService.js';
 
 const router = express.Router();
 
-// Commission rate: Platform receives 20%, Seller receives 80%
-const COMMISSION_RATE = parseFloat(process.env.MARKETPLACE_COMMISSION_RATE) || 20;
+// Default commission rate: Platform receives 20%, Seller receives 80%
+// This is now overridden by admin settings via getMarketplaceCommission()
+const DEFAULT_COMMISSION_RATE = parseFloat(process.env.MARKETPLACE_COMMISSION_RATE) || 20;
 
 // ============================================================================
 // SELLER SUBSCRIPTION CHECK MIDDLEWARE
@@ -470,6 +472,9 @@ router.post('/bots/:id/purchase', authenticate, apiLimiter, async (req, res) => 
     try {
       await client.query('BEGIN');
 
+      // Get dynamic commission rate from admin settings
+      const COMMISSION_RATE = await getMarketplaceCommission();
+
       // Deduct from user wallet
       const balanceBefore = parseFloat(userWallet.balance);
       const balanceAfter = balanceBefore - price;
@@ -485,7 +490,7 @@ router.post('/bots/:id/purchase', authenticate, apiLimiter, async (req, res) => 
         VALUES ($1, 'purchase', $2, $3, $4, $5, 'bot_purchase')
       `, [userId, -price, balanceBefore, balanceAfter, `Bot purchase: ${botData.name}`]);
 
-      // Calculate commissions: 20% platform, 80% seller
+      // Calculate commissions based on admin settings
       const platformCommission = price * (COMMISSION_RATE / 100);
       const sellerEarnings = price - platformCommission;
 
@@ -843,6 +848,9 @@ router.post('/signals/providers/:idOrSlug/subscribe', authenticate, apiLimiter, 
     try {
       await client.query('BEGIN');
 
+      // Get dynamic commission rate from admin settings
+      const COMMISSION_RATE = await getMarketplaceCommission();
+
       // Deduct from user wallet
       const balanceBefore = parseFloat(userWallet.balance);
       const balanceAfter = balanceBefore - price;
@@ -858,7 +866,7 @@ router.post('/signals/providers/:idOrSlug/subscribe', authenticate, apiLimiter, 
         VALUES ($1, 'purchase', $2, $3, $4, $5, 'signal_subscription')
       `, [userId, -price, balanceBefore, balanceAfter, `Signal subscription: ${providerData.display_name} (${plan_type})`]);
 
-      // Calculate commissions: 20% platform, 80% provider
+      // Calculate commissions based on admin settings
       const platformCommission = price * (COMMISSION_RATE / 100);
       const providerEarnings = price - platformCommission;
 
@@ -1169,7 +1177,10 @@ router.post('/products/:id/purchase', authenticate, apiLimiter, async (req, res)
       return res.status(400).json({ error: 'You already own this product' });
     }
 
-    // Calculate commissions: 20% platform, 80% seller
+    // Get dynamic commission rate from admin settings
+    const COMMISSION_RATE = await getMarketplaceCommission();
+
+    // Calculate commissions based on admin settings
     const platformCommission = productData.price * (COMMISSION_RATE / 100);
     const sellerEarnings = productData.price - platformCommission;
 
@@ -1320,18 +1331,51 @@ router.get('/seller/dashboard', authenticate, async (req, res) => {
       FROM users WHERE id = $1
     `, [userId]);
 
-    // Get or create wallet
-    const wallet = await pool.query(`
-      SELECT * FROM seller_wallets WHERE user_id = $1
+    // Get user's main wallet (seller earnings are stored here)
+    let wallet = await pool.query(`
+      SELECT * FROM user_wallets WHERE user_id = $1
     `, [userId]);
 
     let walletData = wallet.rows[0];
     if (!walletData) {
       const newWallet = await pool.query(`
-        INSERT INTO seller_wallets (user_id) VALUES ($1) RETURNING *
+        INSERT INTO user_wallets (user_id, balance, total_deposited, total_spent) 
+        VALUES ($1, 0, 0, 0) RETURNING *
       `, [userId]);
       walletData = newWallet.rows[0];
     }
+
+    // Get seller earnings stats from marketplace_purchases
+    const earningsStats = await pool.query(`
+      SELECT 
+        COALESCE(SUM(seller_earnings), 0) as total_earnings,
+        COUNT(*) as total_sales
+      FROM marketplace_purchases 
+      WHERE seller_id = $1 AND status = 'completed'
+    `, [userId]);
+
+    // Get pending earnings (from recent transactions not yet cleared - if applicable)
+    const pendingEarnings = await pool.query(`
+      SELECT COALESCE(SUM(amount), 0) as pending
+      FROM wallet_transactions 
+      WHERE user_id = $1 AND type = 'sale_earning' AND created_at > NOW() - INTERVAL '7 days'
+    `, [userId]);
+
+    // Get total payouts/withdrawals
+    const payouts = await pool.query(`
+      SELECT COALESCE(SUM(ABS(amount)), 0) as total_payouts
+      FROM wallet_transactions 
+      WHERE user_id = $1 AND type IN ('withdrawal', 'payout')
+    `, [userId]);
+
+    // Build wallet object with seller-relevant fields
+    const sellerWallet = {
+      ...walletData,
+      available_balance: parseFloat(walletData.balance || 0),
+      pending_earnings: parseFloat(pendingEarnings.rows[0]?.pending || 0),
+      total_earnings: parseFloat(earningsStats.rows[0]?.total_earnings || 0),
+      total_payouts: parseFloat(payouts.rows[0]?.total_payouts || 0),
+    };
 
     // Get seller's listings with full pricing info
     const [bots, products, provider] = await Promise.all([
@@ -1353,10 +1397,13 @@ router.get('/seller/dashboard', authenticate, async (req, res) => {
       `, [userId])
     ]);
 
-    // Recent transactions
+    // Recent transactions - get both seller_transactions and wallet_transactions for earnings
     const transactions = await pool.query(`
-      SELECT * FROM seller_transactions 
-      WHERE user_id = $1 
+      SELECT 
+        id, type, amount, description, created_at, 
+        'completed' as status
+      FROM wallet_transactions 
+      WHERE user_id = $1 AND type IN ('sale_earning', 'sale', 'withdrawal', 'payout')
       ORDER BY created_at DESC LIMIT 20
     `, [userId]);
 
@@ -1379,7 +1426,7 @@ router.get('/seller/dashboard', authenticate, async (req, res) => {
 
     res.json({
       success: true,
-      wallet: walletData,
+      wallet: sellerWallet,
       listings: {
         bots: bots.rows,
         products: products.rows,
@@ -1402,51 +1449,56 @@ router.get('/seller/dashboard', authenticate, async (req, res) => {
   }
 });
 
-// Request payout
+// Request payout (withdrawal from user wallet)
 router.post('/seller/payouts', authenticate, apiLimiter, async (req, res) => {
   try {
     const userId = req.user.id;
     const { amount, payout_method, payout_details } = req.body;
 
-    // Get wallet
-    const wallet = await pool.query('SELECT * FROM seller_wallets WHERE user_id = $1', [userId]);
+    const MINIMUM_PAYOUT = 50; // Minimum withdrawal amount
+
+    // Get user's main wallet
+    const wallet = await pool.query('SELECT * FROM user_wallets WHERE user_id = $1', [userId]);
     if (wallet.rows.length === 0) {
-      return res.status(400).json({ error: 'No seller wallet found' });
+      return res.status(400).json({ error: 'No wallet found. Please contact support.' });
     }
 
     const walletData = wallet.rows[0];
+    const availableBalance = parseFloat(walletData.balance || 0);
 
-    if (amount > walletData.available_balance) {
+    if (amount > availableBalance) {
       return res.status(400).json({ error: 'Insufficient available balance' });
     }
 
-    if (amount < walletData.minimum_payout) {
-      return res.status(400).json({ error: `Minimum payout is $${walletData.minimum_payout}` });
+    if (amount < MINIMUM_PAYOUT) {
+      return res.status(400).json({ error: `Minimum payout is $${MINIMUM_PAYOUT}` });
     }
 
     // Calculate fee (if any)
     const fee = 0; // Can add withdrawal fees here
     const netAmount = amount - fee;
 
-    // Create payout request
-    const payout = await pool.query(`
-      INSERT INTO seller_payouts (
-        user_id, wallet_id, amount, fee, net_amount, payout_method, payout_details
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING *
-    `, [userId, walletData.id, amount, fee, netAmount, payout_method, JSON.stringify(payout_details)]);
-
-    // Deduct from available balance
+    // Record the payout request in wallet_transactions
+    const balanceBefore = availableBalance;
+    const balanceAfter = availableBalance - amount;
+    
     await pool.query(`
-      UPDATE seller_wallets 
-      SET available_balance = available_balance - $1,
+      INSERT INTO wallet_transactions (
+        user_id, type, amount, balance_before, balance_after, description, reference_type, metadata
+      ) VALUES ($1, 'payout', $2, $3, $4, $5, 'payout_request', $6)
+    `, [userId, -amount, balanceBefore, balanceAfter, `Payout request via ${payout_method}`, JSON.stringify({ method: payout_method, details: payout_details, net_amount: netAmount, fee })]);
+
+    // Deduct from wallet balance
+    await pool.query(`
+      UPDATE user_wallets 
+      SET balance = balance - $1,
           updated_at = NOW()
-      WHERE id = $2
-    `, [amount, walletData.id]);
+      WHERE user_id = $2
+    `, [amount, userId]);
 
     auditLog(userId, 'SELLER_PAYOUT_REQUESTED', { amount, method: payout_method }, req);
 
-    res.json({ success: true, payout: payout.rows[0] });
+    res.json({ success: true, message: 'Payout request submitted successfully', amount: netAmount });
   } catch (error) {
     console.error('Request payout error:', error);
     res.status(500).json({ error: 'Failed to request payout' });
