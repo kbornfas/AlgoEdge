@@ -34,10 +34,11 @@ export default function AdminLogin() {
 
     try {
       // Use backend login API directly
+      // Backend expects 'username' field but accepts email values
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ username: formData.email, password: formData.password }),
       });
 
       const data = await response.json();

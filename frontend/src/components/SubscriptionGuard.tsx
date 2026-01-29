@@ -19,6 +19,12 @@ const PREMIUM_PAGES = [
   '/dashboard/learning-hub',
   '/dashboard/news',
   '/dashboard/community',
+  '/dashboard/journal',
+  '/dashboard/leaderboard',
+  '/dashboard/glossary',
+  '/dashboard/knowledge-base',
+  '/dashboard/social',
+  '/dashboard/competitions',
 ];
 
 /**
