@@ -1,22 +1,9 @@
 import express from 'express';
 import pool from '../config/database.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 import os from 'os';
 
 const router = express.Router();
-
-// Middleware to check admin role
-const requireAdmin = async (req, res, next) => {
-  try {
-    const result = await pool.query('SELECT role FROM users WHERE id = $1', [req.user.userId]);
-    if (result.rows[0]?.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    next();
-  } catch (error) {
-    res.status(500).json({ error: 'Authorization check failed' });
-  }
-};
 
 // Get system health dashboard
 router.get('/health', authenticate, requireAdmin, async (req, res) => {
