@@ -418,18 +418,21 @@ router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
-        u.id, u.username, u.email, u.full_name, u.phone, u.country, u.timezone, 
-        u.is_verified, u.two_fa_enabled, u.created_at, u.is_blocked,
-        u.is_admin, u.is_seller, u.has_blue_badge, u.profile_image,
-        COALESCE(ws.status, 'none') as subscription_status,
-        ws.plan as subscription_plan,
-        ws.current_period_end as subscription_expires_at,
-        ws.membership_id as whop_membership_id,
-        u.seller_featured,
-        u.verification_pending
-      FROM users u
-      LEFT JOIN whop_subscriptions ws ON u.id = ws.user_id AND ws.status = 'active'
-      ORDER BY u.created_at DESC
+        id, username, email, full_name, phone, country, timezone, 
+        is_verified, two_fa_enabled, created_at, 
+        false as is_blocked,
+        COALESCE(is_admin, false) as is_admin, 
+        COALESCE(is_seller, false) as is_seller, 
+        COALESCE(has_blue_badge, false) as has_blue_badge, 
+        profile_image,
+        COALESCE(subscription_status, 'none') as subscription_status,
+        subscription_plan,
+        subscription_expires_at,
+        COALESCE(seller_featured, false) as seller_featured,
+        COALESCE(verification_pending, false) as verification_pending,
+        role
+      FROM users
+      ORDER BY created_at DESC
     `);
     res.json({ success: true, users: result.rows });
   } catch (error) {
@@ -449,8 +452,8 @@ router.get('/stats', async (req, res) => {
         COUNT(*) as total_users,
         COUNT(*) FILTER (WHERE subscription_status = 'active') as active_subscriptions,
         COUNT(*) FILTER (WHERE subscription_status = 'expired') as expired_subscriptions,
-        COUNT(*) FILTER (WHERE subscription_status IS NULL OR subscription_status = '') as no_subscription,
-        COUNT(*) FILTER (WHERE is_blocked = true) as blocked_users,
+        COUNT(*) FILTER (WHERE subscription_status IS NULL OR subscription_status = '' OR subscription_status = 'none' OR subscription_status = 'inactive') as no_subscription,
+        0 as blocked_users,
         COUNT(*) FILTER (WHERE is_verified = true) as verified_users,
         COUNT(*) FILTER (WHERE is_seller = true) as sellers,
         COUNT(*) FILTER (WHERE is_affiliate = true) as affiliates,
