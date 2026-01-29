@@ -410,6 +410,34 @@ router.post('/bulk/email', async (req, res) => {
 });
 
 /**
+ * Get all users (root endpoint)
+ * GET /api/admin/users
+ */
+router.get('/', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        u.id, u.username, u.email, u.full_name, u.phone, u.country, u.timezone, 
+        u.is_verified, u.two_fa_enabled, u.created_at, u.is_blocked,
+        u.is_admin, u.is_seller, u.has_blue_badge, u.profile_image,
+        COALESCE(ws.status, 'none') as subscription_status,
+        ws.plan as subscription_plan,
+        ws.current_period_end as subscription_expires_at,
+        ws.membership_id as whop_membership_id,
+        u.seller_featured,
+        u.verification_pending
+      FROM users u
+      LEFT JOIN whop_subscriptions ws ON u.id = ws.user_id AND ws.status = 'active'
+      ORDER BY u.created_at DESC
+    `);
+    res.json({ success: true, users: result.rows });
+  } catch (error) {
+    console.error('List all users error:', error);
+    res.status(500).json({ error: 'Failed to list users' });
+  }
+});
+
+/**
  * Get user statistics for admin dashboard
  * GET /api/admin/users/stats
  */
@@ -640,6 +668,201 @@ router.put('/:userId/subscription', async (req, res) => {
   } catch (error) {
     console.error('Update user subscription error:', error);
     res.status(500).json({ error: 'Failed to update subscription' });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:userId/block
+ * Block or unblock a user
+ */
+router.patch('/:userId/block', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { block } = req.body;
+    const result = await pool.query(
+      `UPDATE users SET is_blocked = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 
+       RETURNING id, username, email, is_blocked`,
+      [!!block, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ success: true, user: result.rows[0] });
+  } catch (error) {
+    console.error('Set user blocked error:', error);
+    res.status(500).json({ error: 'Failed to update user status' });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:userId/badge
+ * Grant or revoke blue badge (verified status)
+ */
+router.patch('/:userId/badge', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { has_blue_badge } = req.body;
+    
+    const result = await pool.query(
+      `UPDATE users SET 
+         has_blue_badge = $1, 
+         blue_badge_granted_at = CASE WHEN $1 = TRUE THEN NOW() ELSE NULL END,
+         updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $2 
+       RETURNING id, username, email, has_blue_badge`,
+      [!!has_blue_badge, userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ success: true, user: result.rows[0] });
+  } catch (error) {
+    console.error('Toggle blue badge error:', error);
+    res.status(500).json({ error: 'Failed to update verification status' });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:userId/seller
+ * Grant or revoke seller status
+ */
+router.patch('/:userId/seller', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { is_seller } = req.body;
+    
+    const result = await pool.query(
+      `UPDATE users SET is_seller = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 
+       RETURNING id, username, email, is_seller`,
+      [!!is_seller, userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // If granting seller status, create seller wallet if not exists
+    if (is_seller) {
+      await pool.query(`
+        INSERT INTO seller_wallets (user_id, balance, pending_balance, total_earnings)
+        VALUES ($1, 0, 0, 0)
+        ON CONFLICT (user_id) DO NOTHING
+      `, [userId]);
+    }
+    
+    res.json({ success: true, user: result.rows[0] });
+  } catch (error) {
+    console.error('Toggle seller status error:', error);
+    res.status(500).json({ error: 'Failed to update seller status' });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:userId/admin
+ * Toggle admin status
+ */
+router.patch('/:userId/admin', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { is_admin } = req.body;
+    const result = await pool.query(
+      `UPDATE users SET is_admin = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 
+       RETURNING id, username, email, is_admin`,
+      [!!is_admin, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ success: true, user: result.rows[0] });
+  } catch (error) {
+    console.error('Toggle admin error:', error);
+    res.status(500).json({ error: 'Failed to update admin status' });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:userId/feature
+ * Toggle featured status for a seller (shows on landing page)
+ * Requires seller to be verified AND have at least 1 listing
+ */
+router.patch('/:userId/feature', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { featured } = req.body;
+    
+    // Check if user is a seller with verification status
+    const userCheck = await pool.query(`
+      SELECT u.is_seller, u.has_blue_badge,
+             (SELECT COUNT(*) FROM marketplace_bots WHERE seller_id = u.id AND status = 'approved') as bots_count,
+             (SELECT COUNT(*) FROM marketplace_products WHERE seller_id = u.id AND status = 'approved') as products_count,
+             (SELECT COUNT(*) FROM signal_providers WHERE user_id = u.id AND status = 'approved') as signals_count
+      FROM users u WHERE u.id = $1
+    `, [userId]);
+    
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const user = userCheck.rows[0];
+    if (!user.is_seller) {
+      return res.status(400).json({ error: 'User is not a seller' });
+    }
+    
+    // Only enforce verification and listing requirements when featuring (not when unfeaturing)
+    if (featured) {
+      if (!user.has_blue_badge) {
+        return res.status(400).json({ 
+          error: 'Seller must be verified (have blue badge) to be featured',
+          requires_verification: true
+        });
+      }
+      
+      const totalListings = parseInt(user.bots_count) + parseInt(user.products_count) + parseInt(user.signals_count);
+      if (totalListings < 1) {
+        return res.status(400).json({ 
+          error: 'Seller must have at least 1 approved listing (bot, product, or signal) to be featured',
+          requires_listings: true
+        });
+      }
+    }
+    
+    const result = await pool.query(
+      `UPDATE users SET seller_featured = $1, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $2 RETURNING id, username, seller_featured`,
+      [!!featured, userId]
+    );
+    
+    res.json({ success: true, user: result.rows[0] });
+  } catch (error) {
+    console.error('Toggle featured seller error:', error);
+    res.status(500).json({ error: 'Failed to update featured status' });
+  }
+});
+
+/**
+ * DELETE /api/admin/users/:userId
+ * Delete a user
+ */
+router.delete('/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const adminId = req.user.id;
+    
+    // Prevent self-deletion
+    if (parseInt(userId) === adminId) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+    
+    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id, email', [userId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ success: true, message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
   }
 });
 
