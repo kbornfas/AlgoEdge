@@ -135,7 +135,7 @@ export default function AdminDepositsPage() {
   // Copy state
   const [copied, setCopied] = useState(false);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
   const fetchData = useCallback(async () => {
     if (!token) return;

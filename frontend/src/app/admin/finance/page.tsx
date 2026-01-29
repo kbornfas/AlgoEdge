@@ -109,7 +109,7 @@ export default function AdminFinancePage() {
   const [txTotalPages, setTxTotalPages] = useState(1);
   const [txFilter, setTxFilter] = useState('');
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
     if (tabValue === 0) {
@@ -124,7 +124,7 @@ export default function AdminFinancePage() {
   const fetchAdminWallet = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_URL}/api/admin/wallet`, {
+      const res = await fetch(`${API_URL}/api/admin/wallet/wallet`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -153,7 +153,7 @@ export default function AdminFinancePage() {
       params.append('sort', 'balance');
       params.append('order', 'desc');
 
-      const res = await fetch(`${API_URL}/api/admin/users/balances?${params}`, {
+      const res = await fetch(`${API_URL}/api/admin/wallet/users/balances?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
