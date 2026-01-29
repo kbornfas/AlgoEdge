@@ -59,6 +59,9 @@ import {
   Gift,
   HelpCircle,
   FileText,
+  Heart,
+  Calendar,
+  Trophy,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -66,6 +69,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import SubscriptionGuard from '@/components/SubscriptionGuard';
 
 const drawerWidth = 280;
+const mobileDrawerWidth = 260;
 
 // Menu categories for better organization
 const menuCategories = [
@@ -78,6 +82,9 @@ const menuCategories = [
       { text: 'Copy Trading', icon: Target, href: '/dashboard/copy-trading', requiresSubscription: true },
       { text: 'Analytics', icon: BarChart3, href: '/dashboard/analytics', requiresSubscription: true },
       { text: 'Trade History', icon: History, href: '/dashboard/history', requiresSubscription: true },
+      { text: 'Trading Journal', icon: BookOpen, href: '/dashboard/journal', requiresSubscription: false },
+      { text: 'Signal Leaderboard', icon: TrendingUp, href: '/dashboard/leaderboard', requiresSubscription: false },
+      { text: 'Economic Calendar', icon: Calendar, href: '/dashboard/calendar', requiresSubscription: false },
       { text: 'MT5 Connection', icon: TrendingUp, href: '/dashboard/mt5', requiresSubscription: true },
     ],
   },
@@ -92,6 +99,7 @@ const menuCategories = [
     title: 'Marketplace',
     items: [
       { text: 'Browse Products', icon: Store, href: '/marketplace', requiresSubscription: false },
+      { text: 'Wishlist', icon: Heart, href: '/dashboard/wishlist', requiresSubscription: false },
       { text: 'Seller Dashboard', icon: BarChart3, href: '/dashboard/seller', requiresSubscription: false },
     ],
   },
@@ -99,8 +107,12 @@ const menuCategories = [
     title: 'Resources',
     items: [
       { text: 'Learning Hub', icon: BookOpen, href: '/dashboard/learning-hub', requiresSubscription: true },
+      { text: 'Trading Glossary', icon: BookOpen, href: '/dashboard/glossary', requiresSubscription: false },
+      { text: 'Knowledge Base', icon: HelpCircle, href: '/dashboard/knowledge-base', requiresSubscription: false },
       { text: 'Market News', icon: Newspaper, href: '/dashboard/news', requiresSubscription: true },
+      { text: 'Social Feed', icon: MessageSquare, href: '/dashboard/social', requiresSubscription: false },
       { text: 'Community', icon: MessageSquare, href: '/dashboard/community', requiresSubscription: true },
+      { text: 'Competitions', icon: Trophy, href: '/dashboard/competitions', requiresSubscription: false },
     ],
   },
   {
@@ -256,19 +268,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Logo Section */}
       <Box 
         sx={{ 
-          px: 3, 
-          py: 2.5,
+          px: { xs: 2, lg: 3 }, 
+          py: { xs: 2, lg: 2.5 },
           display: 'flex',
           alignItems: 'center',
-          gap: 2,
+          gap: { xs: 1.5, lg: 2 },
           borderBottom: '1px solid',
           borderColor: alpha(theme.palette.divider, 0.1),
         }}
       >
         <Box
           sx={{
-            width: 44,
-            height: 44,
+            width: { xs: 36, lg: 44 },
+            height: { xs: 36, lg: 44 },
             borderRadius: 2,
             background: 'linear-gradient(135deg, #0066FF 0%, #00D4FF 100%)',
             display: 'flex',
@@ -288,7 +300,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Typography 
             variant="h6" 
             sx={{ 
-              fontWeight: 800, 
+              fontWeight: 800,
+              fontSize: { xs: '1.1rem', lg: '1.25rem' },
               background: 'linear-gradient(135deg, #0066FF 0%, #00D4FF 100%)',
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
@@ -378,10 +391,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Typography
               variant="overline"
               sx={{
-                px: 1.5,
-                py: 1,
+                px: { xs: 1, lg: 1.5 },
+                py: { xs: 0.75, lg: 1 },
                 display: 'block',
-                fontSize: '0.65rem',
+                fontSize: { xs: '0.6rem', lg: '0.65rem' },
                 fontWeight: 700,
                 letterSpacing: '0.1em',
                 color: 'text.secondary',
@@ -411,7 +424,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         sx={{
                           borderRadius: 2,
                           mx: 0.5,
-                          py: 1.2,
+                          py: { xs: 1, lg: 1.2 },
+                          px: { xs: 1, lg: 1.5 },
                           opacity: isLocked ? 0.6 : 1,
                           position: 'relative',
                           transition: 'all 0.2s ease',
@@ -716,7 +730,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             sx={{
               '& .MuiDrawer-paper': {
                 boxSizing: 'border-box',
-                width: drawerWidth,
+                width: isMobile ? mobileDrawerWidth : drawerWidth,
                 borderRight: 'none',
                 boxShadow: theme.palette.mode === 'dark' 
                   ? '4px 0 24px rgba(0,0,0,0.3)'
