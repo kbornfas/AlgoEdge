@@ -125,12 +125,17 @@ export default function AdminUsersPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+      console.log('Fetching users with token:', token ? 'Token exists' : 'NO TOKEN');
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) {
-        const data = await res.json();
+      const data = await res.json();
+      console.log('Users API response:', res.status, data);
+      if (res.ok && data.success) {
         setUsers(data.users || []);
+      } else {
+        console.error('Failed to fetch users:', data.error || data);
+        setAlert({ type: 'error', message: data.error || 'Failed to fetch users' });
       }
     } catch (error) {
       console.error('Error fetching users:', error);

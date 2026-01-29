@@ -115,15 +115,21 @@ export default function AdminFeaturedPage() {
   const fetchFeaturedData = async () => {
     try {
       setLoading(true);
+      const token = getToken();
+      console.log('Fetching featured with token:', token ? 'Token exists' : 'NO TOKEN');
       const response = await fetch(`${API_URL}/api/admin/featured`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
+      console.log('Featured API response:', response.status, data);
       if (data.success) {
         setBots(data.bots || []);
         setSignals(data.signals || []);
         setProducts(data.products || []);
         setSellers(data.sellers || []);
+      } else {
+        console.error('Failed to fetch featured:', data.error || data);
+        setSnackbar({ open: true, message: data.error || 'Failed to load featured data', severity: 'error' });
       }
     } catch (error) {
       console.error('Error fetching featured data:', error);
