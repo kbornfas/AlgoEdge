@@ -1320,6 +1320,121 @@ router.delete('/api-keys/:id', authenticate, async (req, res) => {
 // SELLER DASHBOARD
 // ============================================================================
 
+// Get seller analytics (charts data)
+router.get('/seller/analytics', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { period = '30' } = req.query; // days
+    const days = parseInt(period) || 30;
+
+    // Earnings over time (daily)
+    const earningsOverTime = await pool.query(`
+      SELECT 
+        DATE(wt.created_at) as date,
+        COALESCE(SUM(wt.amount), 0) as earnings,
+        COUNT(*) as sales_count
+      FROM wallet_transactions wt
+      WHERE wt.user_id = $1 
+        AND wt.type = 'sale_earning'
+        AND wt.created_at > NOW() - INTERVAL '${days} days'
+      GROUP BY DATE(wt.created_at)
+      ORDER BY date ASC
+    `, [userId]);
+
+    // Product performance breakdown
+    const productPerformance = await pool.query(`
+      SELECT 
+        COALESCE(b.name, p.name, sp.display_name) as product_name,
+        CASE 
+          WHEN mp.item_type = 'bot' THEN 'Bot'
+          WHEN mp.item_type = 'product' THEN 'Product'
+          WHEN mp.item_type = 'signal' THEN 'Signal'
+          ELSE 'Other'
+        END as product_type,
+        COUNT(*) as total_sales,
+        COALESCE(SUM(mp.seller_earnings), 0) as total_earnings,
+        COALESCE(AVG(r.rating), 0) as avg_rating
+      FROM marketplace_purchases mp
+      LEFT JOIN marketplace_bots b ON mp.item_type = 'bot' AND mp.item_id = b.id
+      LEFT JOIN marketplace_products p ON mp.item_type = 'product' AND mp.item_id = p.id
+      LEFT JOIN signal_providers sp ON mp.item_type = 'signal' AND mp.item_id = sp.id
+      LEFT JOIN reviews r ON r.item_id = mp.item_id AND r.item_type = mp.item_type
+      WHERE mp.seller_id = $1 AND mp.status = 'completed'
+      GROUP BY mp.item_type, mp.item_id, b.name, p.name, sp.display_name
+      ORDER BY total_earnings DESC
+      LIMIT 10
+    `, [userId]);
+
+    // Customer demographics (basic: new vs returning)
+    const customerStats = await pool.query(`
+      SELECT 
+        COUNT(DISTINCT buyer_id) as unique_customers,
+        COUNT(*) as total_purchases,
+        ROUND(AVG(total_amount)::numeric, 2) as avg_order_value
+      FROM marketplace_purchases
+      WHERE seller_id = $1 AND status = 'completed'
+    `, [userId]);
+
+    // Top customers
+    const topCustomers = await pool.query(`
+      SELECT 
+        u.username,
+        u.full_name,
+        u.profile_image,
+        COUNT(*) as purchase_count,
+        COALESCE(SUM(mp.seller_earnings), 0) as total_spent
+      FROM marketplace_purchases mp
+      JOIN users u ON mp.buyer_id = u.id
+      WHERE mp.seller_id = $1 AND mp.status = 'completed'
+      GROUP BY u.id, u.username, u.full_name, u.profile_image
+      ORDER BY total_spent DESC
+      LIMIT 5
+    `, [userId]);
+
+    // Monthly comparison
+    const monthlyComparison = await pool.query(`
+      SELECT 
+        to_char(created_at, 'YYYY-MM') as month,
+        COUNT(*) as sales,
+        COALESCE(SUM(seller_earnings), 0) as revenue
+      FROM marketplace_purchases
+      WHERE seller_id = $1 
+        AND status = 'completed'
+        AND created_at > NOW() - INTERVAL '6 months'
+      GROUP BY to_char(created_at, 'YYYY-MM')
+      ORDER BY month ASC
+    `, [userId]);
+
+    // Reviews breakdown
+    const reviewsBreakdown = await pool.query(`
+      SELECT 
+        rating,
+        COUNT(*) as count
+      FROM reviews r
+      JOIN marketplace_purchases mp ON r.item_id = mp.item_id AND r.item_type = mp.item_type
+      WHERE mp.seller_id = $1
+      GROUP BY rating
+      ORDER BY rating DESC
+    `, [userId]);
+
+    res.json({
+      success: true,
+      analytics: {
+        earningsOverTime: earningsOverTime.rows,
+        productPerformance: productPerformance.rows,
+        customerStats: customerStats.rows[0] || { unique_customers: 0, total_purchases: 0, avg_order_value: 0 },
+        topCustomers: topCustomers.rows,
+        monthlyComparison: monthlyComparison.rows,
+        reviewsBreakdown: reviewsBreakdown.rows,
+        period: days
+      }
+    });
+  } catch (error) {
+    console.error('Get seller analytics error:', error);
+    res.status(500).json({ error: 'Failed to get seller analytics' });
+  }
+});
+
 // Get seller dashboard
 router.get('/seller/dashboard', authenticate, async (req, res) => {
   try {

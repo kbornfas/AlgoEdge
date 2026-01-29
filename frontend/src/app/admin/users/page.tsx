@@ -35,6 +35,7 @@ import {
   InputLabel,
   Pagination,
   Badge,
+  Checkbox,
 } from '@mui/material';
 import {
   Search,
@@ -62,6 +63,7 @@ import {
   Store,
 } from 'lucide-react';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
+import AdminBulkActions from '@/components/AdminBulkActions';
 
 interface User {
   id: number;
@@ -99,6 +101,7 @@ export default function AdminUsersPage() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
 
   const stats = {
     total: users.length,
@@ -404,12 +407,33 @@ export default function AdminUsersPage() {
         </CardContent>
       </Card>
 
+      {/* Bulk Actions */}
+      <AdminBulkActions
+        selectedUsers={selectedUserIds}
+        onActionComplete={fetchUsers}
+        onClearSelection={() => setSelectedUserIds([])}
+      />
+
       {/* Users Table */}
       <Card sx={{ bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 3 }}>
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell padding="checkbox" sx={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                  <Checkbox
+                    indeterminate={selectedUserIds.length > 0 && selectedUserIds.length < paginatedUsers.length}
+                    checked={paginatedUsers.length > 0 && selectedUserIds.length === paginatedUsers.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedUserIds(paginatedUsers.map(u => u.id));
+                      } else {
+                        setSelectedUserIds([]);
+                      }
+                    }}
+                    sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#8B5CF6' } }}
+                  />
+                </TableCell>
                 <TableCell sx={{ color: 'rgba(255,255,255,0.7)', borderColor: 'rgba(255,255,255,0.06)' }}>User</TableCell>
                 <TableCell sx={{ color: 'rgba(255,255,255,0.7)', borderColor: 'rgba(255,255,255,0.06)' }}>Status</TableCell>
                 <TableCell sx={{ color: 'rgba(255,255,255,0.7)', borderColor: 'rgba(255,255,255,0.06)' }}>Subscription</TableCell>
@@ -421,20 +445,39 @@ export default function AdminUsersPage() {
               {loading ? (
                 Array.from({ length: 10 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={5} sx={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                    <TableCell colSpan={6} sx={{ borderColor: 'rgba(255,255,255,0.06)' }}>
                       <Skeleton variant="rectangular" height={50} sx={{ borderRadius: 1, bgcolor: 'rgba(255,255,255,0.05)' }} />
                     </TableCell>
                   </TableRow>
                 ))
               ) : paginatedUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 8 }}>
+                  <TableCell colSpan={6} align="center" sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 8 }}>
                     <Typography sx={{ color: 'rgba(255,255,255,0.4)' }}>No users found</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedUsers.map((user) => (
-                  <TableRow key={user.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                  <TableRow 
+                    key={user.id} 
+                    sx={{ 
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' },
+                      bgcolor: selectedUserIds.includes(user.id) ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+                    }}
+                  >
+                    <TableCell padding="checkbox" sx={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                      <Checkbox
+                        checked={selectedUserIds.includes(user.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedUserIds([...selectedUserIds, user.id]);
+                          } else {
+                            setSelectedUserIds(selectedUserIds.filter(id => id !== user.id));
+                          }
+                        }}
+                        sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#8B5CF6' } }}
+                      />
+                    </TableCell>
                     <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)' }}>
                       <Stack direction="row" alignItems="center" spacing={2}>
                         <Avatar sx={{ width: 40, height: 40, bgcolor: user.is_admin ? '#F59E0B' : '#3B82F6' }}>

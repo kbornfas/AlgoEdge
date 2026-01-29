@@ -39,6 +39,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
+import SubscriptionCountdown from '@/components/SubscriptionCountdown';
 
 interface MT5Account {
   id: number;
@@ -331,6 +332,9 @@ export default function DashboardPage() {
   const [activeRobots, setActiveRobots] = useState(0);
   const [user, setUser] = useState<any>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscriptionExpiry, setSubscriptionExpiry] = useState<string | null>(null);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number>(0);
 
   useEffect(() => {
@@ -352,6 +356,9 @@ export default function DashboardPage() {
         if (response.ok) {
           const data = await response.json();
           setIsSubscribed(data.isActive || data.status === 'active');
+          setSubscriptionExpiry(data.expiresAt || null);
+          setSubscriptionPlan(data.plan || null);
+          setIsExpired(data.isExpired || false);
         }
       } catch (error) {
         console.error('Error checking subscription:', error);
@@ -580,6 +587,15 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
+        {/* Subscription Status - Full width on mobile, 1/4 on desktop */}
+        <Grid item xs={12} lg={3}>
+          <SubscriptionCountdown
+            expiresAt={subscriptionExpiry}
+            plan={subscriptionPlan}
+            isExpired={isExpired}
+            isActive={isSubscribed}
+          />
+        </Grid>
         <Grid item xs={6} sm={6} lg={3}>
           <StatCard
             title="Account Balance"
@@ -613,6 +629,10 @@ export default function DashboardPage() {
             onClick={() => router.push('/dashboard/robots')}
           />
         </Grid>
+      </Grid>
+
+      {/* Secondary Stats Row */}
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
         <Grid item xs={6} sm={6} lg={3}>
           <StatCard
             title="Total Trades"

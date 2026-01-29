@@ -5,6 +5,9 @@
 
 import { sendWeeklyReportsToAll } from './notificationService.js';
 import { sendDailyReportsToAllUsers } from './emailService.js';
+import { startSubscriptionReminderScheduler, stopSubscriptionReminderScheduler, runSubscriptionReminders } from './subscriptionReminderService.js';
+import { startSellerReportScheduler, triggerSellerReports } from './sellerReportService.js';
+import { startWeeklyTradingScheduler, triggerWeeklyTradingSummaries } from './weeklyTradingService.js';
 import pool from '../config/database.js';
 
 let weeklyReportInterval = null;
@@ -111,6 +114,9 @@ export function startReportSchedulers() {
   
   startWeeklyReportScheduler();
   startDailyReportScheduler();
+  startSubscriptionReminderScheduler();
+  startSellerReportScheduler();
+  startWeeklyTradingScheduler();
   
   console.log('✅ Report schedulers started successfully\n');
 }
@@ -127,6 +133,7 @@ export function stopReportSchedulers() {
     clearTimeout(dailyReportInterval);
     dailyReportInterval = null;
   }
+  stopSubscriptionReminderScheduler();
   console.log('🛑 Report schedulers stopped');
 }
 
@@ -146,9 +153,36 @@ export async function triggerDailyReports() {
   return await legacySendDaily(pool);
 }
 
+/**
+ * Manually trigger subscription reminders (for testing)
+ */
+export async function triggerSubscriptionReminders() {
+  console.log('📧 Manually triggering subscription reminders...');
+  return await runSubscriptionReminders();
+}
+
+/**
+ * Manually trigger seller reports (for testing)
+ */
+export async function triggerSellerMonthlyReports() {
+  console.log('📧 Manually triggering seller monthly reports...');
+  return await triggerSellerReports();
+}
+
+/**
+ * Manually trigger weekly trading summaries (for testing)
+ */
+export async function triggerTradingSummaries() {
+  console.log('📧 Manually triggering weekly trading summaries...');
+  return await triggerWeeklyTradingSummaries();
+}
+
 export default {
   startReportSchedulers,
   stopReportSchedulers,
   triggerWeeklyReports,
   triggerDailyReports,
+  triggerSubscriptionReminders,
+  triggerSellerMonthlyReports,
+  triggerTradingSummaries,
 };

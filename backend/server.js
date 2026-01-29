@@ -39,6 +39,7 @@ import walletRoutes from './routes/walletRoutes.js';
 import verificationRoutes from './routes/verificationRoutes.js';
 import adminWalletRoutes from './routes/adminWalletRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
+import adminUserRoutes from './routes/adminUserRoutes.js';
 
 /* -------------------------------------------------------------------------- */
 /*                              ENV & CONSTANTS                               */
@@ -152,6 +153,7 @@ const setupRoutes = (app) => {
   app.use('/api/wallet', walletRoutes);
   app.use('/api/verification', verificationRoutes);
   app.use('/api/admin', adminWalletRoutes);
+  app.use('/api/admin/users', adminUserRoutes);
   app.use('/api/profile', profileRoutes);
   console.log('✅ All routes registered');
 };

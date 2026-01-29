@@ -8,6 +8,7 @@ import { sendEmail, generateVerificationCode, sendVerificationCodeEmail, sendVer
 import { auditLog } from '../middleware/audit.js';
 import { sendNewReferralTelegram } from '../services/telegramService.js';
 import { createSession } from '../services/sessionService.js';
+import { logActivity, ActivityTypes } from '../services/activityLogService.js';
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -212,6 +213,14 @@ export const login = async (req, res) => {
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
+      // Log failed login attempt
+      await logActivity({
+        userId: user.id,
+        type: ActivityTypes.LOGIN_FAILED,
+        description: 'Invalid password attempt',
+        metadata: { username },
+        req,
+      });
       return res.status(401).json({ error: 'Incorrect password. Please try again.' });
     }
 
@@ -290,6 +299,15 @@ export const login = async (req, res) => {
 
     // Create session for tracking across devices
     await createSession(user.id, req, token);
+
+    // Log successful login
+    await logActivity({
+      userId: user.id,
+      type: ActivityTypes.LOGIN,
+      description: 'User logged in successfully',
+      metadata: { username, twoFA: user.two_fa_enabled },
+      req,
+    });
 
     // Audit log
     auditLog(user.id, 'USER_LOGIN', { username }, req);

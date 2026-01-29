@@ -63,6 +63,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import VerificationModal from '@/components/VerificationModal';
+import SellerAnalytics from '@/components/SellerAnalytics';
 
 interface SellerStats {
   wallet: {
@@ -1051,6 +1052,7 @@ export default function SellerDashboardPage() {
         >
           <Tab label="Bots" icon={<Bot size={16} />} iconPosition="start" />
           <Tab label="Products" icon={<Package size={16} />} iconPosition="start" />
+          <Tab label="Analytics" icon={<TrendingUp size={16} />} iconPosition="start" />
           <Tab label="Transactions" icon={<FileText size={16} />} iconPosition="start" />
         </Tabs>
 
@@ -1223,8 +1225,13 @@ export default function SellerDashboardPage() {
           </TableContainer>
         )}
 
-        {/* Transactions Tab */}
+        {/* Analytics Tab */}
         {activeTab === 2 && (
+          <SellerAnalytics />
+        )}
+
+        {/* Transactions Tab */}
+        {activeTab === 3 && (
           <TableContainer component={Paper} sx={{ bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
             <Table>
               <TableHead>

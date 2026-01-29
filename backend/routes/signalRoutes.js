@@ -69,9 +69,9 @@ router.get('/subscription', authenticate, async (req, res) => {
 
 /**
  * POST /api/signals/subscribe
- * Subscribe to a signal tier
+ * Subscribe to a signal tier (requires active platform subscription)
  */
-router.post('/subscribe', authenticate, async (req, res) => {
+router.post('/subscribe', authenticate, requireSubscription, async (req, res) => {
   try {
     const { tierSlug, stripeSubscriptionId } = req.body;
     
