@@ -40,6 +40,14 @@ import verificationRoutes from './routes/verificationRoutes.js';
 import adminWalletRoutes from './routes/adminWalletRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
 import adminUserRoutes from './routes/adminUserRoutes.js';
+import exportRoutes from './routes/exportRoutes.js';
+import alertRoutes from './routes/alertRoutes.js';
+import changelogRoutes from './routes/changelogRoutes.js';
+import feedbackRoutes from './routes/feedbackRoutes.js';
+import journalRoutes from './routes/journalRoutes.js';
+import leaderboardRoutes from './routes/leaderboardRoutes.js';
+import reviewRoutes from './routes/reviewRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 /* -------------------------------------------------------------------------- */
 /*                              ENV & CONSTANTS                               */
@@ -152,9 +160,17 @@ const setupRoutes = (app) => {
   app.use('/api/seller', sellerRoutes);
   app.use('/api/wallet', walletRoutes);
   app.use('/api/verification', verificationRoutes);
-  app.use('/api/admin', adminWalletRoutes);
+  app.use('/api/admin/wallet', adminWalletRoutes);
   app.use('/api/admin/users', adminUserRoutes);
+  app.use('/api/admin', adminRoutes);
   app.use('/api/profile', profileRoutes);
+  app.use('/api/export', exportRoutes);
+  app.use('/api/alerts', alertRoutes);
+  app.use('/api/changelog', changelogRoutes);
+  app.use('/api/feedback', feedbackRoutes);
+  app.use('/api/journal', journalRoutes);
+  app.use('/api/leaderboard', leaderboardRoutes);
+  app.use('/api/reviews', reviewRoutes);
   console.log('✅ All routes registered');
 };
 

@@ -2,6 +2,15 @@ import express from 'express';
 import webPush from 'web-push';
 import pool from '../config/database.js';
 import { authenticate as authenticateToken } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimiter.js';
+import {
+  getInAppNotifications,
+  getUnreadNotificationCount,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteInAppNotification,
+  clearAllInAppNotifications,
+} from '../services/notificationService.js';
 
 const router = express.Router();
 
@@ -220,6 +229,126 @@ router.post('/test', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error sending test notification:', error);
     res.status(500).json({ error: 'Failed to send test notification' });
+  }
+});
+
+// ===================================================
+// IN-APP NOTIFICATIONS (Notification Center)
+// ===================================================
+
+/**
+ * Get in-app notifications
+ * GET /api/notifications/inbox
+ */
+router.get('/inbox', authenticateToken, apiLimiter, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    const offset = (page - 1) * limit;
+    const unreadOnly = req.query.unread === 'true';
+    
+    const notifications = await getInAppNotifications(userId, { limit, offset, unreadOnly });
+    const unreadCount = await getUnreadNotificationCount(userId);
+    
+    res.json({
+      success: true,
+      notifications,
+      unreadCount,
+      pagination: { page, limit },
+    });
+  } catch (error) {
+    console.error('Get inbox error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get notifications' });
+  }
+});
+
+/**
+ * Get unread count only
+ * GET /api/notifications/count
+ */
+router.get('/count', authenticateToken, apiLimiter, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const count = await getUnreadNotificationCount(userId);
+    res.json({ success: true, count });
+  } catch (error) {
+    console.error('Get notification count error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get count' });
+  }
+});
+
+/**
+ * Mark notification as read
+ * PATCH /api/notifications/inbox/:id/read
+ */
+router.patch('/inbox/:id/read', authenticateToken, apiLimiter, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const notificationId = parseInt(req.params.id);
+    
+    const success = await markNotificationAsRead(userId, notificationId);
+    
+    if (success) {
+      res.json({ success: true, message: 'Marked as read' });
+    } else {
+      res.status(404).json({ success: false, error: 'Notification not found' });
+    }
+  } catch (error) {
+    console.error('Mark read error:', error);
+    res.status(500).json({ success: false, error: 'Failed to mark as read' });
+  }
+});
+
+/**
+ * Mark all notifications as read
+ * POST /api/notifications/inbox/read-all
+ */
+router.post('/inbox/read-all', authenticateToken, apiLimiter, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const count = await markAllNotificationsAsRead(userId);
+    res.json({ success: true, message: `${count} marked as read`, count });
+  } catch (error) {
+    console.error('Mark all read error:', error);
+    res.status(500).json({ success: false, error: 'Failed to mark all as read' });
+  }
+});
+
+/**
+ * Delete a notification
+ * DELETE /api/notifications/inbox/:id
+ */
+router.delete('/inbox/:id', authenticateToken, apiLimiter, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const notificationId = parseInt(req.params.id);
+    
+    const success = await deleteInAppNotification(userId, notificationId);
+    
+    if (success) {
+      res.json({ success: true, message: 'Notification deleted' });
+    } else {
+      res.status(404).json({ success: false, error: 'Notification not found' });
+    }
+  } catch (error) {
+    console.error('Delete notification error:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete' });
+  }
+});
+
+/**
+ * Clear all notifications
+ * DELETE /api/notifications/inbox
+ */
+router.delete('/inbox', authenticateToken, apiLimiter, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const count = await clearAllInAppNotifications(userId);
+    res.json({ success: true, message: `${count} notifications cleared`, count });
+  } catch (error) {
+    console.error('Clear notifications error:', error);
+    res.status(500).json({ success: false, error: 'Failed to clear' });
   }
 });
 

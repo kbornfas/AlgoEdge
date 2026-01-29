@@ -94,13 +94,22 @@ export default function NotificationsPage() {
     try {
       const token = localStorage.getItem('token');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/notifications`, {
+      const response = await fetch(`${apiUrl}/api/notifications/inbox`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
         const data = await response.json();
-        setNotifications(data.notifications || []);
+        // Map the new format to the existing format
+        const mapped = (data.notifications || []).map((n: any) => ({
+          id: n.id,
+          type: n.type || 'info',
+          title: n.title,
+          message: n.message,
+          is_read: n.read,
+          created_at: n.created_at,
+        }));
+        setNotifications(mapped);
       } else {
         // No notifications endpoint yet - show empty state
         setNotifications([]);
@@ -117,7 +126,7 @@ export default function NotificationsPage() {
     try {
       const token = localStorage.getItem('token');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      await fetch(`${apiUrl}/api/notifications/read-all`, {
+      await fetch(`${apiUrl}/api/notifications/inbox/read-all`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -131,7 +140,7 @@ export default function NotificationsPage() {
     try {
       const token = localStorage.getItem('token');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      await fetch(`${apiUrl}/api/notifications/${id}`, {
+      await fetch(`${apiUrl}/api/notifications/inbox/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

@@ -21,6 +21,7 @@ import { authenticate } from '../middleware/auth.js';
 import { apiLimiter } from '../middleware/rateLimiter.js';
 import { fetchEconomicCalendar, getUpcomingNews, getRecentNews } from '../services/newsService.js';
 import { getUserSessions, revokeSession, revokeOtherSessions, parseUserAgent } from '../services/sessionService.js';
+import { getUserActivities } from '../services/activityLogService.js';
 
 const router = express.Router();
 
@@ -236,6 +237,50 @@ router.post('/sessions/revoke-others', apiLimiter, async (req, res) => {
   } catch (error) {
     console.error('Revoke other sessions error:', error);
     res.status(500).json({ success: false, error: 'Failed to revoke sessions' });
+  }
+});
+
+// Activity / Login History
+router.get('/activity', apiLimiter, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 15, 50);
+    const offset = (page - 1) * limit;
+    const type = req.query.type; // Optional filter
+    
+    // Build options
+    const options = { limit: limit + 1, offset }; // Get one extra to check if more exist
+    if (type && type !== 'all') {
+      options.types = [type];
+    }
+    
+    const activities = await getUserActivities(userId, options);
+    const hasMore = activities.length > limit;
+    const results = hasMore ? activities.slice(0, limit) : activities;
+    
+    // Count total for pagination
+    const countResult = await pool.query(
+      'SELECT COUNT(*) FROM activity_logs WHERE user_id = $1' + 
+        (type && type !== 'all' ? ' AND activity_type = $2' : ''),
+      type && type !== 'all' ? [userId, type] : [userId]
+    );
+    const total = parseInt(countResult.rows[0].count);
+    
+    res.json({
+      success: true,
+      activities: results,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore,
+      },
+    });
+  } catch (error) {
+    console.error('Get activity error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get activity' });
   }
 });
 

@@ -678,6 +678,165 @@ export async function sendWeeklyReportsToAll() {
   }
 }
 
+// ===================================================
+// IN-APP NOTIFICATIONS
+// ===================================================
+
+export const InAppNotificationTypes = {
+  SIGNAL: 'signal',
+  TRADE: 'trade',
+  SYSTEM: 'system',
+  PROMO: 'promo',
+  ALERT: 'alert',
+  SECURITY: 'security',
+  SUBSCRIPTION: 'subscription',
+  WALLET: 'wallet',
+  MARKETPLACE: 'marketplace',
+};
+
+/**
+ * Create an in-app notification for a user
+ */
+export async function createInAppNotification({
+  userId,
+  type,
+  title,
+  message,
+  icon = null,
+  link = null,
+  metadata = null,
+}) {
+  try {
+    const result = await pool.query(`
+      INSERT INTO in_app_notifications (user_id, type, title, message, icon, link, metadata, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING *
+    `, [userId, type, title, message, icon, link, metadata ? JSON.stringify(metadata) : null]);
+    
+    return result.rows[0];
+  } catch (error) {
+    console.error('Failed to create in-app notification:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Create notifications for multiple users
+ */
+export async function createBulkInAppNotifications(userIds, notification) {
+  if (!userIds || userIds.length === 0) return true;
+  
+  try {
+    const values = userIds.map((userId, idx) => {
+      const offset = idx * 7;
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, NOW())`;
+    }).join(',');
+    
+    const params = userIds.flatMap(userId => [
+      userId,
+      notification.type,
+      notification.title,
+      notification.message,
+      notification.icon || null,
+      notification.link || null,
+      notification.metadata ? JSON.stringify(notification.metadata) : null,
+    ]);
+    
+    await pool.query(`
+      INSERT INTO in_app_notifications (user_id, type, title, message, icon, link, metadata, created_at)
+      VALUES ${values}
+    `, params);
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to create bulk notifications:', error.message);
+    return false;
+  }
+}
+
+/**
+ * Get in-app notifications for a user
+ */
+export async function getInAppNotifications(userId, options = {}) {
+  const { limit = 20, offset = 0, unreadOnly = false } = options;
+  
+  let query = `
+    SELECT id, type, title, message, icon, link, metadata, read, read_at, created_at
+    FROM in_app_notifications
+    WHERE user_id = $1
+  `;
+  
+  if (unreadOnly) {
+    query += ` AND read = false`;
+  }
+  
+  query += ` ORDER BY created_at DESC LIMIT $2 OFFSET $3`;
+  
+  const result = await pool.query(query, [userId, limit, offset]);
+  return result.rows;
+}
+
+/**
+ * Get unread notification count
+ */
+export async function getUnreadNotificationCount(userId) {
+  const result = await pool.query(
+    'SELECT COUNT(*) FROM in_app_notifications WHERE user_id = $1 AND read = false',
+    [userId]
+  );
+  return parseInt(result.rows[0].count);
+}
+
+/**
+ * Mark notification as read
+ */
+export async function markNotificationAsRead(userId, notificationId) {
+  const result = await pool.query(`
+    UPDATE in_app_notifications 
+    SET read = true, read_at = NOW() 
+    WHERE id = $1 AND user_id = $2
+    RETURNING *
+  `, [notificationId, userId]);
+  
+  return result.rowCount > 0;
+}
+
+/**
+ * Mark all notifications as read
+ */
+export async function markAllNotificationsAsRead(userId) {
+  const result = await pool.query(`
+    UPDATE in_app_notifications 
+    SET read = true, read_at = NOW() 
+    WHERE user_id = $1 AND read = false
+    RETURNING id
+  `, [userId]);
+  
+  return result.rowCount;
+}
+
+/**
+ * Delete a notification
+ */
+export async function deleteInAppNotification(userId, notificationId) {
+  const result = await pool.query(
+    'DELETE FROM in_app_notifications WHERE id = $1 AND user_id = $2 RETURNING id',
+    [notificationId, userId]
+  );
+  return result.rowCount > 0;
+}
+
+/**
+ * Clear all notifications for a user
+ */
+export async function clearAllInAppNotifications(userId) {
+  const result = await pool.query(
+    'DELETE FROM in_app_notifications WHERE user_id = $1 RETURNING id',
+    [userId]
+  );
+  return result.rowCount;
+}
+
 export default {
   sendTradeOpenedAlert,
   sendTradeClosedAlert,
@@ -685,4 +844,14 @@ export default {
   sendMarketNews,
   calculateWeeklyStats,
   sendWeeklyReportsToAll,
+  // In-app notifications
+  InAppNotificationTypes,
+  createInAppNotification,
+  createBulkInAppNotifications,
+  getInAppNotifications,
+  getUnreadNotificationCount,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteInAppNotification,
+  clearAllInAppNotifications,
 };
