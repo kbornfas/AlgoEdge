@@ -15,6 +15,66 @@ const MINIMUM_PAYOUT = parseFloat(process.env.MINIMUM_PAYOUT) || 50;
 const COMMISSION_CLEARING_DAYS = parseInt(process.env.COMMISSION_CLEARING_DAYS) || 7;
 
 // ============================================================================
+// SELLER PROFILE & STATUS
+// ============================================================================
+
+/**
+ * GET /api/seller/profile
+ * Get seller profile and status - used to check if user is a seller
+ */
+router.get('/profile', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Check if user is an approved seller
+    const user = await pool.query(`
+      SELECT id, is_seller, seller_slug, has_blue_badge, full_name, profile_image
+      FROM users WHERE id = $1
+    `, [userId]);
+
+    if (user.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userData = user.rows[0];
+
+    // Check for seller application status
+    const application = await pool.query(`
+      SELECT id, status, created_at, updated_at
+      FROM seller_applications 
+      WHERE user_id = $1 
+      ORDER BY created_at DESC LIMIT 1
+    `, [userId]);
+
+    const appData = application.rows[0] || null;
+
+    // Determine seller status
+    let sellerStatus = 'not_applied';
+    if (userData.is_seller) {
+      sellerStatus = 'approved';
+    } else if (appData) {
+      sellerStatus = appData.status; // pending, approved, rejected
+    }
+
+    res.json({
+      success: true,
+      seller: {
+        status: sellerStatus,
+        is_seller: userData.is_seller || false,
+        seller_slug: userData.seller_slug,
+        has_blue_badge: userData.has_blue_badge || false,
+        full_name: userData.full_name,
+        profile_image: userData.profile_image,
+      },
+      application: appData,
+    });
+  } catch (error) {
+    console.error('Get seller profile error:', error);
+    res.status(500).json({ error: 'Failed to get seller profile' });
+  }
+});
+
+// ============================================================================
 // SELLER DASHBOARD
 // ============================================================================
 
@@ -664,6 +724,293 @@ router.post('/telegram/join-free', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Error joining free channel:', error);
     res.status(500).json({ error: 'Failed to join channel' });
+  }
+});
+
+// ============================================================================
+// SELLER CUSTOMERS
+// ============================================================================
+
+/**
+ * GET /api/seller/customers
+ * Get all customers (buyers) of seller's products/bots
+ */
+router.get('/customers', authenticate, async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+    const { page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Get all unique buyers from product and bot purchases
+    const customers = await pool.query(`
+      SELECT DISTINCT ON (u.id)
+        u.id,
+        u.full_name,
+        u.email,
+        u.profile_image,
+        u.created_at as user_joined,
+        (
+          SELECT COUNT(*) FROM marketplace_product_purchases pp 
+          JOIN marketplace_products p ON pp.product_id = p.id 
+          WHERE p.seller_id = $1 AND pp.buyer_id = u.id
+        ) + (
+          SELECT COUNT(*) FROM marketplace_bot_purchases bp 
+          JOIN marketplace_bots b ON bp.bot_id = b.id 
+          WHERE b.seller_id = $1 AND bp.buyer_id = u.id
+        ) as total_purchases,
+        (
+          SELECT COALESCE(SUM(pp.price_paid), 0) FROM marketplace_product_purchases pp 
+          JOIN marketplace_products p ON pp.product_id = p.id 
+          WHERE p.seller_id = $1 AND pp.buyer_id = u.id
+        ) + (
+          SELECT COALESCE(SUM(bp.price_paid), 0) FROM marketplace_bot_purchases bp 
+          JOIN marketplace_bots b ON bp.bot_id = b.id 
+          WHERE b.seller_id = $1 AND bp.buyer_id = u.id
+        ) as total_spent,
+        (
+          SELECT MAX(created_at) FROM (
+            SELECT pp.created_at FROM marketplace_product_purchases pp 
+            JOIN marketplace_products p ON pp.product_id = p.id 
+            WHERE p.seller_id = $1 AND pp.buyer_id = u.id
+            UNION ALL
+            SELECT bp.created_at FROM marketplace_bot_purchases bp 
+            JOIN marketplace_bots b ON bp.bot_id = b.id 
+            WHERE b.seller_id = $1 AND bp.buyer_id = u.id
+          ) as all_purchases
+        ) as last_purchase
+      FROM users u
+      WHERE u.id IN (
+        SELECT DISTINCT pp.buyer_id FROM marketplace_product_purchases pp 
+        JOIN marketplace_products p ON pp.product_id = p.id 
+        WHERE p.seller_id = $1
+        UNION
+        SELECT DISTINCT bp.buyer_id FROM marketplace_bot_purchases bp 
+        JOIN marketplace_bots b ON bp.bot_id = b.id 
+        WHERE b.seller_id = $1
+      )
+      ORDER BY u.id, last_purchase DESC
+      LIMIT $2 OFFSET $3
+    `, [sellerId, parseInt(limit), offset]);
+
+    // Get total count
+    const countResult = await pool.query(`
+      SELECT COUNT(DISTINCT buyer_id) as total FROM (
+        SELECT pp.buyer_id FROM marketplace_product_purchases pp 
+        JOIN marketplace_products p ON pp.product_id = p.id 
+        WHERE p.seller_id = $1
+        UNION
+        SELECT bp.buyer_id FROM marketplace_bot_purchases bp 
+        JOIN marketplace_bots b ON bp.bot_id = b.id 
+        WHERE b.seller_id = $1
+      ) as all_buyers
+    `, [sellerId]);
+
+    res.json({
+      success: true,
+      customers: customers.rows,
+      total: parseInt(countResult.rows[0]?.total || 0),
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+  } catch (error) {
+    console.error('Error fetching customers:', error);
+    res.status(500).json({ error: 'Failed to fetch customers' });
+  }
+});
+
+/**
+ * GET /api/seller/customers/:id/purchases
+ * Get purchase history for a specific customer
+ */
+router.get('/customers/:id/purchases', authenticate, async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+    const customerId = req.params.id;
+
+    const purchases = await pool.query(`
+      SELECT * FROM (
+        SELECT 
+          pp.id,
+          'product' as type,
+          p.name as item_name,
+          p.slug as item_slug,
+          pp.price_paid,
+          pp.created_at
+        FROM marketplace_product_purchases pp 
+        JOIN marketplace_products p ON pp.product_id = p.id 
+        WHERE p.seller_id = $1 AND pp.buyer_id = $2
+        
+        UNION ALL
+        
+        SELECT 
+          bp.id,
+          'bot' as type,
+          b.name as item_name,
+          b.slug as item_slug,
+          bp.price_paid,
+          bp.created_at
+        FROM marketplace_bot_purchases bp 
+        JOIN marketplace_bots b ON bp.bot_id = b.id 
+        WHERE b.seller_id = $1 AND bp.buyer_id = $2
+      ) as all_purchases
+      ORDER BY created_at DESC
+    `, [sellerId, customerId]);
+
+    res.json({
+      success: true,
+      purchases: purchases.rows,
+    });
+  } catch (error) {
+    console.error('Error fetching customer purchases:', error);
+    res.status(500).json({ error: 'Failed to fetch customer purchases' });
+  }
+});
+
+// ============================================================================
+// SELLER REVIEWS
+// ============================================================================
+
+/**
+ * GET /api/seller/reviews
+ * Get all reviews on seller's products/bots
+ */
+router.get('/reviews', authenticate, async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+    const { page = 1, limit = 20, filter = 'all' } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let filterCondition = '';
+    if (filter === 'pending') filterCondition = "AND r.status = 'pending'";
+    else if (filter === 'approved') filterCondition = "AND r.status = 'approved'";
+
+    const reviews = await pool.query(`
+      SELECT * FROM (
+        SELECT 
+          r.id,
+          'product' as type,
+          p.id as item_id,
+          p.name as item_name,
+          p.slug as item_slug,
+          r.rating,
+          r.review_text,
+          r.status,
+          r.seller_reply,
+          r.created_at,
+          r.updated_at,
+          u.id as reviewer_id,
+          u.full_name as reviewer_name,
+          u.profile_image as reviewer_avatar
+        FROM marketplace_product_reviews r
+        JOIN marketplace_products p ON r.product_id = p.id
+        JOIN users u ON r.user_id = u.id
+        WHERE p.seller_id = $1 ${filterCondition}
+        
+        UNION ALL
+        
+        SELECT 
+          r.id,
+          'bot' as type,
+          b.id as item_id,
+          b.name as item_name,
+          b.slug as item_slug,
+          r.rating,
+          r.review_text,
+          r.status,
+          r.seller_reply,
+          r.created_at,
+          r.updated_at,
+          u.id as reviewer_id,
+          u.full_name as reviewer_name,
+          u.profile_image as reviewer_avatar
+        FROM marketplace_bot_reviews r
+        JOIN marketplace_bots b ON r.bot_id = b.id
+        JOIN users u ON r.user_id = u.id
+        WHERE b.seller_id = $1 ${filterCondition}
+      ) as all_reviews
+      ORDER BY created_at DESC
+      LIMIT $2 OFFSET $3
+    `, [sellerId, parseInt(limit), offset]);
+
+    // Get counts
+    const stats = await pool.query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN type = 'product' THEN 1 ELSE 0 END), 0) as product_reviews,
+        COALESCE(SUM(CASE WHEN type = 'bot' THEN 1 ELSE 0 END), 0) as bot_reviews,
+        COALESCE(AVG(rating), 0) as avg_rating,
+        COUNT(*) as total_reviews
+      FROM (
+        SELECT 'product' as type, r.rating FROM marketplace_product_reviews r
+        JOIN marketplace_products p ON r.product_id = p.id
+        WHERE p.seller_id = $1 AND r.status = 'approved'
+        UNION ALL
+        SELECT 'bot' as type, r.rating FROM marketplace_bot_reviews r
+        JOIN marketplace_bots b ON r.bot_id = b.id
+        WHERE b.seller_id = $1 AND r.status = 'approved'
+      ) as all_reviews
+    `, [sellerId]);
+
+    res.json({
+      success: true,
+      reviews: reviews.rows,
+      stats: {
+        total: parseInt(stats.rows[0]?.total_reviews || 0),
+        average_rating: parseFloat(stats.rows[0]?.avg_rating || 0).toFixed(1),
+        product_reviews: parseInt(stats.rows[0]?.product_reviews || 0),
+        bot_reviews: parseInt(stats.rows[0]?.bot_reviews || 0),
+      },
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
+/**
+ * POST /api/seller/reviews/:id/reply
+ * Reply to a review
+ */
+router.post('/reviews/:id/reply', authenticate, async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+    const reviewId = req.params.id;
+    const { reply, type } = req.body;
+
+    if (!reply || !type) {
+      return res.status(400).json({ error: 'Reply text and type are required' });
+    }
+
+    const table = type === 'product' ? 'marketplace_product_reviews' : 'marketplace_bot_reviews';
+    const joinTable = type === 'product' ? 'marketplace_products' : 'marketplace_bots';
+    const joinColumn = type === 'product' ? 'product_id' : 'bot_id';
+
+    // Verify the review belongs to this seller's product/bot
+    const verify = await pool.query(`
+      SELECT r.id FROM ${table} r
+      JOIN ${joinTable} p ON r.${joinColumn} = p.id
+      WHERE r.id = $1 AND p.seller_id = $2
+    `, [reviewId, sellerId]);
+
+    if (verify.rows.length === 0) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+
+    // Update the reply
+    await pool.query(`
+      UPDATE ${table} 
+      SET seller_reply = $1, updated_at = NOW()
+      WHERE id = $2
+    `, [reply, reviewId]);
+
+    res.json({
+      success: true,
+      message: 'Reply added successfully',
+    });
+  } catch (error) {
+    console.error('Error replying to review:', error);
+    res.status(500).json({ error: 'Failed to reply to review' });
   }
 });
 

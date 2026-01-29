@@ -342,16 +342,6 @@ export default function MT5ConnectionPage() {
           <Box sx={{ mt: { xs: 2, md: 4 }, display: 'flex', gap: { xs: 1, md: 2 }, flexWrap: 'wrap' }}>
             <Button
               variant="outlined"
-              startIcon={refreshing ? <CircularProgress size={18} /> : <RefreshCw size={18} />}
-              onClick={handleRefresh}
-              disabled={refreshing}
-              size="small"
-              sx={{ fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.875rem' }, px: { xs: 1.5, md: 2 } }}
-            >
-              {refreshing ? 'Refreshing...' : 'Refresh'}
-            </Button>
-            <Button
-              variant="outlined"
               color="error"
               startIcon={<Unlink size={18} />}
               onClick={handleDisconnect}

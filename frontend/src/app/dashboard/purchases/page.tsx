@@ -49,6 +49,7 @@ import {
   Star,
 } from 'lucide-react';
 import Link from 'next/link';
+import ReviewDialog from '@/components/marketplace/ReviewDialog';
 
 interface Purchase {
   id: number;
@@ -64,6 +65,9 @@ interface Purchase {
   product_type?: string;
   avatar_url?: string;
   display_name?: string;
+  bot_id?: number;
+  product_id?: number;
+  provider_id?: number;
 }
 
 interface Deliverable {
@@ -119,6 +123,24 @@ export default function MyPurchasesPage() {
   } | null>(null);
   const [accessLoading, setAccessLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Review dialog state
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewItem, setReviewItem] = useState<{
+    type: 'bot' | 'product' | 'signal';
+    id: number;
+    name: string;
+  } | null>(null);
+
+  const openReviewDialog = (type: 'bot' | 'product' | 'signal', id: number, name: string) => {
+    setReviewItem({ type, id, name });
+    setReviewDialogOpen(true);
+  };
+
+  const closeReviewDialog = () => {
+    setReviewDialogOpen(false);
+    setReviewItem(null);
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -414,18 +436,33 @@ export default function MyPurchasesPage() {
                             </Typography>
                           </Stack>
 
-                          <Button
-                            fullWidth
-                            variant="contained"
-                            startIcon={<Download size={18} />}
-                            onClick={() => openAccessDialog('bot', bot.id, bot)}
-                            sx={{
-                              bgcolor: '#22C55E',
-                              '&:hover': { bgcolor: '#16A34A' },
-                            }}
-                          >
-                            Access Downloads
-                          </Button>
+                          <Stack spacing={1}>
+                            <Button
+                              fullWidth
+                              variant="contained"
+                              startIcon={<Download size={18} />}
+                              onClick={() => openAccessDialog('bot', bot.id, bot)}
+                              sx={{
+                                bgcolor: '#22C55E',
+                                '&:hover': { bgcolor: '#16A34A' },
+                              }}
+                            >
+                              Access Downloads
+                            </Button>
+                            <Button
+                              fullWidth
+                              variant="outlined"
+                              startIcon={<Star size={18} />}
+                              onClick={() => openReviewDialog('bot', bot.bot_id || bot.id, bot.name)}
+                              sx={{
+                                borderColor: 'rgba(255,255,255,0.2)',
+                                color: 'rgba(255,255,255,0.8)',
+                                '&:hover': { borderColor: '#FFD700', color: '#FFD700' },
+                              }}
+                            >
+                              Leave Review
+                            </Button>
+                          </Stack>
                         </CardContent>
                       </Card>
                     </Grid>
@@ -500,18 +537,33 @@ export default function MyPurchasesPage() {
                             Purchased: {new Date(product.created_at).toLocaleDateString()}
                           </Typography>
 
-                          <Button
-                            fullWidth
-                            variant="contained"
-                            startIcon={<Package size={18} />}
-                            onClick={() => openAccessDialog('product', product.id, product)}
-                            sx={{
-                              bgcolor: '#F59E0B',
-                              '&:hover': { bgcolor: '#D97706' },
-                            }}
-                          >
-                            Access Content
-                          </Button>
+                          <Stack spacing={1}>
+                            <Button
+                              fullWidth
+                              variant="contained"
+                              startIcon={<Package size={18} />}
+                              onClick={() => openAccessDialog('product', product.id, product)}
+                              sx={{
+                                bgcolor: '#F59E0B',
+                                '&:hover': { bgcolor: '#D97706' },
+                              }}
+                            >
+                              Access Content
+                            </Button>
+                            <Button
+                              fullWidth
+                              variant="outlined"
+                              startIcon={<Star size={18} />}
+                              onClick={() => openReviewDialog('product', product.product_id || product.id, product.name)}
+                              sx={{
+                                borderColor: 'rgba(255,255,255,0.2)',
+                                color: 'rgba(255,255,255,0.8)',
+                                '&:hover': { borderColor: '#FFD700', color: '#FFD700' },
+                              }}
+                            >
+                              Leave Review
+                            </Button>
+                          </Stack>
                         </CardContent>
                       </Card>
                     </Grid>
@@ -592,20 +644,35 @@ export default function MyPurchasesPage() {
                             </Typography>
                           )}
 
-                          <Button
-                            fullWidth
-                            variant="contained"
-                            startIcon={<Signal size={18} />}
-                            onClick={() => openAccessDialog('signal', sub.id, sub)}
-                            disabled={sub.subscription_status !== 'active'}
-                            sx={{
-                              bgcolor: '#3B82F6',
-                              '&:hover': { bgcolor: '#2563EB' },
-                              '&:disabled': { bgcolor: 'rgba(59, 130, 246, 0.3)' },
-                            }}
-                          >
-                            Access Signals
-                          </Button>
+                          <Stack spacing={1}>
+                            <Button
+                              fullWidth
+                              variant="contained"
+                              startIcon={<Signal size={18} />}
+                              onClick={() => openAccessDialog('signal', sub.id, sub)}
+                              disabled={sub.subscription_status !== 'active'}
+                              sx={{
+                                bgcolor: '#3B82F6',
+                                '&:hover': { bgcolor: '#2563EB' },
+                                '&:disabled': { bgcolor: 'rgba(59, 130, 246, 0.3)' },
+                              }}
+                            >
+                              Access Signals
+                            </Button>
+                            <Button
+                              fullWidth
+                              variant="outlined"
+                              startIcon={<Star size={18} />}
+                              onClick={() => openReviewDialog('signal', sub.provider_id || sub.id, sub.display_name || 'Signal Provider')}
+                              sx={{
+                                borderColor: 'rgba(255,255,255,0.2)',
+                                color: 'rgba(255,255,255,0.8)',
+                                '&:hover': { borderColor: '#FFD700', color: '#FFD700' },
+                              }}
+                            >
+                              Leave Review
+                            </Button>
+                          </Stack>
                         </CardContent>
                       </Card>
                     </Grid>
@@ -900,6 +967,20 @@ export default function MyPurchasesPage() {
           >
             ✓ Copied to clipboard!
           </Box>
+        )}
+
+        {/* Review Dialog */}
+        {reviewItem && (
+          <ReviewDialog
+            open={reviewDialogOpen}
+            onClose={closeReviewDialog}
+            itemType={reviewItem.type}
+            itemId={reviewItem.id}
+            itemName={reviewItem.name}
+            onSuccess={() => {
+              // Optionally refresh purchases
+            }}
+          />
         )}
       </Container>
     </Box>

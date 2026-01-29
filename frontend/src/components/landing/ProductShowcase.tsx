@@ -292,7 +292,7 @@ export default function ProductShowcase() {
             ))
           ) : (
             bots.map((bot) => {
-              // Use slug-specific image, then category-based fallback, then default
+              // Use thumbnail_url from API if available, then slug-specific image, then category-based fallback
               const categoryImages: Record<string, string> = {
                 'scalper': 'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=400&h=250&fit=crop',
                 'trend': 'https://images.unsplash.com/photo-1589656966895-2f33e7653819?w=400&h=250&fit=crop',
@@ -300,7 +300,7 @@ export default function ProductShowcase() {
                 'news': 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&h=250&fit=crop',
                 'utility': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=250&fit=crop',
               };
-              const imageUrl = botImages[bot.slug] || categoryImages[bot.category?.toLowerCase()] || botImages['default'];
+              const imageUrl = bot.thumbnail_url || botImages[bot.slug] || categoryImages[bot.category?.toLowerCase()] || botImages['default'];
               return (
                 <Grid item xs={12} md={4} key={bot.id}>
                   <GlassCard
@@ -664,7 +664,8 @@ export default function ProductShowcase() {
             ))
           ) : (
             products.map((product) => {
-              const imageUrl = productImages[product.type?.toLowerCase()] || productImages['default'];
+              // Use thumbnail_url from API if available, otherwise fallback to type-based images
+              const imageUrl = product.thumbnail_url || productImages[product.type?.toLowerCase()] || productImages['default'];
               return (
                 <Grid item xs={12} sm={6} md={4} key={product.id}>
                   <GlassCard

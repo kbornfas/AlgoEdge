@@ -247,7 +247,6 @@ export default function AdminWalletsPage() {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, pl: { xs: 6, md: 0 } }}>
         <Typography variant="h4">Wallet Management</Typography>
-        <Button startIcon={<RefreshIcon />} onClick={fetchWallets}>Refresh</Button>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}

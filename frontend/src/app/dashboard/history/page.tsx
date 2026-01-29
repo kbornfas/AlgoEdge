@@ -432,26 +432,6 @@ export default function TradesPage() {
                 </Typography>
               </Box>
             )}
-            <Tooltip title="Refresh Data">
-              <IconButton
-                onClick={handleRefresh}
-                disabled={refreshing}
-                size="small"
-                sx={{
-                  bgcolor: 'rgba(16, 185, 129, 0.1)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  '&:hover': { bgcolor: 'rgba(16, 185, 129, 0.2)' },
-                  width: { xs: 36, md: 40 },
-                  height: { xs: 36, md: 40 },
-                }}
-              >
-                {refreshing ? (
-                  <CircularProgress size={18} color="inherit" />
-                ) : (
-                  <RefreshCw size={18} color="#10B981" />
-                )}
-              </IconButton>
-            </Tooltip>
           </Box>
         </Box>
       </Box>

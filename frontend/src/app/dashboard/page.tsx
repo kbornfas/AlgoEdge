@@ -536,25 +536,6 @@ export default function DashboardPage() {
               Monitor your automated trading performance and manage your bots.
             </Typography>
           </Box>
-          <Button
-            variant="outlined"
-            startIcon={refreshing ? <CircularProgress size={16} color="inherit" /> : <RefreshCw size={16} />}
-            onClick={handleRefresh}
-            disabled={refreshing}
-            sx={{
-              borderRadius: 2,
-              px: { xs: 1.5, md: 2.5 },
-              py: { xs: 0.75, md: 1 },
-              fontSize: { xs: '0.8rem', md: '0.875rem' },
-              borderColor: alpha(theme.palette.primary.main, 0.3),
-              '&:hover': {
-                borderColor: 'primary.main',
-                bgcolor: alpha(theme.palette.primary.main, 0.05),
-              },
-            }}
-          >
-            Refresh
-          </Button>
         </Box>
       </Box>
 
@@ -719,7 +700,7 @@ export default function DashboardPage() {
             <Grid container spacing={{ xs: 1.5, sm: 2 }}>
               {[1, 2, 3, 4].map((i) => (
                 <Grid item xs={6} sm={6} lg={3} key={i}>
-                  <Skeleton variant="rounded" height={{ xs: 100, md: 120 }} sx={{ borderRadius: 2 }} />
+                  <Skeleton variant="rounded" height={110} sx={{ borderRadius: 2 }} />
                 </Grid>
               ))}
             </Grid>

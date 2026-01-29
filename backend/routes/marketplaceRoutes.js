@@ -2337,4 +2337,349 @@ router.get('/price-history/:type/:id', async (req, res) => {
   }
 });
 
+// ============================================================================
+// BUYER REVIEW ENDPOINTS
+// ============================================================================
+
+/**
+ * POST /api/marketplace/reviews/:type/:id
+ * Submit a review for a purchased product or bot
+ */
+router.post('/reviews/:type/:id', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { type, id } = req.params;
+    const itemId = parseInt(id);
+    const { rating, title, review } = req.body;
+
+    // Validate input
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+    if (!review || review.trim().length < 10) {
+      return res.status(400).json({ error: 'Review must be at least 10 characters' });
+    }
+
+    // Get user info for reviewer name and avatar
+    const user = await pool.query(
+      'SELECT username, profile_picture FROM users WHERE id = $1',
+      [userId]
+    );
+    const reviewer = user.rows[0];
+
+    if (type === 'bot') {
+      // Verify purchase
+      const purchase = await pool.query(
+        'SELECT id FROM marketplace_bot_purchases WHERE bot_id = $1 AND buyer_id = $2',
+        [itemId, userId]
+      );
+      if (purchase.rows.length === 0) {
+        return res.status(403).json({ error: 'You must purchase this bot before reviewing' });
+      }
+
+      // Check if already reviewed
+      const existing = await pool.query(
+        'SELECT id FROM marketplace_bot_reviews WHERE bot_id = $1 AND user_id = $2',
+        [itemId, userId]
+      );
+      if (existing.rows.length > 0) {
+        return res.status(400).json({ error: 'You have already reviewed this bot' });
+      }
+
+      // Insert review
+      await pool.query(`
+        INSERT INTO marketplace_bot_reviews (bot_id, user_id, rating, title, review, reviewer_name, reviewer_avatar, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'approved')
+      `, [itemId, userId, rating, title || '', review, reviewer?.username, reviewer?.profile_picture]);
+
+      // Update average rating
+      await pool.query(`
+        UPDATE marketplace_bots SET 
+          rating_average = (SELECT COALESCE(AVG(rating), 0) FROM marketplace_bot_reviews WHERE bot_id = $1 AND status = 'approved'),
+          rating_count = (SELECT COUNT(*) FROM marketplace_bot_reviews WHERE bot_id = $1 AND status = 'approved')
+        WHERE id = $1
+      `, [itemId]);
+
+      res.json({ success: true, message: 'Review submitted successfully' });
+
+    } else if (type === 'product') {
+      // Verify purchase
+      const purchase = await pool.query(
+        'SELECT id FROM marketplace_product_purchases WHERE product_id = $1 AND buyer_id = $2',
+        [itemId, userId]
+      );
+      if (purchase.rows.length === 0) {
+        return res.status(403).json({ error: 'You must purchase this product before reviewing' });
+      }
+
+      // Check if already reviewed
+      const existing = await pool.query(
+        'SELECT id FROM marketplace_product_reviews WHERE product_id = $1 AND user_id = $2',
+        [itemId, userId]
+      );
+      if (existing.rows.length > 0) {
+        return res.status(400).json({ error: 'You have already reviewed this product' });
+      }
+
+      // Insert review
+      await pool.query(`
+        INSERT INTO marketplace_product_reviews (product_id, user_id, rating, title, review, reviewer_name, reviewer_avatar, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'approved')
+      `, [itemId, userId, rating, title || '', review, reviewer?.username, reviewer?.profile_picture]);
+
+      // Update average rating
+      await pool.query(`
+        UPDATE marketplace_products SET 
+          rating_average = (SELECT COALESCE(AVG(rating), 0) FROM marketplace_product_reviews WHERE product_id = $1 AND status = 'approved'),
+          rating_count = (SELECT COUNT(*) FROM marketplace_product_reviews WHERE product_id = $1 AND status = 'approved')
+        WHERE id = $1
+      `, [itemId]);
+
+      res.json({ success: true, message: 'Review submitted successfully' });
+
+    } else if (type === 'signal') {
+      // Verify subscription
+      const subscription = await pool.query(
+        'SELECT id FROM signal_provider_subscriptions WHERE provider_id = $1 AND subscriber_id = $2',
+        [itemId, userId]
+      );
+      if (subscription.rows.length === 0) {
+        return res.status(403).json({ error: 'You must subscribe to this provider before reviewing' });
+      }
+
+      // Check if already reviewed
+      const existing = await pool.query(
+        'SELECT id FROM signal_provider_reviews WHERE provider_id = $1 AND user_id = $2',
+        [itemId, userId]
+      );
+      if (existing.rows.length > 0) {
+        return res.status(400).json({ error: 'You have already reviewed this signal provider' });
+      }
+
+      // Insert review
+      await pool.query(`
+        INSERT INTO signal_provider_reviews (provider_id, user_id, rating, title, review, reviewer_name, reviewer_avatar, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'approved')
+      `, [itemId, userId, rating, title || '', review, reviewer?.username, reviewer?.profile_picture]);
+
+      // Update average rating
+      await pool.query(`
+        UPDATE signal_providers SET 
+          rating_average = (SELECT COALESCE(AVG(rating), 0) FROM signal_provider_reviews WHERE provider_id = $1 AND status = 'approved'),
+          rating_count = (SELECT COUNT(*) FROM signal_provider_reviews WHERE provider_id = $1 AND status = 'approved')
+        WHERE id = $1
+      `, [itemId]);
+
+      res.json({ success: true, message: 'Review submitted successfully' });
+
+    } else {
+      return res.status(400).json({ error: 'Invalid type. Use bot, product, or signal' });
+    }
+  } catch (error) {
+    console.error('Submit review error:', error);
+    res.status(500).json({ error: 'Failed to submit review' });
+  }
+});
+
+/**
+ * GET /api/marketplace/reviews/:type/:id/check
+ * Check if user can review and if they have already reviewed
+ */
+router.get('/reviews/:type/:id/check', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { type, id } = req.params;
+    const itemId = parseInt(id);
+
+    let hasPurchased = false;
+    let hasReviewed = false;
+    let existingReview = null;
+
+    if (type === 'bot') {
+      const purchase = await pool.query(
+        'SELECT id FROM marketplace_bot_purchases WHERE bot_id = $1 AND buyer_id = $2',
+        [itemId, userId]
+      );
+      hasPurchased = purchase.rows.length > 0;
+
+      const review = await pool.query(
+        'SELECT * FROM marketplace_bot_reviews WHERE bot_id = $1 AND user_id = $2',
+        [itemId, userId]
+      );
+      hasReviewed = review.rows.length > 0;
+      existingReview = review.rows[0] || null;
+
+    } else if (type === 'product') {
+      const purchase = await pool.query(
+        'SELECT id FROM marketplace_product_purchases WHERE product_id = $1 AND buyer_id = $2',
+        [itemId, userId]
+      );
+      hasPurchased = purchase.rows.length > 0;
+
+      const review = await pool.query(
+        'SELECT * FROM marketplace_product_reviews WHERE product_id = $1 AND user_id = $2',
+        [itemId, userId]
+      );
+      hasReviewed = review.rows.length > 0;
+      existingReview = review.rows[0] || null;
+
+    } else if (type === 'signal') {
+      const subscription = await pool.query(
+        'SELECT id FROM signal_provider_subscriptions WHERE provider_id = $1 AND subscriber_id = $2',
+        [itemId, userId]
+      );
+      hasPurchased = subscription.rows.length > 0;
+
+      const review = await pool.query(
+        'SELECT * FROM signal_provider_reviews WHERE provider_id = $1 AND user_id = $2',
+        [itemId, userId]
+      );
+      hasReviewed = review.rows.length > 0;
+      existingReview = review.rows[0] || null;
+
+    } else {
+      return res.status(400).json({ error: 'Invalid type' });
+    }
+
+    res.json({
+      success: true,
+      canReview: hasPurchased && !hasReviewed,
+      hasPurchased,
+      hasReviewed,
+      existingReview
+    });
+  } catch (error) {
+    console.error('Check review error:', error);
+    res.status(500).json({ error: 'Failed to check review status' });
+  }
+});
+
+/**
+ * PUT /api/marketplace/reviews/:type/:reviewId
+ * Update an existing review
+ */
+router.put('/reviews/:type/:reviewId', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { type, reviewId } = req.params;
+    const { rating, title, review } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+
+    let tableName, idColumn;
+    if (type === 'bot') {
+      tableName = 'marketplace_bot_reviews';
+      idColumn = 'bot_id';
+    } else if (type === 'product') {
+      tableName = 'marketplace_product_reviews';
+      idColumn = 'product_id';
+    } else if (type === 'signal') {
+      tableName = 'signal_provider_reviews';
+      idColumn = 'provider_id';
+    } else {
+      return res.status(400).json({ error: 'Invalid type' });
+    }
+
+    // Verify ownership
+    const existing = await pool.query(
+      `SELECT ${idColumn} as item_id FROM ${tableName} WHERE id = $1 AND user_id = $2`,
+      [reviewId, userId]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Review not found or you do not own it' });
+    }
+
+    const itemId = existing.rows[0].item_id;
+
+    // Update review
+    await pool.query(`
+      UPDATE ${tableName} SET rating = $1, title = $2, review = $3, updated_at = NOW()
+      WHERE id = $4 AND user_id = $5
+    `, [rating, title || '', review, reviewId, userId]);
+
+    // Update average rating
+    if (type === 'bot') {
+      await pool.query(`
+        UPDATE marketplace_bots SET 
+          rating_average = (SELECT COALESCE(AVG(rating), 0) FROM marketplace_bot_reviews WHERE bot_id = $1 AND status = 'approved')
+        WHERE id = $1
+      `, [itemId]);
+    } else if (type === 'product') {
+      await pool.query(`
+        UPDATE marketplace_products SET 
+          rating_average = (SELECT COALESCE(AVG(rating), 0) FROM marketplace_product_reviews WHERE product_id = $1 AND status = 'approved')
+        WHERE id = $1
+      `, [itemId]);
+    } else if (type === 'signal') {
+      await pool.query(`
+        UPDATE signal_providers SET 
+          rating_average = (SELECT COALESCE(AVG(rating), 0) FROM signal_provider_reviews WHERE provider_id = $1 AND status = 'approved')
+        WHERE id = $1
+      `, [itemId]);
+    }
+
+    res.json({ success: true, message: 'Review updated successfully' });
+  } catch (error) {
+    console.error('Update review error:', error);
+    res.status(500).json({ error: 'Failed to update review' });
+  }
+});
+
+/**
+ * DELETE /api/marketplace/reviews/:type/:reviewId
+ * Delete a review
+ */
+router.delete('/reviews/:type/:reviewId', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { type, reviewId } = req.params;
+
+    let tableName, idColumn, updateTable;
+    if (type === 'bot') {
+      tableName = 'marketplace_bot_reviews';
+      idColumn = 'bot_id';
+      updateTable = 'marketplace_bots';
+    } else if (type === 'product') {
+      tableName = 'marketplace_product_reviews';
+      idColumn = 'product_id';
+      updateTable = 'marketplace_products';
+    } else if (type === 'signal') {
+      tableName = 'signal_provider_reviews';
+      idColumn = 'provider_id';
+      updateTable = 'signal_providers';
+    } else {
+      return res.status(400).json({ error: 'Invalid type' });
+    }
+
+    // Get item ID before deletion
+    const existing = await pool.query(
+      `SELECT ${idColumn} as item_id FROM ${tableName} WHERE id = $1 AND user_id = $2`,
+      [reviewId, userId]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Review not found or you do not own it' });
+    }
+
+    const itemId = existing.rows[0].item_id;
+
+    // Delete review
+    await pool.query(`DELETE FROM ${tableName} WHERE id = $1 AND user_id = $2`, [reviewId, userId]);
+
+    // Update average rating
+    await pool.query(`
+      UPDATE ${updateTable} SET 
+        rating_average = (SELECT COALESCE(AVG(rating), 0) FROM ${tableName} WHERE ${idColumn} = $1 AND status = 'approved'),
+        rating_count = (SELECT COUNT(*) FROM ${tableName} WHERE ${idColumn} = $1 AND status = 'approved')
+      WHERE id = $1
+    `, [itemId]);
+
+    res.json({ success: true, message: 'Review deleted successfully' });
+  } catch (error) {
+    console.error('Delete review error:', error);
+    res.status(500).json({ error: 'Failed to delete review' });
+  }
+});
+
 export default router;

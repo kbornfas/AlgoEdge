@@ -755,6 +755,117 @@ router.get('/admin/accounts', authenticate, async (req, res) => {
 });
 
 /**
+ * GET /api/mt5/my-positions
+ * Get live positions from user's connected MT5 account as trading signals
+ */
+router.get('/my-positions', authenticate, async (req, res) => {
+  try {
+    // Find user's MT5 account from database
+    const accountResult = await import('../config/database.js').then(m => m.default.query(
+      'SELECT id, account_id, meta_api_account_id, server FROM mt5_accounts WHERE user_id = $1 AND status = $2 LIMIT 1',
+      [req.user.id, 'connected']
+    ));
+
+    if (!accountResult.rows.length) {
+      return res.json({ 
+        signals: [], 
+        account: null,
+        message: 'No connected MT5 account found' 
+      });
+    }
+
+    const mt5Account = accountResult.rows[0];
+    const metaApiAccountId = mt5Account.meta_api_account_id;
+
+    if (!metaApiAccountId) {
+      return res.json({ 
+        signals: [], 
+        account: null,
+        message: 'MT5 account not provisioned with MetaAPI' 
+      });
+    }
+
+    if (!api) {
+      await initMetaApi();
+      if (!api) {
+        return res.status(500).json({ error: 'MetaAPI SDK not initialized' });
+      }
+    }
+
+    // Check for cached connection first
+    let connection = null;
+    if (mt5Connections.has(metaApiAccountId)) {
+      connection = mt5Connections.get(metaApiAccountId)?.connection;
+    }
+
+    // Get fresh connection if not cached
+    if (!connection) {
+      try {
+        const account = await api.metatraderAccountApi.getAccount(metaApiAccountId);
+        if (account && account.state === 'DEPLOYED') {
+          connection = account.getRPCConnection();
+          await connection.connect();
+          await connection.waitSynchronized({ timeoutInSeconds: 10 });
+          mt5Connections.set(metaApiAccountId, { connection, metaApiId: metaApiAccountId });
+        }
+      } catch (connErr) {
+        console.error('Failed to get MT5 connection:', connErr.message);
+      }
+    }
+
+    if (!connection) {
+      return res.json({ 
+        signals: [], 
+        account: null,
+        message: 'Failed to connect to MT5 account' 
+      });
+    }
+
+    // Fetch positions and account info
+    const [positions, accountInfo] = await Promise.all([
+      connection.getPositions(),
+      connection.getAccountInformation()
+    ]);
+
+    // Convert positions to signal format
+    const signals = positions.map((pos, index) => ({
+      id: `mt5-${pos.id || index}`,
+      symbol: pos.symbol,
+      direction: pos.type?.toUpperCase() === 'POSITION_TYPE_BUY' || pos.type?.toUpperCase() === 'BUY' ? 'BUY' : 'SELL',
+      entryPrice: pos.openPrice,
+      stopLoss: pos.stopLoss || null,
+      takeProfit1: pos.takeProfit || null,
+      currentPrice: pos.currentPrice,
+      volume: pos.volume,
+      profit: pos.profit || pos.unrealizedProfit || 0,
+      swap: pos.swap || 0,
+      commission: pos.commission || 0,
+      pnlPercent: accountInfo.balance > 0 ? ((pos.profit || 0) / accountInfo.balance * 100) : 0,
+      confidence: 100, // Live trade = 100% confidence
+      timeframe: 'LIVE',
+      strategy: pos.comment || 'Manual Trade',
+      timestamp: pos.time || new Date().toISOString(),
+      status: 'active',
+      openTime: pos.time,
+    }));
+
+    res.json({
+      signals,
+      account: {
+        balance: accountInfo.balance || 0,
+        equity: accountInfo.equity || 0,
+        profit: accountInfo.profit || (accountInfo.equity - accountInfo.balance) || 0,
+        freeMargin: accountInfo.freeMargin || 0,
+      },
+      timestamp: Date.now(),
+    });
+  } catch (error) {
+    console.error('Get my positions error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch positions' });
+  }
+});
+
+/**
  * DELETE /api/mt5/admin/account/:accountId
  * Delete a MetaAPI account (to clean up duplicates)
  */

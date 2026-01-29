@@ -925,4 +925,77 @@ router.get('/financial-summary', async (req, res) => {
   }
 });
 
+// ============================================================================
+// PLATFORM SETTINGS ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/admin/settings
+ * Get platform settings
+ */
+router.get('/settings', async (req, res) => {
+  try {
+    // Check if settings table exists and get settings
+    const result = await pool.query(`
+      SELECT key, value FROM platform_settings
+    `).catch(() => ({ rows: [] }));
+    
+    // Convert rows to object
+    const settings = {};
+    result.rows.forEach(row => {
+      try {
+        settings[row.key] = JSON.parse(row.value);
+      } catch {
+        settings[row.key] = row.value;
+      }
+    });
+
+    res.json({ success: true, settings });
+  } catch (error) {
+    console.error('Error getting settings:', error);
+    // Return empty settings if table doesn't exist
+    res.json({ success: true, settings: {} });
+  }
+});
+
+/**
+ * PUT /api/admin/settings
+ * Update platform settings
+ */
+router.put('/settings', async (req, res) => {
+  try {
+    const { settings } = req.body;
+    
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({ error: 'Invalid settings object' });
+    }
+
+    // Ensure platform_settings table exists
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS platform_settings (
+        key VARCHAR(255) PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT NOW(),
+        updated_by INTEGER
+      )
+    `);
+
+    // Upsert each setting
+    for (const [key, value] of Object.entries(settings)) {
+      const jsonValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+      await pool.query(`
+        INSERT INTO platform_settings (key, value, updated_at, updated_by)
+        VALUES ($1, $2, NOW(), $3)
+        ON CONFLICT (key) 
+        DO UPDATE SET value = $2, updated_at = NOW(), updated_by = $3
+      `, [key, jsonValue, req.user.id]);
+    }
+
+    res.json({ success: true, message: 'Settings updated successfully' });
+  } catch (error) {
+    console.error('Error updating settings:', error);
+    res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
 export default router;

@@ -174,6 +174,45 @@ export default function SignalsPage() {
     
     try {
       const token = localStorage.getItem('token');
+      
+      // First try to fetch live MT5 positions
+      if (token) {
+        try {
+          const mt5Response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/mt5/my-positions`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          
+          if (mt5Response.ok) {
+            const mt5Data = await mt5Response.json();
+            if (mt5Data.signals && mt5Data.signals.length > 0) {
+              // Use live MT5 positions as signals
+              const mappedSignals: Signal[] = mt5Data.signals.map((s: any) => ({
+                id: s.id,
+                symbol: s.symbol,
+                direction: s.direction,
+                entryPrice: s.entryPrice,
+                stopLoss: s.stopLoss,
+                takeProfit1: s.takeProfit1,
+                confidence: s.confidence || 100,
+                timeframe: s.timeframe || 'LIVE',
+                strategy: s.strategy || 'MT5 Live Trade',
+                timestamp: s.timestamp || s.openTime,
+                status: 'active',
+                currentPrice: s.currentPrice,
+                pnlPercent: s.pnlPercent,
+              }));
+              setSignals(mappedSignals);
+              setLoading(false);
+              setRefreshing(false);
+              return;
+            }
+          }
+        } catch (mt5Error) {
+          console.log('MT5 positions not available, falling back to signals API');
+        }
+      }
+      
+      // Fallback to signals API
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/signals/active`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -284,14 +323,6 @@ export default function SignalsPage() {
           <IconButton onClick={() => setSettingsOpen(true)}>
             <Settings />
           </IconButton>
-          <Button
-            variant="outlined"
-            startIcon={refreshing ? <RefreshCw className="animate-spin" /> : <RefreshCw />}
-            onClick={() => fetchSignals(true)}
-            disabled={refreshing}
-          >
-            Refresh
-          </Button>
         </Box>
       </Box>
 
