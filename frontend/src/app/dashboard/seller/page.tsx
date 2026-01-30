@@ -217,16 +217,15 @@ export default function SellerDashboardPage() {
         const data = await res.json();
         console.log('Seller dashboard data:', data); // Debug log
         console.log('Verification data:', data.verification); // Debug log
+        console.log('has_blue_badge from API:', data.has_blue_badge, data.verification?.has_blue_badge); // Debug
         
-        // Check verification from multiple possible sources
+        // Seller verification is based on has_blue_badge only (not email is_verified)
         const isVerified = Boolean(
-          data.verification?.is_verified ||
           data.verification?.has_blue_badge ||
-          data.is_verified ||
           data.has_blue_badge
         );
         
-        console.log('Is verified (computed):', isVerified); // Debug log
+        console.log('Is seller verified (computed):', isVerified); // Debug log
         
         // Map API response to SellerStats interface
         const mappedStats: SellerStats = {
