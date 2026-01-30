@@ -279,6 +279,15 @@ export default function SellerDashboardPage() {
       }
     } catch (error) {
       console.error('Error fetching seller stats:', error);
+      // Set default stats even on error so Get Verified card shows
+      setStats({
+        wallet: { available_balance: 0, pending_earnings: 0, total_earnings: 0, total_payouts: 0 },
+        is_verified: false,
+        verification_pending: false,
+        totals: { bots: 0, products: 0, signals: 0, total_sales: 0, total_revenue: 0, avg_rating: 0 },
+        recent_transactions: [],
+        listings: { bots: [], products: [] },
+      });
     } finally {
       setLoading(false);
     }
