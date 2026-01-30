@@ -173,6 +173,7 @@ export default function SellerDashboardPage() {
   const checkSellerStatus = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('checkSellerStatus: token exists?', !!token);
       if (!token) {
         setLoading(false);
         return;
@@ -182,8 +183,11 @@ export default function SellerDashboardPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       
+      console.log('checkSellerStatus: response status', res.status);
+      
       if (res.ok) {
         const data = await res.json();
+        console.log('checkSellerStatus: data', data);
         setIsSeller(data.is_seller);
         if (data.application) {
           setApplicationStatus(data.application.status);
@@ -191,11 +195,14 @@ export default function SellerDashboardPage() {
         
         // Only fetch seller stats if user is a seller
         if (data.is_seller) {
+          console.log('checkSellerStatus: user is seller, fetching stats...');
           await fetchSellerStats();
         } else {
+          console.log('checkSellerStatus: user is NOT a seller');
           setLoading(false);
         }
       } else {
+        console.log('checkSellerStatus: response not ok');
         setLoading(false);
       }
     } catch (error) {
