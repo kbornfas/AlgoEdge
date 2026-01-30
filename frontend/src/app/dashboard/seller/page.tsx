@@ -234,6 +234,11 @@ export default function SellerDashboardPage() {
           data.has_blue_badge
         );
         
+        // TEMP DEBUG - remove after confirming
+        if (typeof window !== 'undefined') {
+          alert(`API Response Debug:\nhas_blue_badge: ${data.has_blue_badge}\nverification.has_blue_badge: ${data.verification?.has_blue_badge}\nComputed isVerified: ${isVerified}`);
+        }
+        
         console.log('Is seller verified (computed):', isVerified); // Debug log
         
         // Map API response to SellerStats interface
