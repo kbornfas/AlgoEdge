@@ -213,9 +213,11 @@ export default function SellerDashboardPage() {
           'Cache-Control': 'no-cache',
         },
       });
+      
+      const data = await res.json();
+      console.log('Seller dashboard response:', res.status, data); // Debug log
+      
       if (res.ok) {
-        const data = await res.json();
-        console.log('Seller dashboard data:', data); // Debug log
         console.log('Verification data:', data.verification); // Debug log
         console.log('has_blue_badge from API:', data.has_blue_badge, data.verification?.has_blue_badge); // Debug
         
@@ -256,6 +258,17 @@ export default function SellerDashboardPage() {
         };
         setStats(mappedStats);
         console.log('Mapped stats:', mappedStats); // Debug log
+      } else {
+        // API returned an error - set default stats so UI shows properly
+        console.error('Seller dashboard API error:', data.error);
+        setStats({
+          wallet: { available_balance: 0, pending_earnings: 0, total_earnings: 0, total_payouts: 0 },
+          is_verified: false,
+          verification_pending: false,
+          totals: { bots: 0, products: 0, signals: 0, total_sales: 0, total_revenue: 0, avg_rating: 0 },
+          recent_transactions: [],
+          listings: { bots: [], products: [] },
+        });
       }
     } catch (error) {
       console.error('Error fetching seller stats:', error);
