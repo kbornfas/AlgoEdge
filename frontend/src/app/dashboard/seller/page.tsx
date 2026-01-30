@@ -529,11 +529,6 @@ export default function SellerDashboardPage() {
           </Alert>
         )}
 
-        {/* DEBUG: Show verification status - TEMP for production debugging */}
-        <Alert severity="info" sx={{ mb: 2 }}>
-          DEBUG: stats={stats ? 'loaded' : 'null'}, is_verified={String(stats?.is_verified)}, verification_pending={String(stats?.verification_pending)}
-        </Alert>
-
         {/* Verification Pending Card - Show when verification is submitted but awaiting approval */}
         {stats && !stats.is_verified && stats.verification_pending && (
           <Card
