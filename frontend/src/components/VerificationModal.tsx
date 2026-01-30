@@ -39,6 +39,7 @@ interface VerificationModalProps {
   onClose: () => void;
   onSuccess: () => void;
   walletBalance: number;
+  isAlreadyVerified?: boolean;
 }
 
 const VERIFICATION_FEE = 50;
@@ -51,7 +52,7 @@ const ID_TYPES = [
 
 type LivenessStep = 'center' | 'left' | 'right' | 'complete';
 
-export default function VerificationModal({ open, onClose, onSuccess, walletBalance }: VerificationModalProps) {
+export default function VerificationModal({ open, onClose, onSuccess, walletBalance, isAlreadyVerified }: VerificationModalProps) {
   const [activeStep, setActiveStep] = useState(0);
   const [idType, setIdType] = useState('');
   const [idFront, setIdFront] = useState<File | null>(null);
@@ -327,6 +328,85 @@ export default function VerificationModal({ open, onClose, onSuccess, walletBala
         return { icon: <CheckCircle size={24} />, text: 'Liveness check complete!', color: '#22C55E' };
     }
   };
+
+  // Already verified - show success message
+  if (isAlreadyVerified) {
+    return (
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: '#0f1629',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            borderRadius: 3,
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <CheckCircle size={24} color="#22C55E" />
+            <Typography variant="h6" sx={{ color: 'white', fontWeight: 700 }}>
+              Already Verified
+            </Typography>
+          </Stack>
+          <IconButton onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+            <X size={20} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Box
+              sx={{
+                width: 80,
+                height: 80,
+                borderRadius: '50%',
+                bgcolor: 'rgba(34, 197, 94, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 3,
+              }}
+            >
+              <Shield size={40} color="#22C55E" />
+            </Box>
+            <Typography variant="h5" sx={{ color: 'white', fontWeight: 700, mb: 2 }}>
+              You&apos;re Already Verified! 🎉
+            </Typography>
+            <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 3 }}>
+              Your seller account has the verified badge. You have access to all verified seller benefits including:
+            </Typography>
+            <Stack spacing={1.5} sx={{ textAlign: 'left', maxWidth: 300, mx: 'auto' }}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <CheckCircle size={18} color="#22C55E" />
+                <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>Verified badge on all listings</Typography>
+              </Stack>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <CheckCircle size={18} color="#22C55E" />
+                <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>Higher visibility in search</Typography>
+              </Stack>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <CheckCircle size={18} color="#22C55E" />
+                <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>Increased buyer confidence</Typography>
+              </Stack>
+            </Stack>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0, justifyContent: 'center' }}>
+          <Button
+            variant="contained"
+            onClick={handleClose}
+            sx={{ bgcolor: '#22C55E', '&:hover': { bgcolor: '#16A34A' }, minWidth: 120 }}
+          >
+            Got it!
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
 
   // Don't render if can't afford - show error message instead
   if (!canAfford) {

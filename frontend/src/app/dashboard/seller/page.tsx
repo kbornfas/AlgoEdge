@@ -1450,6 +1450,7 @@ export default function SellerDashboardPage() {
           onClose={() => setVerifyModalOpen(false)}
           onSuccess={handleVerificationSuccess}
           walletBalance={userWalletBalance}
+          isAlreadyVerified={stats?.is_verified}
         />
       </Box>
     </Box>
