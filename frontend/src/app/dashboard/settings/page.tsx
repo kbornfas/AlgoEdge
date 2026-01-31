@@ -339,6 +339,7 @@ export default function SettingsPage() {
     dateOfBirth: '',
     avatarUrl: '',
     isVerified: false,
+    hasBlueBadge: false,
   });
 
   // Password State
@@ -588,7 +589,8 @@ export default function SettingsPage() {
           country: data.country || '',
           dateOfBirth: data.date_of_birth || data.dateOfBirth || '',
           avatarUrl: data.avatar_url || data.avatarUrl || '',
-          isVerified: data.is_verified === true || data.isVerified === true || data.has_blue_badge === true,
+          isVerified: data.is_verified === true || data.isVerified === true,
+          hasBlueBadge: data.has_blue_badge === true,
         });
         
         setSecurity(prev => ({
@@ -1142,10 +1144,39 @@ export default function SettingsPage() {
   };
 
   const handleDeleteAccount = async () => {
-    if (deleteConfirmText === 'DELETE') {
-      localStorage.clear();
-      setShowDeleteDialog(false);
-      router.push('/');
+    if (deleteConfirmText !== 'DELETE') return;
+    
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/account`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (res.ok) {
+        // Clear all local data
+        localStorage.clear();
+        sessionStorage.clear();
+        setShowDeleteDialog(false);
+        setSuccess('Your account has been permanently deleted. Redirecting...');
+        
+        // Redirect after a short delay
+        setTimeout(() => {
+          router.push('/');
+        }, 2000);
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to delete account. Please try again.');
+      }
+    } catch (err) {
+      console.error('Delete account error:', err);
+      setError('Failed to delete account. Please contact support.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1294,8 +1325,8 @@ export default function SettingsPage() {
                     {profile.fullName?.charAt(0) || profile.username?.charAt(0) || 'U'}
                   </Avatar>
                 </Badge>
-                {/* Verified Badge */}
-                {profile.isVerified && (
+                {/* Blue Verification Badge */}
+                {profile.hasBlueBadge && (
                   <Box
                     sx={{
                       position: 'absolute',
@@ -1941,8 +1972,8 @@ export default function SettingsPage() {
           <TextField fullWidth value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())} placeholder="Type DELETE to confirm" error={deleteConfirmText.length > 0 && deleteConfirmText !== 'DELETE'} helperText={deleteConfirmText.length > 0 && deleteConfirmText !== 'DELETE' ? 'Please type DELETE exactly' : ''} />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setShowDeleteDialog(false); setDeleteConfirmText(''); }}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={handleDeleteAccount} disabled={deleteConfirmText !== 'DELETE'}>Delete My Account Forever</Button>
+          <Button onClick={() => { setShowDeleteDialog(false); setDeleteConfirmText(''); }} disabled={loading}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleDeleteAccount} disabled={deleteConfirmText !== 'DELETE' || loading} startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <Trash2 size={16} />}>{loading ? 'Deleting...' : 'Delete My Account Forever'}</Button>
         </DialogActions>
       </Dialog>
 

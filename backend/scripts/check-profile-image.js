@@ -9,10 +9,9 @@ const pool = new pg.Pool({
 });
 
 async function check() {
-  // Check current reviewer names
-  const reviews = await pool.query('SELECT id, reviewer_name, reviewer_avatar FROM marketplace_product_reviews LIMIT 15');
-  console.log('Current product reviews:');
-  reviews.rows.forEach(row => console.log(row));
+  // Check Lian Hua's badge and verification status
+  const result = await pool.query("SELECT id, username, full_name, has_blue_badge, is_verified, is_seller, is_verified_seller FROM users WHERE username = 'lianhua14feb'");
+  console.log('Lian Hua user:', result.rows[0]);
   
   await pool.end();
 }

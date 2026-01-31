@@ -302,4 +302,88 @@ router.post('/mt5-accounts', apiLimiter, addMT5Account);
 router.get('/robot-configs', apiLimiter, getRobotConfigs);
 router.put('/robot-configs/:robotId', apiLimiter, updateRobotConfig);
 
+// Delete own account
+router.delete('/account', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const userId = req.user.id;
+    
+    await client.query('BEGIN');
+    
+    // Delete all related data in order (foreign key constraints)
+    // Note: Using TRY for tables that might not exist
+    const tablesToClean = [
+      'user_sessions',
+      'user_settings',
+      'user_robot_configs',
+      'mt5_accounts',
+      'mt5_trades',
+      'price_alerts',
+      'push_subscriptions',
+      'in_app_notifications',
+      'telegram_connections',
+      'telegram_pending_connections',
+      'user_follows',
+      'social_posts',
+      'social_post_likes',
+      'social_post_comments',
+      'wishlist',
+      'wishlist_price_alerts',
+      'economic_event_reminders',
+      'seller_media',
+      'marketplace_bot_reviews',
+      'marketplace_product_reviews',
+      'review_helpfulness',
+      'feedback_votes',
+      'user_purchases',
+      'user_wallets',
+      'wallet_transactions',
+      'affiliate_referrals',
+      'affiliate_earnings',
+      'verification_requests',
+      'audit_logs',
+    ];
+    
+    for (const table of tablesToClean) {
+      try {
+        await client.query(`DELETE FROM ${table} WHERE user_id = $1`, [userId]);
+      } catch (tableError) {
+        // Table might not exist, continue
+        console.log(`Table ${table} cleanup skipped:`, tableError.message);
+      }
+    }
+    
+    // Finally delete the user
+    const result = await client.query(
+      'DELETE FROM users WHERE id = $1 RETURNING id, email, username',
+      [userId]
+    );
+    
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    await client.query('COMMIT');
+    
+    console.log(`User account deleted: ${result.rows[0].email} (ID: ${userId})`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Your account has been permanently deleted',
+      deletedUser: {
+        id: result.rows[0].id,
+        email: result.rows[0].email,
+        username: result.rows[0].username
+      }
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Failed to delete account. Please contact support.' });
+  } finally {
+    client.release();
+  }
+});
+
 export default router;
