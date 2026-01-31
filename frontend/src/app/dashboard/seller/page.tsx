@@ -513,6 +513,11 @@ export default function SellerDashboardPage() {
           </Alert>
         )}
 
+        {/* TEMP DEBUG BANNER - REMOVE AFTER TESTING */}
+        <Alert severity="info" sx={{ mb: 3, bgcolor: '#ff00ff', color: 'white' }}>
+          DEBUG: stats.is_verified = {String(stats?.is_verified)} | stats.verification_pending = {String(stats?.verification_pending)} | stats exists = {String(!!stats)}
+        </Alert>
+
         {/* Verified Status Alert - Show for verified sellers */}
         {stats?.is_verified && (
           <Alert 
