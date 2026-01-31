@@ -9,7 +9,7 @@ const pool = new pg.Pool({
 });
 
 async function checkSchema() {
-  const tables = ['marketplace_products', 'product_deliverables'];
+  const tables = ['marketplace_bots', 'marketplace_products', 'signal_providers', 'seller_media', 'marketplace_bot_reviews', 'marketplace_product_reviews', 'users'];
   for (const table of tables) {
     const result = await pool.query(`
       SELECT column_name, data_type 
@@ -24,6 +24,14 @@ async function checkSchema() {
       result.rows.forEach(r => console.log(`  - ${r.column_name}: ${r.data_type}`));
     }
   }
+  
+  // Check for any review tables
+  const reviewTables = await pool.query(`
+    SELECT table_name FROM information_schema.tables 
+    WHERE table_name LIKE '%review%'
+  `);
+  console.log('\nReview tables found:', reviewTables.rows.map(r => r.table_name).join(', ') || 'NONE');
+  
   await pool.end();
 }
 

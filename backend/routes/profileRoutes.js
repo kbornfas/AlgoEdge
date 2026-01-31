@@ -125,8 +125,9 @@ router.get('/seller/:slug', async (req, res) => {
     `, [sellerData.id]);
 
     const signals = await pool.query(`
-      SELECT id, name, slug, trading_style, monthly_price, total_subscribers,
-             rating_average, rating_count, performance_stats
+      SELECT id, display_name as name, slug, trading_style, monthly_price, 
+             subscriber_count as total_subscribers, rating_average, rating_count,
+             win_rate, total_pips
       FROM signal_providers 
       WHERE user_id = $1 AND status = 'approved'
       LIMIT 6
@@ -134,25 +135,56 @@ router.get('/seller/:slug', async (req, res) => {
 
     // Get seller's performance media (screenshots, videos)
     const media = await pool.query(`
-      SELECT id, media_type, media_url, thumbnail_url, title, description, is_featured
+      SELECT id, media_type, COALESCE(media_url, url) as media_url, thumbnail_url, title, description, is_featured
       FROM seller_media 
       WHERE user_id = $1 AND is_visible = TRUE
       ORDER BY is_featured DESC, display_order ASC
       LIMIT 20
     `, [sellerData.id]);
 
-    // Get seller reviews
-    const reviews = await pool.query(`
-      SELECT r.*, 
-             u.username as reviewer_username, 
-             u.full_name as reviewer_name,
-             u.profile_image as reviewer_avatar
-      FROM marketplace_reviews r
-      JOIN users u ON r.user_id = u.id
-      WHERE r.seller_id = $1 AND r.status = 'approved'
-      ORDER BY r.created_at DESC
-      LIMIT 10
-    `, [sellerData.id]);
+    // Get seller reviews from various review tables
+    let reviews = { rows: [] };
+    try {
+      // Try to get reviews from bot reviews
+      const botReviews = await pool.query(`
+        SELECT br.id, br.rating, br.review as comment, br.created_at,
+               u.username as reviewer_username, 
+               u.full_name as reviewer_name,
+               u.profile_image as reviewer_avatar,
+               'bot' as review_type,
+               b.name as item_name
+        FROM marketplace_bot_reviews br
+        JOIN users u ON br.user_id = u.id
+        JOIN marketplace_bots b ON br.bot_id = b.id
+        WHERE b.seller_id = $1 AND br.status = 'approved'
+        ORDER BY br.created_at DESC
+        LIMIT 10
+      `, [sellerData.id]);
+      
+      // Try to get reviews from product reviews (no status column in this table)
+      const productReviews = await pool.query(`
+        SELECT pr.id, pr.rating, pr.review as comment, pr.created_at,
+               u.username as reviewer_username, 
+               u.full_name as reviewer_name,
+               u.profile_image as reviewer_avatar,
+               'product' as review_type,
+               p.name as item_name
+        FROM marketplace_product_reviews pr
+        JOIN users u ON pr.user_id = u.id
+        JOIN marketplace_products p ON pr.product_id = p.id
+        WHERE p.seller_id = $1
+        ORDER BY pr.created_at DESC
+        LIMIT 10
+      `, [sellerData.id]);
+      
+      // Combine and sort reviews
+      reviews.rows = [...botReviews.rows, ...productReviews.rows]
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 10);
+    } catch (reviewError) {
+      console.log('Reviews fetch note:', reviewError.message);
+      reviews.rows = [];
+    }
 
     res.json({
       success: true,
