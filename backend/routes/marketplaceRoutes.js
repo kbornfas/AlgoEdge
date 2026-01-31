@@ -1524,16 +1524,16 @@ router.get('/seller/dashboard', authenticate, async (req, res) => {
 
     // Log the raw user info for debugging
     console.log('Raw userInfo:', userInfo.rows[0]);
+    console.log('has_blue_badge raw value:', userInfo.rows[0]?.has_blue_badge, 'type:', typeof userInfo.rows[0]?.has_blue_badge);
     
     // Seller verification is based on has_blue_badge ONLY (not email is_verified)
     // has_blue_badge is granted by admin with $50 fee
-    const isSellerVerified = userInfo.rows[0]?.has_blue_badge === true || 
-                             userInfo.rows[0]?.has_blue_badge === 't' ||
-                             userInfo.rows[0]?.has_blue_badge === 1;
+    // Handle all possible truthy values from PostgreSQL
+    const rawBadge = userInfo.rows[0]?.has_blue_badge;
+    const isSellerVerified = rawBadge === true || rawBadge === 't' || rawBadge === 1 || rawBadge === '1' || rawBadge === 'true';
     
-    const verificationPending = userInfo.rows[0]?.verification_pending === true || 
-                                userInfo.rows[0]?.verification_pending === 't' ||
-                                userInfo.rows[0]?.verification_pending === 1;
+    const rawPending = userInfo.rows[0]?.verification_pending;
+    const verificationPending = rawPending === true || rawPending === 't' || rawPending === 1 || rawPending === '1' || rawPending === 'true';
     
     console.log('Computed is_seller_verified:', isSellerVerified); // Debug log
 
