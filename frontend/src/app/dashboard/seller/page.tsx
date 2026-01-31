@@ -228,15 +228,23 @@ export default function SellerDashboardPage() {
         console.log('Verification data:', data.verification); // Debug log
         console.log('has_blue_badge from API:', data.has_blue_badge, data.verification?.has_blue_badge); // Debug
         
+        // Store raw API values for debug banner
+        if (typeof window !== 'undefined') {
+          (window as any).__debug_badge = data.has_blue_badge;
+          (window as any).__debug_verification = JSON.stringify(data.verification);
+        }
+        
         // Seller verification is based on has_blue_badge only (not email is_verified)
         const isVerified = Boolean(
           data.verification?.has_blue_badge ||
-          data.has_blue_badge
+          data.has_blue_badge ||
+          data.verification?.is_verified ||
+          data.is_verified
         );
         
         // TEMP DEBUG - remove after confirming
         if (typeof window !== 'undefined') {
-          alert(`API Response Debug:\nhas_blue_badge: ${data.has_blue_badge}\nverification.has_blue_badge: ${data.verification?.has_blue_badge}\nComputed isVerified: ${isVerified}`);
+          alert(`API Response Debug:\nhas_blue_badge: ${data.has_blue_badge}\nverification.has_blue_badge: ${data.verification?.has_blue_badge}\nverification.is_verified: ${data.verification?.is_verified}\nis_verified: ${data.is_verified}\nComputed isVerified: ${isVerified}`);
         }
         
         console.log('Is seller verified (computed):', isVerified); // Debug log
@@ -514,8 +522,8 @@ export default function SellerDashboardPage() {
         )}
 
         {/* TEMP DEBUG BANNER - REMOVE AFTER TESTING */}
-        <Alert severity="info" sx={{ mb: 3, bgcolor: '#ff00ff', color: 'white' }}>
-          DEBUG: stats.is_verified = {String(stats?.is_verified)} | stats.verification_pending = {String(stats?.verification_pending)} | stats exists = {String(!!stats)}
+        <Alert severity="info" sx={{ mb: 3, bgcolor: '#ff00ff', color: 'white', fontSize: '12px' }}>
+          DEBUG: is_verified={String(stats?.is_verified)} | verification_pending={String(stats?.verification_pending)} | raw_api_badge={String((window as any).__debug_badge)} | raw_api_verification={String((window as any).__debug_verification)}
         </Alert>
 
         {/* Verified Status Alert - Show for verified sellers */}
