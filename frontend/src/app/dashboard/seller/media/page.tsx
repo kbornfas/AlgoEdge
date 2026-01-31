@@ -479,23 +479,61 @@ export default function SellerMediaPage() {
           {/* File Upload Area */}
           <Box
             sx={{
-              border: '2px dashed rgba(139, 92, 246, 0.3)',
-              borderRadius: 2,
+              border: '2px dashed rgba(139, 92, 246, 0.5)',
+              borderRadius: 3,
               p: 4,
               textAlign: 'center',
               cursor: 'pointer',
               mb: 3,
-              '&:hover': { borderColor: '#8B5CF6', bgcolor: 'rgba(139, 92, 246, 0.05)' },
+              bgcolor: 'rgba(139, 92, 246, 0.05)',
+              transition: 'all 0.3s ease',
+              '&:hover': { 
+                borderColor: '#8B5CF6', 
+                bgcolor: 'rgba(139, 92, 246, 0.1)',
+                transform: 'scale(1.01)',
+              },
             }}
             component="label"
           >
-            <Upload size={48} color="#8B5CF6" style={{ marginBottom: 16 }} />
-            <Typography variant="h6" gutterBottom>
+            <Box
+              sx={{
+                width: 80,
+                height: 80,
+                borderRadius: '50%',
+                bgcolor: 'rgba(139, 92, 246, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 2,
+              }}
+            >
+              <Upload size={36} color="#8B5CF6" />
+            </Box>
+            <Typography variant="h6" gutterBottom sx={{ color: 'white', fontWeight: 600 }}>
               Drop files here or click to upload
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Images (JPG, PNG - max 10MB) • Videos (MP4, WebM - max 50MB)
             </Typography>
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
+                px: 3,
+                py: 1,
+                borderRadius: 2,
+                bgcolor: '#8B5CF6',
+                color: 'white',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                '&:hover': { bgcolor: '#7C3AED' },
+              }}
+            >
+              <Upload size={18} />
+              Browse Files
+            </Box>
             <input
               type="file"
               hidden
