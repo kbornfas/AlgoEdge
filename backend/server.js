@@ -252,7 +252,7 @@ const startServer = async () => {
     console.log('✅ Report schedulers started - emails will be sent on schedule');
 
     server.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Backend server running on port ${PORT}`);
+      console.log(`🚀 Backend server running on port ${PORT} - v2.1.0`);
     });
   } catch (error) {
     console.error('🔥 Startup failure:', error);
