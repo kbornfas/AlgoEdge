@@ -60,6 +60,7 @@ import {
   ShieldCheck,
   Camera,
   Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import VerificationModal from '@/components/VerificationModal';
@@ -72,7 +73,8 @@ interface SellerStats {
     total_earnings: number;
     total_payouts: number;
   };
-  is_verified: boolean;
+  is_seller_approved: boolean; // Whether user can sell on marketplace
+  has_blue_badge: boolean; // Whether user has identity verification badge
   verification_pending: boolean;
   profile_image?: string;
   seller_slug?: string;
@@ -169,11 +171,10 @@ export default function SellerDashboardPage() {
         // Check has_blue_badge from user profile
         const hasBlueBadge = data.user?.has_blue_badge === true || 
                             data.user?.has_blue_badge === 't' || 
-                            data.user?.has_blue_badge === 1 ||
-                            data.user?.is_verified === true;
+                            data.user?.has_blue_badge === 1;
         
         if (hasBlueBadge) {
-          setStats(prev => prev ? { ...prev, is_verified: true } : prev);
+          setStats(prev => prev ? { ...prev, has_blue_badge: true } : prev);
           setDebugInfo(`Profile has_blue_badge: ${data.user?.has_blue_badge}`);
         }
       }
@@ -268,17 +269,15 @@ export default function SellerDashboardPage() {
       
       if (res.ok) {
         console.log('Verification data:', data.verification); // Debug log
-        console.log('has_blue_badge from API:', data.has_blue_badge, data.verification?.has_blue_badge); // Debug
+        console.log('has_blue_badge from API:', data.has_blue_badge); // Debug
         
-        // Seller verification is based on has_blue_badge only (not email is_verified)
-        const isVerified = Boolean(
+        // Blue badge is identity verification (separate from seller approval)
+        const hasBlueBadge = Boolean(
           data.verification?.has_blue_badge ||
-          data.has_blue_badge ||
-          data.verification?.is_verified ||
-          data.is_verified
+          data.has_blue_badge
         );
         
-        console.log('Is seller verified (computed):', isVerified); // Debug log
+        console.log('Has blue badge:', hasBlueBadge); // Debug log
         
         // Map API response to SellerStats interface
         const mappedStats: SellerStats = {
@@ -288,7 +287,8 @@ export default function SellerDashboardPage() {
             total_earnings: parseFloat(data.wallet?.total_earnings) || 0,
             total_payouts: parseFloat(data.wallet?.total_payouts) || 0,
           },
-          is_verified: isVerified,
+          is_seller_approved: true, // If API responds successfully, user is an approved seller
+          has_blue_badge: hasBlueBadge,
           verification_pending: Boolean(data.verification?.verification_pending || data.verification_pending),
           profile_image: data.verification?.profile_image || undefined,
           seller_slug: data.verification?.seller_slug || undefined,
@@ -308,7 +308,7 @@ export default function SellerDashboardPage() {
           },
         };
         setStats(mappedStats);
-        setDebugInfo(`OK: badge=${data.has_blue_badge}, v.badge=${data.verification?.has_blue_badge}, computed=${isVerified}`);
+        setDebugInfo(`OK: is_seller=true, has_badge=${hasBlueBadge}`);
         console.log('Mapped stats:', mappedStats); // Debug log
       } else {
         // API returned an error - set default stats so UI shows properly
@@ -316,7 +316,8 @@ export default function SellerDashboardPage() {
         setDebugInfo(`API Error ${res.status}: ${data.error || 'unknown'}`);
         setStats({
           wallet: { available_balance: 0, pending_earnings: 0, total_earnings: 0, total_payouts: 0 },
-          is_verified: false,
+          is_seller_approved: false,
+          has_blue_badge: false,
           verification_pending: false,
           totals: { bots: 0, products: 0, signals: 0, total_sales: 0, total_revenue: 0, avg_rating: 0 },
           recent_transactions: [],
@@ -329,7 +330,8 @@ export default function SellerDashboardPage() {
       // Set default stats even on error so Get Verified card shows
       setStats({
         wallet: { available_balance: 0, pending_earnings: 0, total_earnings: 0, total_payouts: 0 },
-        is_verified: false,
+        is_seller_approved: false,
+        has_blue_badge: false,
         verification_pending: false,
         totals: { bots: 0, products: 0, signals: 0, total_sales: 0, total_revenue: 0, avg_rating: 0 },
         recent_transactions: [],
@@ -555,13 +557,8 @@ export default function SellerDashboardPage() {
           </Alert>
         )}
 
-        {/* TEMP DEBUG BANNER - REMOVE AFTER TESTING */}
-        <Alert severity="info" sx={{ mb: 3, bgcolor: '#ff00ff', color: 'white', fontSize: '12px' }}>
-          DEBUG: {debugInfo}
-        </Alert>
-
-        {/* Verified Status Alert - Show for verified sellers */}
-        {stats?.is_verified && (
+        {/* Blue Badge Verified Alert - Show only for sellers who have identity verification */}
+        {stats?.has_blue_badge && (
           <Alert 
             severity="success" 
             sx={{ 
@@ -577,12 +574,12 @@ export default function SellerDashboardPage() {
               </svg>
             }
           >
-            You are a verified seller! Your verified badge is displayed on all your listings.
+            You have the verified badge! Your blue badge is displayed on all your listings.
           </Alert>
         )}
 
         {/* Verification Pending Card - Show when verification is submitted but awaiting approval */}
-        {stats && !stats.is_verified && stats.verification_pending && (
+        {stats && !stats.has_blue_badge && stats.verification_pending && (
           <Card
             sx={{
               mb: { xs: 2, md: 4 },
@@ -643,8 +640,8 @@ export default function SellerDashboardPage() {
           </Card>
         )}
 
-        {/* Get Verified Card - Only show for non-verified sellers who haven't applied */}
-        {stats && !stats.is_verified && !stats.verification_pending && (
+        {/* Get Verified Card - Only show for sellers who don't have blue badge and haven't applied */}
+        {stats && !stats.has_blue_badge && !stats.verification_pending && (
         <Card
           sx={{
             mb: { xs: 2, md: 4 },
@@ -811,6 +808,25 @@ export default function SellerDashboardPage() {
               }}
             >
               Reviews
+            </Button>
+          </Grid>
+          <Grid item xs={6} md={3}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<ImageIcon size={16} />}
+              component={Link}
+              href="/dashboard/seller/media"
+              sx={{
+                py: 1.5,
+                borderColor: 'rgba(236, 72, 153, 0.5)',
+                color: '#EC4899',
+                fontSize: { xs: '0.65rem', sm: '0.8rem' },
+                '&:hover': { borderColor: '#EC4899', bgcolor: 'rgba(236, 72, 153, 0.1)' },
+                '& .MuiButton-startIcon': { mr: 0.5 },
+              }}
+            >
+              Media
             </Button>
           </Grid>
         </Grid>
@@ -1502,7 +1518,7 @@ export default function SellerDashboardPage() {
           onClose={() => setVerifyModalOpen(false)}
           onSuccess={handleVerificationSuccess}
           walletBalance={userWalletBalance}
-          isAlreadyVerified={stats?.is_verified}
+          isAlreadyVerified={stats?.has_blue_badge}
         />
       </Box>
     </Box>

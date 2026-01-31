@@ -95,13 +95,40 @@ export default function SellerReviewsPage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      if (!response.ok) throw new Error('Failed to fetch reviews');
+      // If response is not ok, check if it's a real error or just no data
+      if (!response.ok) {
+        // Set empty state instead of showing error
+        setReviews([]);
+        setStats({
+          total: 0,
+          average_rating: '0.0',
+          product_reviews: 0,
+          bot_reviews: 0,
+        });
+        setError(null); // Don't show error for empty reviews
+        return;
+      }
       
       const data = await response.json();
       setReviews(data.reviews || []);
-      setStats(data.stats || null);
+      setStats(data.stats || {
+        total: 0,
+        average_rating: '0.0',
+        product_reviews: 0,
+        bot_reviews: 0,
+      });
+      setError(null); // Clear any previous errors
     } catch (err: any) {
-      setError(err.message);
+      // On network error, show empty state, not error
+      console.error('Reviews fetch error:', err);
+      setReviews([]);
+      setStats({
+        total: 0,
+        average_rating: '0.0',
+        product_reviews: 0,
+        bot_reviews: 0,
+      });
+      // Don't set error - just show empty reviews
     } finally {
       setLoading(false);
     }

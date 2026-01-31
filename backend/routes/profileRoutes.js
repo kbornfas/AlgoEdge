@@ -1,8 +1,74 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import pool from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Configure multer for seller media uploads (images and videos)
+const sellerMediaStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(process.cwd(), 'uploads', 'seller-media');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `media-${req.user?.id || 'unknown'}-${uniqueSuffix}${ext}`);
+  }
+});
+
+const sellerMediaUpload = multer({
+  storage: sellerMediaStorage,
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit for videos
+  fileFilter: (req, file, cb) => {
+    const imageTypes = /jpeg|jpg|png|gif|webp/;
+    const videoTypes = /mp4|webm|mov|avi|mkv/;
+    const ext = path.extname(file.originalname).toLowerCase().slice(1);
+    const isImage = imageTypes.test(ext) || file.mimetype.startsWith('image/');
+    const isVideo = videoTypes.test(ext) || file.mimetype.startsWith('video/');
+    
+    if (isImage || isVideo) {
+      return cb(null, true);
+    }
+    cb(new Error('Only image and video files are allowed'));
+  }
+});
+
+// Configure multer for profile/banner images
+const profileImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(process.cwd(), 'uploads', 'profiles');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `profile-${req.user?.id || 'unknown'}-${uniqueSuffix}${ext}`);
+  }
+});
+
+const profileImageUpload = multer({
+  storage: profileImageStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit for images
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const ext = path.extname(file.originalname).toLowerCase().slice(1);
+    const isImage = allowedTypes.test(ext) || file.mimetype.startsWith('image/');
+    if (isImage) {
+      return cb(null, true);
+    }
+    cb(new Error('Only image files are allowed'));
+  }
+});
 
 // ============================================================================
 // PUBLIC PROFILE ROUTES (No auth required)
@@ -13,20 +79,24 @@ router.get('/seller/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
     
+    // Look up seller by seller_slug first, then fallback to username
     const seller = await pool.query(`
       SELECT 
         u.id, u.username, u.full_name, u.profile_image, u.has_blue_badge,
+        u.seller_display_name,
+        COALESCE(u.seller_display_name, u.full_name, u.username) as display_name,
         u.seller_bio, u.seller_tagline, u.seller_website, u.seller_telegram,
         u.seller_twitter, u.seller_instagram, u.seller_youtube, u.seller_discord,
         u.seller_experience_years, u.seller_specialties, u.seller_trading_style,
         u.seller_joined_at, u.seller_total_sales, u.seller_rating_average, 
         u.seller_rating_count, u.seller_banner_url, u.seller_featured,
         u.country, u.verified_at,
+        COALESCE(u.seller_slug, u.username) as seller_slug,
         (SELECT COUNT(*) FROM marketplace_bots WHERE seller_id = u.id AND status = 'approved') as bots_count,
         (SELECT COUNT(*) FROM marketplace_products WHERE seller_id = u.id AND status = 'approved') as products_count,
         (SELECT COUNT(*) FROM signal_providers WHERE user_id = u.id AND status = 'approved') as signals_count
       FROM users u
-      WHERE u.seller_slug = $1 AND u.is_seller = TRUE
+      WHERE (u.seller_slug = $1 OR u.username = $1) AND u.is_seller = TRUE
     `, [slug]);
 
     if (seller.rows.length === 0) {
@@ -62,6 +132,28 @@ router.get('/seller/:slug', async (req, res) => {
       LIMIT 6
     `, [sellerData.id]);
 
+    // Get seller's performance media (screenshots, videos)
+    const media = await pool.query(`
+      SELECT id, media_type, media_url, thumbnail_url, title, description, is_featured
+      FROM seller_media 
+      WHERE user_id = $1 AND is_visible = TRUE
+      ORDER BY is_featured DESC, display_order ASC
+      LIMIT 20
+    `, [sellerData.id]);
+
+    // Get seller reviews
+    const reviews = await pool.query(`
+      SELECT r.*, 
+             u.username as reviewer_username, 
+             u.full_name as reviewer_name,
+             u.profile_image as reviewer_avatar
+      FROM marketplace_reviews r
+      JOIN users u ON r.user_id = u.id
+      WHERE r.seller_id = $1 AND r.status = 'approved'
+      ORDER BY r.created_at DESC
+      LIMIT 10
+    `, [sellerData.id]);
+
     res.json({
       success: true,
       seller: {
@@ -71,6 +163,8 @@ router.get('/seller/:slug', async (req, res) => {
       bots: bots.rows,
       products: products.rows,
       signals: signals.rows,
+      media: media.rows,
+      reviews: reviews.rows,
     });
   } catch (error) {
     console.error('Get seller profile error:', error);
@@ -270,7 +364,7 @@ router.post('/become-seller', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
     const {
-      full_name, phone, country, bio, tagline, experience_years,
+      full_name, display_name, phone, country, bio, tagline, experience_years,
       trading_style, specialties, website, telegram, twitter,
       instagram, youtube, discord, portfolio_links, sample_work_urls,
       why_join, terms_accepted
@@ -306,13 +400,14 @@ router.post('/become-seller', authenticate, async (req, res) => {
     // Create application
     const application = await pool.query(`
       INSERT INTO seller_applications (
-        user_id, full_name, email, phone, country, bio, tagline, 
+        user_id, full_name, display_name, email, phone, country, bio, tagline, 
         experience_years, trading_style, specialties, website,
         telegram, twitter, instagram, youtube, discord,
         portfolio_links, sample_work_urls, why_join, terms_accepted
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
       ON CONFLICT (user_id) DO UPDATE SET
         full_name = EXCLUDED.full_name,
+        display_name = EXCLUDED.display_name,
         phone = EXCLUDED.phone,
         country = EXCLUDED.country,
         bio = EXCLUDED.bio,
@@ -334,7 +429,7 @@ router.post('/become-seller', authenticate, async (req, res) => {
         updated_at = NOW()
       RETURNING *
     `, [
-      userId, full_name, user.rows[0].email, phone, country, bio, tagline,
+      userId, full_name, display_name || null, user.rows[0].email, phone, country, bio, tagline,
       experience_years || 0, trading_style, specialties || [], website,
       telegram, twitter, instagram, youtube, discord,
       portfolio_links || [], sample_work_urls || [], why_join, terms_accepted
@@ -474,8 +569,9 @@ router.post('/admin/seller-applications/:id/approve', authenticate, async (req, 
 
     const application = app.rows[0];
 
-    // Generate unique seller slug
-    let slug = application.full_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    // Generate unique seller slug from display_name if provided, otherwise full_name
+    const nameForSlug = application.display_name || application.full_name;
+    let slug = nameForSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
     const existingSlug = await pool.query('SELECT id FROM users WHERE seller_slug = $1', [slug]);
     if (existingSlug.rows.length > 0) {
       slug = `${slug}-${application.user_id}`;
@@ -486,25 +582,26 @@ router.post('/admin/seller-applications/:id/approve', authenticate, async (req, 
       UPDATE users SET
         is_seller = TRUE,
         seller_slug = $1,
-        full_name = COALESCE($2, full_name),
-        seller_bio = $3,
-        seller_tagline = $4,
-        seller_experience_years = $5,
-        seller_trading_style = $6,
-        seller_specialties = $7,
-        seller_website = $8,
-        seller_telegram = $9,
-        seller_twitter = $10,
-        seller_instagram = $11,
-        seller_youtube = $12,
-        seller_discord = $13,
+        seller_display_name = $2,
+        full_name = COALESCE($3, full_name),
+        seller_bio = $4,
+        seller_tagline = $5,
+        seller_experience_years = $6,
+        seller_trading_style = $7,
+        seller_specialties = $8,
+        seller_website = $9,
+        seller_telegram = $10,
+        seller_twitter = $11,
+        seller_instagram = $12,
+        seller_youtube = $13,
+        seller_discord = $14,
         seller_joined_at = NOW(),
-        phone = COALESCE($14, phone),
-        country = COALESCE($15, country),
+        phone = COALESCE($15, phone),
+        country = COALESCE($16, country),
         updated_at = NOW()
-      WHERE id = $16
+      WHERE id = $17
     `, [
-      slug, application.full_name, application.bio, application.tagline,
+      slug, application.display_name || null, application.full_name, application.bio, application.tagline,
       application.experience_years, application.trading_style, application.specialties,
       application.website, application.telegram, application.twitter, application.instagram,
       application.youtube, application.discord, application.phone, application.country,
@@ -722,6 +819,327 @@ router.get('/my-links', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Get links error:', error);
     res.status(500).json({ error: 'Failed to get links' });
+  }
+});
+
+// ============================================================================
+// SELLER MEDIA UPLOAD ROUTES
+// ============================================================================
+
+// Upload seller profile image
+router.post('/seller/profile-image', authenticate, profileImageUpload.single('image'), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    const baseUrl = process.env.BACKEND_URL || 'https://algoedge-production-a108.up.railway.app';
+    const imageUrl = `${baseUrl}/uploads/profiles/${req.file.filename}`;
+
+    // Update user's profile_image
+    await pool.query(
+      'UPDATE users SET profile_image = $1, updated_at = NOW() WHERE id = $2',
+      [imageUrl, userId]
+    );
+
+    res.json({
+      success: true,
+      image_url: imageUrl,
+      message: 'Profile image uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Profile image upload error:', error);
+    res.status(500).json({ error: 'Failed to upload profile image' });
+  }
+});
+
+// Upload seller banner image
+router.post('/seller/banner-image', authenticate, profileImageUpload.single('image'), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    const baseUrl = process.env.BACKEND_URL || 'https://algoedge-production-a108.up.railway.app';
+    const imageUrl = `${baseUrl}/uploads/profiles/${req.file.filename}`;
+
+    // Update user's banner image
+    await pool.query(
+      'UPDATE users SET banner_image_url = $1, updated_at = NOW() WHERE id = $2',
+      [imageUrl, userId]
+    );
+
+    res.json({
+      success: true,
+      image_url: imageUrl,
+      message: 'Banner image uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Banner image upload error:', error);
+    res.status(500).json({ error: 'Failed to upload banner image' });
+  }
+});
+
+// Upload seller media (performance screenshots/videos)
+router.post('/seller/media', authenticate, sellerMediaUpload.single('media'), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { title, description, is_featured } = req.body;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No media file provided' });
+    }
+
+    // Determine media type
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
+    const mediaType = videoExtensions.includes(ext) ? 'video' : 'image';
+
+    const baseUrl = process.env.BACKEND_URL || 'https://algoedge-production-a108.up.railway.app';
+    const mediaUrl = `${baseUrl}/uploads/seller-media/${req.file.filename}`;
+
+    // Get current max display order
+    const orderResult = await pool.query(
+      'SELECT COALESCE(MAX(display_order), 0) + 1 as next_order FROM seller_media WHERE user_id = $1',
+      [userId]
+    );
+    const displayOrder = orderResult.rows[0].next_order;
+
+    // Insert into seller_media table
+    const result = await pool.query(`
+      INSERT INTO seller_media (user_id, media_type, media_url, title, description, is_featured, display_order)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `, [userId, mediaType, mediaUrl, title || null, description || null, is_featured === 'true', displayOrder]);
+
+    res.json({
+      success: true,
+      media: result.rows[0],
+      message: `${mediaType === 'video' ? 'Video' : 'Image'} uploaded successfully`
+    });
+  } catch (error) {
+    console.error('Seller media upload error:', error);
+    res.status(500).json({ error: 'Failed to upload media' });
+  }
+});
+
+// Upload multiple seller media files
+router.post('/seller/media/bulk', authenticate, sellerMediaUpload.array('media', 10), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'No media files provided' });
+    }
+
+    const baseUrl = process.env.BACKEND_URL || 'https://algoedge-production-a108.up.railway.app';
+    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
+    
+    // Get current max display order
+    const orderResult = await pool.query(
+      'SELECT COALESCE(MAX(display_order), 0) as max_order FROM seller_media WHERE user_id = $1',
+      [userId]
+    );
+    let displayOrder = orderResult.rows[0].max_order;
+
+    const uploadedMedia = [];
+    
+    for (const file of req.files) {
+      displayOrder++;
+      const ext = path.extname(file.originalname).toLowerCase();
+      const mediaType = videoExtensions.includes(ext) ? 'video' : 'image';
+      const mediaUrl = `${baseUrl}/uploads/seller-media/${file.filename}`;
+
+      const result = await pool.query(`
+        INSERT INTO seller_media (user_id, media_type, media_url, display_order)
+        VALUES ($1, $2, $3, $4)
+        RETURNING *
+      `, [userId, mediaType, mediaUrl, displayOrder]);
+      
+      uploadedMedia.push(result.rows[0]);
+    }
+
+    res.json({
+      success: true,
+      media: uploadedMedia,
+      message: `${uploadedMedia.length} files uploaded successfully`
+    });
+  } catch (error) {
+    console.error('Bulk media upload error:', error);
+    res.status(500).json({ error: 'Failed to upload media files' });
+  }
+});
+
+// Get seller's media
+router.get('/seller/media', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const media = await pool.query(`
+      SELECT * FROM seller_media 
+      WHERE user_id = $1 AND is_visible = TRUE
+      ORDER BY is_featured DESC, display_order ASC
+    `, [userId]);
+
+    res.json({
+      success: true,
+      media: media.rows
+    });
+  } catch (error) {
+    console.error('Get seller media error:', error);
+    res.status(500).json({ error: 'Failed to get media' });
+  }
+});
+
+// Get public seller media by seller slug/username
+router.get('/seller/:slug/media', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    
+    // Find seller by slug or username
+    const seller = await pool.query(
+      'SELECT id FROM users WHERE (seller_slug = $1 OR username = $1) AND is_seller = TRUE',
+      [slug]
+    );
+    
+    if (seller.rows.length === 0) {
+      return res.status(404).json({ error: 'Seller not found' });
+    }
+
+    const media = await pool.query(`
+      SELECT id, media_type, media_url, thumbnail_url, title, description, is_featured, created_at
+      FROM seller_media 
+      WHERE user_id = $1 AND is_visible = TRUE
+      ORDER BY is_featured DESC, display_order ASC
+    `, [seller.rows[0].id]);
+
+    res.json({
+      success: true,
+      media: media.rows
+    });
+  } catch (error) {
+    console.error('Get public seller media error:', error);
+    res.status(500).json({ error: 'Failed to get media' });
+  }
+});
+
+// Update seller media (full update)
+router.put('/seller/media/:id', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { title, description, is_featured, is_visible, display_order } = req.body;
+
+    // Verify ownership
+    const existing = await pool.query(
+      'SELECT id FROM seller_media WHERE id = $1 AND user_id = $2',
+      [id, userId]
+    );
+    
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Media not found' });
+    }
+
+    const result = await pool.query(`
+      UPDATE seller_media SET 
+        title = COALESCE($1, title),
+        description = COALESCE($2, description),
+        is_featured = COALESCE($3, is_featured),
+        is_visible = COALESCE($4, is_visible),
+        display_order = COALESCE($5, display_order),
+        updated_at = NOW()
+      WHERE id = $6 AND user_id = $7
+      RETURNING *
+    `, [title, description, is_featured, is_visible, display_order, id, userId]);
+
+    res.json({
+      success: true,
+      media: result.rows[0],
+      message: 'Media updated successfully'
+    });
+  } catch (error) {
+    console.error('Update seller media error:', error);
+    res.status(500).json({ error: 'Failed to update media' });
+  }
+});
+
+// Partial update seller media (for toggle switches)
+router.patch('/seller/media/:id', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { is_featured, is_visible } = req.body;
+
+    // Verify ownership
+    const existing = await pool.query(
+      'SELECT id FROM seller_media WHERE id = $1 AND user_id = $2',
+      [id, userId]
+    );
+    
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Media not found' });
+    }
+
+    const result = await pool.query(`
+      UPDATE seller_media SET 
+        is_featured = COALESCE($1, is_featured),
+        is_visible = COALESCE($2, is_visible),
+        updated_at = NOW()
+      WHERE id = $3 AND user_id = $4
+      RETURNING *
+    `, [is_featured, is_visible, id, userId]);
+
+    res.json({
+      success: true,
+      media: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Patch seller media error:', error);
+    res.status(500).json({ error: 'Failed to update media' });
+  }
+});
+
+// Delete seller media
+router.delete('/seller/media/:id', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    // Get media info to delete file
+    const media = await pool.query(
+      'SELECT media_url FROM seller_media WHERE id = $1 AND user_id = $2',
+      [id, userId]
+    );
+    
+    if (media.rows.length === 0) {
+      return res.status(404).json({ error: 'Media not found' });
+    }
+
+    // Delete from database
+    await pool.query('DELETE FROM seller_media WHERE id = $1 AND user_id = $2', [id, userId]);
+
+    // Try to delete the file (don't fail if file doesn't exist)
+    try {
+      const filename = media.rows[0].media_url.split('/').pop();
+      const filePath = path.join(process.cwd(), 'uploads', 'seller-media', filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (fileError) {
+      console.error('Error deleting media file:', fileError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Media deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete seller media error:', error);
+    res.status(500).json({ error: 'Failed to delete media' });
   }
 });
 

@@ -294,8 +294,8 @@ export default function WalletPage() {
 
   useEffect(() => {
     fetchWalletData();
-    // Auto-refresh wallet data every 15 seconds to catch balance updates after admin approval
-    const interval = setInterval(fetchWalletData, 15000);
+    // Auto-refresh wallet data every 2 minutes to catch balance updates after admin approval
+    const interval = setInterval(fetchWalletData, 120000);
     return () => clearInterval(interval);
   }, [fetchWalletData]);
 

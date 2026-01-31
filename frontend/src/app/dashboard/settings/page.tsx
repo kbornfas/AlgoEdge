@@ -323,6 +323,11 @@ export default function SettingsPage() {
   const [showAvatarDialog, setShowAvatarDialog] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   
+  // Avatar upload state
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  
   // Profile State
   const [profile, setProfile] = useState({
     fullName: '',
@@ -704,6 +709,93 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle image selection for avatar
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Image size must be less than 2MB');
+      return;
+    }
+
+    // Validate file type
+    if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+      setError('Please upload a JPG or PNG image');
+      return;
+    }
+
+    setSelectedImage(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    setError('');
+  };
+
+  // Handle avatar upload
+  const handleUploadAvatar = async () => {
+    if (!selectedImage) {
+      setError('Please select an image first');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    setError('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('profile_image', selectedImage);
+
+      const response = await fetch(`${API_URL}/api/users/profile/image`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Update the profile avatar URL
+        setProfile(prev => ({ ...prev, avatarUrl: data.profile_image }));
+        setSuccess('Profile picture updated successfully!');
+        setShowAvatarDialog(false);
+        setSelectedImage(null);
+        setImagePreview(null);
+        
+        // Update localStorage
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          user.profile_image = data.profile_image;
+          user.avatarUrl = data.profile_image;
+          localStorage.setItem('user', JSON.stringify(user));
+        }
+      } else {
+        setError(data.error || 'Failed to upload image');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      setError('Failed to upload image. Please try again.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  // Close avatar dialog and reset state
+  const handleCloseAvatarDialog = () => {
+    setShowAvatarDialog(false);
+    setSelectedImage(null);
+    setImagePreview(null);
   };
 
   const handleSendPasswordCode = async () => {
@@ -1855,18 +1947,63 @@ export default function SettingsPage() {
       </Dialog>
 
       {/* Avatar Upload Dialog */}
-      <Dialog open={showAvatarDialog} onClose={() => setShowAvatarDialog(false)} maxWidth="xs" fullWidth>
+      <Dialog open={showAvatarDialog} onClose={handleCloseAvatarDialog} maxWidth="xs" fullWidth>
         <DialogTitle>Update Profile Picture</DialogTitle>
         <DialogContent>
           <Box sx={{ textAlign: 'center', py: 3 }}>
-            <Avatar sx={{ width: 120, height: 120, mx: 'auto', mb: 3, fontSize: '3rem' }} src={profile.avatarUrl}>{profile.fullName?.charAt(0) || 'U'}</Avatar>
-            <Button variant="outlined" startIcon={<Upload size={18} />} component="label">Upload Photo<input type="file" hidden accept="image/*" /></Button>
-            <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>Max 2MB, JPG or PNG</Typography>
+            {/* Show preview if image selected, otherwise show current avatar */}
+            <Avatar 
+              sx={{ 
+                width: 150, 
+                height: 150, 
+                mx: 'auto', 
+                mb: 3, 
+                fontSize: '3.5rem',
+                border: imagePreview ? '3px solid #22C55E' : '3px solid rgba(255,255,255,0.1)'
+              }} 
+              src={imagePreview || profile.avatarUrl}
+            >
+              {profile.fullName?.charAt(0) || 'U'}
+            </Avatar>
+            
+            {imagePreview && (
+              <Typography variant="body2" color="success.main" sx={{ mb: 2 }}>
+                ✓ Image selected - Click Save to upload
+              </Typography>
+            )}
+            
+            <Button 
+              variant="outlined" 
+              startIcon={<Upload size={18} />} 
+              component="label"
+              disabled={uploadingAvatar}
+            >
+              {imagePreview ? 'Choose Different Photo' : 'Upload Photo'}
+              <input 
+                type="file" 
+                hidden 
+                accept="image/jpeg,image/jpg,image/png" 
+                onChange={handleImageSelect}
+              />
+            </Button>
+            <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
+              Max 2MB, JPG or PNG
+            </Typography>
+            <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
+              Use a square image for best results
+            </Typography>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowAvatarDialog(false)}>Cancel</Button>
-          <Button variant="contained">Save</Button>
+          <Button onClick={handleCloseAvatarDialog} disabled={uploadingAvatar}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleUploadAvatar}
+            disabled={!selectedImage || uploadingAvatar}
+            startIcon={uploadingAvatar ? <CircularProgress size={16} color="inherit" /> : null}
+          >
+            {uploadingAvatar ? 'Uploading...' : 'Save'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

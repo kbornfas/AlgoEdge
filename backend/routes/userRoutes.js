@@ -130,8 +130,8 @@ router.put('/profile', apiLimiter, updateProfile);
 router.post('/send-password-code', apiLimiter, sendPasswordChangeCode);
 router.post('/change-password', apiLimiter, changePassword);
 
-// Profile image upload
-router.post('/profile/image', apiLimiter, profileUpload.single('profile_image'), async (req, res) => {
+// Profile image upload - Store as base64 data URL in database
+router.post('/profile/image', authenticate, apiLimiter, profileUpload.single('profile_image'), async (req, res) => {
   try {
     const userId = req.user.id;
     
@@ -139,20 +139,30 @@ router.post('/profile/image', apiLimiter, profileUpload.single('profile_image'),
       return res.status(400).json({ error: 'No image file provided' });
     }
 
-    // Generate the public URL for the uploaded image
-    const imageUrl = `${process.env.BACKEND_URL || 'https://algoedge-production.up.railway.app'}/uploads/profiles/${req.file.filename}`;
+    // Read the file and convert to base64 data URL
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const base64Image = fileBuffer.toString('base64');
+    const mimeType = req.file.mimetype;
+    const dataUrl = `data:${mimeType};base64,${base64Image}`;
+    
+    // Clean up the temp file
+    try {
+      fs.unlinkSync(req.file.path);
+    } catch (e) {
+      // Ignore cleanup errors
+    }
 
-    // Update user's profile_image in the database
+    // Update user's profile_image in the database with the data URL
     await pool.query(
       'UPDATE users SET profile_image = $1, updated_at = NOW() WHERE id = $2',
-      [imageUrl, userId]
+      [dataUrl, userId]
     );
 
-    console.log(`Profile image updated for user ${userId}: ${imageUrl}`);
+    console.log(`Profile image updated for user ${userId} (base64, ${Math.round(base64Image.length / 1024)}KB)`);
 
     res.json({
       success: true,
-      profile_image: imageUrl,
+      profile_image: dataUrl,
       message: 'Profile image uploaded successfully'
     });
   } catch (error) {

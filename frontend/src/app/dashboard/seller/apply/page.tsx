@@ -77,6 +77,7 @@ export default function BecomeSellerPage() {
   
   const [formData, setFormData] = useState({
     full_name: '',
+    display_name: '', // Optional trading alias/brand name
     phone: '',
     country: '',
     bio: '',
@@ -373,6 +374,27 @@ export default function BecomeSellerPage() {
                     onChange={handleChange}
                     required
                     InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)' } }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        color: 'white',
+                        '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                        '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
+                        '&.Mui-focused fieldset': { borderColor: '#8B5CF6' },
+                      },
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Display Name (Optional)"
+                    name="display_name"
+                    value={formData.display_name}
+                    onChange={handleChange}
+                    placeholder="Your trading alias or brand name"
+                    helperText="This is how you'll appear on your listings. Leave blank to use your full name."
+                    InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)' } }}
+                    FormHelperTextProps={{ sx: { color: 'rgba(255,255,255,0.5)' } }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         color: 'white',

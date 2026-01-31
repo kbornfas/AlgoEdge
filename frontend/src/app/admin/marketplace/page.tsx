@@ -107,6 +107,7 @@ interface SellerApplication {
   username: string;
   profile_image: string;
   full_name: string;
+  display_name?: string; // Optional trading alias/brand name
   bio: string;
   tagline: string;
   experience_years: number;
@@ -654,12 +655,17 @@ export default function AdminMarketplacePage() {
                             src={application.profile_image} 
                             sx={{ bgcolor: '#8B5CF6', width: 48, height: 48 }}
                           >
-                            {application.full_name?.charAt(0) || 'U'}
+                            {(application.display_name || application.full_name)?.charAt(0) || 'U'}
                           </Avatar>
                           <Box sx={{ flex: 1 }}>
                             <Typography sx={{ color: 'white', fontWeight: 700 }}>
-                              {application.full_name}
+                              {application.display_name || application.full_name}
                             </Typography>
+                            {application.display_name && (
+                              <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
+                                Real name: {application.full_name}
+                              </Typography>
+                            )}
                             <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>
                               {application.user_email}
                             </Typography>
@@ -1221,12 +1227,17 @@ export default function AdminMarketplacePage() {
                       src={selectedApplication.profile_image}
                       sx={{ bgcolor: '#8B5CF6', width: 48, height: 48 }}
                     >
-                      {selectedApplication.full_name?.charAt(0) || 'U'}
+                      {(selectedApplication.display_name || selectedApplication.full_name)?.charAt(0) || 'U'}
                     </Avatar>
                     <Box>
                       <Typography sx={{ color: 'white', fontWeight: 700 }}>
-                        {selectedApplication.full_name}
+                        {selectedApplication.display_name || selectedApplication.full_name}
                       </Typography>
+                      {selectedApplication.display_name && (
+                        <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
+                          Real name: {selectedApplication.full_name}
+                        </Typography>
+                      )}
                       <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
                         {selectedApplication.user_email}
                       </Typography>

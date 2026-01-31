@@ -142,7 +142,8 @@ router.get('/landing', async (req, res) => {
         SELECT b.id, b.name, b.slug, b.short_description as description, b.thumbnail_url, b.price, b.price_type,
                b.win_rate, b.monthly_return, b.rating_average, b.rating_count as total_reviews, b.total_sales, b.category,
                b.is_featured,
-               u.full_name as seller_name, u.profile_image as seller_avatar, u.has_blue_badge as seller_verified
+               COALESCE(u.seller_display_name, u.full_name, u.username) as seller_name, 
+               u.profile_image as seller_avatar, u.has_blue_badge as seller_verified
         FROM marketplace_bots b
         JOIN users u ON b.seller_id = u.id
         WHERE b.status = 'approved' AND b.is_featured = true
@@ -153,7 +154,8 @@ router.get('/landing', async (req, res) => {
         SELECT sp.id, sp.display_name as name, sp.slug, sp.avatar_url, sp.monthly_price,
                sp.win_rate, sp.total_pips, sp.subscriber_count, sp.rating_average,
                sp.trading_style, sp.risk_level, sp.bio as description, sp.is_featured,
-               u.full_name as provider_name, u.profile_image as provider_avatar, u.has_blue_badge as provider_verified
+               COALESCE(u.seller_display_name, u.full_name, u.username) as provider_name, 
+               u.profile_image as provider_avatar, u.has_blue_badge as provider_verified
         FROM signal_providers sp
         JOIN users u ON sp.user_id = u.id
         WHERE sp.status = 'approved' AND sp.is_featured = true
@@ -164,7 +166,8 @@ router.get('/landing', async (req, res) => {
         SELECT p.id, p.name, p.slug, p.short_description as description, p.thumbnail_url, p.price,
                p.product_type as type, p.rating_average, p.rating_count as total_reviews, p.total_sales,
                p.is_featured,
-               u.full_name as seller_name, u.profile_image as seller_avatar, u.has_blue_badge as seller_verified
+               COALESCE(u.seller_display_name, u.full_name, u.username) as seller_name, 
+               u.profile_image as seller_avatar, u.has_blue_badge as seller_verified
         FROM marketplace_products p
         JOIN users u ON p.seller_id = u.id
         WHERE p.status = 'approved' AND p.is_featured = true
@@ -206,7 +209,7 @@ router.get('/bots', async (req, res) => {
 
     let query = `
       SELECT b.*, 
-             u.username as seller_name,
+             COALESCE(u.seller_display_name, u.full_name, u.username) as seller_name,
              u.profile_picture as seller_avatar,
              u.has_blue_badge as seller_verified,
              COALESCE(u.seller_rating_average, 0) as seller_rating,
@@ -296,12 +299,13 @@ router.get('/bots/:slug', optionalAuthenticate, async (req, res) => {
 
     const bot = await pool.query(`
       SELECT b.*, 
-             u.username as seller_name, 
+             COALESCE(u.seller_display_name, u.full_name, u.username) as seller_name, 
              u.created_at as seller_since,
              u.profile_picture as seller_avatar,
              u.has_blue_badge as seller_verified,
              COALESCE(u.seller_rating_average, 0) as seller_rating,
-             COALESCE(u.seller_total_sales, 0) as seller_total_sales
+             COALESCE(u.seller_total_sales, 0) as seller_total_sales,
+             u.seller_slug
       FROM marketplace_bots b
       JOIN users u ON b.seller_id = u.id
       WHERE b.slug = $1 AND b.status = 'approved'
@@ -970,7 +974,7 @@ router.get('/products', async (req, res) => {
 
     let query = `
       SELECT p.*, 
-             u.username as seller_name,
+             COALESCE(u.seller_display_name, u.full_name, u.username) as seller_name,
              u.profile_picture as seller_avatar,
              u.has_blue_badge as seller_verified,
              COALESCE(u.seller_rating_average, 0) as seller_rating,
@@ -1036,11 +1040,12 @@ router.get('/products/:slug', optionalAuthenticate, async (req, res) => {
 
     const product = await pool.query(`
       SELECT p.*, 
-             u.username as seller_name,
+             COALESCE(u.seller_display_name, u.full_name, u.username) as seller_name,
              u.profile_picture as seller_avatar,
              u.has_blue_badge as seller_verified,
              COALESCE(u.seller_rating_average, 0) as seller_rating,
-             COALESCE(u.seller_total_sales, 0) as seller_total_sales
+             COALESCE(u.seller_total_sales, 0) as seller_total_sales,
+             u.seller_slug
       FROM marketplace_products p
       JOIN users u ON p.seller_id = u.id
       WHERE p.slug = $1 AND p.status = 'approved'
@@ -1547,14 +1552,14 @@ router.get('/seller/dashboard', authenticate, async (req, res) => {
       },
       transactions: transactions.rows,
       verification: {
-        is_verified: isSellerVerified,
+        is_seller_approved: true, // If they reach this endpoint, they're an approved seller
+        has_blue_badge: isSellerVerified, // Blue badge is separate identity verification
         verification_pending: verificationPending,
         profile_image: userInfo.rows[0]?.profile_image || null,
         seller_slug: userInfo.rows[0]?.seller_slug || null,
-        has_blue_badge: isSellerVerified
       },
       // Also include at top level for easier access
-      is_verified: isSellerVerified,
+      is_seller_approved: true,
       has_blue_badge: isSellerVerified
     });
   } catch (error) {

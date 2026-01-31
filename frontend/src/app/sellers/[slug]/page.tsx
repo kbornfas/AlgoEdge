@@ -20,6 +20,9 @@ import {
   Breadcrumbs,
   Paper,
   Divider,
+  Dialog,
+  DialogContent,
+  IconButton,
 } from '@mui/material';
 import {
   ArrowLeft,
@@ -35,9 +38,32 @@ import {
   ExternalLink,
   Twitter,
   Instagram,
+  Image as ImageIcon,
+  Play,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+
+interface SellerMedia {
+  id: number;
+  media_type: 'image' | 'video';
+  media_url: string;
+  thumbnail_url?: string;
+  title?: string;
+  description?: string;
+  is_featured?: boolean;
+}
+
+interface SellerReview {
+  id: number;
+  rating: number;
+  comment: string;
+  reviewer_username: string;
+  reviewer_name: string;
+  reviewer_avatar?: string;
+  created_at: string;
+}
 
 interface SellerProfile {
   id: number;
@@ -88,6 +114,8 @@ interface SellerProfile {
       total_subscribers: number;
     }>;
   };
+  media?: SellerMedia[];
+  reviews?: SellerReview[];
 }
 
 // Blue badge SVG component
@@ -105,6 +133,7 @@ export default function SellerProfilePage() {
   const [seller, setSeller] = useState<SellerProfile | null>(null);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState(0);
+  const [mediaLightbox, setMediaLightbox] = useState<SellerMedia | null>(null);
 
   useEffect(() => {
     if (slug) {
@@ -120,7 +149,7 @@ export default function SellerProfilePage() {
         // Map API response to our interface
         setSeller({
           ...data.seller,
-          display_name: data.seller.full_name || data.seller.username,
+          display_name: data.seller.display_name || data.seller.full_name || data.seller.username,
           seller_expertise: data.seller.seller_specialties || [],
           seller_location: data.seller.country,
           seller_total_reviews: data.seller.seller_rating_count || 0,
@@ -130,6 +159,8 @@ export default function SellerProfilePage() {
             products: data.products || [],
             signals: data.signals || [],
           },
+          media: data.media || [],
+          reviews: data.reviews || [],
         });
       } else {
         setError('Seller not found');
@@ -551,9 +582,226 @@ export default function SellerProfilePage() {
                 </Grid>
               </>
             )}
+
+            {/* Performance Media Gallery */}
+            {seller.media && seller.media.length > 0 && (
+              <>
+                <Typography variant="h5" sx={{ color: 'white', fontWeight: 700, mb: 3, mt: 4 }}>
+                  Performance Gallery
+                </Typography>
+                <Grid container spacing={2}>
+                  {seller.media.map((media) => (
+                    <Grid item xs={6} sm={4} md={3} key={media.id}>
+                      <Box
+                        onClick={() => setMediaLightbox(media)}
+                        sx={{
+                          position: 'relative',
+                          aspectRatio: '1',
+                          borderRadius: 2,
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          border: media.is_featured ? '2px solid #F59E0B' : '1px solid rgba(255,255,255,0.1)',
+                          '&:hover': {
+                            '& .media-overlay': {
+                              opacity: 1,
+                            },
+                          },
+                        }}
+                      >
+                        {media.media_type === 'video' ? (
+                          <Box
+                            sx={{
+                              width: '100%',
+                              height: '100%',
+                              bgcolor: 'rgba(0,0,0,0.8)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundImage: media.thumbnail_url ? `url(${media.thumbnail_url})` : undefined,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 48,
+                                height: 48,
+                                borderRadius: '50%',
+                                bgcolor: 'rgba(255,255,255,0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Play size={24} fill="white" color="white" />
+                            </Box>
+                          </Box>
+                        ) : (
+                          <Box
+                            component="img"
+                            src={media.media_url}
+                            alt={media.title || 'Performance screenshot'}
+                            sx={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                            }}
+                          />
+                        )}
+                        <Box
+                          className="media-overlay"
+                          sx={{
+                            position: 'absolute',
+                            inset: 0,
+                            bgcolor: 'rgba(0,0,0,0.5)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            opacity: 0,
+                            transition: 'opacity 0.2s',
+                          }}
+                        >
+                          {media.media_type === 'video' ? (
+                            <Play size={32} color="white" />
+                          ) : (
+                            <ImageIcon size={32} color="white" />
+                          )}
+                        </Box>
+                        {media.is_featured && (
+                          <Chip
+                            label="Featured"
+                            size="small"
+                            sx={{
+                              position: 'absolute',
+                              top: 8,
+                              left: 8,
+                              bgcolor: 'rgba(245, 158, 11, 0.9)',
+                              color: 'white',
+                              fontSize: '0.65rem',
+                            }}
+                          />
+                        )}
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              </>
+            )}
+
+            {/* Reviews Section */}
+            {seller.reviews && seller.reviews.length > 0 && (
+              <>
+                <Typography variant="h5" sx={{ color: 'white', fontWeight: 700, mb: 3, mt: 4 }}>
+                  Customer Reviews ({seller.reviews.length})
+                </Typography>
+                <Stack spacing={2}>
+                  {seller.reviews.map((review) => (
+                    <Card
+                      key={review.id}
+                      sx={{
+                        bgcolor: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                      }}
+                    >
+                      <CardContent>
+                        <Stack direction="row" spacing={2} alignItems="flex-start">
+                          <Avatar
+                            src={review.reviewer_avatar}
+                            sx={{ width: 40, height: 40 }}
+                          >
+                            {(review.reviewer_name || review.reviewer_username)?.charAt(0)}
+                          </Avatar>
+                          <Box sx={{ flex: 1 }}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
+                              <Typography sx={{ color: 'white', fontWeight: 600 }}>
+                                {review.reviewer_name || review.reviewer_username}
+                              </Typography>
+                              <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>
+                                {new Date(review.created_at).toLocaleDateString()}
+                              </Typography>
+                            </Stack>
+                            <Rating
+                              value={review.rating}
+                              readOnly
+                              size="small"
+                              sx={{ mb: 1 }}
+                            />
+                            <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
+                              {review.comment}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Stack>
+              </>
+            )}
           </Grid>
         </Grid>
       </Container>
+
+      {/* Media Lightbox Dialog */}
+      <Dialog
+        open={!!mediaLightbox}
+        onClose={() => setMediaLightbox(null)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: 'rgba(0,0,0,0.95)',
+            backgroundImage: 'none',
+          },
+        }}
+      >
+        <IconButton
+          onClick={() => setMediaLightbox(null)}
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            color: 'white',
+            zIndex: 1,
+            bgcolor: 'rgba(255,255,255,0.1)',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
+          }}
+        >
+          <X size={24} />
+        </IconButton>
+        <DialogContent sx={{ p: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+          {mediaLightbox?.media_type === 'video' ? (
+            <video
+              controls
+              autoPlay
+              style={{ maxWidth: '100%', maxHeight: '80vh' }}
+              src={mediaLightbox.media_url}
+            />
+          ) : (
+            <Box
+              component="img"
+              src={mediaLightbox?.media_url}
+              alt={mediaLightbox?.title || 'Performance screenshot'}
+              sx={{
+                maxWidth: '100%',
+                maxHeight: '80vh',
+                objectFit: 'contain',
+              }}
+            />
+          )}
+        </DialogContent>
+        {mediaLightbox?.title && (
+          <Box sx={{ p: 2, textAlign: 'center' }}>
+            <Typography sx={{ color: 'white', fontWeight: 600 }}>
+              {mediaLightbox.title}
+            </Typography>
+            {mediaLightbox.description && (
+              <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem', mt: 0.5 }}>
+                {mediaLightbox.description}
+              </Typography>
+            )}
+          </Box>
+        )}
+      </Dialog>
     </Box>
   );
 }
