@@ -9,22 +9,10 @@ const pool = new pg.Pool({
 });
 
 async function check() {
-  // Update Forex Elite to be official - using separate connection to bypass trigger
-  await pool.query("SET session_replication_role = 'replica'");
-  
-  const result = await pool.query(`
-    UPDATE signal_providers 
-    SET is_official = true 
-    WHERE display_name = 'Forex Elite' 
-    RETURNING id, display_name, is_official
-  `);
-  console.log('Updated:', result.rows[0]);
-  
-  await pool.query("SET session_replication_role = 'origin'");
-  
-  // Verify all signal providers
-  const signals = await pool.query("SELECT id, display_name, is_official FROM signal_providers WHERE user_id = 12");
-  console.log('All signal providers:', signals.rows);
+  // Check current reviewer names
+  const reviews = await pool.query('SELECT id, reviewer_name, reviewer_avatar FROM marketplace_product_reviews LIMIT 15');
+  console.log('Current product reviews:');
+  reviews.rows.forEach(row => console.log(row));
   
   await pool.end();
 }

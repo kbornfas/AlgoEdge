@@ -149,9 +149,9 @@ router.get('/seller/:slug', async (req, res) => {
       // Try to get reviews from bot reviews
       const botReviews = await pool.query(`
         SELECT br.id, br.rating, br.review as comment, br.created_at,
-               u.username as reviewer_username, 
-               u.full_name as reviewer_name,
-               u.profile_image as reviewer_avatar,
+               COALESCE(br.reviewer_name, u.full_name, u.username) as reviewer_name,
+               COALESCE(br.reviewer_avatar, u.profile_image) as reviewer_avatar,
+               u.username as reviewer_username,
                'bot' as review_type,
                b.name as item_name
         FROM marketplace_bot_reviews br
@@ -164,9 +164,9 @@ router.get('/seller/:slug', async (req, res) => {
       // Try to get reviews from product reviews (no status column in this table)
       const productReviews = await pool.query(`
         SELECT pr.id, pr.rating, pr.review as comment, pr.created_at,
-               u.username as reviewer_username, 
-               u.full_name as reviewer_name,
-               u.profile_image as reviewer_avatar,
+               COALESCE(pr.reviewer_name, u.full_name, u.username) as reviewer_name,
+               COALESCE(pr.reviewer_avatar, u.profile_image) as reviewer_avatar,
+               u.username as reviewer_username,
                'product' as review_type,
                p.name as item_name
         FROM marketplace_product_reviews pr
