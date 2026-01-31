@@ -73,6 +73,7 @@ interface SellerProfile {
   seller_bio: string;
   seller_tagline: string;
   profile_image: string;
+  avatar: string;
   has_blue_badge: boolean;
   seller_expertise: string[];
   seller_experience_years: number;
@@ -232,7 +233,7 @@ export default function SellerProfilePage() {
               <Stack direction="row" spacing={3} alignItems="center">
                 <Box sx={{ position: 'relative' }}>
                   <Avatar
-                    src={seller.profile_image}
+                    src={seller.avatar || seller.profile_image}
                     sx={{
                       width: 120,
                       height: 120,

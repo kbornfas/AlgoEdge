@@ -82,7 +82,8 @@ router.get('/seller/:slug', async (req, res) => {
     // Look up seller by seller_slug first, then fallback to username
     const seller = await pool.query(`
       SELECT 
-        u.id, u.username, u.full_name, u.profile_image, u.has_blue_badge,
+        u.id, u.username, u.full_name, u.profile_image, u.profile_picture, u.has_blue_badge,
+        COALESCE(u.profile_image, u.profile_picture) as avatar,
         u.seller_display_name,
         COALESCE(u.seller_display_name, u.full_name, u.username) as display_name,
         u.seller_bio, u.seller_tagline, u.seller_website, u.seller_telegram,
