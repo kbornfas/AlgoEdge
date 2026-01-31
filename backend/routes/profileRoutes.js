@@ -127,7 +127,7 @@ router.get('/seller/:slug', async (req, res) => {
     const signals = await pool.query(`
       SELECT id, display_name as name, slug, trading_style, monthly_price, 
              subscriber_count as total_subscribers, rating_average, rating_count,
-             win_rate, total_pips
+             win_rate, total_pips, avatar_url, profile_image
       FROM signal_providers 
       WHERE user_id = $1 AND status = 'approved'
       LIMIT 6

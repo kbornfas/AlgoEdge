@@ -112,6 +112,8 @@ interface SellerProfile {
       monthly_price: number;
       rating_average: number;
       total_subscribers: number;
+      avatar_url?: string;
+      profile_image?: string;
     }>;
   };
   media?: SellerMedia[];
@@ -548,19 +550,17 @@ export default function SellerProfilePage() {
                       >
                         <CardContent>
                           <Stack direction="row" spacing={2} alignItems="center">
-                            <Box
+                            <Avatar
+                              src={signal.avatar_url || signal.profile_image}
                               sx={{
                                 width: 48,
                                 height: 48,
                                 borderRadius: 2,
                                 background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
                               }}
                             >
                               <Signal size={24} color="white" />
-                            </Box>
+                            </Avatar>
                             <Box sx={{ flex: 1 }}>
                               <Typography sx={{ color: 'white', fontWeight: 700 }}>
                                 {signal.name}
