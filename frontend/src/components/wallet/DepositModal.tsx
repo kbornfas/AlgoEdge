@@ -167,6 +167,7 @@ export default function DepositModal({ open, onClose, onSuccess, token, apiUrl }
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(1200); // 20 minutes in seconds
+  const [orderId, setOrderId] = useState<string>(''); // Stable order ID generated once
 
   const selectedMethodConfig = ALL_PAYMENT_METHODS.find(m => m.id === selectedMethod);
   const isCrypto = CRYPTO_METHODS.some(m => m.id === selectedMethod);
@@ -182,6 +183,7 @@ export default function DepositModal({ open, onClose, onSuccess, token, apiUrl }
       setPaymentReference('');
       setError(null);
       setTimeLeft(1200);
+      setOrderId(''); // Reset order ID for new deposit session
     }
   }, [open]);
 
@@ -270,6 +272,8 @@ export default function DepositModal({ open, onClose, onSuccess, token, apiUrl }
       return;
     }
     setError(null);
+    // Generate a stable order ID when moving to summary
+    setOrderId(Date.now().toString().slice(-12));
     setStep('summary');
   };
 
@@ -730,7 +734,7 @@ export default function DepositModal({ open, onClose, onSuccess, token, apiUrl }
 
                 {/* Order ID */}
                 <Typography variant="h6" color="white" fontWeight="bold" sx={{ mb: 3 }}>
-                  Order {Date.now().toString().slice(-12)}
+                  Order {orderId}
                 </Typography>
 
                 {/* Amount Breakdown */}
@@ -742,11 +746,11 @@ export default function DepositModal({ open, onClose, onSuccess, token, apiUrl }
                   <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
                   
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography color="white">Credit Sale Amount *</Typography>
-                    <Typography color="white" fontWeight="medium">+ {amount.toFixed(2)}</Typography>
+                    <Typography color="white">Deposit Amount *</Typography>
+                    <Typography color="white" fontWeight="medium">+ ${amount.toFixed(2)}</Typography>
                   </Box>
                   <Typography variant="caption" color="rgba(255,255,255,0.5)" sx={{ display: 'block', mb: 2 }}>
-                    * Sending any amount other than what&apos;s shown could result in lost funds, which cannot be recovered.
+                    * Send the exact amount shown. Sending a different amount may result in delays or lost funds.
                   </Typography>
 
                   {isCrypto && getEstimatedFee() > 0 && (
