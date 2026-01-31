@@ -142,6 +142,7 @@ export default function SellerDashboardPage() {
   const [isSeller, setIsSeller] = useState<boolean | null>(null);
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
   const [userWalletBalance, setUserWalletBalance] = useState(0);
+  const [debugInfo, setDebugInfo] = useState('loading...');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -277,10 +278,12 @@ export default function SellerDashboardPage() {
           },
         };
         setStats(mappedStats);
+        setDebugInfo(`OK: badge=${data.has_blue_badge}, v.badge=${data.verification?.has_blue_badge}, computed=${isVerified}`);
         console.log('Mapped stats:', mappedStats); // Debug log
       } else {
         // API returned an error - set default stats so UI shows properly
         console.error('Seller dashboard API error:', data.error);
+        setDebugInfo(`API Error ${res.status}: ${data.error || 'unknown'}`);
         setStats({
           wallet: { available_balance: 0, pending_earnings: 0, total_earnings: 0, total_payouts: 0 },
           is_verified: false,
@@ -290,8 +293,9 @@ export default function SellerDashboardPage() {
           listings: { bots: [], products: [] },
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching seller stats:', error);
+      setDebugInfo(`Catch Error: ${error?.message || String(error)}`);
       // Set default stats even on error so Get Verified card shows
       setStats({
         wallet: { available_balance: 0, pending_earnings: 0, total_earnings: 0, total_payouts: 0 },
@@ -523,7 +527,7 @@ export default function SellerDashboardPage() {
 
         {/* TEMP DEBUG BANNER - REMOVE AFTER TESTING */}
         <Alert severity="info" sx={{ mb: 3, bgcolor: '#ff00ff', color: 'white', fontSize: '12px' }}>
-          DEBUG: is_verified={String(stats?.is_verified)} | status={String((window as any).__debug_status)} | error={String((window as any).__debug_error)} | badge={String((window as any).__debug_badge)}
+          DEBUG: {debugInfo}
         </Alert>
 
         {/* Verified Status Alert - Show for verified sellers */}
