@@ -584,9 +584,12 @@ export default function SellerProfilePage() {
                               )}
                             </Box>
                             <Box sx={{ flex: 1 }}>
-                              <Typography sx={{ color: 'white', fontWeight: 700 }}>
-                                {signal.name}
-                              </Typography>
+                              <Stack direction="row" spacing={0.5} alignItems="center">
+                                <Typography sx={{ color: 'white', fontWeight: 700 }}>
+                                  {signal.name}
+                                </Typography>
+                                {signal.is_official && <BlueBadge size={18} />}
+                              </Stack>
                               <Stack direction="row" spacing={1} alignItems="center">
                                 <Typography sx={{ color: '#22C55E', fontWeight: 700 }}>
                                   ${signal.monthly_price}/mo
