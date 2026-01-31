@@ -2,6 +2,40 @@ import pool from '../config/database.js';
 import crypto from 'crypto';
 
 /**
+ * Get location from IP address using free ip-api.com service
+ */
+export async function getLocationFromIP(ip) {
+  try {
+    // Clean IP address
+    const cleanIP = ip?.replace('::ffff:', '').split(',')[0].trim();
+    
+    // Skip local/private IPs
+    if (!cleanIP || cleanIP === 'Unknown' || cleanIP === '127.0.0.1' || 
+        cleanIP.startsWith('192.168.') || cleanIP.startsWith('10.') ||
+        cleanIP.startsWith('172.16.') || cleanIP === '::1') {
+      return 'Local Network';
+    }
+    
+    // Use ip-api.com (free, no API key required, 45 requests/minute limit)
+    const response = await fetch(`http://ip-api.com/json/${cleanIP}?fields=status,city,country`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.status === 'success' && data.city && data.country) {
+        return `${data.city}, ${data.country}`;
+      } else if (data.status === 'success' && data.country) {
+        return data.country;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('IP geolocation error:', error.message);
+    return null;
+  }
+}
+
+/**
  * Parse user agent string to extract device info
  */
 export function parseUserAgent(userAgent) {
@@ -59,24 +93,31 @@ export async function createSession(userId, req, token) {
                req.ip || 
                'Unknown';
     
+    // Clean IP for storage
+    const cleanIP = ip?.replace('::ffff:', '').trim();
+    
+    // Get location from IP (async, don't block)
+    const location = await getLocationFromIP(cleanIP);
+    
     // Generate a unique session token hash (we hash the JWT to avoid storing it directly)
     const sessionToken = crypto.createHash('sha256').update(token).digest('hex');
     
     // Calculate expiry (7 days from now)
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     
-    // Insert session
+    // Insert session with location
     await pool.query(`
       INSERT INTO user_sessions (
         user_id, session_token, device_type, device_name, browser, os, 
-        ip_address, user_agent, is_current, expires_at, last_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, $9, NOW())
+        ip_address, location, user_agent, is_current, expires_at, last_active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, $10, NOW())
       ON CONFLICT (session_token) DO UPDATE SET
         last_active = NOW(),
-        is_current = TRUE
-    `, [userId, sessionToken, deviceType, deviceName, browser, os, ip, userAgent, expiresAt]);
+        is_current = TRUE,
+        location = COALESCE(EXCLUDED.location, user_sessions.location)
+    `, [userId, sessionToken, deviceType, deviceName, browser, os, cleanIP, location, userAgent, expiresAt]);
     
-    console.log(`Session created for user ${userId}: ${deviceName} (${deviceType})`);
+    console.log(`Session created for user ${userId}: ${deviceName} (${deviceType}) from ${location || 'Unknown'}`);
     
     return sessionToken;
   } catch (error) {

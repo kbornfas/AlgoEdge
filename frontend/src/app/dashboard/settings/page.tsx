@@ -92,7 +92,10 @@ import {
   AlertCircle,
   Database,
   RefreshCw,
+  Smartphone,
+  Tablet,
 } from 'lucide-react';
+import { useThemeMode } from '@/context/ThemeContext';
 
 // Types
 interface TabPanelProps {
@@ -307,6 +310,7 @@ const CURRENCIES = [
 export default function SettingsPage() {
   const router = useRouter();
   const theme = useTheme();
+  const { mode: themeMode, setMode: setThemeMode } = useThemeMode();
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -454,6 +458,7 @@ export default function SettingsPage() {
   const [sessions, setSessions] = useState<Array<{
     id: string | number;
     device: string;
+    deviceType?: string;
     browser: string;
     os?: string;
     location: string;
@@ -606,6 +611,14 @@ export default function SettingsPage() {
           }
           if (data.settings.appearance) {
             setAppearance(prev => ({ ...prev, ...data.settings.appearance }));
+            // Sync theme with context
+            const savedTheme = data.settings.appearance.theme;
+            if (savedTheme === 'light' || savedTheme === 'dark') {
+              setThemeMode(savedTheme);
+            } else if (savedTheme === 'system') {
+              const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+              setThemeMode(prefersDark ? 'dark' : 'light');
+            }
           }
           if (data.settings.localization) {
             setLocalization(prev => ({ ...prev, ...data.settings.localization }));
@@ -634,6 +647,7 @@ export default function SettingsPage() {
           const formattedSessions = data.sessions.map((s: any) => ({
             id: s.id,
             device: s.deviceName || s.device || s.deviceType || 'Unknown Device',
+            deviceType: s.deviceType || 'desktop',
             browser: s.browser || 'Unknown Browser',
             os: s.os || '',
             location: s.location || 'Unknown Location',
@@ -648,7 +662,7 @@ export default function SettingsPage() {
       console.error('Failed to fetch sessions:', err);
       // Use fallback data if API not available
       setSessions([
-        { id: 'current', device: 'Current Device', browser: 'Current Browser', location: 'Current Location', ip: 'Your IP', lastActive: 'Active now', current: true },
+        { id: 'current', device: 'Current Device', deviceType: 'desktop', browser: 'Current Browser', location: 'Current Location', ip: 'Your IP', lastActive: 'Active now', current: true },
       ]);
     }
   };
@@ -896,12 +910,39 @@ export default function SettingsPage() {
         body: JSON.stringify({ [settingsType]: data }),
       });
 
+      const result = await response.json();
+
       if (response.ok) {
-        setSuccess(`${settingsType.charAt(0).toUpperCase() + settingsType.slice(1)} settings saved`);
+        // Update local state with returned settings
+        if (result.settings) {
+          if (result.settings.tradingPrefs) {
+            setTradingPrefs(prev => ({ ...prev, ...result.settings.tradingPrefs }));
+          }
+          if (result.settings.appearance) {
+            setAppearance(prev => ({ ...prev, ...result.settings.appearance }));
+          }
+          if (result.settings.localization) {
+            setLocalization(prev => ({ ...prev, ...result.settings.localization }));
+          }
+          if (result.settings.privacy) {
+            setPrivacy(prev => ({ ...prev, ...result.settings.privacy }));
+          }
+        }
+        
+        // Format nice success message
+        const settingsNames: Record<string, string> = {
+          tradingPrefs: 'Trading Preferences',
+          appearance: 'Appearance',
+          localization: 'Localization',
+          privacy: 'Privacy',
+          notifications: 'Notification',
+        };
+        setSuccess(`${settingsNames[settingsType] || settingsType} saved successfully!`);
       } else {
-        setError(`Failed to save ${settingsType} settings`);
+        setError(result.error || `Failed to save ${settingsType} settings`);
       }
     } catch (err) {
+      console.error('Settings update error:', err);
       setError(`Failed to save ${settingsType} settings`);
     } finally {
       setLoading(false);
@@ -1654,7 +1695,19 @@ export default function SettingsPage() {
         <TabPanel value={tabValue} index={4}>
           <Box sx={{ p: { xs: 2, md: 3 } }}>
             <SettingCard icon={appearance.theme === 'dark' ? <Moon size={24} color="white" /> : <Sun size={24} color="white" />} title="Theme" description="Choose your preferred color scheme">
-              <ToggleButtonGroup value={appearance.theme} exclusive onChange={(_, value) => value && setAppearance({ ...appearance, theme: value })} sx={{ mb: 2 }}>
+              <ToggleButtonGroup value={appearance.theme} exclusive onChange={(_, value) => {
+                if (value) {
+                  setAppearance({ ...appearance, theme: value });
+                  // Apply theme immediately
+                  if (value === 'light' || value === 'dark') {
+                    setThemeMode(value);
+                  } else if (value === 'system') {
+                    // Check system preference
+                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    setThemeMode(prefersDark ? 'dark' : 'light');
+                  }
+                }
+              }} sx={{ mb: 2 }}>
                 <ToggleButton value="light" sx={{ px: 3 }}><Sun size={18} style={{ marginRight: 8 }} /> Light</ToggleButton>
                 <ToggleButton value="dark" sx={{ px: 3 }}><Moon size={18} style={{ marginRight: 8 }} /> Dark</ToggleButton>
                 <ToggleButton value="system" sx={{ px: 3 }}><Laptop size={18} style={{ marginRight: 8 }} /> System</ToggleButton>
@@ -1810,13 +1863,21 @@ export default function SettingsPage() {
             </Box>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {sessions.map((session) => (
+              {sessions.map((session) => {
+                // Get device icon based on deviceType
+                const getDeviceIcon = () => {
+                  if (session.deviceType === 'mobile') return <Smartphone size={24} color="white" />;
+                  if (session.deviceType === 'tablet') return <Tablet size={24} color="white" />;
+                  return <Monitor size={24} color="white" />;
+                };
+                
+                return (
                 <Card key={session.id} sx={{ bgcolor: session.current ? alpha(theme.palette.primary.main, 0.1) : 'background.paper', border: '1px solid', borderColor: session.current ? 'primary.main' : 'divider' }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Box sx={{ width: 48, height: 48, borderRadius: 2, bgcolor: session.current ? 'primary.main' : 'grey.700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Monitor size={24} color="white" />
+                          {getDeviceIcon()}
                         </Box>
                         <Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1833,7 +1894,7 @@ export default function SettingsPage() {
                     </Box>
                   </CardContent>
                 </Card>
-              ))}
+              )})}
             </Box>
 
             {sessions.length === 0 && (

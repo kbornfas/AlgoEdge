@@ -20,7 +20,7 @@ import {
 import { authenticate } from '../middleware/auth.js';
 import { apiLimiter } from '../middleware/rateLimiter.js';
 import { fetchEconomicCalendar, getUpcomingNews, getRecentNews } from '../services/newsService.js';
-import { getUserSessions, revokeSession, revokeOtherSessions, parseUserAgent } from '../services/sessionService.js';
+import { getUserSessions, revokeSession, revokeOtherSessions, parseUserAgent, getLocationFromIP } from '../services/sessionService.js';
 import { getUserActivities } from '../services/activityLogService.js';
 
 const router = express.Router();
@@ -192,6 +192,10 @@ router.get('/sessions', apiLimiter, async (req, res) => {
                  req.headers['x-real-ip'] || 
                  req.ip || 
                  'Unknown';
+      const cleanIP = ip?.replace('::ffff:', '').trim();
+      
+      // Get location from IP
+      const location = await getLocationFromIP(cleanIP);
       
       return res.json({
         success: true,
@@ -201,8 +205,8 @@ router.get('/sessions', apiLimiter, async (req, res) => {
           deviceName,
           browser,
           os,
-          ip: ip.replace('::ffff:', ''),
-          location: null,
+          ip: cleanIP,
+          location: location || 'Unknown Location',
           lastActive: new Date().toISOString(),
           createdAt: new Date().toISOString(),
           current: true,

@@ -1640,12 +1640,17 @@ router.post('/admin/approve-verification/:userId', authenticate, async (req, res
       return res.status(403).json({ error: 'Admin access required' });
     }
 
-    // Approve verification
+    // Approve verification and grant blue badge
     const result = await pool.query(
       `UPDATE users 
-       SET is_verified = TRUE, verification_pending = FALSE, verified_at = NOW()
+       SET is_verified = TRUE, 
+           is_verified_seller = TRUE,
+           has_blue_badge = TRUE,
+           blue_badge_granted_at = NOW(),
+           verification_pending = FALSE, 
+           verified_at = NOW()
        WHERE id = $1
-       RETURNING id, email, name`,
+       RETURNING id, email, full_name, username`,
       [userId]
     );
 
@@ -1653,11 +1658,11 @@ router.post('/admin/approve-verification/:userId', authenticate, async (req, res
       return res.status(404).json({ error: 'User not found' });
     }
 
-    auditLog(adminId, 'ADMIN_APPROVED_VERIFICATION', { userId, user: result.rows[0] }, req);
+    auditLog(adminId, 'ADMIN_APPROVED_VERIFICATION', { userId, user: result.rows[0], blue_badge_granted: true }, req);
 
     res.json({ 
       success: true, 
-      message: 'Seller verification approved',
+      message: 'Seller verification approved and blue badge granted!',
       user: result.rows[0]
     });
   } catch (error) {

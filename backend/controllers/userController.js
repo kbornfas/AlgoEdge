@@ -200,16 +200,94 @@ export const getSettings = async (req, res) => {
       [userId]
     );
 
+    let settings;
     if (result.rows.length === 0) {
       // Create default settings if not exist
+      const defaultTradingPrefs = {
+        defaultRiskPercent: 2,
+        maxDailyTrades: 10,
+        maxDailyLossPercent: 5,
+        maxLotSize: 0.5,
+        defaultLotSize: 0.01,
+        tradingHoursStart: '00:00',
+        tradingHoursEnd: '23:59',
+        timezone: 'UTC',
+        autoStopOnDailyLoss: true,
+        weekendTrading: false,
+        newsFilterEnabled: true,
+        newsFilterMinutes: 30,
+        maxOpenTrades: 5,
+        trailingStopEnabled: false,
+        trailingStopPips: 20,
+        breakEvenEnabled: false,
+        breakEvenPips: 10,
+        defaultTakeProfit: 50,
+        defaultStopLoss: 25,
+        partialCloseEnabled: false,
+        partialClosePercent: 50,
+        partialClosePips: 30,
+      };
+      
+      const defaultAppearance = {
+        theme: 'dark',
+        accentColor: 'blue',
+        compactMode: false,
+        showProfitInPips: false,
+        showPercentageGain: true,
+        animationsEnabled: true,
+        chartDefaultTimeframe: '1H',
+        dashboardLayout: 'default',
+        sidebarCollapsed: false,
+      };
+      
+      const defaultLocalization = {
+        language: 'en',
+        currency: 'USD',
+        dateFormat: 'MM/DD/YYYY',
+        timeFormat: '12h',
+        numberFormat: 'en-US',
+      };
+      
+      const defaultPrivacy = {
+        profilePublic: false,
+        showOnLeaderboard: true,
+        shareTradeHistory: false,
+        allowDataAnalytics: true,
+        hideBalance: false,
+        twoClickTrade: true,
+        confirmBeforeClose: true,
+        sessionTimeout: 30,
+      };
+
       const newSettings = await pool.query(
-        'INSERT INTO user_settings (user_id) VALUES ($1) RETURNING *',
-        [userId]
+        `INSERT INTO user_settings (user_id, trading_prefs, appearance, localization, privacy) 
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [userId, JSON.stringify(defaultTradingPrefs), JSON.stringify(defaultAppearance), 
+         JSON.stringify(defaultLocalization), JSON.stringify(defaultPrivacy)]
       );
-      return res.json({ settings: newSettings.rows[0] });
+      settings = newSettings.rows[0];
+    } else {
+      settings = result.rows[0];
     }
 
-    res.json({ settings: result.rows[0] });
+    // Format the response with parsed JSONB fields
+    const formattedSettings = {
+      ...settings,
+      tradingPrefs: typeof settings.trading_prefs === 'string' 
+        ? JSON.parse(settings.trading_prefs) 
+        : settings.trading_prefs || {},
+      appearance: typeof settings.appearance === 'string' 
+        ? JSON.parse(settings.appearance) 
+        : settings.appearance || {},
+      localization: typeof settings.localization === 'string' 
+        ? JSON.parse(settings.localization) 
+        : settings.localization || {},
+      privacy: typeof settings.privacy === 'string' 
+        ? JSON.parse(settings.privacy) 
+        : settings.privacy || {},
+    };
+
+    res.json({ settings: formattedSettings });
   } catch (error) {
     console.error('Get settings error:', error);
     res.status(500).json({ error: 'Failed to get settings' });
@@ -220,64 +298,184 @@ export const getSettings = async (req, res) => {
 export const updateSettings = async (req, res) => {
   try {
     const userId = req.user.id;
+    
+    // Support both camelCase and snake_case from frontend
     const {
-      email_notifications,
-      trade_alerts,
-      daily_reports,
-      weekly_reports,
-      market_news,
-      telegram_alerts,
-      telegram_chat_id,
+      // Notification settings
+      email_notifications, emailNotifications,
+      trade_alerts, tradeAlerts,
+      daily_reports, dailyReports,
+      weekly_reports, weeklyReports,
+      market_news, marketNews,
+      telegram_alerts, telegramAlerts,
+      telegram_chat_id, telegramChatId,
+      // Complex settings (JSONB)
+      tradingPrefs, trading_prefs,
+      appearance,
+      localization,
+      privacy,
+      notifications,
+      // Simple settings
       timezone,
-      trading_prefs,
-      risk_level,
-      stop_loss_percent,
-      take_profit_percent,
-      auto_close_profit,
       theme,
+      risk_level, riskLevel,
+      stop_loss_percent, stopLossPercent,
+      take_profit_percent, takeProfitPercent,
+      auto_close_profit, autoCloseProfit,
     } = req.body;
 
+    // Build dynamic update query based on what was provided
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    // Handle notification settings
+    const finalEmailNotifications = email_notifications ?? emailNotifications ?? (notifications?.emailNotifications);
+    if (finalEmailNotifications !== undefined) {
+      updates.push(`email_notifications = $${paramIndex++}`);
+      values.push(finalEmailNotifications);
+    }
+
+    const finalTradeAlerts = trade_alerts ?? tradeAlerts ?? (notifications?.tradeAlerts);
+    if (finalTradeAlerts !== undefined) {
+      updates.push(`trade_alerts = $${paramIndex++}`);
+      values.push(finalTradeAlerts);
+    }
+
+    const finalDailyReports = daily_reports ?? dailyReports ?? (notifications?.dailyReports);
+    if (finalDailyReports !== undefined) {
+      updates.push(`daily_reports = $${paramIndex++}`);
+      values.push(finalDailyReports);
+    }
+
+    const finalWeeklyReports = weekly_reports ?? weeklyReports ?? (notifications?.weeklyReports);
+    if (finalWeeklyReports !== undefined) {
+      updates.push(`weekly_reports = $${paramIndex++}`);
+      values.push(finalWeeklyReports);
+    }
+
+    const finalMarketNews = market_news ?? marketNews ?? (notifications?.marketNews);
+    if (finalMarketNews !== undefined) {
+      updates.push(`market_news = $${paramIndex++}`);
+      values.push(finalMarketNews);
+    }
+
+    const finalTelegramAlerts = telegram_alerts ?? telegramAlerts ?? (notifications?.telegramAlerts);
+    if (finalTelegramAlerts !== undefined) {
+      updates.push(`telegram_alerts = $${paramIndex++}`);
+      values.push(finalTelegramAlerts);
+    }
+
+    const finalTelegramChatId = telegram_chat_id ?? telegramChatId ?? (notifications?.telegramChatId);
+    if (finalTelegramChatId !== undefined) {
+      updates.push(`telegram_chat_id = $${paramIndex++}`);
+      values.push(finalTelegramChatId);
+    }
+
+    // Handle JSONB fields
+    const finalTradingPrefs = tradingPrefs ?? trading_prefs;
+    if (finalTradingPrefs !== undefined) {
+      updates.push(`trading_prefs = $${paramIndex++}`);
+      values.push(JSON.stringify(finalTradingPrefs));
+    }
+
+    if (appearance !== undefined) {
+      updates.push(`appearance = $${paramIndex++}`);
+      values.push(JSON.stringify(appearance));
+    }
+
+    if (localization !== undefined) {
+      updates.push(`localization = $${paramIndex++}`);
+      values.push(JSON.stringify(localization));
+    }
+
+    if (privacy !== undefined) {
+      updates.push(`privacy = $${paramIndex++}`);
+      values.push(JSON.stringify(privacy));
+    }
+
+    // Handle simple fields
+    if (timezone !== undefined) {
+      updates.push(`timezone = $${paramIndex++}`);
+      values.push(timezone);
+    }
+
+    if (theme !== undefined) {
+      updates.push(`theme = $${paramIndex++}`);
+      values.push(theme);
+    }
+
+    const finalRiskLevel = risk_level ?? riskLevel;
+    if (finalRiskLevel !== undefined) {
+      updates.push(`risk_level = $${paramIndex++}`);
+      values.push(finalRiskLevel);
+    }
+
+    const finalStopLossPercent = stop_loss_percent ?? stopLossPercent;
+    if (finalStopLossPercent !== undefined) {
+      updates.push(`stop_loss_percent = $${paramIndex++}`);
+      values.push(finalStopLossPercent);
+    }
+
+    const finalTakeProfitPercent = take_profit_percent ?? takeProfitPercent;
+    if (finalTakeProfitPercent !== undefined) {
+      updates.push(`take_profit_percent = $${paramIndex++}`);
+      values.push(finalTakeProfitPercent);
+    }
+
+    const finalAutoCloseProfit = auto_close_profit ?? autoCloseProfit;
+    if (finalAutoCloseProfit !== undefined) {
+      updates.push(`auto_close_profit = $${paramIndex++}`);
+      values.push(finalAutoCloseProfit);
+    }
+
+    // Always update the timestamp
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+
+    // Add user_id to values
+    values.push(userId);
+
+    // First, ensure user settings exist
+    const existingSettings = await pool.query(
+      'SELECT id FROM user_settings WHERE user_id = $1',
+      [userId]
+    );
+
+    if (existingSettings.rows.length === 0) {
+      // Create settings first
+      await pool.query('INSERT INTO user_settings (user_id) VALUES ($1)', [userId]);
+    }
+
+    // Now update
     const result = await pool.query(
       `UPDATE user_settings 
-       SET email_notifications = COALESCE($1, email_notifications),
-           trade_alerts = COALESCE($2, trade_alerts),
-           daily_reports = COALESCE($3, daily_reports),
-           weekly_reports = COALESCE($4, weekly_reports),
-           market_news = COALESCE($5, market_news),
-           telegram_alerts = COALESCE($6, telegram_alerts),
-           telegram_chat_id = COALESCE($7, telegram_chat_id),
-           timezone = COALESCE($8, timezone),
-           trading_prefs = COALESCE($9, trading_prefs),
-           risk_level = COALESCE($10, risk_level),
-           stop_loss_percent = COALESCE($11, stop_loss_percent),
-           take_profit_percent = COALESCE($12, take_profit_percent),
-           auto_close_profit = COALESCE($13, auto_close_profit),
-           theme = COALESCE($14, theme),
-           updated_at = CURRENT_TIMESTAMP
-       WHERE user_id = $15
+       SET ${updates.join(', ')}
+       WHERE user_id = $${paramIndex}
        RETURNING *`,
-      [
-        email_notifications,
-        trade_alerts,
-        daily_reports,
-        weekly_reports,
-        market_news,
-        telegram_alerts,
-        telegram_chat_id,
-        timezone,
-        trading_prefs ? JSON.stringify(trading_prefs) : null,
-        risk_level,
-        stop_loss_percent,
-        take_profit_percent,
-        auto_close_profit,
-        theme,
-        userId,
-      ]
+      values
     );
 
     auditLog(userId, 'SETTINGS_UPDATED', req.body, req);
 
-    res.json({ settings: result.rows[0] });
+    // Format the response
+    const settings = result.rows[0];
+    const formattedSettings = {
+      ...settings,
+      tradingPrefs: typeof settings.trading_prefs === 'string' 
+        ? JSON.parse(settings.trading_prefs) 
+        : settings.trading_prefs || {},
+      appearance: typeof settings.appearance === 'string' 
+        ? JSON.parse(settings.appearance) 
+        : settings.appearance || {},
+      localization: typeof settings.localization === 'string' 
+        ? JSON.parse(settings.localization) 
+        : settings.localization || {},
+      privacy: typeof settings.privacy === 'string' 
+        ? JSON.parse(settings.privacy) 
+        : settings.privacy || {},
+    };
+
+    res.json({ settings: formattedSettings, message: 'Settings saved successfully' });
   } catch (error) {
     console.error('Update settings error:', error);
     res.status(500).json({ error: 'Failed to update settings' });
