@@ -115,6 +115,7 @@ interface SellerProfile {
       total_subscribers: number;
       avatar_url?: string;
       profile_image?: string;
+      is_official?: boolean;
     }>;
   };
   media?: SellerMedia[];
@@ -551,17 +552,37 @@ export default function SellerProfilePage() {
                       >
                         <CardContent>
                           <Stack direction="row" spacing={2} alignItems="center">
-                            <Avatar
-                              src={signal.avatar_url || signal.profile_image}
-                              sx={{
-                                width: 48,
-                                height: 48,
-                                borderRadius: 2,
-                                background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
-                              }}
-                            >
-                              <Signal size={24} color="white" />
-                            </Avatar>
+                            <Box sx={{ position: 'relative' }}>
+                              <Avatar
+                                src={signal.avatar_url || signal.profile_image}
+                                sx={{
+                                  width: 48,
+                                  height: 48,
+                                  borderRadius: 2,
+                                  background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
+                                }}
+                              >
+                                <Signal size={24} color="white" />
+                              </Avatar>
+                              {signal.is_official && (
+                                <Box
+                                  sx={{
+                                    position: 'absolute',
+                                    bottom: -4,
+                                    right: -4,
+                                    width: 20,
+                                    height: 20,
+                                    borderRadius: '50%',
+                                    bgcolor: '#0a0f1a',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                >
+                                  <BlueBadge size={16} />
+                                </Box>
+                              )}
+                            </Box>
                             <Box sx={{ flex: 1 }}>
                               <Typography sx={{ color: 'white', fontWeight: 700 }}>
                                 {signal.name}

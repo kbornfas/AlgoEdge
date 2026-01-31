@@ -9,11 +9,18 @@ const pool = new pg.Pool({
 });
 
 async function check() {
-  const result = await pool.query("SELECT id, username, profile_image, profile_picture, seller_banner_url FROM users WHERE username = 'admin'");
-  console.log('Admin user images:');
-  console.log('profile_image:', result.rows[0].profile_image || 'NULL');
-  console.log('profile_picture:', result.rows[0].profile_picture || 'NULL');
-  console.log('seller_banner_url:', result.rows[0].seller_banner_url || 'NULL');
+  // Check signal_providers for badge/verified columns
+  const cols = await pool.query(`
+    SELECT column_name FROM information_schema.columns 
+    WHERE table_name = 'signal_providers' 
+    AND (column_name LIKE '%verif%' OR column_name LIKE '%badge%' OR column_name LIKE '%official%')
+  `);
+  console.log('Signal provider badge columns:', cols.rows.map(x => x.column_name));
+  
+  // Check actual data
+  const signals = await pool.query("SELECT id, display_name, is_official FROM signal_providers WHERE user_id = 12 LIMIT 3");
+  console.log('Signal providers:', signals.rows);
+  
   await pool.end();
 }
 
