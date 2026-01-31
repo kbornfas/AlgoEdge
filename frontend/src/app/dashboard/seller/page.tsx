@@ -154,6 +154,34 @@ export default function SellerDashboardPage() {
     fetchUserWalletBalance();
   }, []);
 
+  // Fetch verification status directly from user profile
+  const fetchUserVerificationStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        console.log('User profile verification data:', data);
+        // Check has_blue_badge from user profile
+        const hasBlueBadge = data.user?.has_blue_badge === true || 
+                            data.user?.has_blue_badge === 't' || 
+                            data.user?.has_blue_badge === 1 ||
+                            data.user?.is_verified === true;
+        
+        if (hasBlueBadge) {
+          setStats(prev => prev ? { ...prev, is_verified: true } : prev);
+          setDebugInfo(`Profile has_blue_badge: ${data.user?.has_blue_badge}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user verification:', error);
+    }
+  };
+
   const fetchUserWalletBalance = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -198,6 +226,8 @@ export default function SellerDashboardPage() {
         if (data.is_seller) {
           console.log('checkSellerStatus: user is seller, fetching stats...');
           await fetchSellerStats();
+          // Also fetch user profile to double-check verification status
+          await fetchUserVerificationStatus();
         } else {
           console.log('checkSellerStatus: user is NOT a seller');
           setLoading(false);
@@ -216,7 +246,7 @@ export default function SellerDashboardPage() {
     try {
       const token = localStorage.getItem('token');
       const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/seller/dashboard`;
-      console.log('Fetching seller dashboard from:', apiUrl);
+      setDebugInfo(`Calling: ${apiUrl}`);
       
       const res = await fetch(apiUrl, {
         headers: { 
