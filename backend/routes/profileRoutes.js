@@ -158,7 +158,6 @@ router.get('/seller/:slug', async (req, res) => {
         JOIN marketplace_bots b ON br.bot_id = b.id
         WHERE b.seller_id = $1 AND br.status = 'approved'
         ORDER BY br.created_at DESC
-        LIMIT 10
       `, [sellerData.id]);
       
       // Try to get reviews from product reviews (no status column in this table)
@@ -174,13 +173,11 @@ router.get('/seller/:slug', async (req, res) => {
         JOIN marketplace_products p ON pr.product_id = p.id
         WHERE p.seller_id = $1
         ORDER BY pr.created_at DESC
-        LIMIT 10
       `, [sellerData.id]);
       
-      // Combine and sort reviews
+      // Combine and sort all reviews by date
       reviews.rows = [...botReviews.rows, ...productReviews.rows]
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 10);
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     } catch (reviewError) {
       console.log('Reviews fetch note:', reviewError.message);
       reviews.rows = [];
