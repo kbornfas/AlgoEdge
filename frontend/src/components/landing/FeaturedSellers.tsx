@@ -15,7 +15,7 @@ import {
   Skeleton,
   Rating,
 } from '@mui/material';
-import { Store, Star, Package, Bot, ArrowRight, MapPin, Shield } from 'lucide-react';
+import { Store, Star, Package, Bot, ArrowRight, MapPin, Shield, Signal } from 'lucide-react';
 import Link from 'next/link';
 
 // Twitter-style verified badge
@@ -56,6 +56,7 @@ interface Seller {
   country: string;
   bots_count: number;
   products_count: number;
+  signals_count: number;
 }
 
 export default function FeaturedSellers() {
@@ -231,7 +232,7 @@ export default function FeaturedSellers() {
                     )}
 
                     {/* Stats */}
-                    <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                    <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 0.5 }}>
                       {seller.bots_count > 0 && (
                         <Chip
                           icon={<Bot size={14} />}
@@ -241,6 +242,18 @@ export default function FeaturedSellers() {
                             bgcolor: 'rgba(139, 92, 246, 0.15)',
                             color: '#A78BFA',
                             '& .MuiChip-icon': { color: '#A78BFA' },
+                          }}
+                        />
+                      )}
+                      {seller.signals_count > 0 && (
+                        <Chip
+                          icon={<Signal size={14} />}
+                          label={`${seller.signals_count} Signals`}
+                          size="small"
+                          sx={{
+                            bgcolor: 'rgba(34, 197, 94, 0.15)',
+                            color: '#86EFAC',
+                            '& .MuiChip-icon': { color: '#86EFAC' },
                           }}
                         />
                       )}
@@ -262,9 +275,9 @@ export default function FeaturedSellers() {
                           label={`${seller.seller_experience_years}+ yrs`}
                           size="small"
                           sx={{
-                            bgcolor: 'rgba(34, 197, 94, 0.15)',
-                            color: '#86EFAC',
-                            '& .MuiChip-icon': { color: '#86EFAC' },
+                            bgcolor: 'rgba(245, 158, 11, 0.15)',
+                            color: '#FCD34D',
+                            '& .MuiChip-icon': { color: '#FCD34D' },
                           }}
                         />
                       )}

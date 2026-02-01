@@ -49,9 +49,11 @@ import {
   Shield,
   Target,
   Clock,
+  Crop,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import ImageCropper from '@/components/ImageCropper';
 
 // Product type definitions
 const productTypes = {
@@ -184,6 +186,10 @@ export default function CreateListingPage() {
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [mainFile, setMainFile] = useState<File | null>(null);
+  
+  // Cropper state
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string>('');
 
   // Bot-specific fields
   const [botCategory, setBotCategory] = useState('');
@@ -246,13 +252,26 @@ export default function CreateListingPage() {
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setThumbnailFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setThumbnailPreview(reader.result as string);
+        // Open cropper with the image
+        setImageToCrop(reader.result as string);
+        setCropperOpen(true);
       };
       reader.readAsDataURL(file);
     }
+    // Reset the input so the same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleCropComplete = (croppedBlob: Blob) => {
+    // Create a file from the blob
+    const croppedFile = new File([croppedBlob], 'thumbnail.jpg', { type: 'image/jpeg' });
+    setThumbnailFile(croppedFile);
+    
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(croppedBlob);
+    setThumbnailPreview(previewUrl);
   };
 
   const handleScreenshotAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -274,12 +293,83 @@ export default function CreateListingPage() {
     setScreenshotFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Helper function to upload a single image
+  const uploadImage = async (file: File, token: string): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/upload/image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        return data.url;
+      }
+      return null;
+    } catch (error) {
+      console.error('Image upload error:', error);
+      return null;
+    }
+  };
+
+  // Helper function to upload multiple images
+  const uploadImages = async (files: File[], token: string): Promise<string[]> => {
+    try {
+      const formData = new FormData();
+      files.forEach(file => formData.append('images', file));
+      
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/marketplace/upload/images`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        return data.images.map((img: any) => img.url);
+      }
+      return [];
+    } catch (error) {
+      console.error('Images upload error:', error);
+      return [];
+    }
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
     setError('');
 
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please log in to create a listing');
+        setLoading(false);
+        return;
+      }
+
+      // Upload thumbnail if provided
+      let thumbnailUrl = '';
+      if (thumbnailFile) {
+        const uploadedUrl = await uploadImage(thumbnailFile, token);
+        if (uploadedUrl) {
+          thumbnailUrl = uploadedUrl;
+        }
+      }
+
+      // Upload screenshots if provided
+      let screenshotUrls: string[] = [];
+      if (screenshotFiles.length > 0) {
+        screenshotUrls = await uploadImages(screenshotFiles, token);
+      }
+
       let endpoint = '';
       let body: any = {};
 
@@ -305,6 +395,8 @@ export default function CreateListingPage() {
           price: isFree ? 0 : parseFloat(price),
           is_free: isFree,
           discount_percentage: parseFloat(discountPercent) || 0,
+          thumbnail_url: thumbnailUrl || undefined,
+          screenshots: screenshotUrls.length > 0 ? screenshotUrls : undefined,
           backtest_results: {
             win_rate: parseFloat(backtest.winRate) || 0,
             profit_factor: parseFloat(backtest.profitFactor) || 0,
@@ -321,6 +413,8 @@ export default function CreateListingPage() {
           category: productCategory,
           price: parseFloat(price) || 0,
           discount_percentage: parseFloat(discountPercent) || 0,
+          thumbnail_url: thumbnailUrl || undefined,
+          preview_images: screenshotUrls.length > 0 ? screenshotUrls : undefined,
         };
       } else if (listingType === 'signal') {
         endpoint = '/api/marketplace/signals/providers';
@@ -329,6 +423,7 @@ export default function CreateListingPage() {
           trading_style: tradingStyle,
           risk_level: riskLevel,
           instruments,
+          avatar_url: thumbnailUrl || undefined,
           pricing: {
             monthly: parseFloat(monthlyPrice) || 0,
             quarterly: parseFloat(quarterlyPrice) || 0,
@@ -1101,12 +1196,26 @@ export default function CreateListingPage() {
                     alt="Thumbnail" 
                     style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8 }} 
                   />
-                  <IconButton
-                    onClick={() => { setThumbnailPreview(''); setThumbnailFile(null); }}
-                    sx={{ position: 'absolute', top: 16, right: 16, bgcolor: 'rgba(0,0,0,0.7)', '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.8)' } }}
+                  <Stack 
+                    direction="row" 
+                    spacing={1} 
+                    sx={{ position: 'absolute', top: 16, right: 16 }}
                   >
-                    <X size={18} color="white" />
-                  </IconButton>
+                    <IconButton
+                      onClick={() => thumbnailInputRef.current?.click()}
+                      sx={{ bgcolor: 'rgba(0,0,0,0.7)', '&:hover': { bgcolor: 'rgba(139, 92, 246, 0.8)' } }}
+                      title="Re-crop image"
+                    >
+                      <Crop size={18} color="white" />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => { setThumbnailPreview(''); setThumbnailFile(null); }}
+                      sx={{ bgcolor: 'rgba(0,0,0,0.7)', '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.8)' } }}
+                      title="Remove image"
+                    >
+                      <X size={18} color="white" />
+                    </IconButton>
+                  </Stack>
                 </Paper>
               ) : (
                 <Paper
@@ -1124,10 +1233,10 @@ export default function CreateListingPage() {
                 >
                   <Upload size={40} color="#8B5CF6" style={{ marginBottom: 8 }} />
                   <Typography sx={{ color: 'white', fontWeight: 600 }}>
-                    Click to upload thumbnail
+                    Click to upload & crop thumbnail
                   </Typography>
                   <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>
-                    PNG, JPG, WebP up to 5MB • Recommended: 1200×630px
+                    PNG, JPG, WebP up to 5MB • Will be cropped to 16:9 ratio
                   </Typography>
                 </Paper>
               )}
@@ -1629,6 +1738,16 @@ export default function CreateListingPage() {
           )}
         </Stack>
       </Container>
+
+      {/* Image Cropper Dialog */}
+      <ImageCropper
+        open={cropperOpen}
+        image={imageToCrop}
+        onClose={() => setCropperOpen(false)}
+        onCropComplete={handleCropComplete}
+        aspectRatio={16 / 9}
+        title="Crop Thumbnail Image"
+      />
     </Box>
   );
 }

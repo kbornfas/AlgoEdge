@@ -276,7 +276,7 @@ router.get('/sellers', async (req, res) => {
         (SELECT COUNT(*) FROM marketplace_products WHERE seller_id = u.id AND status = 'approved') as products_count,
         (SELECT COUNT(*) FROM signal_providers WHERE user_id = u.id AND status = 'approved') as signals_count
       FROM users u
-      WHERE u.is_seller = TRUE
+      WHERE u.is_seller = TRUE AND u.seller_slug IS NOT NULL
     `;
     const params = [];
 

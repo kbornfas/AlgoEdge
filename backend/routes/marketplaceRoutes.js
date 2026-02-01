@@ -6,8 +6,46 @@ import { auditLog } from '../middleware/audit.js';
 import crypto from 'crypto';
 import { addAdminWalletTransaction } from '../services/adminWalletService.js';
 import { getMarketplaceCommission } from '../services/settingsService.js';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = express.Router();
+
+// ============================================================================
+// MULTER CONFIGURATION FOR MARKETPLACE IMAGES
+// ============================================================================
+const marketplaceStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '..', 'uploads', 'marketplace');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, `listing-${uniqueSuffix}${ext}`);
+  }
+});
+
+const marketplaceUpload = multer({
+  storage: marketplaceStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only images (JPEG, PNG, WebP, GIF) are allowed'));
+    }
+  }
+});
 
 // Default commission rate: Platform receives 20%, Seller receives 80%
 // This is now overridden by admin settings via getMarketplaceCommission()
@@ -90,6 +128,67 @@ router.get('/stats', async (req, res) => {
   } catch (error) {
     console.error('Get marketplace stats error:', error);
     res.status(500).json({ error: 'Failed to get marketplace stats' });
+  }
+});
+
+// ============================================================================
+// IMAGE UPLOAD FOR LISTINGS
+// ============================================================================
+
+/**
+ * POST /api/marketplace/upload/image
+ * Upload a single image for listing thumbnail or screenshot
+ * Returns the URL of the uploaded image
+ */
+router.post('/upload/image', authenticate, marketplaceUpload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    // Construct the URL for the uploaded file
+    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const imageUrl = `${baseUrl}/uploads/marketplace/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      url: imageUrl,
+      filename: req.file.filename,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    });
+  } catch (error) {
+    console.error('Upload image error:', error);
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
+/**
+ * POST /api/marketplace/upload/images
+ * Upload multiple images for screenshots/gallery
+ * Returns array of URLs
+ */
+router.post('/upload/images', authenticate, marketplaceUpload.array('images', 10), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'No image files provided' });
+    }
+
+    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const images = req.files.map(file => ({
+      url: `${baseUrl}/uploads/marketplace/${file.filename}`,
+      filename: file.filename,
+      size: file.size,
+      mimetype: file.mimetype
+    }));
+
+    res.json({
+      success: true,
+      images
+    });
+  } catch (error) {
+    console.error('Upload images error:', error);
+    res.status(500).json({ error: 'Failed to upload images' });
   }
 });
 
@@ -212,6 +311,7 @@ router.get('/bots', async (req, res) => {
              COALESCE(u.seller_display_name, u.full_name, u.username) as seller_name,
              u.profile_picture as seller_avatar,
              u.has_blue_badge as seller_verified,
+             u.seller_featured,
              COALESCE(u.seller_rating_average, 0) as seller_rating,
              COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM marketplace_bots b
@@ -246,25 +346,25 @@ router.get('/bots', async (req, res) => {
       query += ` AND $${++paramCount} = ANY(b.supported_platforms)`;
     }
 
-    // Sorting
+    // Sorting - always prioritize featured sellers first
     switch (sort) {
       case 'newest':
-        query += ' ORDER BY b.created_at DESC';
+        query += ' ORDER BY u.seller_featured DESC, b.created_at DESC';
         break;
       case 'price_low':
-        query += ' ORDER BY b.price ASC';
+        query += ' ORDER BY u.seller_featured DESC, b.price ASC';
         break;
       case 'price_high':
-        query += ' ORDER BY b.price DESC';
+        query += ' ORDER BY u.seller_featured DESC, b.price DESC';
         break;
       case 'rating':
-        query += ' ORDER BY b.rating_average DESC, b.rating_count DESC';
+        query += ' ORDER BY u.seller_featured DESC, b.rating_average DESC, b.rating_count DESC';
         break;
       case 'win_rate':
-        query += ' ORDER BY b.win_rate DESC';
+        query += ' ORDER BY u.seller_featured DESC, b.win_rate DESC';
         break;
       default: // popular
-        query += ' ORDER BY b.total_sales DESC, b.view_count DESC';
+        query += ' ORDER BY u.seller_featured DESC, b.total_sales DESC, b.view_count DESC';
     }
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -568,6 +668,7 @@ router.get('/signals/providers', async (req, res) => {
              u.username,
              u.profile_picture as seller_avatar,
              u.has_blue_badge as seller_verified,
+             u.seller_featured,
              COALESCE(u.seller_rating_average, 0) as seller_rating,
              COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM signal_providers sp
@@ -586,21 +687,22 @@ router.get('/signals/providers', async (req, res) => {
       query += ` AND sp.risk_level = $${++paramCount}`;
     }
 
+    // Always prioritize featured sellers first, then apply sorting
     switch (sort) {
       case 'newest':
-        query += ' ORDER BY sp.created_at DESC';
+        query += ' ORDER BY u.seller_featured DESC, sp.created_at DESC';
         break;
       case 'win_rate':
-        query += ' ORDER BY sp.win_rate DESC';
+        query += ' ORDER BY u.seller_featured DESC, sp.win_rate DESC';
         break;
       case 'pips':
-        query += ' ORDER BY sp.total_pips DESC';
+        query += ' ORDER BY u.seller_featured DESC, sp.total_pips DESC';
         break;
       case 'rating':
-        query += ' ORDER BY sp.rating_average DESC';
+        query += ' ORDER BY u.seller_featured DESC, sp.rating_average DESC';
         break;
       default:
-        query += ' ORDER BY sp.subscriber_count DESC';
+        query += ' ORDER BY u.seller_featured DESC, sp.subscriber_count DESC';
     }
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -977,6 +1079,7 @@ router.get('/products', async (req, res) => {
              COALESCE(u.seller_display_name, u.full_name, u.username) as seller_name,
              u.profile_picture as seller_avatar,
              u.has_blue_badge as seller_verified,
+             u.seller_featured,
              COALESCE(u.seller_rating_average, 0) as seller_rating,
              COALESCE(u.seller_total_sales, 0) as seller_total_sales
       FROM marketplace_products p
@@ -1003,21 +1106,22 @@ router.get('/products', async (req, res) => {
       query += ` AND p.price <= $${++paramCount}`;
     }
 
+    // Sorting - always prioritize featured sellers first
     switch (sort) {
       case 'newest':
-        query += ' ORDER BY p.created_at DESC';
+        query += ' ORDER BY u.seller_featured DESC, p.created_at DESC';
         break;
       case 'price_low':
-        query += ' ORDER BY p.price ASC';
+        query += ' ORDER BY u.seller_featured DESC, p.price ASC';
         break;
       case 'price_high':
-        query += ' ORDER BY p.price DESC';
+        query += ' ORDER BY u.seller_featured DESC, p.price DESC';
         break;
       case 'rating':
-        query += ' ORDER BY p.rating_average DESC';
+        query += ' ORDER BY u.seller_featured DESC, p.rating_average DESC';
         break;
       default:
-        query += ' ORDER BY p.total_sales DESC';
+        query += ' ORDER BY u.seller_featured DESC, p.total_sales DESC';
     }
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
