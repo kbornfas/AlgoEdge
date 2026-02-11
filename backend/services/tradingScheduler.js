@@ -21,19 +21,20 @@ import https from 'https';
  *   OrderBlock(1.4), VWAP(1.1), Fib(1.0), RSI(1.2)
  * 
  * TRADE ELIGIBILITY:
- * - At least 2 strategies must align in same direction
- * - Weighted score must exceed opposite side by 1.5+
+ * - At least 2 strategies must align (3 in high-vol sessions)
+ * - Weighted score must exceed opposite side by threshold
  * - If both sides eligible → NO TRADE
  * 
  * POSITION SCALING:
- * - Initial entry: Open 5 positions immediately
- * - Scale-in: Add 1 position per +1.0 confidence increase
- * - Maximum: 10 positions per symbol
+ * - Initial entry: Open 1-2 positions
+ * - Scale-in: Add 1 position per +0.8 confidence increase
+ * - Maximum: 2 positions per symbol per session
  * 
  * RISK MANAGEMENT:
- * - Max 5% risk per symbol
- * - Max 30% total exposure
- * - Price spacing: ATR(14) × 0.5 minimum
+ * - Max 1-2% risk per symbol
+ * - Max 15% total exposure
+ * - Daily drawdown limit: 30% (auto stop)
+ * - Price spacing: ATR(14) × 0.3 minimum
  * - Never hedge (no opposing positions)
  * =========================================================================
  */
@@ -90,34 +91,36 @@ function httpsRequest(url, options = {}) {
 // =========================================================================
 
 const ENSEMBLE_CONFIG = {
-  // STRATEGY WEIGHTS (FIXED) - Higher weights = more trusted strategies
+  // STRATEGY WEIGHTS (FIXED) - Per strategy framework plan
   STRATEGY_WEIGHTS: {
-    'EMA-Pullback': 1.3,
-    'Break-Retest': 1.2,
-    'Liquidity-Sweep': 1.5,              // Highest - best for Gold reversals
-    'London-Breakout': 1.1,              // Boosted - session breakouts work well
-    'Order-Block': 1.4,                  // High - institutional levels are reliable
-    'VWAP-Reversion': 1.0,               // Reduced - M1 is noisy
-    'Fibonacci': 1.2,                    // Boosted - H4 swings are profitable
-    'RSI-Divergence': 1.3,               // Boosted - divergences catch reversals
+    'EMA-Pullback': 2.0,                  // Highest - trend + pullback most reliable
+    'Break-Retest': 1.3,
+    'Liquidity-Sweep': 1.5,              // High - Gold reversal specialist
+    'London-Breakout': 1.2,              // Session breakouts
+    'Order-Block': 1.4,                  // Institutional levels
+    'VWAP-Reversion': 1.1,              // VWAP mean reversion
+    'Fibonacci': 1.2,                    // Fib retracements
+    'RSI-Divergence': 1.0,               // Divergence confirmation
   },
   
-  // TRADE ELIGIBILITY RULES (BALANCED)
-  MIN_STRATEGIES_ALIGNED: 2,              // At least 2 strategies must align
+  // TRADE ELIGIBILITY RULES (STRATEGY FRAMEWORK)
+  MIN_STRATEGIES_ALIGNED: 2,              // 2 strategies in slow sessions, 3 in high-vol
   MIN_SCORE_DIFFERENCE: 0.8,              // Score difference for signal clarity
   SINGLE_STRONG_THRESHOLD: 2.0,           // Allow single strong strategy at 2.0 weight
+  HIGH_VOL_MIN_STRATEGIES: 3,             // Require 3 strategies during London/NY
+  LOW_VOL_MIN_STRATEGIES: 2,              // 2 strategies enough in Asian session
   
-  // POSITION SCALING (START 2-3, SCALE IN UNLIMITED)
-  INITIAL_POSITIONS: 2,                   // Start with 2-3 positions
-  MAX_POSITIONS_PER_SYMBOL: 999,          // NO LIMIT - scale in as confidence grows
+  // POSITION SCALING (1-2 per session to avoid overexposure)
+  INITIAL_POSITIONS: 1,                   // Start with 1 position
+  MAX_POSITIONS_PER_SYMBOL: 2,            // Max 1-2 per session
   SCALE_IN_CONFIDENCE_INCREMENT: 0.8,     // Scale in on +0.8 confidence increase
   
   // PRICE SPACING
-  ATR_SPACING_MULTIPLIER: 0.3,            // Tighter spacing for more entries
+  ATR_SPACING_MULTIPLIER: 0.3,            // ATR-based minimum spacing
   
-  // RISK LIMITS (BALANCED)
-  MAX_RISK_PER_SYMBOL: 0.05,              // 5% max risk per symbol
-  MAX_TOTAL_EXPOSURE: 0.30,               // 30% max total exposure
+  // RISK LIMITS (1-2% per trade, strategy framework plan)
+  MAX_RISK_PER_SYMBOL: 0.02,              // 2% max risk per symbol
+  MAX_TOTAL_EXPOSURE: 0.15,               // 15% max total exposure
   
   // CONFLICT PROTECTION
   SCORE_CONVERGENCE_THRESHOLD: 0.6,       // Threshold for cleaner signals
@@ -133,30 +136,33 @@ const ENSEMBLE_CONFIG = {
 // =========================================================================
 const STRATEGY_TIMEFRAMES = {
   // =========================================================================
-  // SCALPING STRATEGIES (M5) - Quick entries, ride momentum
+  // HIGHER TF STRATEGIES (H1/H4) - Trend, EMA 200, Order Blocks
   // =========================================================================
   'EMA-Pullback': {
-    timeframe: 'm5',                      // 5-minute - Quick pullback entries
+    timeframe: 'h1',                      // H1 primary (H4 trend, M15 entry refinement)
     candlesNeeded: 100,
-    description: 'Fast EMA pullbacks on M5 for momentum entries',
-    slMultiplier: 1.2,                    // Slightly wider for Gold volatility
-    tpMultiplier: 2.0,                    // 2 R:R - let winners run
-    maxHoldingPeriod: 45,                 // 45 minutes max hold
+    description: 'EMA 200 trend + pullback on H1 with M15 entry refinement',
+    slMultiplier: 1.5,                    // ATR-based for H1
+    tpMultiplier: 2.5,                    // 2.5 R:R - let trend trades run
+    maxHoldingPeriod: 480,                // 8 hours max hold for H1 trades
     tradingHours: { start: 7, end: 21 },  // Active hours UTC
   },
   
+  // =========================================================================
+  // MEDIUM TF STRATEGIES (M15/H1) - Break & Retest, VWAP, Fibonacci, RSI
+  // =========================================================================
   'VWAP-Reversion': {
-    timeframe: 'm5',                      // Changed from M1 to M5 (less noise)
-    candlesNeeded: 150,
-    description: 'VWAP mean reversion on M5 for cleaner signals',
-    slMultiplier: 1.0,                    // Tight SL
-    tpMultiplier: 1.8,                    // 1.8 R:R
-    maxHoldingPeriod: 30,                 // 30 minutes max
+    timeframe: 'm15',                     // M15 primary (H1 trend alignment)
+    candlesNeeded: 120,
+    description: 'VWAP mean reversion on M15 with H1 trend alignment',
+    slMultiplier: 1.2,                    // ATR-based for M15
+    tpMultiplier: 2.0,                    // 2.0 R:R
+    maxHoldingPeriod: 120,                // 2 hours max
     tradingHours: { start: 8, end: 20 },  // High volume hours only
   },
   
   // =========================================================================
-  // INTRADAY STRATEGIES (M15-M30) - Core profit generators
+  // LOWER TF STRATEGIES (M5/M15) - Liquidity Sweep, entry timing precision
   // =========================================================================
   'Break-Retest': {
     timeframe: 'm15',                     // 15-minute - Structure breaks
@@ -189,7 +195,7 @@ const STRATEGY_TIMEFRAMES = {
   },
   
   // =========================================================================
-  // DAY TRADING STRATEGIES (H1) - Larger moves, high probability
+  // DAY TRADING STRATEGIES (H1) - Order Blocks, RSI Divergence, Fibonacci
   // =========================================================================
   'Order-Block': {
     timeframe: 'h1',                      // 1-hour - Institutional levels
@@ -211,16 +217,13 @@ const STRATEGY_TIMEFRAMES = {
     tradingHours: { start: 0, end: 24 },
   },
   
-  // =========================================================================
-  // SWING TRADING STRATEGIES (H4) - Big picture, biggest winners
-  // =========================================================================
   'Fibonacci': {
-    timeframe: 'h4',                      // 4-hour - Fib retracements
+    timeframe: 'h1',                      // H1 primary (H4 trend confirmation)
     candlesNeeded: 100,
-    description: 'Fibonacci swing entries - catches $20-50 moves',
-    slMultiplier: 2.0,                    // Wide SL for swing
-    tpMultiplier: 5.0,                    // 5 R:R - MAXIMUM PROFIT POTENTIAL
-    maxHoldingPeriod: 2880,               // 48 hours max - let big moves run
+    description: 'Fibonacci retracement on H1 with H4 trend confirmation',
+    slMultiplier: 1.8,                    // ATR-based SL
+    tpMultiplier: 3.5,                    // 3.5 R:R - Fib extensions as targets
+    maxHoldingPeriod: 600,                // 10 hours max
     tradingHours: { start: 0, end: 24 },  // Always monitoring
   },
 };
@@ -242,7 +245,7 @@ const RISK_CONFIG = {
   // ACCOUNT PROTECTION - BALANCED FOR CATCHING MOVES
   MIN_ACCOUNT_BALANCE: parseFloat(process.env.MIN_ACCOUNT_BALANCE) || 50,
   TRADE_COOLDOWN_MS: parseInt(process.env.TRADE_COOLDOWN_MS) || 30000,        // 30 sec cooldown
-  DAILY_LOSS_LIMIT: 1.0,                  // DISABLED - 100% = no daily limit
+  DAILY_LOSS_LIMIT: 0.30,                  // 30% daily drawdown auto-stop
   MAX_LOT_SIZE: 1.00,                     // Allow up to 1.0 lots for scaling
   MIN_LOT_SIZE: 0.01,
   PREVENT_HEDGING: true,                  // Never open opposite positions
@@ -321,7 +324,7 @@ const EQUITY_PROTECTION_CONFIG = {
   PROTECT_PROFIT_ABOVE: 0.03,             // Start protecting when up 3% from start
   
   // CORRELATION LIMITS
-  MAX_SAME_DIRECTION_POSITIONS: 8,        // Max positions in same direction
+  MAX_SAME_DIRECTION_POSITIONS: 3,        // Max positions in same direction (tight per plan)
   MAX_CORRELATED_EXPOSURE: 0.20,          // Max 20% exposure to correlated pairs
 };
 
@@ -1971,10 +1974,7 @@ function getDailyStartBalance(accountId, currentBalance) {
 
 /**
  * Check if we can open more trades based on risk exposure
- * NO POSITION LIMITS - Always trade strong signals
- * Only protect against catastrophic losses (stop out protection)
- * 
- * NOTE: Daily loss limit has been DISABLED
+ * Enforces daily drawdown limit (10%) and position limits per strategy framework plan
  */
 function canOpenMoreTrades(balance, equity, openPositionsCount, currentProfitLoss, signalConfidence = 50, accountId = null) {
   // Don't trade if no balance info
@@ -1982,24 +1982,33 @@ function canOpenMoreTrades(balance, equity, openPositionsCount, currentProfitLos
     return { canTrade: false, reason: 'Account balance too low or unknown' };
   }
   
-  // Daily loss limit DISABLED - no daily restrictions
-  
-  // Get dynamic position limits based on account balance
-  const { target, max } = getPositionLimits(balance);
+  // Daily loss limit check (10% daily drawdown auto-stop)
+  if (accountId) {
+    const dailyStart = getDailyStartBalance(accountId, balance);
+    const dailyLoss = dailyStart - equity;
+    const dailyLossPercent = dailyLoss / dailyStart;
+    if (dailyLossPercent >= RISK_CONFIG.DAILY_LOSS_LIMIT) {
+      return { canTrade: false, reason: `Daily drawdown limit hit (${(dailyLossPercent * 100).toFixed(1)}% >= ${RISK_CONFIG.DAILY_LOSS_LIMIT * 100}%) - auto-stop until next day` };
+    }
+  }
   
   // Check if equity is critically low (stop out protection)
   if (equity && equity < balance * 0.5) {
     return { canTrade: false, reason: `Equity critically low (${((equity / balance) * 100).toFixed(1)}% of balance)` };
   }
   
-  // Check drawdown - only stop if losing more than 25% (catastrophic)
-  if (currentProfitLoss < -(balance * 0.25)) {
-    return { canTrade: false, reason: `Drawdown limit reached (${((currentProfitLoss / balance) * 100).toFixed(1)}%)` };
+  // Check floating drawdown (5-10% range from plan)
+  if (currentProfitLoss < -(balance * RISK_CONFIG.DAILY_LOSS_LIMIT)) {
+    return { canTrade: false, reason: `Floating loss limit reached (${((currentProfitLoss / balance) * 100).toFixed(1)}%)` };
   }
   
-  // NO POSITION LIMITS - Always allow trades for any signal strength
-  // Lot size is calculated based on account balance for proper risk management
-  return { canTrade: true, reason: `UNLIMITED POSITIONS - Signal ${signalConfidence}%` };
+  // Position limit check
+  const maxPos = ENSEMBLE_CONFIG.MAX_POSITIONS_PER_SYMBOL * 3; // total across all symbols
+  if (openPositionsCount >= maxPos) {
+    return { canTrade: false, reason: `Max total positions reached (${openPositionsCount}/${maxPos})` };
+  }
+  
+  return { canTrade: true, reason: `OK - ${openPositionsCount} positions open, signal ${signalConfidence}%` };
 }
 
 // NO MOCK DATA - Only real prices from MetaAPI
@@ -5129,13 +5138,20 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null, accoun
   console.log(`     Diff: ${Math.abs(buyScore - sellScore).toFixed(2)}`);
   
   // ================================================================
-  // TRADE ELIGIBILITY CHECK (OPTIMIZED FOR EXECUTION + QUALITY)
-  // Primary: 2+ strategies align with score difference >= 1.0
-  // Fallback: Single high-weight strategy with 80%+ confidence
+  // TRADE ELIGIBILITY CHECK (STRATEGY FRAMEWORK PLAN)
+  // Dynamic confirmation threshold:
+  //   High-vol sessions (London/NY): require 3+ strategies
+  //   Slow sessions (Asian): require 2+ strategies
+  // Fallback: Single high-weight strategy (EMA=2.0) with 80%+ confidence
   // ================================================================
   const scoreDiff = Math.abs(buyScore - sellScore);
-  const minStrategies = ENSEMBLE_CONFIG.MIN_STRATEGIES_ALIGNED;
+  const sessionInfo = getSessionInfo();
+  const minStrategies = sessionInfo.isHighVolume 
+    ? (ENSEMBLE_CONFIG.HIGH_VOL_MIN_STRATEGIES || 3)
+    : (ENSEMBLE_CONFIG.LOW_VOL_MIN_STRATEGIES || ENSEMBLE_CONFIG.MIN_STRATEGIES_ALIGNED);
   const minScoreDiff = ENSEMBLE_CONFIG.MIN_SCORE_DIFFERENCE;
+  
+  console.log(`     Session: ${sessionInfo.session || 'NONE'} | Required strategies: ${minStrategies} (${sessionInfo.isHighVolume ? 'high-vol' : 'low-vol'})`);
   
   // Check for conflict (scores too close with signals on both sides)
   if (scoreDiff < ENSEMBLE_CONFIG.SCORE_CONVERGENCE_THRESHOLD && buyCount > 0 && sellCount > 0) {
@@ -5143,15 +5159,15 @@ function analyzeWithMultipleStrategies(candles, symbol, botConfig = null, accoun
     return null;
   }
   
-  // PRIMARY ELIGIBILITY: 2+ strategies aligned with score difference
+  // PRIMARY ELIGIBILITY: Dynamic threshold strategies aligned with score difference
   let buyEligible = buyCount >= minStrategies && buyScore > sellScore + minScoreDiff;
   let sellEligible = sellCount >= minStrategies && sellScore > buyScore + minScoreDiff;
   
-  // FALLBACK: Single high-confidence strategy with weight >= 1.4
-  // This allows Liquidity-Sweep (1.5) or Order-Block (1.4) to trade alone if very confident
-  if (!buyEligible && !sellEligible) {
-    const highConfidenceBuy = buyStrategies.find(s => s.weight >= 1.4 && s.confidence >= 80);
-    const highConfidenceSell = sellStrategies.find(s => s.weight >= 1.4 && s.confidence >= 80);
+  // FALLBACK: Single high-weight strategy (EMA=2.0, Liquidity=1.5, Order-Block=1.4)
+  // Only allowed in slow sessions; high-vol sessions always require 3 strategies
+  if (!buyEligible && !sellEligible && !sessionInfo.isHighVolume) {
+    const highConfidenceBuy = buyStrategies.find(s => s.weight >= ENSEMBLE_CONFIG.SINGLE_STRONG_THRESHOLD && s.confidence >= 80);
+    const highConfidenceSell = sellStrategies.find(s => s.weight >= ENSEMBLE_CONFIG.SINGLE_STRONG_THRESHOLD && s.confidence >= 80);
     
     if (highConfidenceBuy && !highConfidenceSell && sellCount === 0) {
       console.log(`  🎯 ${symbol}: HIGH-CONF BUY trigger - ${highConfidenceBuy.name} (${highConfidenceBuy.confidence}%)`);

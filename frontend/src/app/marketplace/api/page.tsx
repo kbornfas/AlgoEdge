@@ -115,9 +115,9 @@ console.log(signals);
       "id": 1234,
       "symbol": "XAUUSD",
       "type": "BUY",
-      "entry": 2045.50,
-      "stop_loss": 2040.00,
-      "take_profit": [2055.00, 2060.00, 2070.00],
+      "entry": 5038.50,
+      "stop_loss": 5020.00,
+      "take_profit": [5055.00, 5075.00, 5100.00],
       "confidence": 85,
       "timestamp": "2026-01-25T10:30:00Z"
     }

@@ -297,11 +297,11 @@ const demoReviews: Review[] = [
 
 // Demo recent signals
 const demoSignals: RecentSignal[] = [
-  { id: 1, symbol: 'XAUUSD', signal_type: 'BUY', entry_price: 2035.50, stop_loss: 2028.00, take_profit_1: 2050.00, status: 'tp1_hit', pips_result: 145, created_at: '2026-01-24' },
-  { id: 2, symbol: 'EURUSD', signal_type: 'SELL', entry_price: 1.0892, stop_loss: 1.0920, take_profit_1: 1.0850, status: 'tp1_hit', pips_result: 42, created_at: '2026-01-24' },
-  { id: 3, symbol: 'GBPUSD', signal_type: 'BUY', entry_price: 1.2720, stop_loss: 1.2680, take_profit_1: 1.2780, status: 'active', pips_result: 0, created_at: '2026-01-25' },
-  { id: 4, symbol: 'US30', signal_type: 'BUY', entry_price: 38250, stop_loss: 38100, take_profit_1: 38500, status: 'tp2_hit', pips_result: 250, created_at: '2026-01-23' },
-  { id: 5, symbol: 'XAUUSD', signal_type: 'SELL', entry_price: 2055.00, stop_loss: 2065.00, take_profit_1: 2040.00, status: 'sl_hit', pips_result: -100, created_at: '2026-01-22' },
+  { id: 1, symbol: 'XAUUSD', signal_type: 'BUY', entry_price: 5038.50, stop_loss: 5020.00, take_profit_1: 5065.00, status: 'tp1_hit', pips_result: 265, created_at: '2026-02-07' },
+  { id: 2, symbol: 'EURUSD', signal_type: 'SELL', entry_price: 1.1905, stop_loss: 1.1935, take_profit_1: 1.1865, status: 'tp1_hit', pips_result: 40, created_at: '2026-02-07' },
+  { id: 3, symbol: 'GBPUSD', signal_type: 'BUY', entry_price: 1.3625, stop_loss: 1.3585, take_profit_1: 1.3680, status: 'active', pips_result: 0, created_at: '2026-02-08' },
+  { id: 4, symbol: 'US30', signal_type: 'BUY', entry_price: 50120, stop_loss: 49950, take_profit_1: 50400, status: 'tp2_hit', pips_result: 280, created_at: '2026-02-06' },
+  { id: 5, symbol: 'XAUUSD', signal_type: 'SELL', entry_price: 5060.00, stop_loss: 5080.00, take_profit_1: 5035.00, status: 'sl_hit', pips_result: -200, created_at: '2026-02-05' },
 ];
 
 export default function SignalProviderPage() {

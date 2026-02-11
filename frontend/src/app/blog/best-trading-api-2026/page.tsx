@@ -135,9 +135,9 @@ df['SMA_20'] = df['close'].rolling(20).mean()
 signal = client.create_signal(
     symbol="XAUUSD",
     direction="buy",
-    entry=2035.50,
-    stop_loss=2030.00,
-    take_profit=2050.00
+    entry=5038.50,
+    stop_loss=5020.00,
+    take_profit=5065.00
 )`,
 };
 

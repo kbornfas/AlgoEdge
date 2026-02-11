@@ -93,14 +93,14 @@ const signalProviders = [
 ];
 
 const signalExample = {
-  pair: 'XAUUSD (Gold)',
+  pair: 'XAUUSD',
   direction: 'BUY',
-  entry: 2035.50,
-  stopLoss: 2028.00,
-  takeProfit1: 2045.00,
-  takeProfit2: 2055.00,
-  takeProfit3: 2065.00,
-  riskReward: '1:3.9',
+  entry: 5038.50,
+  stopLoss: 5020.00,
+  takeProfit1: 5055.00,
+  takeProfit2: 5075.00,
+  takeProfit3: 5100.00,
+  riskReward: '1:3.3',
   analysis: 'Bullish engulfing at H4 support zone. RSI oversold bounce with bullish divergence. London session breakout setup.',
   confidence: 'High',
   timestamp: '09:15 GMT',
