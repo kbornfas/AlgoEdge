@@ -195,8 +195,11 @@ router.get('/audit-logs/stats', authenticate, requireAdmin, async (req, res) => 
  */
 router.get('/featured', authenticate, requireAdmin, async (req, res) => {
   try {
-    const [bots, signals, products, sellers] = await Promise.all([
-      pool.query(`
+    // Run queries independently so one failure doesn't break all sections
+    let bots = [], signals = [], products = [], sellers = [];
+    
+    try {
+      const result = await pool.query(`
         SELECT b.id, b.name, b.slug, b.thumbnail_url, b.is_featured, b.status, b.total_sales,
                u.id as seller_id, u.username as seller_username, u.full_name as seller_name, 
                u.has_blue_badge as seller_verified
@@ -204,8 +207,12 @@ router.get('/featured', authenticate, requireAdmin, async (req, res) => {
         JOIN users u ON b.seller_id = u.id
         WHERE b.status = 'approved'
         ORDER BY b.is_featured DESC, b.total_sales DESC
-      `),
-      pool.query(`
+      `);
+      bots = result.rows;
+    } catch (e) { console.error('Featured bots query error:', e.message); }
+
+    try {
+      const result = await pool.query(`
         SELECT sp.id, sp.display_name as name, sp.slug, sp.avatar_url, sp.is_featured, sp.status, sp.subscriber_count,
                u.id as provider_id, u.username as provider_username, u.full_name as provider_name,
                u.has_blue_badge as provider_verified
@@ -213,8 +220,12 @@ router.get('/featured', authenticate, requireAdmin, async (req, res) => {
         JOIN users u ON sp.user_id = u.id
         WHERE sp.status = 'approved'
         ORDER BY sp.is_featured DESC, sp.subscriber_count DESC
-      `),
-      pool.query(`
+      `);
+      signals = result.rows;
+    } catch (e) { console.error('Featured signals query error:', e.message); }
+
+    try {
+      const result = await pool.query(`
         SELECT p.id, p.name, p.slug, p.thumbnail_url, p.is_featured, p.status, p.total_sales,
                u.id as seller_id, u.username as seller_username, u.full_name as seller_name,
                u.has_blue_badge as seller_verified
@@ -222,8 +233,12 @@ router.get('/featured', authenticate, requireAdmin, async (req, res) => {
         JOIN users u ON p.seller_id = u.id
         WHERE p.status = 'approved'
         ORDER BY p.is_featured DESC, p.total_sales DESC
-      `),
-      pool.query(`
+      `);
+      products = result.rows;
+    } catch (e) { console.error('Featured products query error:', e.message); }
+
+    try {
+      const result = await pool.query(`
         SELECT u.id, u.username, u.full_name, u.profile_image, u.seller_featured, u.has_blue_badge,
                (SELECT COUNT(*) FROM marketplace_bots WHERE seller_id = u.id AND status = 'approved') as bots_count,
                (SELECT COUNT(*) FROM marketplace_products WHERE seller_id = u.id AND status = 'approved') as products_count,
@@ -231,15 +246,16 @@ router.get('/featured', authenticate, requireAdmin, async (req, res) => {
         FROM users u
         WHERE u.is_seller = true
         ORDER BY u.seller_featured DESC, u.created_at DESC
-      `)
-    ]);
+      `);
+      sellers = result.rows;
+    } catch (e) { console.error('Featured sellers query error:', e.message); }
 
     res.json({
       success: true,
-      bots: bots.rows,
-      signals: signals.rows,
-      products: products.rows,
-      sellers: sellers.rows
+      bots,
+      signals,
+      products,
+      sellers
     });
   } catch (error) {
     console.error('Get featured items error:', error);
@@ -306,6 +322,8 @@ router.patch('/signals/:signalId/feature', authenticate, requireAdmin, async (re
     const { signalId } = req.params;
     const { featured } = req.body;
     
+    console.log(`[Admin] Toggle signal featured: signalId=${signalId}, featured=${featured}`);
+    
     const signalCheck = await pool.query(`
       SELECT sp.id, sp.display_name, sp.status, u.has_blue_badge as provider_verified
       FROM signal_providers sp
@@ -319,6 +337,7 @@ router.patch('/signals/:signalId/feature', authenticate, requireAdmin, async (re
     
     const signal = signalCheck.rows[0];
     
+    // Only enforce requirements when featuring (not when unfeaturing)
     if (featured) {
       if (signal.status !== 'approved') {
         return res.status(400).json({ error: 'Signal provider must be approved before being featured' });
@@ -336,14 +355,21 @@ router.patch('/signals/:signalId/feature', authenticate, requireAdmin, async (re
        RETURNING id, display_name, slug, is_featured`,
       [!!featured, signalId]
     );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Signal provider not found or update failed' });
+    }
+    
+    console.log(`[Admin] Signal featured toggled: ${result.rows[0].display_name} -> is_featured=${result.rows[0].is_featured}`);
+    
     res.json({ 
       success: true, 
       signal: result.rows[0],
       message: featured ? 'Signal provider is now featured on landing page' : 'Signal provider removed from featured list'
     });
   } catch (error) {
-    console.error('Toggle signal featured error:', error);
-    res.status(500).json({ error: 'Failed to update signal featured status' });
+    console.error('Toggle signal featured error:', error.message, error.detail || '');
+    res.status(500).json({ error: 'Failed to update signal featured status: ' + error.message });
   }
 });
 
