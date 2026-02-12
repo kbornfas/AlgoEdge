@@ -324,6 +324,8 @@ export default function ProductShowcase() {
                             )}
                           </Box>
                           <Button
+                            component={Link}
+                            href={`/marketplace/bots/${bot.slug || bot.id}`}
                             variant="contained"
                             sx={{
                               bgcolor: '#22C55E',
@@ -493,6 +495,8 @@ export default function ProductShowcase() {
                       </Grid>
 
                       <Button
+                        component={Link}
+                        href={`/marketplace/signals/${signal.id}`}
                         fullWidth
                         variant="contained"
                         sx={{
@@ -663,6 +667,8 @@ export default function ProductShowcase() {
                             </Typography>
                           </Box>
                           <Button
+                            component={Link}
+                            href={`/marketplace/products/${product.slug || product.id}`}
                             size="small"
                             variant="contained"
                             sx={{
@@ -752,7 +758,7 @@ export default function ProductShowcase() {
                   <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', mb: 2 }}>
                     {tier.requests}
                   </Typography>
-                  <Stack spacing={0.5}>
+                  <Stack spacing={0.5} sx={{ mb: 2 }}>
                     {tier.features.map((feature) => (
                       <Stack key={feature} direction="row" spacing={1} alignItems="center" justifyContent="center">
                         <CheckCircle size={12} color="#22C55E" />
@@ -762,6 +768,36 @@ export default function ProductShowcase() {
                       </Stack>
                     ))}
                   </Stack>
+                  <Button
+                    component={Link}
+                    href="/marketplace/api"
+                    fullWidth
+                    variant={index === 1 ? 'contained' : 'outlined'}
+                    sx={{
+                      ...(index === 1
+                        ? {
+                            background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+                            color: 'white',
+                            fontWeight: 700,
+                            py: 1.2,
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+                            },
+                          }
+                        : {
+                            borderColor: 'rgba(139, 92, 246, 0.4)',
+                            color: '#A78BFA',
+                            fontWeight: 700,
+                            py: 1.2,
+                            '&:hover': {
+                              borderColor: '#8B5CF6',
+                              bgcolor: 'rgba(139, 92, 246, 0.1)',
+                            },
+                          }),
+                    }}
+                  >
+                    Subscribe Now
+                  </Button>
                 </CardContent>
               </GlassCard>
             </Grid>
