@@ -128,8 +128,8 @@ async function checkAndSeedBots() {
             price, price_type, thumbnail_url, tags,
             win_rate, monthly_return, max_drawdown, 
             supported_pairs, supported_platforms, minimum_balance,
-            status, is_official
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'approved', true)
+            status, is_official, is_featured
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'approved', true, true)
         `, [
           sellerId, bot.name, bot.slug, bot.description, bot.short_description, bot.category,
           bot.price, bot.price_type, bot.thumbnail_url, bot.tags,
@@ -205,8 +205,8 @@ async function checkAndSeedBots() {
             user_id, display_name, slug, bio, avatar_url,
             monthly_price, win_rate, total_pips, average_pips,
             trading_style, main_instruments, risk_level, 
-            status, is_official
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'approved', true)
+            status, is_official, is_featured
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'approved', true, true)
         `, [
           sellerId, provider.display_name, provider.slug, provider.bio, provider.avatar_url,
           provider.monthly_price, provider.win_rate, provider.total_pips, provider.average_pips,

@@ -1020,105 +1020,164 @@ export default function Home() {
       
       {/* Hero Section - Above the Fold */}
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 10, pt: 8 }}>
-        <Box sx={{ py: { xs: 6, md: 10 }, textAlign: 'center' }}>
-          {/* Main Headline with Clear Offer */}
+        <Box sx={{ py: { xs: 5, md: 10 }, textAlign: 'center' }}>
+          
+          {/* Tagline chip */}
+          <Box
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 1,
+              bgcolor: 'rgba(34, 197, 94, 0.1)',
+              border: '1px solid rgba(34, 197, 94, 0.3)',
+              borderRadius: 50,
+              px: 2.5,
+              py: 0.75,
+              mb: 3,
+            }}
+          >
+            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#22C55E', boxShadow: '0 0 8px #22C55E', animation: 'pulse 2s infinite' }} />
+            <Typography sx={{ color: '#22C55E', fontSize: '0.85rem', fontWeight: 600, letterSpacing: '0.5px' }}>
+              LIVE — 2,400+ Traders Active Now
+            </Typography>
+          </Box>
+
+          {/* Main Headline */}
           <Typography
             variant="h1"
             sx={{
-              fontSize: { xs: '2.5rem', sm: '3rem', md: '4rem' },
+              fontSize: { xs: '2.2rem', sm: '3rem', md: '3.8rem' },
               fontWeight: 900,
-              mb: 3,
-              background: 'linear-gradient(135deg, #22C55E 0%, #22C55E 50%, #22C55E 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              textShadow: '0 0 40px rgba(0, 255, 0, 0.3)',
-              lineHeight: 1.2,
+              mb: 2.5,
+              color: '#FFFFFF',
+              lineHeight: 1.15,
+              letterSpacing: '-0.02em',
             }}
           >
-            AlgoEdge Trading Hub
+            Trade Smarter with{' '}
+            <Box
+              component="span"
+              sx={{
+                background: 'linear-gradient(135deg, #22C55E 0%, #4ADE80 50%, #22C55E 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.4))',
+              }}
+            >
+              AlgoEdge
+            </Box>
           </Typography>
           
           {/* Hero Description */}
           <Typography
             sx={{
-              fontSize: { xs: '1.1rem', md: '1.3rem' },
-              color: '#FFFFFF',
+              fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+              color: 'rgba(255, 255, 255, 0.8)',
               mb: 4,
-              maxWidth: '800px',
+              maxWidth: '640px',
               mx: 'auto',
-              lineHeight: 1.6,
-              fontWeight: 600,
+              lineHeight: 1.7,
+              fontWeight: 400,
             }}
           >
-            Earn Consistent Forex Returns with Fully Automated Trading Bots — No Experience Needed.
+            Fully automated trading bots that deliver consistent forex returns.
+            <Box component="span" sx={{ color: '#FFFFFF', fontWeight: 600 }}>
+              {' '}Zero experience required.
+            </Box>
           </Typography>
-          
-          {/* CTA Buttons - Get Started & Login */}
+
+          {/* Quick trust indicators */}
           <Stack 
-            direction={{ xs: 'column', sm: 'row' }} 
-            spacing={2} 
+            direction="row" 
+            spacing={{ xs: 2, sm: 4 }} 
+            sx={{ justifyContent: 'center', mb: 4 }}
+          >
+            {[
+              { value: '87%', label: 'Win Rate' },
+              { value: '24/7', label: 'Automated' },
+              { value: '4.9★', label: 'Rating' },
+            ].map((stat) => (
+              <Box key={stat.label} sx={{ textAlign: 'center' }}>
+                <Typography sx={{ color: '#22C55E', fontWeight: 800, fontSize: { xs: '1.1rem', sm: '1.3rem' } }}>
+                  {stat.value}
+                </Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.8rem' }, fontWeight: 500 }}>
+                  {stat.label}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+          
+          {/* CTA Buttons - Always side by side */}
+          <Stack 
+            direction="row"
+            spacing={1.5} 
             sx={{ 
               justifyContent: 'center', 
               alignItems: 'center',
               mb: 3,
-              maxWidth: '600px',
-              mx: 'auto',
             }}
           >
             <Button
               component={Link}
               href="/auth/register"
               variant="contained"
-              size="large"
               sx={{
-                minWidth: { xs: '100%', sm: 240 },
+                minWidth: { xs: 150, sm: 180 },
                 bgcolor: '#22C55E',
                 color: '#000000',
-                fontWeight: 800,
-                fontSize: { xs: '1.1rem', md: '1.2rem' },
-                py: 2,
-                px: 5,
+                fontWeight: 700,
+                fontSize: { xs: '0.9rem', sm: '1rem' },
+                py: { xs: 1.25, sm: 1.5 },
+                px: { xs: 3, sm: 4 },
                 '&:hover': {
                   bgcolor: '#16A34A',
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 32px rgba(0, 255, 0, 0.5)',
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 12px 28px rgba(34, 197, 94, 0.45)',
                 },
                 transition: 'all 0.3s ease',
                 textTransform: 'none',
-                boxShadow: '0 8px 24px rgba(0, 255, 0, 0.4)',
-                borderRadius: 2,
+                boxShadow: '0 6px 20px rgba(34, 197, 94, 0.35)',
+                borderRadius: '12px',
               }}
             >
-              Get Started
+              Get Started →
             </Button>
             <Button
               component={Link}
               href="/auth/login"
               variant="outlined"
-              size="large"
               sx={{
-                minWidth: { xs: '100%', sm: 240 },
-                borderColor: '#22C55E',
-                color: '#22C55E',
-                fontWeight: 800,
-                fontSize: { xs: '1.1rem', md: '1.2rem' },
-                py: 2,
-                px: 5,
-                borderWidth: 2,
+                minWidth: { xs: 130, sm: 160 },
+                borderColor: 'rgba(255,255,255,0.25)',
+                color: '#FFFFFF',
+                fontWeight: 600,
+                fontSize: { xs: '0.9rem', sm: '1rem' },
+                py: { xs: 1.25, sm: 1.5 },
+                px: { xs: 3, sm: 4 },
+                borderWidth: 1.5,
+                backdropFilter: 'blur(10px)',
+                bgcolor: 'rgba(255,255,255,0.05)',
                 '&:hover': {
                   borderColor: '#22C55E',
-                  bgcolor: 'rgba(0, 255, 0, 0.1)',
-                  borderWidth: 2,
-                  transform: 'translateY(-4px)',
+                  color: '#22C55E',
+                  bgcolor: 'rgba(34, 197, 94, 0.08)',
+                  borderWidth: 1.5,
+                  transform: 'translateY(-3px)',
                 },
                 transition: 'all 0.3s ease',
                 textTransform: 'none',
-                borderRadius: 2,
+                borderRadius: '12px',
               }}
             >
               Login
             </Button>
           </Stack>
+
+          {/* Subtle trust line */}
+          <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem', fontWeight: 400 }}>
+            No credit card required • Free trial available • Cancel anytime
+          </Typography>
         </Box>
       </Container>
 

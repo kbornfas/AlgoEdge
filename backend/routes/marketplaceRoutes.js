@@ -236,50 +236,53 @@ router.get('/featured', async (req, res) => {
 // Fast landing page data endpoint - returns all products needed for homepage in single request
 router.get('/landing', async (req, res) => {
   try {
-    const [bots, providers, products] = await Promise.all([
+    // Single optimized query - try featured first, fallback to all approved
+    const [botsQuery, providersQuery, productsQuery] = await Promise.all([
       pool.query(`
-        SELECT b.id, b.name, b.slug, b.short_description as description, b.thumbnail_url, b.price, b.price_type,
-               b.win_rate, b.monthly_return, b.rating_average, b.rating_count as total_reviews, b.total_sales, b.category,
-               b.is_featured,
+        SELECT b.id, b.name, b.slug, b.short_description as description, b.thumbnail_url, 
+               b.price, b.price_type, b.is_free,
+               b.win_rate, b.monthly_return, b.rating_average, b.rating_count as total_reviews, 
+               b.total_sales, b.category, b.is_featured,
                COALESCE(u.seller_display_name, u.full_name, u.username) as seller_name, 
                u.profile_image as seller_avatar, u.has_blue_badge as seller_verified
         FROM marketplace_bots b
         JOIN users u ON b.seller_id = u.id
-        WHERE b.status = 'approved' AND b.is_featured = true
-        ORDER BY b.total_sales DESC, b.rating_average DESC
+        WHERE b.status = 'approved'
+        ORDER BY b.is_featured DESC, b.rating_average DESC, b.total_sales DESC
         LIMIT 6
       `),
       pool.query(`
         SELECT sp.id, sp.display_name as name, sp.slug, sp.avatar_url, sp.monthly_price,
-               sp.win_rate, sp.total_pips, sp.subscriber_count, sp.rating_average,
-               sp.trading_style, sp.risk_level, sp.bio as description, sp.is_featured,
+               sp.win_rate, sp.total_pips, sp.average_pips, sp.subscriber_count, sp.rating_average,
+               sp.trading_style, sp.risk_level, sp.bio as description, sp.is_featured, sp.is_free,
                COALESCE(u.seller_display_name, u.full_name, u.username) as provider_name, 
                u.profile_image as provider_avatar, u.has_blue_badge as provider_verified
         FROM signal_providers sp
         JOIN users u ON sp.user_id = u.id
-        WHERE sp.status = 'approved' AND sp.is_featured = true
-        ORDER BY sp.subscriber_count DESC, sp.rating_average DESC
+        WHERE sp.status = 'approved'
+        ORDER BY sp.is_featured DESC, sp.rating_average DESC, sp.subscriber_count DESC
         LIMIT 6
       `),
       pool.query(`
-        SELECT p.id, p.name, p.slug, p.short_description as description, p.thumbnail_url, p.price,
-               p.product_type as type, p.rating_average, p.rating_count as total_reviews, p.total_sales,
-               p.is_featured,
+        SELECT p.id, p.name, p.slug, p.short_description as description, p.thumbnail_url, 
+               p.price, p.discount_price,
+               p.product_type as type, p.rating_average, p.rating_count as total_reviews, 
+               p.total_sales, p.is_featured,
                COALESCE(u.seller_display_name, u.full_name, u.username) as seller_name, 
                u.profile_image as seller_avatar, u.has_blue_badge as seller_verified
         FROM marketplace_products p
         JOIN users u ON p.seller_id = u.id
-        WHERE p.status = 'approved' AND p.is_featured = true
-        ORDER BY p.total_sales DESC, p.rating_average DESC
+        WHERE p.status = 'approved'
+        ORDER BY p.is_featured DESC, p.rating_average DESC, p.total_sales DESC
         LIMIT 6
       `)
     ]);
 
     res.json({
       success: true,
-      bots: bots.rows,
-      signals: providers.rows,
-      products: products.rows
+      bots: botsQuery.rows,
+      signals: providersQuery.rows,
+      products: productsQuery.rows
     });
   } catch (error) {
     console.error('Get landing data error:', error);
