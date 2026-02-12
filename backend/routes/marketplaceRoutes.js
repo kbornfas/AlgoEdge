@@ -236,11 +236,13 @@ router.get('/featured', async (req, res) => {
 // Fast landing page data endpoint - returns all products needed for homepage in single request
 router.get('/landing', async (req, res) => {
   try {
-    // Single optimized query - try featured first, fallback to all approved
-    const [botsQuery, providersQuery, productsQuery] = await Promise.all([
-      pool.query(`
+    // Run queries independently so one failure doesn't break everything
+    let bots = [], signals = [], products = [];
+
+    try {
+      const botsQuery = await pool.query(`
         SELECT b.id, b.name, b.slug, b.short_description as description, b.thumbnail_url, 
-               b.price, b.price_type, b.is_free,
+               b.price, b.price_type,
                b.win_rate, b.monthly_return, b.rating_average, b.rating_count as total_reviews, 
                b.total_sales, b.category, b.is_featured,
                COALESCE(u.seller_display_name, u.full_name, u.username) as seller_name, 
@@ -250,8 +252,14 @@ router.get('/landing', async (req, res) => {
         WHERE b.status = 'approved'
         ORDER BY b.is_featured DESC, b.rating_average DESC, b.total_sales DESC
         LIMIT 6
-      `),
-      pool.query(`
+      `);
+      bots = botsQuery.rows;
+    } catch (e) {
+      console.error('Landing bots query error:', e.message);
+    }
+
+    try {
+      const providersQuery = await pool.query(`
         SELECT sp.id, sp.display_name as name, sp.slug, sp.avatar_url, sp.monthly_price,
                sp.win_rate, sp.total_pips, sp.average_pips, sp.subscriber_count, sp.rating_average,
                sp.trading_style, sp.risk_level, sp.bio as description, sp.is_featured, sp.is_free,
@@ -262,10 +270,16 @@ router.get('/landing', async (req, res) => {
         WHERE sp.status = 'approved'
         ORDER BY sp.is_featured DESC, sp.rating_average DESC, sp.subscriber_count DESC
         LIMIT 6
-      `),
-      pool.query(`
+      `);
+      signals = providersQuery.rows;
+    } catch (e) {
+      console.error('Landing signals query error:', e.message);
+    }
+
+    try {
+      const productsQuery = await pool.query(`
         SELECT p.id, p.name, p.slug, p.short_description as description, p.thumbnail_url, 
-               p.price, p.discount_price,
+               p.price,
                p.product_type as type, p.rating_average, p.rating_count as total_reviews, 
                p.total_sales, p.is_featured,
                COALESCE(u.seller_display_name, u.full_name, u.username) as seller_name, 
@@ -275,14 +289,17 @@ router.get('/landing', async (req, res) => {
         WHERE p.status = 'approved'
         ORDER BY p.is_featured DESC, p.rating_average DESC, p.total_sales DESC
         LIMIT 6
-      `)
-    ]);
+      `);
+      products = productsQuery.rows;
+    } catch (e) {
+      console.error('Landing products query error:', e.message);
+    }
 
     res.json({
       success: true,
-      bots: botsQuery.rows,
-      signals: providersQuery.rows,
-      products: productsQuery.rows
+      bots,
+      signals,
+      products
     });
   } catch (error) {
     console.error('Get landing data error:', error);

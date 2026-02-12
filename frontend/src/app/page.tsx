@@ -437,135 +437,177 @@ const LiveStatsBar = () => {
 const RecentActivityPopup = () => {
   const [visible, setVisible] = useState(false);
   const [currentActivity, setCurrentActivity] = useState(0);
+  const [dismissed, setDismissed] = useState(false);
 
   const activities = [
-    { name: 'John D.', location: 'New York, USA', action: 'just subscribed', plan: 'Monthly', time: '2 mins ago', flag: '🇺🇸' },
-    { name: 'Ahmed K.', location: 'Dubai, UAE', action: 'just started trading', plan: '', time: '5 mins ago', flag: '🇦🇪' },
-    { name: 'Sarah M.', location: 'London, UK', action: 'earned +$847', plan: 'today', time: '8 mins ago', flag: '🇬🇧' },
-    { name: 'Pierre L.', location: 'Paris, France', action: 'just subscribed', plan: 'Quarterly', time: '12 mins ago', flag: '🇫🇷' },
-    { name: 'Michael R.', location: 'Sydney, AUS', action: 'just signed up', plan: '', time: '15 mins ago', flag: '🇦🇺' },
-    { name: 'Chen W.', location: 'Singapore', action: 'earned +$1,234', plan: 'this week', time: '18 mins ago', flag: '🇸🇬' },
-    { name: 'David O.', location: 'Lagos, Nigeria', action: 'just subscribed', plan: 'Weekly', time: '23 mins ago', flag: '🇳🇬' },
-    { name: 'Maria S.', location: 'Toronto, CAN', action: 'just started trading', plan: '', time: '27 mins ago', flag: '🇨🇦' },
-    { name: 'James T.', location: 'Nairobi, Kenya', action: 'earned +$456', plan: 'today', time: '32 mins ago', flag: '🇰🇪' },
-    { name: 'Anna P.', location: 'Berlin, GER', action: 'just subscribed', plan: 'Monthly', time: '38 mins ago', flag: '🇩🇪' },
+    { name: 'John D.', location: 'New York', country: 'US', action: 'subscribed to Pro', type: 'subscribe', time: '2 mins ago' },
+    { name: 'Ahmed K.', location: 'Dubai', country: 'AE', action: 'started auto-trading', type: 'trade', time: '5 mins ago' },
+    { name: 'Sarah M.', location: 'London', country: 'GB', action: 'earned +$847 today', type: 'profit', time: '8 mins ago' },
+    { name: 'Pierre L.', location: 'Paris', country: 'FR', action: 'subscribed to Pro', type: 'subscribe', time: '12 mins ago' },
+    { name: 'Michael R.', location: 'Sydney', country: 'AU', action: 'connected MT5', type: 'trade', time: '15 mins ago' },
+    { name: 'Chen W.', location: 'Singapore', country: 'SG', action: 'earned +$1,234 this week', type: 'profit', time: '18 mins ago' },
+    { name: 'David O.', location: 'Lagos', country: 'NG', action: 'purchased Gold Scalper', type: 'subscribe', time: '23 mins ago' },
+    { name: 'Maria S.', location: 'Toronto', country: 'CA', action: 'started auto-trading', type: 'trade', time: '27 mins ago' },
+    { name: 'James T.', location: 'Nairobi', country: 'KE', action: 'earned +$456 today', type: 'profit', time: '32 mins ago' },
+    { name: 'Anna P.', location: 'Berlin', country: 'DE', action: 'subscribed to Pro', type: 'subscribe', time: '38 mins ago' },
   ];
 
   useEffect(() => {
-    // Show popup every 8-15 seconds
+    if (dismissed) return;
+
     const showPopup = () => {
       setVisible(true);
-      
-      // Hide after 5 seconds
       setTimeout(() => {
         setVisible(false);
-        // Move to next activity
         setCurrentActivity(prev => (prev + 1) % activities.length);
       }, 5000);
     };
 
-    // Initial delay before first popup (3 seconds)
-    const initialTimeout = setTimeout(showPopup, 3000);
-
-    // Then show every 8-15 seconds
-    const interval = setInterval(showPopup, 8000 + Math.random() * 7000);
+    const initialTimeout = setTimeout(showPopup, 4000);
+    const interval = setInterval(showPopup, 10000 + Math.random() * 8000);
 
     return () => {
       clearTimeout(initialTimeout);
       clearInterval(interval);
     };
-  }, [activities.length]);
+  }, [activities.length, dismissed]);
+
+  if (dismissed) return null;
 
   const activity = activities[currentActivity];
+
+  const actionColor = activity.type === 'profit' ? '#22C55E' : 'rgba(255,255,255,0.5)';
+  const initials = activity.name.split(' ').map(n => n[0]).join('');
 
   return (
     <Box
       sx={{
         position: 'fixed',
-        bottom: { xs: 70, sm: 80, md: 100 },
-        left: { xs: 8, sm: 16, md: 24 },
-        right: { xs: 8, sm: 'auto' },
+        bottom: { xs: 80, md: 32 },
+        left: { xs: 12, md: 24 },
         zIndex: 999,
         opacity: visible ? 1 : 0,
-        transform: visible ? 'translateX(0) translateY(0)' : 'translateX(0) translateY(120%)',
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        maxWidth: { xs: 'calc(100% - 16px)', sm: 300, md: 320 },
+        transform: visible ? 'translateY(0)' : 'translateY(20px)',
+        transition: 'opacity 0.35s ease, transform 0.35s ease',
+        pointerEvents: visible ? 'auto' : 'none',
       }}
     >
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
-          gap: { xs: 1, sm: 1.5 },
-          bgcolor: 'rgba(30, 41, 59, 0.98)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: 2,
-          p: { xs: 1.25, sm: 1.5 },
-          border: '1px solid rgba(0, 255, 0, 0.3)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+          gap: 1.5,
+          bgcolor: 'rgba(15, 23, 42, 0.95)',
+          backdropFilter: 'blur(16px)',
+          borderRadius: '14px',
+          p: '12px 16px',
+          pr: '14px',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset',
+          maxWidth: 310,
+          position: 'relative',
         }}
       >
-        {/* Avatar/Flag */}
+        {/* Close button */}
         <Box
+          onClick={() => setDismissed(true)}
           sx={{
-            width: 44,
-            height: 44,
+            position: 'absolute',
+            top: -6,
+            right: -6,
+            width: 18,
+            height: 18,
             borderRadius: '50%',
-            bgcolor: 'rgba(0, 255, 0, 0.2)',
+            bgcolor: 'rgba(30,41,59,0.95)',
+            border: '1px solid rgba(255,255,255,0.1)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '1.5rem',
-            flexShrink: 0,
+            cursor: 'pointer',
+            opacity: 0.6,
+            '&:hover': { opacity: 1 },
+            transition: 'opacity 0.2s',
           }}
         >
-          {activity.flag}
+          <Typography sx={{ fontSize: '10px', color: '#fff', lineHeight: 1, mt: '-1px' }}>✕</Typography>
         </Box>
-        
+
+        {/* Avatar with country flag */}
+        <Box sx={{ position: 'relative', flexShrink: 0 }}>
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              color: 'rgba(255,255,255,0.7)',
+              letterSpacing: '0.5px',
+            }}
+          >
+            {initials}
+          </Box>
+          {/* Country flag via flagcdn */}
+          <Box
+            component="img"
+            src={`https://flagcdn.com/w40/${activity.country.toLowerCase()}.png`}
+            alt={activity.country}
+            sx={{
+              position: 'absolute',
+              bottom: -3,
+              right: -3,
+              width: 16,
+              height: 12,
+              borderRadius: '2px',
+              border: '1.5px solid rgba(15,23,42,0.95)',
+              objectFit: 'cover',
+            }}
+          />
+        </Box>
+
+        {/* Content */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography
             sx={{
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              color: '#FFFFFF',
-              lineHeight: 1.3,
-            }}
-          >
-            {activity.name} from {activity.location}
-          </Typography>
-          <Typography
-            sx={{
               fontSize: '0.8rem',
-              color: activity.action.includes('earned') ? '#22C55E' : '#888888',
-              fontWeight: activity.action.includes('earned') ? 700 : 500,
+              fontWeight: 600,
+              color: '#FFFFFF',
+              lineHeight: 1.2,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
-            {activity.action} {activity.plan && <span style={{ color: '#22C55E' }}>{activity.plan}</span>}
+            {activity.name}{' '}
+            <Typography component="span" sx={{ fontSize: '0.8rem', fontWeight: 400, color: 'rgba(255,255,255,0.4)' }}>
+              {activity.location}
+            </Typography>
           </Typography>
           <Typography
             sx={{
-              fontSize: '0.7rem',
-              color: '#666666',
+              fontSize: '0.75rem',
+              color: actionColor,
+              fontWeight: activity.type === 'profit' ? 600 : 400,
+              lineHeight: 1.4,
+              mt: 0.15,
+            }}
+          >
+            {activity.action}
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: '0.65rem',
+              color: 'rgba(255,255,255,0.25)',
+              lineHeight: 1.3,
+              mt: 0.15,
             }}
           >
             {activity.time}
           </Typography>
-        </Box>
-
-        {/* Verified badge */}
-        <Box
-          sx={{
-            width: 20,
-            height: 20,
-            borderRadius: '50%',
-            bgcolor: '#22C55E',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          <CheckCircle2 size={14} color="black" />
         </Box>
       </Box>
     </Box>

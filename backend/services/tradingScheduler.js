@@ -7020,8 +7020,8 @@ export async function startTradingScheduler() {
   // Run every 60 seconds to stay under rate limits
   tradingInterval = setInterval(runTradingCycle, 60 * 1000);
   
-  // Stream positions every 5 seconds (uses cache, so rate-limit safe)
-  positionStreamInterval = setInterval(streamPositions, 5000);
+  // Stream positions every 15 seconds (reduced from 5s to lower DB load on Railway)
+  positionStreamInterval = setInterval(streamPositions, 15000);
   
   return { success: true, message: 'Trading scheduler started' };
 }

@@ -619,9 +619,14 @@ export const initializeMT5Connections = async () => {
   }
 };
 
-// Periodic balance sync (run every 5 minutes)
+// Periodic balance sync (run every 10 minutes)
+let balanceSyncInterval = null;
 export const startBalanceSyncScheduler = () => {
-  setInterval(async () => {
+  // Prevent duplicate timers if called multiple times
+  if (balanceSyncInterval) {
+    clearInterval(balanceSyncInterval);
+  }
+  balanceSyncInterval = setInterval(async () => {
     for (const [accountId, connection] of mt5Connections) {
       if (connection.connected) {
         try {
@@ -631,9 +636,9 @@ export const startBalanceSyncScheduler = () => {
         }
       }
     }
-  }, 5 * 60 * 1000); // 5 minutes
+  }, 10 * 60 * 1000); // 10 minutes (reduced from 5 to lower DB load)
 
-  console.log('Balance sync scheduler started');
+  console.log('Balance sync scheduler started (every 10 min)');
 };
 
 export default {

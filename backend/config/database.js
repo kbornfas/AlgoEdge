@@ -11,14 +11,17 @@ dotenv.config();
 
 const { Pool } = pg;
 
-// Create PostgreSQL connection pool with better settings for Railway
+// Create PostgreSQL connection pool with optimized settings for Railway
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.DATABASE_URL?.trim(),
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 10, // Reduced from 20 to prevent connection exhaustion
-  idleTimeoutMillis: 10000, // Close idle connections faster (10s instead of 30s)
-  connectionTimeoutMillis: 5000, // Increased timeout for connection
+  max: 5, // Low pool size to prevent Railway memory/connection exhaustion
+  min: 1, // Keep at least 1 connection warm
+  idleTimeoutMillis: 5000, // Close idle connections fast (5s) to free Railway memory
+  connectionTimeoutMillis: 10000, // 10s timeout for slow Railway cold starts
   allowExitOnIdle: false, // Keep pool alive
+  statement_timeout: 30000, // Kill queries running longer than 30s
+  query_timeout: 30000, // Query-level timeout
 });
 
 // Don't log DATABASE_URL in production (security)
